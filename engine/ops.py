@@ -299,6 +299,23 @@ class EventSetOp(OpModel):
         return f"Change the time of {named(view, 'event', self.id)}: " + " and ".join(p for p in parts if p)
 
 
+class EventGuestsOp(OpModel):
+    """Say who is on a calendar entry that is in the list, when the input says so ("lunch with Sam is confirmed", the
+    guests proposed for an entry in the list and the words that show they are right). The people are then recorded as
+    on it, and a proposal for it is cleared. Refused if the entry doesn't exist or is called off, or a name is not one
+    known person; evidence is required."""
+
+    op: Literal["event.guests"] = "event.guests"
+    id: Annotated[str, RefTo("event")] = Field(description="The id of the calendar entry.")
+    people: list[str] = Field(
+        min_length=1, description="The people on it, each by name or id; each must be one known person."
+    )
+    evidence: EvidenceIn = Field(description="The exact words from the input that say who is on it.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Say who is on {named(view, 'event', self.id)}"
+
+
 class SeriesAddOp(OpModel):
     """A meeting or check-in that repeats, when the input says so ("every Tuesday"). `events` names existing entries
     that are instances of it. Never add one that is already in the lists. Evidence is required."""
@@ -606,6 +623,23 @@ class ActionMoveOp(OpModel):
 
     def describe(self, view: Any = None) -> str | None:
         return f"Move the date of {named(view, 'action', self.id)}"
+
+
+class ActionTieOp(OpModel):
+    """Tie an open action to the calendar entry it is due at, when the words or the calendar show it is that entry
+    ("the contract is due at the print sync", an entry proposed for it in the list of open actions): the action is then
+    due on the entry's day and moves with the entry, and is told when the entry is called off. Refused if the action
+    doesn't exist or isn't open, or the entry doesn't exist or is called off; evidence is required."""
+
+    op: Literal["action.tie"] = "action.tie"
+    id: str = Field(description="The id of the open action that is due at the entry.")
+    event: Annotated[str, RefTo("event")] = Field(description="The id of the calendar entry it is due at.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Tie {named(view, 'action', self.id)} to {named(view, 'event', self.event)}"
 
 
 class ActionRepeatOp(OpModel):
@@ -1891,6 +1925,7 @@ Op = Annotated[
     | FactOp
     | EventAddOp
     | EventSetOp
+    | EventGuestsOp
     | SeriesAddOp
     | SeriesLinkOp
     | AgendaAddOp
@@ -1903,6 +1938,7 @@ Op = Annotated[
     | ActionUnholdOp
     | ActionDropOp
     | ActionMoveOp
+    | ActionTieOp
     | ActionRepeatOp
     | ActionPartOp
     | ActionNewsOp
@@ -1976,6 +2012,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "fact": FactOp,
     "event.add": EventAddOp,
     "event.set": EventSetOp,
+    "event.guests": EventGuestsOp,
     "series.add": SeriesAddOp,
     "series.link": SeriesLinkOp,
     "agenda.add": AgendaAddOp,
@@ -1988,6 +2025,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "action.unhold": ActionUnholdOp,
     "action.drop": ActionDropOp,
     "action.move": ActionMoveOp,
+    "action.tie": ActionTieOp,
     "action.repeat": ActionRepeatOp,
     "action.part": ActionPartOp,
     "action.news": ActionNewsOp,
@@ -2135,6 +2173,7 @@ NEEDS_EVIDENCE = {
     "fact",
     "event.add",
     "event.set",
+    "event.guests",
     "series.add",
     "series.link",
     "agenda.add",
@@ -2144,6 +2183,7 @@ NEEDS_EVIDENCE = {
     "action.unhold",
     "action.drop",
     "action.move",
+    "action.tie",
     "action.repeat",
     "action.part",
     "action.news",

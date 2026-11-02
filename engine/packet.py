@@ -978,8 +978,11 @@ def _known_texts(ws: Workspace, store: Store, exclude: str | None) -> list[str]:
 
 def _open_actions(store: Store, people: People, left_out: Callable[[Mapping], bool] | None = None) -> str:
     """The open actions, one line each, without those `left_out` says a packet's recipient may not see."""
+    from engine import entry_ties
+
     lines = []
     reader = store.read()
+    refused = entry_ties.declined(reader)
     for a in reader.list("action"):
         d = a.data
         if d["status"] in ("done", "dropped") or (left_out is not None and left_out(d)):
@@ -994,7 +997,11 @@ def _open_actions(store: Store, people: People, left_out: Callable[[Mapping], bo
         project = f"[{d['project']}] " if d.get("project") else ""
         promised = ", ".join(people.name(person) for person in d.get("promised_to") or [])
         promised = f"; promised to {promised}" if promised else ""
-        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{promised}{due}{hold}{owed}{_belongs_to(d)})")
+        proposed = entry_ties.pending(reader, a, refused)
+        tie = f"; may be due at calendar entry {proposed.id}, not tied yet" if proposed is not None else ""
+        lines.append(
+            f"- {a.id} {project}{d['text']} (owners: {owners}{promised}{due}{hold}{owed}{_belongs_to(d)}{tie})"
+        )
     return "\n".join(lines) or "(none)"
 
 
@@ -1019,11 +1026,13 @@ def _belongs_to(data: dict, before: str = "", after: str = "") -> str:
 def _calendar_section(store: Store, cfg: Config, today: date) -> str:
     """The series and the calendar entries that haven't ended, with their ids, so a run can tie an item to one by id;
     empty when the workspace has none."""
+    from engine import entry_guests
     from engine import series as series_module
     from engine.today import zone
 
     here = zone(cfg)
     view = store.read()
+    refused = entry_guests.declined(view)
     lines = []
     for found in view.list("series"):
         d = found.data
@@ -1038,8 +1047,19 @@ def _calendar_section(store: Store, cfg: Config, today: date) -> str:
         d = entry.data
         of = f"; series {d['series']}" if d.get("series") else ""
         until = f" to {d['end']}" if d.get("end") else ""
-        lines.append(f"- {entry.id} {d['title']} ({d['start']}{until}{of})")
+        proposed = entry_guests.pending(view, entry, refused)
+        who = (
+            f"; may be with {', '.join(f'{p} ({_person_label(view, p)})' for p in proposed)}, not confirmed"
+            if proposed
+            else ""
+        )
+        lines.append(f"- {entry.id} {d['title']} ({d['start']}{until}{of}{who})")
     return "# Calendar entries and series\n" + "\n".join(lines) if lines else ""
+
+
+def _person_label(view: Any, person_id: str) -> str:
+    found = view.get("person", person_id)
+    return str(found.data["full_name"]) if found is not None else person_id
 
 
 def _people(store: Store, cfg: Config, only: frozenset[str] | None = None) -> str:

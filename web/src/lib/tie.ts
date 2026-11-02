@@ -23,3 +23,25 @@ export function useTie(): {
       ),
   };
 }
+
+// The people a plain calendar entry's title names, proposed as on it (design 6.32): the person says yes, which records them,
+// or that they aren't the ones. Both answer at once with Undo on the toast.
+export function useGuests(): {
+  confirm: (entry: string, title: string, names: string) => Promise<unknown>;
+  notThem: (entry: string, title: string, names: string) => Promise<unknown>;
+} {
+  const { t } = useWords();
+  const act = useAct();
+  return {
+    confirm: (entry, title, names) =>
+      act(
+        () => api.confirmGuests(entry),
+        (done) => ({ message: t("queue.guests.done", { title, names }), undo: () => api.undo(done.changeset) }),
+      ),
+    notThem: (entry, title, names) =>
+      act(
+        () => api.notTheseGuests(entry),
+        (put) => ({ message: t("queue.guests.no_done", { title, names }), undo: () => api.undoNotNowSuggestion(put.signal) }),
+      ),
+  };
+}

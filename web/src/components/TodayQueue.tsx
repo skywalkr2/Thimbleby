@@ -15,7 +15,7 @@ import { useFirstGoText } from "../lib/first-go";
 import { durationWords } from "../lib/duration";
 import { useRowKeys } from "../lib/keys";
 import { SUGGESTION_KINDS, useNotNow } from "../lib/not-now";
-import { useTie } from "../lib/tie";
+import { useGuests, useTie } from "../lib/tie";
 import { useAttention } from "../lib/attention";
 import { useChoices } from "../lib/suggestion-choices";
 import { chooseFilters } from "../lib/open-items";
@@ -668,6 +668,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.clash", { text: line.text ?? "", other: line.other ?? "", when: day(line.due) });
       case "tie":
         return t("queue.tie", { text: plainTitle(line.text ?? "").replace(/[.!?\s]+$/, ""), other: line.other ?? "", when: day(line.due) });
+      case "guests":
+        return t("queue.guests", { title: line.text ?? "", names: (line.names ?? []).join(", "), when: day(line.due) });
       case "attention":
         return tn(`queue.attention.${line.state === "stopped" ? "stopped" : "quiet"}`, line.count, { kind: t(`queue.attention.kind.${line.text ?? ""}`) });
       case "promise": {
@@ -764,6 +766,7 @@ function QueueRow(props: {
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null, () => ref.current?.focus());
   const notNow = useNotNow();
   const tieAnswers = useTie();
+  const guestAnswers = useGuests();
   const attention = useAttention();
   const quietRow = useQuietChoices(line);
   // The offered area's name is a field the person may change before starting it.
@@ -1083,6 +1086,20 @@ function QueueRow(props: {
           meta: t("queue.tie.meta"),
           primary: { label: t("queue.tie.yes"), run: () => void tieAnswers.tie(action, text, other) },
           other: { label: t("queue.tie.no"), run: () => void tieAnswers.notThis(action, text, other) },
+          menu: [show],
+        };
+      }
+      case "guests": {
+        // A plain entry's title names known people: they are guests only when the person says so.
+        const entry = line.entry ?? "";
+        const title = line.text ?? "";
+        const names = (line.names ?? []).join(", ");
+        return {
+          pill: t("queue.pill.guests"),
+          tone: "neutral",
+          meta: t("queue.guests.meta"),
+          primary: { label: t("queue.guests.yes"), run: () => void guestAnswers.confirm(entry, title, names) },
+          other: { label: t("queue.guests.no"), run: () => void guestAnswers.notThem(entry, title, names) },
           menu: [show],
         };
       }

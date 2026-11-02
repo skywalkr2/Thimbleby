@@ -1967,11 +1967,18 @@ class CalendarEntry(Record):
         False,
         description="Nobody else is invited and it has no description, so the rules kept it without the assistant "
         "reading it. A plain entry whose title starts with a task verb is offered as a to-do, one whose title "
-        "names a known person is linked to them, and one that names an open promise's words on its day is "
-        "proposed to that promise for the person to tie.",
+        "names a known person is proposed for them to confirm as a guest, and one that names an open promise's "
+        "words on its day is proposed to that promise for the person to tie.",
     )
     people: list[Annotated[str, RefTo("person")]] = Field(
-        default_factory=list, description="The known people its title names, linked by rule when it is plain."
+        default_factory=list,
+        description="The known people confirmed to be on it: by the person (Yes on the proposal) or by the assistant's "
+        "`event.guests` with the words that say so; never written by a rule.",
+    )
+    proposed_guests: list[Annotated[str, RefTo("person", blocks_delete=False)]] = Field(
+        default_factory=list,
+        description="The known people a plain entry's title names, proposed for the person to confirm as on it; "
+        "nothing treats them as guests until they say yes, which moves them to `people`.",
     )
     agenda: list[AgendaItem] = Field(
         default_factory=list,
@@ -2957,6 +2964,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("organizer.person", "person"),
         ("attendees[].person", "person"),
         ("people[]", "person"),
+        ("proposed_guests[]", "person"),
         ("reminder", "action"),
         *AGENDA_REFERENCES,
     ],

@@ -181,3 +181,22 @@ test("items that could be on two sides are one question with a list of those sid
   await waitFor(() => expect(calls.find((c) => c.route === "POST filing/move")?.body).toMatchObject({ side: SECOND.project }));
   expect(await screen.findByText(`Moved 3 items to ${SECOND.name}. They are now visible with ${SECOND.name}'s work.`)).toBeInTheDocument();
 });
+
+test("items the rules filed beside a side on a guess name that side, offer Personal, and Keep leaves them where they are", async () => {
+  const user = userEvent.setup();
+  const beside: S["FilingQuestion"] = { ...waiting(FIRST), side: PERSONAL.id, name: "Personal", sides: [{ side: PERSONAL.id, name: "Personal" }], kept_under: { side: FIRST.project, name: FIRST.name } };
+  const calls = show(sortLine(3, null), [FIRST], {
+    "GET unfiled": () => unfiledView(),
+    "GET filing/questions": () => ({ questions: [beside] }),
+    "POST filing/move": () => ({ changeset: "CS-3", count: 3, rule: null }),
+    "POST filing/keep": () => ({ signal: "SIG-2" }),
+  });
+  const asked = `These 3 items were filed under ${FIRST.name} on a guess. Move them to Personal?`;
+  await user.click(within(await row("These 3 items could belong to one of your sides. Move them?")).getByRole("button", { name: "Look" }));
+  const question = await screen.findByLabelText(asked, { selector: "section" });
+  expect(within(question).getAllByRole("button").map((b) => b.textContent)).toEqual(["Move", `Keep under ${FIRST.name}`]);
+  await user.click(within(question).getByRole("button", { name: `Keep under ${FIRST.name}` }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST filing/keep")?.body).toMatchObject({ side: PERSONAL.id }));
+  expect(calls.some((c) => c.route === "POST filing/move")).toBe(false);
+  expect(await screen.findByText(`Kept under ${FIRST.name}.`)).toBeInTheDocument();
+});

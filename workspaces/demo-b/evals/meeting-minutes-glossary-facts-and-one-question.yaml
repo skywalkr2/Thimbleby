@@ -1,0 +1,153 @@
+id: meeting-minutes-glossary-facts-and-one-question
+title: Minutes with several decisions, owners, a launch date, two undefined words and an item nobody owns are one run that records each word by what the assistant can read, one fact per decision, a to-do for what is to be written, and asks at most one question
+skills: [use-term, evidence, owners, dates]
+received: '2026-10-21'
+# The parity case for the notes run (P110): one input, every part of it handled together. The two undefined words differ:
+# "UAT" is an abbreviation the assistant can read (recorded as assumed, never asked about), "QRT" is the team's own
+# word the minutes never explain, and the launch date waits on it, so it is recorded as unknown and asked about once.
+# The notes run has no op that writes prose, so what is to be written ("writes the launch announcement") is a to-do for
+# its writer, due as the minutes say; the draft itself is the assistant's work on that to-do (`action-work`).
+pasted: |-
+  From: Maya Okafor
+  Subject: Launch sync minutes, Oct 21
+
+  Attendees: Avery Lane, Maya Okafor, Ines Duarte
+
+  Decisions
+  - The launch date is Thursday, November 12.
+  - The cover goes with the matte finish.
+  - The first order is a print run of 2,000 copies.
+  - The QRT check must pass before we confirm the date with the printer.
+
+  Actions
+  - Maya Okafor sends the cover proofs to the printer by Friday, October 30.
+  - Ines Duarte writes the launch announcement for the newsletter, first draft by Monday, November 2.
+  - Avery Lane runs the UAT pass on the sample copies by Tuesday, October 27.
+  - The shipping labels still need to be ordered by Wednesday, November 4.
+expect:
+# a fact for each decision the minutes list, said as what the minutes list
+- op: fact
+  text_has: [launch, November 12]
+- op: fact
+  text_has: [cover, matte]
+- op: fact
+  text_has: ['2,000']
+- op: fact
+  text_has: [QRT]
+# the named owners, each with the day the minutes give
+- op: action.add
+  owners: [PER-2]
+  text_has: [cover proofs]
+  due: '2026-10-30'
+- op: action.add
+  owners: [PER-5]
+  text_has: [announcement]
+  due: '2026-11-02'
+- op: action.add
+  owners: [PER-1]
+  text_has: [UAT]
+  due: '2026-10-27'
+# the one item nobody owns waits for the person to pick an owner
+- op: action.add
+  status: held
+  text_has: [labels]
+# the words: one the assistant can read, one it can't
+- op: glossary.add
+  term: UAT
+  confidence: assumed
+- op: glossary.add
+  term: QRT
+  confidence: unknown
+- op: question.add
+  text_has: [QRT]
+forbid:
+# the word it can read is never asked about, and no other word is
+- term_question: UAT
+# at most one question from the whole input
+- op: question.add
+  more_than: 1
+# nobody is invented as an owner of the unowned item
+- op: action.add
+  text_has: [labels]
+  owners: [PER-1, PER-2, PER-3, PER-4, PER-5, PER-6, PER-7]
+allow:
+- event.add
+stub_answer:
+  summary: Minutes of the launch sync, four decisions and four actions; the label item has no owner.
+  topic: Launch sync minutes
+  ops:
+  - op: fact
+    text: The minutes list that the launch date is Thursday, November 12
+    project: PRJ-1
+    evidence:
+      quote: The launch date is Thursday, November 12
+  - op: fact
+    text: The minutes list that the cover goes with the matte finish
+    project: PRJ-1
+    evidence:
+      quote: The cover goes with the matte finish
+  - op: fact
+    text: The minutes list that the first order is a print run of 2,000 copies
+    project: PRJ-1
+    evidence:
+      quote: The first order is a print run of 2,000 copies
+  - op: fact
+    text: The minutes list that the QRT check must pass before the date is confirmed with the printer
+    project: PRJ-1
+    evidence:
+      quote: The QRT check must pass before we confirm the date with the printer
+  - op: event.add
+    title: The Salt Orchard launch
+    start: '2026-11-12'
+    project: PRJ-1
+    evidence:
+      quote: The launch date is Thursday, November 12
+  - op: action.add
+    text: Send the cover proofs to the printer
+    owners: [Maya Okafor]
+    due: '2026-10-30'
+    due_words: by Friday, October 30
+    project: PRJ-1
+    evidence:
+      quote: Maya Okafor sends the cover proofs to the printer by Friday, October 30
+  - op: action.add
+    text: Write the launch announcement for the newsletter, first draft
+    owners: [Ines Duarte]
+    due: '2026-11-02'
+    due_words: by Monday, November 2
+    project: PRJ-1
+    evidence:
+      quote: Ines Duarte writes the launch announcement for the newsletter, first draft by Monday, November 2
+  - op: action.add
+    text: Run the UAT pass on the sample copies
+    owners: [Avery Lane]
+    due: '2026-10-27'
+    due_words: by Tuesday, October 27
+    project: PRJ-1
+    evidence:
+      quote: Avery Lane runs the UAT pass on the sample copies by Tuesday, October 27
+  - op: action.add
+    text: Order the shipping labels
+    due: '2026-11-04'
+    due_words: by Wednesday, November 4
+    project: PRJ-1
+    evidence:
+      quote: The shipping labels still need to be ordered by Wednesday, November 4
+  - op: glossary.add
+    text: 'UAT: user acceptance testing'
+    term: UAT
+    meaning: user acceptance testing, the check that the sample copies are acceptable before they go on
+    confidence: assumed
+    evidence:
+      quote: runs the UAT pass on the sample copies
+  - op: glossary.add
+    text: 'QRT: a check that gates the launch date; not explained in the minutes'
+    term: QRT
+    meaning: used in the minutes as a check that must pass before the launch date is confirmed; the minutes do not say what it is
+    confidence: unknown
+    evidence:
+      quote: The QRT check must pass before we confirm the date with the printer
+  - op: question.add
+    to: Avery Lane
+    title: What does QRT mean here?
+    term: QRT

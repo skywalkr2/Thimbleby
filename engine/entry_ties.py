@@ -5,7 +5,8 @@ A plain entry whose title and an open to-do's words contain one another, on the 
 and decides nothing. The person's yes ("Tie it") makes the tie, the to-do's `due_event`, as their own change with Undo;
 "Not this" records that the pair is not the one, so it is never proposed again. Only a tie moves the to-do's date when
 the entry moves, or tells it the entry was called off (`engine.applier.follow_event`, `engine.source_entries`). A to-do
-the assistant makes at an entry by its own op is tied from the start."""
+the assistant makes at an entry by its own op is tied from the start, and the assistant can tie one itself with
+`action.tie` (the applier uses `tied_fields`), as a run that sees the proposal or the words that show it."""
 
 from __future__ import annotations
 
@@ -69,6 +70,17 @@ def view_of(view: Any, action: Any) -> dict[str, Any] | None:
     return {"entry": entry.id, "title": entry.data["title"], "day": str(entry.data["start"])[:10]}
 
 
+def tied_fields(entry: Any) -> dict[str, Any]:
+    """What tying a to-do to an entry sets, for the person's tie and the assistant's `action.tie` alike: the entry it is
+    due at, its day as the to-do's date (no longer a date to check) and no proposal left."""
+    return {
+        "due_event": entry.id,
+        "due": str(entry.data["start"])[:10],
+        "due_check": False,
+        "proposed_event": None,
+    }
+
+
 def tie(store: Any, cfg: Any, action_id: str) -> str:
     """Tie the to-do to the entry proposed for it, as the person's own change: its `due_event` set and its date the
     entry's. Returns the changeset's id, which Undo takes. Raises `StoreError` saying why when nothing is proposed."""
@@ -80,12 +92,7 @@ def tie(store: Any, cfg: Any, action_id: str) -> str:
     op = {
         "op": "record.edit",
         "record": {"kind": "action", "id": action_id},
-        "fields": {
-            "due_event": entry.id,
-            "due": str(entry.data["start"])[:10],
-            "due_check": False,
-            "proposed_event": None,
-        },
+        "fields": tied_fields(entry),
         "read_version": action.version,
     }
     return apply_as_person(store, cfg, [op], f"Tied a to-do to {entry.data['title']}", note=str(action.data["text"]))

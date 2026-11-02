@@ -393,7 +393,8 @@ def test_the_week_still_asks_which_side_once_and_what_words_filed_says_why(env):
 
     projects, lines, before = run_week(env)
     _, cfg, store = env
-    assert len(filing.questions(store.read(), cfg, NOW)) == 1  # one question for the one other side
+    asked = filing.questions(store.read(), cfg, NOW)
+    assert len([q for q in asked if q.kept_under is None]) == 1  # one question for the one other side
     by_words = [a for a in store.read().list("action") if (a.data.get("filed_by") or {}).get("by") == "alias"]
     assert len(by_words) == 1
     assert by_words[0].data["filed_by"]["project"] == BUSINESS_ID and by_words[0].data["filed_by"]["word"]

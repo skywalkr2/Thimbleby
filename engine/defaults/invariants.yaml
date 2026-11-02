@@ -96,6 +96,7 @@ invariants:
       - fact
       - event.add
       - event.set
+      - event.guests
       - series.add
       - series.link
       - agenda.add
@@ -107,6 +108,7 @@ invariants:
       - action.unhold
       - action.drop
       - action.move
+      - action.tie
       - action.repeat
       - action.part
       - action.news
@@ -172,6 +174,7 @@ invariants:
       - fact
       - event.add
       - event.set
+      - event.guests
       - series.add
       - series.link
       - agenda.add
@@ -181,6 +184,7 @@ invariants:
       - action.unhold
       - action.drop
       - action.move
+      - action.tie
       - action.repeat
       - action.part
       - action.news

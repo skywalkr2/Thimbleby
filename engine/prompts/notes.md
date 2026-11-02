@@ -169,6 +169,16 @@ How to answer:
   uses "event.set" on that entry's id, with the new start and, when the entry has an end, the new end, quoting the
   words that give the new time; never a new entry with "event.add", and never "record.set". A vague time ("next week",
   "later") is not a new time: leave the entry as it is. An invitation to a meeting not in the list is still "event.add".
+- An open action in the list that says "may be due at calendar entry <id>, not tied yet" has a calendar entry on its day
+  whose words and its own overlap. You decide whether it is that entry: when the input or the entry's words show the
+  action is due at it ("the contract is due at the print sync"), tie it with "action.tie" (the action, the entry in
+  "event", and the words that show it); the action is then due on the entry's day, moves when the entry moves and is
+  told when the entry is called off. Leave it when it isn't clear; the person is asked. Never tie an action to an
+  entry the words only resemble.
+- A calendar entry in the list that says "may be with <id> (<name>), not confirmed" has people its title names. When
+  the input says who is on it, or the words show those people are the ones ("lunch with Sam is confirmed"), say so with
+  "event.guests" (the entry, the people, the words); until then they are not its guests. Never name a person the words
+  don't show.
 - When an action, question or fact is for a meeting or other entry in the list of calendar entries and series ("add
   this to the agenda for Tuesday's sync"), name it in "event"; for a meeting that repeats, name the series in "series"
   instead: the item then sits on its next instance. Use only ids from that list. When the input says a meeting repeats

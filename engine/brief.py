@@ -77,7 +77,9 @@ class Line:
     little travel time the minutes the travel needs (`needed_minutes`) and where each meeting is (`place`,
     `other_place`), the Today line it
     opens (`queue`) or the record it opens (`link`), `ready` when a message is already drafted for it and `you` when it
-    is the person themselves who owns it or did it."""
+    is the person themselves who owns it or did it. `quieted` is the kind of suggestion the person chose to keep for the
+    brief (`steward.attention.quieted_kinds`) that this line is one of, so the brief can offer to show the kind on Today
+    again; none for a line that waits for the brief for another reason (quiet hours, the day's cap)."""
 
     key: str
     kind: str
@@ -104,6 +106,7 @@ class Line:
     ready: bool = False
     you: bool = False
     on_today_line: bool = False
+    quieted: str | None = None
 
 
 @dataclass
@@ -682,7 +685,11 @@ def _yes(c: _Day) -> list[Line]:
 
 
 def _digest(c: _Day) -> list[Line]:
-    """The suggestions the attention rules saved for the brief (quiet hours, the day's cap), most important first."""
+    """The suggestions the attention rules saved for the brief (quiet hours, the day's cap, or the person's choice to
+    keep a kind for it), most important first."""
+    from engine import attention_learning
+
+    chosen = attention_learning.verdicts(c.cfg)
     return [
         Line(
             f"digest:{q.key}",
@@ -693,6 +700,7 @@ def _digest(c: _Day) -> list[Line]:
             person_name=c.name(q.person),
             count=q.count,
             queue=q.key,
+            quieted=q.kind if chosen.get(q.kind) == attention_learning.QUIET else None,
         )
         for q in c.split.digest
     ]

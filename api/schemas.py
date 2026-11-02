@@ -1507,7 +1507,8 @@ class FilingSide(BaseModel):
 
 
 class FilingQuestion(BaseModel):
-    """The question for a set of sides (design 6.32): the items that wait under Personal and could be on any of them.
+    """The question for a set of sides (design 6.32): the items that wait under Personal (or sit beside another side on
+    the rules' guess, `kept_under`) and could be on any of them.
     Each item is in one question only; with several `sides` the person picks where they go, and the pick starts on
     `side`."""
 
@@ -1515,6 +1516,11 @@ class FilingQuestion(BaseModel):
     name: str = Field(description="The name of the side the choice starts on.")
     sides: list[FilingSide] = Field(description="The sides the items could move to, in the person's order.")
     items: list[FilingItem]
+    kept_under: FilingSide | None = Field(
+        None,
+        description="For items the rules filed beside this side on a guess (not under Personal): the side they sit on "
+        "now, which Keep leaves them on, and Personal is among `sides`; none for items under Personal.",
+    )
 
 
 class FilingQuestions(BaseModel):
@@ -2186,6 +2192,13 @@ class AttentionChosen(BaseModel):
 
     kind: str
     state: Literal["quiet", "stopped", "shown"]
+
+
+class GuestsDone(BaseModel):
+    """The people proposed for a calendar entry, recorded as on it (POST /api/events/{id}/guests/confirm): `changeset`
+    is what Undo (POST /api/changesets/{id}/undo) takes back."""
+
+    changeset: str
 
 
 class TieProposal(BaseModel):
@@ -3338,6 +3351,7 @@ class QueueLineView(BaseModel):
         "capacity",
         "clash",
         "tie",
+        "guests",
         "attention",
         "unfiled",
         "moved",
@@ -7926,6 +7940,12 @@ class BriefLineView(BaseModel):
     you: bool = False
     on_today_line: bool = Field(
         False, description="Today already has a line for this one (a late or due-today to-do, say); it is marked."
+    )
+    quieted: str | None = Field(
+        None,
+        description="For a line kept for the brief because the person chose to quiet its kind of suggestion: that "
+        "kind. "
+        "Show on Today again is POST /api/attention/{kind}/show, and Undo is POST /api/attention/{kind}/quiet.",
     )
     side: str | None = Field(
         None,

@@ -699,3 +699,19 @@ test("a promise Today already has a line for stays in the week's list, marked on
   expect(within(rows[0]).getByText("on Today")).toBeInTheDocument();
   expect(within(rows[1]).queryByText("on Today")).toBeNull();
 });
+
+test("a kind the person quieted into the brief has Show on Today again, once per kind, and Undo quiets it again", async () => {
+  const user = userEvent.setup();
+  const stale = (n: number) => line({ key: `digest:stale:ACT-${n}`, kind: "digest", change: "stale", count: 1, text: `Tidy ${n}`, quieted: "stale", queue: `stale:ACT-${n}` });
+  const { calls } = await show(
+    { ...MORNING, sections: [{ key: "yes", more: 0, lines: [stale(1), stale(2), line({ key: "digest:capped", kind: "digest", change: "unfiled", count: 2, queue: "unfiled" })] }] },
+    { "POST attention/stale/show": () => ({ kind: "stale", state: "shown" }), "POST attention/stale/quiet": () => ({ kind: "stale", state: "quiet" }) },
+  );
+  const again = await screen.findAllByRole("button", { name: /^Show on Today again/ });
+  expect(again).toHaveLength(1); // one for the kind, none for a line kept for the brief for another reason
+  await user.click(again[0]);
+  await waitFor(() => expect(calls.some((c) => c.route === "POST attention/stale/show")).toBe(true));
+  expect(await screen.findByText("Okay. to-dos nobody has touched show on Today again.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST attention/stale/quiet")).toBe(true));
+});

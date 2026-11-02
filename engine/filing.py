@@ -10,9 +10,13 @@ click moves.
 
 An item counts as waiting under Personal on a guess when it sits directly under the personal project, the assistant
 made it after the side existed, and either no signal stamped a reason on it (`filed_by` is empty) or the reason is only
-the rules' guess for a project the assistant left empty (`filed_by.unsure`). Move is the person's own
+the rules' guess for a project the assistant left empty (`filed_by.unsure`). An item the rules filed beside the
+person's side on that same kind of guess (it sits under a side's project, `filed_by.unsure`, and still where the rules
+put it) is asked about too, grouped by the side it was filed to: it could move to Personal or to another side, and Keep
+leaves it where it is. Move is the person's own
 change (`record.edit` of the item's project, in one changeset with Undo, recorded as a correction like any edit of
-something the assistant set). Keep and Move each leave a signal (`suggestion_dismissed`, `suggestion_chosen`) whose note
+something the assistant set; it clears the rules' reason, since the person has now decided). Keep and Move each leave a
+signal (`suggestion_dismissed`, `suggestion_chosen`) whose note
 names the side, so a kept item is never asked about again and a side is asked about once a day. Moving the same sender's
 items a second time proposes a standing rule that says where that sender's mail goes, held for Keep like other learning.
 Reads only, except `move`, `keep` and the proposal the second move makes.
@@ -43,6 +47,7 @@ class Waiting:
     text: str
     created_at: str
     could_be: tuple[str, ...]
+    filed_to: str | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +66,9 @@ class Question:
 
     sides: list[Choice]
     items: list[Waiting] = field(default_factory=list)
+    #: The side the items were filed to on a guess, for items that sit beside the person's side rather than under
+    #: Personal; none for items under Personal.
+    kept_under: Choice | None = None
 
     @property
     def side(self) -> str:
@@ -74,11 +82,12 @@ class Question:
 @dataclass(frozen=True)
 class Summary:
     """What the Today line for the questions says: how many items, the one side's name when only one is asked about
-    (none with several), and the oldest item's time."""
+    (none with several), the oldest item's time and the side the items sit on now (none when they sit on several)."""
 
     count: int
     subject: str | None
     since: str
+    side: str | None = None
 
 
 @dataclass(frozen=True)
@@ -140,19 +149,36 @@ def _noted(signal: Any) -> dict[str, Any] | None:
     return said if isinstance(said, dict) and said.get("kind") == SIGNAL_KIND else None
 
 
-def _kept(view: Any) -> set[str]:
-    """The ids of the items the person said to keep under Personal."""
+def _kept(view: Any, personal: str | None = None) -> set[str]:
+    """The ids of the items the person said to keep where they are, and those they moved to Personal (a move that was
+    undone is none): either way they have decided, so nothing asks again."""
     found: set[str] = set()
     for signal in view.list("signal"):
         said = _noted(signal)
-        if said is not None and said.get("action") == "keep":
+        if said is None:
+            continue
+        if said.get("action") == "keep" or (
+            said.get("action") == "move"
+            and personal is not None
+            and said.get("subject") == personal
+            and not _undone(view, signal.data.get("changeset"))
+        ):
             found.update(signal.data["refs"])
     return found
 
 
+def _beside(view: Any, cfg: Any, where: list[str], reason: dict[str, Any], others: list[str]) -> str | None:
+    """The side an item the rules filed on a guess sits on, when it is beside the person's side and is still where
+    the rules put it; none for anything else (under Personal, filed by the assistant or the person, or moved since)."""
+    if not reason.get("unsure") or len(where) != 1 or where[0] != reason.get("project"):
+        return None
+    side = sides.side_of_project(view, cfg, where[0])
+    return side if side in others else None
+
+
 def waiting(view: Any, cfg: Any) -> list[Waiting]:
-    """Every open item the assistant put under Personal on a guess, newest first. None without a personal project or
-    another side."""
+    """Every open item the assistant put under Personal on a guess, and every one the rules filed beside the person's
+    side on a guess, newest first. None without a personal project or another side."""
     personal = sides.personal_project(view, cfg)
     others = sides.side_list(view, cfg)
     if personal is None or not others:
@@ -161,7 +187,8 @@ def waiting(view: Any, cfg: Any) -> list[Waiting]:
     starts = [_at(made[s.project][1]) for s in others if s.project in made]
     since = min(starts) if starts else None
     other_ids = [s.project for s in others]
-    kept = _kept(view)
+    every = [personal, *other_ids]
+    kept = _kept(view, personal)
     replaced = {f.data["supersedes"] for f in view.list("fact") if f.data.get("supersedes")}
     found: list[Waiting] = []
     for kind, (text_field, _, open_statuses) in KINDS.items():
@@ -169,19 +196,24 @@ def waiting(view: Any, cfg: Any) -> list[Waiting]:
         for record in view.list(kind):
             data = record.data
             who, at = creators.get(record.id, (PERSON, ""))
+            reason = data.get("filed_by") or {}
+            where = _projects(kind, data)
+            beside = _beside(view, cfg, where, reason, other_ids)
             if (
                 who == PERSON
                 or record.id in kept
-                or (data.get("filed_by") and not data["filed_by"].get("unsure"))
-                or _projects(kind, data) != [personal]
+                or (where != [personal] and beside is None)
+                or (where == [personal] and reason and not reason.get("unsure"))
                 or (open_statuses and data.get("status") not in open_statuses)
                 or (kind == "fact" and record.id in replaced)
                 or (kind == "note" and from_input(view, data))
                 or (since is not None and at and _at(at) < since)
             ):
                 continue
-            could = _could_be(view, cfg, data, other_ids)
-            found.append(Waiting(kind, record.id, record.version, str(data.get(text_field) or ""), at, tuple(could)))
+            could = _could_be(view, cfg, data, other_ids) if beside is None else [p for p in every if p != beside]
+            found.append(
+                Waiting(kind, record.id, record.version, str(data.get(text_field) or ""), at, tuple(could), beside)
+            )
     return sorted(found, key=lambda i: (i.created_at, i.id), reverse=True)
 
 
@@ -205,31 +237,38 @@ def questions(view: Any, cfg: Any, now: datetime) -> list[Question]:
     question held back while every one of its sides was answered today. Groups in the order of their first side in the
     person's list of sides, then the rest."""
     items = waiting(view, cfg)
-    listed = sides.side_list(view, cfg)
-    order = {s.project: n for n, s in enumerate(listed)}
-    names = {s.project: s.name for s in listed}
-    groups: dict[tuple[str, ...], list[Waiting]] = {}
+    order = {p: n for n, p in enumerate(sides.side_ids(view, cfg))}
+    names = sides.side_names(view, cfg)
+    groups: dict[tuple[str | None, tuple[str, ...]], list[Waiting]] = {}
     for item in items:
-        groups.setdefault(tuple(sorted(item.could_be, key=lambda p: order.get(p, len(order)))), []).append(item)
+        could = tuple(sorted(item.could_be, key=lambda p: order.get(p, len(order))))
+        groups.setdefault((item.filed_to, could), []).append(item)
     asked: list[Question] = []
-    for could, mine in sorted(groups.items(), key=lambda g: [order.get(p, len(order)) for p in g[0]]):
+    for (filed_to, could), mine in sorted(
+        groups.items(), key=lambda g: (g[0][0] is not None, [order.get(p, len(order)) for p in g[0][1]], g[0][0] or "")
+    ):
         if all(_answered_today(view, cfg, p, now) for p in could):
             continue
-        asked.append(Question([Choice(p, names[p]) for p in could if p in names], mine))
+        under = Choice(filed_to, names[filed_to]) if filed_to in names else None
+        asked.append(Question([Choice(p, names[p]) for p in could if p in names], mine, under))
     return [q for q in asked if q.sides]
 
 
 def summary(view: Any, cfg: Any, now: datetime) -> Summary | None:
     """The one Today line for all the questions (the line plugs into Today's review group): how many items, which side
-    when there is only one, and the oldest item's time; none when there is nothing to ask."""
+    when there is only one and the items sit under Personal (items filed beside a side name none), and the oldest
+    item's time; none when there is nothing to ask."""
     asked = questions(view, cfg, now)
     if not asked:
         return None
     every = {(i.kind, i.id): i for q in asked for i in q.items}
+    personal = sides.personal_project(view, cfg)
+    held = {q.kept_under.project if q.kept_under is not None else personal for q in asked}
     return Summary(
         count=len(every),
-        subject=asked[0].name if len(asked) == 1 and len(asked[0].sides) == 1 else None,
+        subject=asked[0].name if len(asked) == 1 and len(asked[0].sides) == 1 and asked[0].kept_under is None else None,
         since=min((i.created_at for i in every.values()), default=""),
+        side=next(iter(held)) if len(held) == 1 else None,
     )
 
 
@@ -237,10 +276,11 @@ def summary(view: Any, cfg: Any, now: datetime) -> Summary | None:
 
 
 def move_ops(view: Any, cfg: Any, side: str, items: list[tuple[str, str, int | None]]) -> list[dict[str, Any]]:
-    """The edits that move these items from Personal to a side: one `record.edit` each, with the version the person
-    saw. Refused, naming the item, for one that isn't under Personal any more or isn't a kind that can be filed."""
+    """The edits that move these items to a side (or to Personal): one `record.edit` each, with the version the person
+    saw. Refused, naming the item, for one that is neither under Personal nor still where the rules guessed it went,
+    or isn't a kind that can be filed."""
     personal = sides.personal_project(view, cfg)
-    if side not in [s.project for s in sides.side_list(view, cfg)]:
+    if side not in sides.side_ids(view, cfg):
         raise ValueError("that isn't one of your sides")
     ops = []
     for kind, record_id, seen in items:
@@ -249,18 +289,27 @@ def move_ops(view: Any, cfg: Any, side: str, items: list[tuple[str, str, int | N
         record = view.get(kind, record_id)
         if record is None:
             raise ValueError(f"there is no {kind} {record_id}")
-        if _projects(kind, record.data) != [personal]:
+        where = _projects(kind, record.data)
+        reason = record.data.get("filed_by") or {}
+        guessed = _beside(view, cfg, where, reason, [s.project for s in sides.side_list(view, cfg)]) is not None
+        if where != [personal] and not guessed:
             raise ValueError(f"{kind} {record_id} was moved meanwhile")
+        if where == [side]:
+            raise ValueError(f"{kind} {record_id} is under that side already")
         field_name = KINDS[kind][1]
+        fields = {field_name: [side] if field_name == "projects" else side}
+        if reason:
+            fields["filed_by"] = None  # the person decided, so the rules' reason no longer stands
         ops.append(
             {
                 "op": "record.edit",
                 "record": {"kind": kind, "id": record_id},
-                "fields": {field_name: [side] if field_name == "projects" else side},
+                "fields": fields,
                 "read_version": seen or record.version,
             }
         )
-    return [*ops, *_notes_of(view, personal, side, items)]
+    from_personal = [i for i in items if _projects(i[0], view.get(i[0], i[1]).data) == [personal]]
+    return [*ops, *_notes_of(view, personal, side, from_personal)]
 
 
 def _notes_of(
@@ -298,7 +347,7 @@ def move(
     view = store.read()
     ops = move_ops(view, cfg, side, items)
     senders = sorted({s for kind, rid, _ in items if (s := sender_of(view, view.get(kind, rid).data))})
-    name = next((s.name for s in sides.side_list(view, cfg) if s.project == side), "")
+    name = sides.side_names(view, cfg).get(side, "")
     changeset = apply_as_person(store, cfg, ops, sides.word(cfg, "filing.move_summary").format(side=name))
     signal(
         store,
@@ -316,12 +365,12 @@ def move(
 
 
 def keep(store: Any, cfg: Any, side: str, items: list[tuple[str, str, int | None]], now: datetime | None = None) -> str:
-    """Keep the items under Personal: they are never asked about again, and the side isn't asked again today. Nothing
-    about the items changes. Returns the signal's id."""
+    """Keep the items where they are (under Personal, or the side the rules filed them to): they are never asked about
+    again, and the side isn't asked again today. Nothing about the items changes. Returns the signal's id."""
     from engine.dispatcher import signal
 
     view = store.read()
-    if side not in [s.project for s in sides.side_list(view, cfg)]:
+    if side not in sides.side_ids(view, cfg):
         raise ValueError("that isn't one of your sides")
     for kind, record_id, _ in items:
         if kind not in KINDS or view.get(kind, record_id) is None:

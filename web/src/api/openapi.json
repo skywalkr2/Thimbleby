@@ -6920,6 +6920,18 @@
             ],
             "title": "Queue"
           },
+          "quieted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a line kept for the brief because the person chose to quiet its kind of suggestion: that kind. Show on Today again is POST /api/attention/{kind}/show, and Undo is POST /api/attention/{kind}/quiet.",
+            "title": "Quieted"
+          },
           "ready": {
             "default": false,
             "title": "Ready",
@@ -10692,7 +10704,7 @@
         "type": "object"
       },
       "FilingQuestion": {
-        "description": "The question for a set of sides (design 6.32): the items that wait under Personal and could be on any of them.\nEach item is in one question only; with several `sides` the person picks where they go, and the pick starts on\n`side`.",
+        "description": "The question for a set of sides (design 6.32): the items that wait under Personal (or sit beside another side on\nthe rules' guess, `kept_under`) and could be on any of them.\nEach item is in one question only; with several `sides` the person picks where they go, and the pick starts on\n`side`.",
         "properties": {
           "items": {
             "items": {
@@ -10700,6 +10712,17 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "kept_under": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FilingSide"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For items the rules filed beside this side on a guess (not under Personal): the side they sit on now, which Keep leaves them on, and Personal is among `sides`; none for items under Personal."
           },
           "name": {
             "description": "The name of the side the choice starts on.",
@@ -12004,6 +12027,20 @@
           "long_text"
         ],
         "title": "GenericRecordView",
+        "type": "object"
+      },
+      "GuestsDone": {
+        "description": "The people proposed for a calendar entry, recorded as on it (POST /api/events/{id}/guests/confirm): `changeset`\nis what Undo (POST /api/changesets/{id}/undo) takes back.",
+        "properties": {
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changeset"
+        ],
+        "title": "GuestsDone",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -24066,6 +24103,7 @@
               "capacity",
               "clash",
               "tie",
+              "guests",
               "attention",
               "unfiled",
               "moved",
@@ -38725,6 +38763,86 @@
         "summary": "Cancel"
       }
     },
+    "/api/events/{event_id}/guests/confirm": {
+      "post": {
+        "description": "Record the people proposed for the calendar entry from its title as on it, as the person's own change with\nUndo. Refused when nobody is proposed for it now.",
+        "operationId": "confirm_guests_api_events__event_id__guests_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestsDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Guests"
+      }
+    },
+    "/api/events/{event_id}/guests/not-them": {
+      "post": {
+        "description": "Say the people proposed for the entry aren't the ones on it: that set is not proposed again. Nothing else\nchanges.",
+        "operationId": "not_them_api_events__event_id__guests_not_them_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotNowDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Not Them"
+      }
+    },
     "/api/events/{event_id}/move": {
       "post": {
         "description": "Move the person's own entry to another time, with Undo. Entries from a connected calendar are moved\nthrough an act the person approves, not here.",
@@ -39191,7 +39309,7 @@
     },
     "/api/filing/questions": {
       "get": {
-        "description": "The questions of which side unsure items belong to: the items waiting under Personal, each in one question\nwith the sides it could be on (none for sides the person answered today).",
+        "description": "The questions of which side unsure items belong to: the items waiting under Personal and the ones the rules\nfiled beside a side on a guess, each in one question with the sides it could be on (none for sides the person\nanswered today).",
         "operationId": "filing_questions_api_filing_questions_get",
         "responses": {
           "200": {

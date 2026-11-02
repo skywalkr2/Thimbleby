@@ -81,8 +81,9 @@ def build_records_router(ws: Workspace, cfg: Config, store: Store, events: Event
 
     @r.get("/filing/questions")
     def filing_questions() -> FilingQuestions:
-        """The questions of which side unsure items belong to: the items waiting under Personal, each in one question
-        with the sides it could be on (none for sides the person answered today)."""
+        """The questions of which side unsure items belong to: the items waiting under Personal and the ones the rules
+        filed beside a side on a guess, each in one question with the sides it could be on (none for sides the person
+        answered today)."""
         asked = filing.questions(store.read(), cfg, worker.now())
         return FilingQuestions(
             questions=[
@@ -94,6 +95,7 @@ def build_records_router(ws: Workspace, cfg: Config, store: Store, events: Event
                         FilingItem(kind=i.kind, id=i.id, version=i.version, text=i.text)  # type: ignore[arg-type]
                         for i in q.items
                     ],
+                    kept_under=FilingSide(side=q.kept_under.project, name=q.kept_under.name) if q.kept_under else None,
                 )
                 for q in asked
             ]

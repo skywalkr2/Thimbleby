@@ -571,8 +571,19 @@ def test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks
     assert unclear == 5 and before == 0 and unfiled(store.read()) == []
     asked = filing.summary(store.read(), cfg, NOW)  # one batched question, never one line per message
     # The stub left every project empty, so what the rules placed under Personal is a guess too (`filed_by.unsure`).
-    assert asked is not None and asked.count == unclear + sum(m["side"] == "personal" for m in week)
-    assert asked.subject == fixture_records(DEMO_B, "project")[0]["name"]  # the business, named from its record
+    # What the rules filed under the business on a guess (its people, its words) is asked about too, beside Personal's.
+    guessed = [
+        a
+        for a in store.read().list("action")
+        if (a.data.get("filed_by") or {}).get("unsure") and a.data.get("project") == BUSINESS_ID
+    ]
+    assert len(guessed) == 4
+    assert asked is not None and asked.count == unclear + sum(m["side"] == "personal" for m in week) + len(guessed)
+    # Two questions (Personal's items could be the business's; the business's guesses could be Personal's), so the line
+    # names no one side; with only Personal's it names the business, from its record.
+    assert asked.subject is None
+    only = [q for q in filing.questions(store.read(), cfg, NOW) if q.kept_under is None]
+    assert [q.name for q in only] == [fixture_records(DEMO_B, "project")[0]["name"]]
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" in sheet["queue.sides.one"] and "{business}" in sheet["queue.sides.other"]
     assert "{n}" in sheet["queue.sides.other"]  # the line reads "These 5 items might be <business>'s. Move them there?"

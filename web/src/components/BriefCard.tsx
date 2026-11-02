@@ -9,6 +9,7 @@ import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "r
 import { useIsNarrow } from "../lib/media";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { useAttention } from "../lib/attention";
 import { copyMessage } from "../lib/copy";
 import { day, isAfternoon, wallTime } from "../lib/dates";
 import { durationWords } from "../lib/duration";
@@ -258,9 +259,10 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
 /** Where a suggestion that waited for the brief is dealt with, since its line isn't on Today. */
 const DIGEST_VIEW: Record<string, View> = { stale: "work/open", unfiled: "records/projects", escalate: "work/followups", learned: "records/knowledge", catch_up: "records/knowledge" };
 
-function LineRow(props: { line: Line; queue: QueueLine | undefined; onOpenRecord: (kind: string, id: string) => void; onOpenView?: (view: View) => void }) {
+function LineRow(props: { line: Line; queue: QueueLine | undefined; showAgain?: boolean; onOpenRecord: (kind: string, id: string) => void; onOpenView?: (view: View) => void }) {
   const { t } = useWords();
   const act = useAct();
+  const attention = useAttention();
   const words = useLineWords();
   const { line } = props;
   const offer = line.kind === "yes" && line.change === "reminder_offer" && line.link && line.when ? { action: line.link.id, at: line.when } : null;
@@ -290,6 +292,11 @@ function LineRow(props: { line: Line; queue: QueueLine | undefined; onOpenRecord
       {offer && (
         <Button size="sm" className={styles.open} onClick={remind}>
           {t("brief.remind")}
+        </Button>
+      )}
+      {props.showAgain && line.quieted && (
+        <Button size="sm" className={styles.open} onClick={() => void attention.showAgain(line.quieted ?? "")} aria-label={`${t("brief.show_again")}: ${attention.kindWords(line.quieted)}`}>
+          {t("brief.show_again")}
         </Button>
       )}
       {opens && (
@@ -634,8 +641,8 @@ export function BriefCard(props: {
           <div key={section.key} className={styles.section} data-section={section.key}>
             <h3 className={styles.sub}>{heading(section.key, t)}</h3>
             <ul className={styles.lines}>
-              {lines.map((line) => (
-                <LineRow key={line.key} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
+              {lines.map((line, n) => (
+                <LineRow key={line.key} showAgain={Boolean(line.quieted) && lines.findIndex((x) => x.quieted === line.quieted) === n} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
               ))}
             </ul>
             {section.more > 0 && <p className="hint">{tn("brief.more", section.more)}</p>}

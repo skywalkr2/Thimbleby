@@ -75,11 +75,13 @@ from engine.ops import (
     ActionPartOp,
     ActionRepeatOp,
     ActionReplyOp,
+    ActionTieOp,
     ActionUnholdOp,
     AgendaAddOp,
     AnswerOp,
     ChangesetIn,
     EventAddOp,
+    EventGuestsOp,
     EventSetOp,
     EvidenceIn,
     FactOp,
@@ -546,10 +548,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no calendar entry {op.id}")
             elif (why := entry_problem(op.start or entry.data["start"], op.end or entry.data.get("end"))) is not None:
                 refuse(i, "targets", f"calendar entry {op.id}: {why}")
-        if isinstance(op, (FactOp, ActionAddOp, QuestionAddOp)) and (
-            why := series_module.item_problem(view, op.event, op.series)
-        ):
+        if isinstance(op, EventGuestsOp) and (why := event_guests_problem(view, ctx, op)) is not None:
             refuse(i, "targets", why)
+        if isinstance(op, ActionTieOp):
+            why = action_tie_problem(view, op)
+            if why:
+                refuse(i, "targets", why)
+            elif evidence is not None and not _shares_words(
+                evidence.quote, f"{view.get('action', op.id).data['text']} {view.get('event', op.event).data['title']}"
+            ):
+                lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id} or entry {op.event}")
         if isinstance(op, SeriesAddOp):
             for entry in op.events:
                 found = view.get("event", entry)
@@ -1765,6 +1773,38 @@ def _guessed_recipient(ctx: Context, view: Any, op: QuestionAddOp | ActionAddOp)
         recipients,
         language_words(ctx.cfg.language, "already_sent_phrases"),
     )
+
+
+def action_tie_problem(view: Any, op: ActionTieOp) -> str | None:
+    """Why an action can't be tied to a calendar entry, or None. The action must be open, the entry must exist and not
+    be called off, and the action isn't tied to it already."""
+    if (why := action_hold_problem(view, op)) is not None:
+        return why
+    entry = view.get("event", op.event)
+    if entry is None:
+        return f"there is no calendar entry {op.event}"
+    if entry.data.get("cancelled"):
+        return f"calendar entry {op.event} is called off, so nothing is due at it"
+    if view.get("action", op.id).data.get("due_event") == op.event:
+        return f"action {op.id} is tied to calendar entry {op.event} already"
+    return None
+
+
+def event_guests_problem(view: Any, ctx: Context, op: EventGuestsOp) -> str | None:
+    """Why the people on a calendar entry can't be recorded, or None. The entry must exist and not be called off, and
+    each name must be one known person other than the person themselves."""
+    entry = view.get("event", op.id)
+    if entry is None:
+        return f"there is no calendar entry {op.id}"
+    if entry.data.get("cancelled"):
+        return f"calendar entry {op.id} is called off"
+    for name in op.people:
+        who = ctx.people.resolve(name)
+        if who.status != "ok":
+            return f"{name} isn't one known person, so they can't be recorded as on the entry"
+        if who.person == ctx.people.pm:
+            return "the person themselves is on every entry of theirs; leave them out"
+    return None
 
 
 def action_unhold_problem(view: Any, op: ActionUnholdOp) -> str | None:
@@ -4219,6 +4259,20 @@ def _apply_op(
         changes |= {"due_event": None, "due_by_person": due is not None and _persons_own(tx, ctx)}
         tx.update("action", op.id, changes, w, read_version=cur.version)
         made("action", op.id)
+    elif isinstance(op, ActionTieOp):
+        from engine import entry_ties
+
+        cur = tx.get("action", op.id)
+        tx.update("action", op.id, entry_ties.tied_fields(tx.get("event", op.event)), w, read_version=cur.version)
+        made("action", op.id)
+    elif isinstance(op, EventGuestsOp):
+        cur = tx.get("event", op.id)
+        said = [ctx.people.resolve(name).person for name in op.people]
+        have = list(cur.data.get("people") or [])
+        people = [*have, *(p for p in dict.fromkeys(said) if p and p not in have)]
+        proposed = [p for p in cur.data.get("proposed_guests") or [] if p not in people]
+        tx.update("event", op.id, {"people": people, "proposed_guests": proposed}, w, read_version=cur.version)
+        made("event", op.id)
     elif isinstance(op, (ActionPartOp, ActionNewsOp)):
         cur = tx.get("action", op.id)
         quote = op.evidence.quote if op.evidence is not None else None

@@ -34,7 +34,15 @@ function SideQuestion(props: { question: Question }) {
   const several = q.sides.length > 1;
   const refs = q.items.map((i) => ({ kind: i.kind, id: i.id, read_version: i.version }));
   const n = q.items.length;
-  const asked = several ? tn("filing.question.pick", n) : tn("filing.question", n, { side: q.name });
+  // Items the rules filed beside a side on a guess name the side they sit on; Keep leaves them there.
+  const under = q.kept_under?.name;
+  const asked = under
+    ? several
+      ? tn("filing.question.beside_pick", n, { kept: under })
+      : tn("filing.question.beside", n, { kept: under, side: q.name })
+    : several
+      ? tn("filing.question.pick", n)
+      : tn("filing.question", n, { side: q.name });
   const move = () =>
     act(
       () => api.filingMove({ side: to.side, items: refs }),
@@ -46,11 +54,12 @@ function SideQuestion(props: { question: Question }) {
         },
       }),
     );
-  const keep = () => act(() => api.filingKeep({ side: q.side, items: refs }), () => ({ message: t("filing.kept") }));
+  const keep = () =>
+    act(() => api.filingKeep({ side: q.side, items: refs }), () => ({ message: under ? t("filing.kept_under", { side: under }) : t("filing.kept") }));
   return (
     <section className="filing-question" data-filing-question={q.side} aria-label={asked}>
       <p>{asked}</p>
-      <ul className="plain-list" aria-label={several ? t("filing.items_label.pick") : t("filing.items_label", { side: q.name })}>
+      <ul className="plain-list" aria-label={under ? t("filing.items_label.beside", { kept: under }) : several ? t("filing.items_label.pick") : t("filing.items_label", { side: q.name })}>
         {q.items.map((i) => (
           <li key={`${i.kind}:${i.id}`}>{plainTitle(i.text)}</li>
         ))}
@@ -71,7 +80,7 @@ function SideQuestion(props: { question: Question }) {
         <Button variant="primary" onClick={() => void move()}>
           {t("filing.move")}
         </Button>
-        <Button onClick={() => void keep()}>{t("filing.keep")}</Button>
+        <Button onClick={() => void keep()}>{under ? t("filing.keep_under", { side: under }) : t("filing.keep")}</Button>
       </Actions>
     </section>
   );
@@ -91,7 +100,7 @@ export function SideChoose() {
   return (
     <div data-side-choose="">
       {questions.map((q) => (
-        <SideQuestion key={q.side} question={q} />
+        <SideQuestion key={`${q.kept_under?.side ?? ""}:${q.side}`} question={q} />
       ))}
       {items.length > 0 && (
         <>

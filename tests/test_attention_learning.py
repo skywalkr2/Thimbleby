@@ -230,6 +230,22 @@ def test_the_queue_and_the_brief_follow_what_the_person_chose(tmp_path, monkeypa
         assert keys(today_queue.queue(ws, store, cfg, NOW)) == ["overdue"]
         yes = next(s for s in brief.build(ws, store, cfg, NOW, "morning").sections if s.key == "yes")
         assert [(x.change, x.queue) for x in yes.lines if x.kind == "digest"] == [("stale", "stale")]
+        # The brief says which digest lines are there by the person's choice, so it can offer to show the kind again.
+        assert [x.quieted for x in yes.lines if x.kind == "digest"] == ["stale"]
+    finally:
+        store.close()
+
+
+def test_a_digest_line_saved_for_another_reason_is_not_marked_as_quieted(tmp_path, monkeypatch):
+    """Only a kind the person chose to quiet is offered back to Today; a line saved for the brief by the day's cap or
+    quiet hours is not theirs to show again."""
+    ws, cfg, store = build(tmp_path, COCKPIT__STEWARD__ATTENTION__DAILY_CAP="0")
+    try:
+        lines = [today_queue.Line(key="stale", group="review", kind="stale", count=2, actions=["ACT-1"], since="a")]
+        monkeypatch.setattr(today_queue, "_everything", lambda *a, **k: lines)
+        yes = next(s for s in brief.build(ws, store, cfg, NOW, "morning").sections if s.key == "yes")
+        found = [x for x in yes.lines if x.kind == "digest"]
+        assert [(x.change, x.quieted) for x in found] == [("stale", None)]
     finally:
         store.close()
 
@@ -265,6 +281,23 @@ def test_the_routes_quiet_a_kind_on_a_yes_and_undo_shows_it_again(api):
     assert client.post("/api/attention/stale/show").json()["state"] == "shown"
     assert load_config(ws.config_dir, env=ZONE_UTC).steward.attention.quieted_kinds == []
     assert client.post("/api/attention/overdue/quiet").status_code == 404
+
+
+def test_the_briefs_route_marks_the_quieted_kind_and_show_on_today_again_brings_the_line_back(api, monkeypatch):
+    client, store, ws, cfg, worker = api
+    lines = [today_queue.Line(key="stale", group="review", kind="stale", count=2, actions=["ACT-1"], since="a")]
+    monkeypatch.setattr(today_queue, "_everything", lambda *a, **k: lines)
+
+    def digest():
+        found = client.get("/api/brief", params={"form": "morning"}).json()["sections"]
+        return [x for s in found for x in s["lines"] if x["kind"] == "digest"]
+
+    assert [x["key"] for x in client.get("/api/today/queue").json()] == ["stale"] and digest() == []
+    assert client.post("/api/attention/stale/quiet").status_code == 200
+    assert client.get("/api/today/queue").json() == []
+    assert [(x["change"], x["quieted"]) for x in digest()] == [("stale", "stale")]
+    assert client.post("/api/attention/stale/show").json()["state"] == "shown"  # what the brief's button posts
+    assert [x["key"] for x in client.get("/api/today/queue").json()] == ["stale"] and digest() == []
 
 
 def test_the_routes_keep_showing_puts_the_question_off_and_undo_gives_it_back(api):

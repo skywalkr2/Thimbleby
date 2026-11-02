@@ -4,6 +4,45 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The assistant ties and confirms what the rules propose; guests named in a title are a proposal; the filing review and the brief's quieted kinds finish (P110, J8, J10, J17, the parity case)
+
+**Decided:** (1) A new data op **`action.tie`** (the to-do, the calendar entry, the words) lets the assistant confirm a tie
+itself: it does what the person's Tie it does through the same fields (`due_event` set, the to-do's date the entry's day, no
+proposal left) and is refused when the to-do isn't open, the entry doesn't exist or is called off, or the to-do is tied to
+it already. Every run's packet shows the proposal on the to-do's line ("may be due at calendar entry <id>, not tied yet"), and
+the notes prompt says to tie only when the words or the entry show it. (2) The known people a plain entry's title names are
+no longer written as the entry's guests: they are `proposed_guests`, and Today asks "Is <entry> on <day> with <names>?"
+with Yes (the person's own edit with Undo, which records them in `people`) and Not them (a signal; that set isn't proposed
+again); the assistant confirms them with a new data op **`event.guests`** (the entry, the people, the words). Meeting
+preparation, who the person last met and the brief read only confirmed guests. (3) The "Move these items?" review also asks
+about items the rules filed beside a side on their guess (`filed_by.unsure`, still where the rules put them), grouped by the
+side they were filed to, with Personal and the other sides as the choices, Move (which clears the rules' reason) and Keep
+under that side; an item the person moved to Personal counts as decided. (4) A line in the brief kept there because the
+person quieted its kind has **Show on Today again** (the existing show route; Undo quiets it again). (5) The parity case
+for the notes run (P110 (c)) is a golden case, scored for glossary entries by what the assistant can read, one fact per
+decision, a to-do for each action with its owner and day, and at most one question (`more_than` on a forbidden op, a
+`glossary.add` matcher in the evaluation harness).
+
+**Decided by:** the owner's rule of 2026-11-02 (rules take the mechanical, money, safety and the person's own rules;
+judgment about the work is the assistant's; a function may narrow what it looks at, never decide for it); the audit's rows
+J8, J10 and J17 and their follow-ups.
+
+**Why:** a proposal only the person could confirm left the assistant, which reads every run with the person's knowledge,
+unable to settle what its words already showed; and a title's name written as a guest was a rule deciding who the person
+met. The filing review and the brief had the person's answer one step short: a guess beside a side was never asked, and a
+quieted kind came back only from a toast.
+
+**Impact:** design 6.2, 6.32 and 6.7 (`06-engine.md`: plain entries, the filing review, what dismissals show, the term
+questions); `engine/ops.py` (`ActionTieOp`, `EventGuestsOp`), `engine/applier.py`, `engine/entry_guests.py` (new),
+`engine/entry_rules.py`, `engine/entry_ties.py`, `engine/records.py` (`CalendarEntry.proposed_guests`), `engine/packet.py`,
+`engine/prompts/notes.md`, `engine/today_queue.py` (the `guests` line), `engine/filing.py`, `engine/brief.py`
+(`Line.quieted`), `engine/evaluate.py`, `api/tie_routes.py`, `api/records_routes.py`, `api/schemas.py`, the plugin guide
+(two core ops and a record field), the wording sheet. No new setting; no change to scope. Not built: the assistant tying a
+proposal in a run that reads only the calendar change (plain entries still need no run; any run that sees the proposal in
+its packet may tie), a Show-on-Today-again row in Settings, and dismissals as input to the brief's run. Change log:
+section 301.
+
+
 ## 2026-11-02: The Schedule's Timeline, core (P111, P112 item 1)
 
 **Decided:** (1) The calendar page gets a fifth view, **Timeline**, in the core, over what every person has: calendar

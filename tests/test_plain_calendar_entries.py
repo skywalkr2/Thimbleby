@@ -344,7 +344,7 @@ def test_the_agenda_api_carries_the_offer(api):
 # ---- linked to a known person, or to a promise's words ---------------------------------------------------------------
 
 
-def test_an_entry_whose_title_names_a_known_person_is_linked_to_them(cal):
+def test_an_entry_whose_title_names_a_known_person_has_them_proposed_as_a_guest_never_recorded_as_one(cal):
     ws, cfg, store, put = cal
     put(
         calendar(
@@ -353,9 +353,10 @@ def test_an_entry_whose_title_names_a_known_person_is_linked_to_them(cal):
             vevent("c", "Lunch with Nobody Known", day="20300307"),
         )
     )
-    assert entry_of(store, f"Lunch with {KNOWN['full_name']}").data["people"] == [KNOWN["id"]]
-    assert entry_of(store, f"Coffee with {FIRST_NAME}").data["people"] == [KNOWN["id"]]
-    assert entry_of(store, "Lunch with Nobody Known").data["people"] == []
+    assert entry_of(store, f"Lunch with {KNOWN['full_name']}").data["proposed_guests"] == [KNOWN["id"]]
+    assert entry_of(store, f"Coffee with {FIRST_NAME}").data["proposed_guests"] == [KNOWN["id"]]
+    assert entry_of(store, "Lunch with Nobody Known").data["proposed_guests"] == []
+    assert all(e.data["people"] == [] for e in store.read().find("event", {"source": "calendar"}))
 
 
 def test_a_first_name_two_people_share_links_nobody_and_a_full_name_links_the_one(cal):
@@ -367,14 +368,14 @@ def test_a_first_name_two_people_share_links_nobody_and_a_full_name_links_the_on
             vevent("b", f"Lunch with {both[0]['full_name']}", day="20300307"),
         )
     )
-    assert entry_of(store, f"Coffee with {SHARED}").data["people"] == []
-    assert entry_of(store, f"Lunch with {both[0]['full_name']}").data["people"] == [both[0]["id"]]
+    assert entry_of(store, f"Coffee with {SHARED}").data["proposed_guests"] == []
+    assert entry_of(store, f"Lunch with {both[0]['full_name']}").data["proposed_guests"] == [both[0]["id"]]
 
 
 def test_the_person_themselves_named_in_a_title_links_nobody(cal):
     ws, cfg, store, put = cal
     put(calendar(vevent("a", f"Quiet time for {ME['full_name']}", day="20300307")))
-    assert entry_of(store, f"Quiet time for {ME['full_name']}").data["people"] == []
+    assert entry_of(store, f"Quiet time for {ME['full_name']}").data["proposed_guests"] == []
 
 
 def promise(store, text, *, due):

@@ -133,15 +133,26 @@ an entry with a description, and one that moved a date a promise is due at (the 
 whose title's **first word is one of `language.task_verbs`** ("Pay the deposit") is offered as a to-do, one click in its
 agenda row's menu: the person's own `action.add`, in the entry's words, on the entry (due on its day, moving with it), with
 Undo (`POST /api/events/{id}/todo`, `AgendaItemView.todo_offer`). A plain entry whose title **names a known person** (their
-full name, else a first name or alias only one person has; never the person themselves) is linked to them
-(`CalendarEntry.people`); one that **names a promise's words**, on that promise's day, is only **proposed** to the promise
+full name, else a first name or alias only one person has; never the person themselves) has them **proposed** as its
+guests (`CalendarEntry.proposed_guests`, `engine/entry_guests.py`; change log 301): a name in a title may be a lunch
+partner or only a topic, so Today asks "Is <entry> on <day> with <names>?" with Yes (the person's own edit with Undo,
+which moves them into `CalendarEntry.people`, the guests everything else reads: meeting preparation, who the person last
+met, the brief) and Not them (a `suggestion_dismissed` signal that keeps that set from being proposed again), and the
+assistant confirms them itself with `event.guests` (the entry, the people, the words that say so); one that **names a
+promise's words**, on that promise's day, is only **proposed** to the promise
 (`Action.proposed_event`, `engine/entry_ties.py`): word overlap narrows what the person looks at and decides nothing.
 Today and the promise's page show one line, "Tie <to-do> to <entry> on <day>?", with Tie it (the person's own edit with
 Undo: the promise's `due_event`, so it moves with the entry and is told if the entry is called off) and Not this (a
 `suggestion_dismissed` signal that keeps the pair from being proposed again). Nothing follows a proposal; a promise on
 another day, or with none, is never proposed. A promise the assistant makes at an entry (`action.add` with `due_at_event`)
-is tied from the start. *Not built:* the assistant tying a proposal in the run that reads the calendar change. *Built:*
-`tests/test_plain_calendar_entries.py` (a calendar fixture of each kind), `web/src/components/TodayRail.test.tsx`.
+is tied from the start, and the assistant ties a proposal itself with **`action.tie`** (the to-do, the entry, the words;
+a data op with Undo that does what the person's Tie it does through the same fields, `entry_ties.tied_fields`: `due_event`
+set, the date the entry's day, no proposal left; refused when the to-do isn't open, the entry doesn't exist or is called
+off, or the to-do is tied to it already). Every run's packet shows it the proposal ("may be due at calendar entry <id>,
+not tied yet" on the to-do's line, "may be with <id> (<name>), not confirmed" on the entry's), and the notes prompt tells it
+to tie or confirm only when the words or the entry show it, leaving the rest for the person. *Built:*
+`tests/test_plain_calendar_entries.py` (a calendar fixture of each kind), `tests/test_action_tie.py`,
+`tests/test_proposed_guests.py`, `web/src/components/TodayGuests.test.tsx`, `web/src/components/TodayRail.test.tsx`.
 *Built so far (P17, B-5):*
 `tests/test_ics_full.py` (the connector, a source's read, the entries, the agenda and the add-source routes),
 `tests/test_calendar_mail.py`, `web/src/components/Sources.test.tsx` (the file picker),
@@ -821,7 +832,10 @@ How each is recorded (decided 2026-10-15; *being built, L3b*):
 `event.set` (data tier, offered to reading notes) moves an entry already in the calendar: a new `start`, a new `end` or
 both, with the input's words as evidence (required), refused alone when the entry doesn't exist or the end would come
 before the start, and undone like any change. A message that moves a real event uses it on the entry's id, never a second
-entry. **Built:** `tests/test_event_set.py`, the golden case `moved-meeting-moves-its-entry`.
+entry. **Built:** `tests/test_event_set.py`, the golden case `moved-meeting-moves-its-entry`. `action.tie` (data tier,
+offered to reading notes, change log 301) ties an open to-do to the entry it is due at when the words or the proposal in
+the packet show it, and `event.guests` records who is on an entry; both need the input's words and have Undo (above, in the
+plain-entry paragraph, and `tests/test_action_tie.py`, `tests/test_proposed_guests.py`).
 
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
@@ -3333,7 +3347,14 @@ twice, and any past `knowledge.new_terms_per_input` for one input or `knowledge.
 off), never about a term already asked or dismissed (a dropped question is a term never listed again), and the day's
 questions show on Today as one line. A term with no meaning is not knowledge, so nothing goes to Knowledge's Proposed
 tab; only the person's answer becomes a glossary term, in their own words. Dropping the question records a `dropped`
-signal. A project's Still unknown lists only what a question was asked about ("Asked {who} on {day}"), never "nobody
+signal. The parity case for the whole run (change log 301, `tests/test_meeting_minutes_parity.py`, the golden case
+`meeting-minutes-glossary-facts-and-one-question`) hands in one set of fictional minutes (four decisions, three named
+owners with days, a launch date, two undefined acronyms, an item nobody owns) and scores the one run: a glossary entry for each
+word by what the assistant can read (`assumed`) or can't (`unknown`), a question about neither unless the answer matters
+(never about the readable one), a fact for each decision, a to-do for each action with its owner and day (the one nobody
+owns waits for the person to pick), and at most one question (`forbid: {op: question.add, more_than: 1}`). The notes run has no op
+that writes prose, so what the minutes say is to be written is the to-do for its writer, and the drafting is the
+assistant's work on that to-do (`action-work`). A project's Still unknown lists only what a question was asked about ("Asked {who} on {day}"), never "nobody
 has been asked". The run that processes an input may also propose:
 - glossary entries for new acronyms or terms. An assumed or unknown one that blocks understanding can carry one short question
   to whoever routing says knows it.
@@ -3808,8 +3829,11 @@ people and details, and never acts in their name without their yes on the exact 
   answer to this question and a clash marked fine count for nothing, and old ones are forgotten with the window, so
   taking dismissals back removes the question at once. A workspace from before the question keeps what the counts had
   quieted for it, once at start, as its own choice in those settings. The brief's run reads no knowledge today, so the
-  dismissals are not yet part of what it reads. `tests/test_attention_learning.py`,
-  `web/src/components/TodayAttention.test.tsx`.
+  dismissals are not yet part of what it reads. In the brief, a line kept for it because the person quieted its kind says so
+  (`BriefLineView.quieted`) and the first line of each such kind has **Show on Today again** (`POST
+  /api/attention/{kind}/show`, with Undo that quiets the kind again; change log 301); a line saved for the brief for
+  another reason (quiet hours, the day's cap) has none. `tests/test_attention_learning.py`,
+  `web/src/components/TodayAttention.test.tsx`, `web/src/components/BriefCard.test.tsx`.
   *The reminder offer:* for the person's own to-do with a day within `steward.brief.remind_within_days` and no reminder,
   the brief says "Add a reminder on Thu at 9:00 for 'X'" with **Remind me**, which sets it for the working morning before
   the day (else the morning of it), the person's own change with Undo. Only to-dos carry a reminder; a date inside a mail or
@@ -3869,7 +3893,8 @@ people and details, and never acts in their name without their yes on the exact 
   **Built (S3, meeting prep, capture and people memory):** all of it by rules from the records, with one draft kind.
   - *Who is on an entry* (`engine/meeting_guests.py`): the organizer and attendees of a calendar entry without the person
     and without anyone who declined, each a person id when the workspace knows them (else the name or address as the
-    calendar wrote it, never guessed at), and the known people a plain entry's title names. A cancelled entry, one the
+    calendar wrote it, never guessed at), and the known people a plain entry's title names once they are confirmed as on it
+    (`CalendarEntry.people`; a proposal from the title isn't a guest, change log 301). A cancelled entry, one the
     person declined and one nobody else is on have nobody to prepare for. Any entry with others is covered, a series' or not.
   - *Prep* (`engine/meeting_prep.py`): for each known person coming, what is open between them and the person (the
     person's promises to them, theirs to the person, replies the person owes them, questions the person asked them), each
@@ -4613,7 +4638,11 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
   project with no reason kept (`filed_by` empty: no core record gained a field, since the plugin API is on hold); it stays
   unfiled only when there is no personal project. It counts as waiting on a guess while it sits directly under Personal,
   the assistant made it after the side existed, it has no `filed_by` (or only the rules' guess, `filed_by.unsure`, for a
-  project the assistant left empty, change log 291) and the person hasn't kept it. `GET
+  project the assistant left empty, change log 291) and the person hasn't kept it. An item the rules filed **beside a side**
+  on that same guess (it sits under a side's project, `filed_by.unsure` and `filed_by.project` still where it is) is asked
+  about too (change log 301): grouped by the side it was filed to (`Question.kept_under`), with Personal and the other
+  sides as the choices, Move (which clears the rules' reason, the person having decided) and Keep under that side. An item
+  the person moved to Personal counts as decided, so nothing asks about it again unless the move is undone. `GET
   /api/filing/questions` gives each waiting item in exactly one question: items that could be the same sides' are one question
   with the list of those sides (the choice starts on the first, which is the one side the items' source serves when it serves
   one; the Move names what it changes, and every other way of moving something to a side's work, an item's page, a project's

@@ -1857,8 +1857,9 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `delivery.carrier` | str \| None | `None` | Who carries it, as the mail gives it. |
 | `delivery.status` | Literal['on_its_way', 'out_for_delivery', 'arrived'] | `'on_its_way'` | How far it has got; it only moves forward. |
 | `delivery.dated` | bool | `True` | Whether the mail gave a date or window. False for a delivery with no date yet: its entry sits on the day the mail came and shows under the schedule's "On its way", not on a day. |
-| `plain` | bool | `False` | Nobody else is invited and it has no description, so the rules kept it without the assistant reading it. A plain entry whose title starts with a task verb is offered as a to-do, one whose title names a known person is linked to them, and one that names an open promise's words on its day is proposed to that promise for the person to tie. |
-| `people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The known people its title names, linked by rule when it is plain. |
+| `plain` | bool | `False` | Nobody else is invited and it has no description, so the rules kept it without the assistant reading it. A plain entry whose title starts with a task verb is offered as a to-do, one whose title names a known person is proposed for them to confirm as a guest, and one that names an open promise's words on its day is proposed to that promise for the person to tie. |
+| `people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The known people confirmed to be on it: by the person (Yes on the proposal) or by the assistant's `event.guests` with the words that say so; never written by a rule. |
+| `proposed_guests` | list[Annotated[str, RefTo(kind='person', blocks_delete=False)]] | `[]` | The known people a plain entry's title names, proposed for the person to confirm as on it; nothing treats them as guests until they say yes, which moves them to `people`. |
 | `agenda` | list[AgendaItem] | `[]` | What is to be taken up at it, each item linked to the action, question or note it came from; added by `agenda.add`. |
 | `agenda[].action` | str \| None | `None` | The id of the action it came from. |
 | `agenda[].question` | str \| None | `None` | The id of the question it came from. |
@@ -2908,6 +2909,18 @@ Approve the drafted reply of an action as it is, or replace it with the person's
 | `id` | str | required | The id of the action. |
 | `text` | str \| None | `None` | The person's own wording of the reply; left out, the draft is approved. |
 
+### `action.tie`
+
+Tie an open action to the calendar entry it is due at, when the words or the calendar show it is that entry ("the contract is due at the print sync", an entry proposed for it in the list of open actions): the action is then due on the entry's day and moves with the entry, and is told when the entry is called off. Refused if the action doesn't exist or isn't open, or the entry doesn't exist or is called off; evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the open action that is due at the entry. |
+| `event` | str | required | The id of the calendar entry it is due at. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
 ### `action.unhold`
 
 Take an action off hold when the input says the thing it was waiting for has happened: it is due, chased and shown again by its own due date. Refused if the action doesn't exist, isn't open or isn't on hold; evidence is required (the input's words, or the person's note).
@@ -2968,6 +2981,18 @@ A date or a range of dates the input gives for something (a delivery window, a d
 | `project` | str \| None | `None` | Project id, if the entry belongs to one. |
 | `series` | str \| None | `None` | The id of the series this entry is an instance of, if any. |
 | `evidence` | EvidenceIn | required | The exact words from the input that give the date. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `event.guests`
+
+Say who is on a calendar entry that is in the list, when the input says so ("lunch with Sam is confirmed", the guests proposed for an entry in the list and the words that show they are right). The people are then recorded as on it, and a proposal for it is cleared. Refused if the entry doesn't exist or is called off, or a name is not one known person; evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the calendar entry. |
+| `people` | list[str] | required | The people on it, each by name or id; each must be one known person. |
+| `evidence` | EvidenceIn | required | The exact words from the input that say who is on it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `event.set`

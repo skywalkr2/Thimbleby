@@ -160,6 +160,9 @@ class Line:
     tie (a calendar entry proposed for an open to-do, because its title and the to-do's words contain one another on the
     to-do's day: the to-do's id in `actions`, its words in `text`, the entry's id in `entry`, its title in `other` and
     its day in `due`; Tie it is POST /api/actions/{id}/tie and Not this POST /api/actions/{id}/not-this),
+    guests (the known people a plain calendar entry's title names, proposed as on it: the entry's id in `entry`, its
+    title in `text`, the people's names in `names` and its day in `due`; Yes is POST /api/events/{id}/guests/confirm
+    and Not them POST /api/events/{id}/guests/not-them),
     attention (the person has put off one kind of suggestion enough times that Today asks whether to quiet it into the
     morning brief, or stop offering it: the kind in `text`, how many times in `count`, `state` quiet or stopped; Quiet
     them is POST /api/attention/{kind}/quiet (or /stop) and Keep showing POST /api/attention/{kind}/keep, both with
@@ -1527,7 +1530,7 @@ def _everything(
                 kind="unfiled",
                 state="which_side",
                 subject=asked.subject,
-                side=sides.personal_project(reader, cfg),
+                side=asked.side,
                 count=asked.count,
                 since=asked.since,
             )
@@ -1660,6 +1663,7 @@ def _everything(
 
     lines += _day_lines(store, cfg, now)
     lines += _tie_lines(store)
+    lines += _guest_lines(store, cfg, now)
     lines += _attention_lines(store, cfg, now)
 
     if cfg.steward.hold_outside_hours:
@@ -1756,6 +1760,30 @@ def _tie_lines(store: Any) -> list[Line]:
             since=str(entry.data["start"])[:10],
         )
         for action, entry in entry_ties.proposals(store.read())
+    ]
+
+
+def _guest_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
+    """One line for each plain calendar entry that has known people proposed as on it, for the person to say whether
+    they are (`engine.entry_guests`)."""
+    from engine import entry_guests
+
+    reader = store.read()
+    today = now.astimezone(zone(cfg)).date()
+    return [
+        Line(
+            key=f"guests:{entry.id}",
+            group="decide",
+            kind="guests",
+            text=str(entry.data["title"]),
+            subject=str(entry.data["title"]),
+            names=[str(reader.get("person", p).data["full_name"]) for p in people],
+            entry=entry.id,
+            due=str(entry.data["start"])[:10],
+            project=entry.data.get("project"),
+            since=str(entry.data["start"])[:10],
+        )
+        for entry, people in entry_guests.proposals(reader, today, zone(cfg))
     ]
 
 
@@ -1914,6 +1942,7 @@ _KIND_ORDER = {
     "capacity": 2,
     "clash": 3,
     "tie": 3.5,
+    "guests": 3.55,
     "attention": 3.6,
     "promise": 2,
     "reminder": 0,

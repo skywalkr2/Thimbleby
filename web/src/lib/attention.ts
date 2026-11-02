@@ -1,5 +1,5 @@
 // The question about a kind of suggestion the person keeps putting off (design 6.32): quiet it into the morning brief, stop
-// offering it, or keep showing it. Each answer acts at once with Undo on the toast; only the person's yes changes what shows.
+// offering it, or keep showing it; and, from the brief, show a quieted kind on Today again. Each answer acts at once with Undo on the toast; only the person's yes changes what shows.
 import { api } from "./api";
 import { useAct } from "./act";
 import { useWords } from "./wording";
@@ -9,6 +9,8 @@ export function useAttention(): {
   quiet: (kind: string) => Promise<unknown>;
   stop: (kind: string) => Promise<unknown>;
   keep: (kind: string) => Promise<unknown>;
+  /** Offer a kind the person quieted on Today again (from the brief's list of what was kept for it); Undo quiets it once more. */
+  showAgain: (kind: string) => Promise<unknown>;
 } {
   const { t } = useWords();
   const act = useAct();
@@ -22,6 +24,11 @@ export function useAttention(): {
     kindWords,
     quiet: (kind) => chosen(kind, "quiet", "queue.attention.quiet_done"),
     stop: (kind) => chosen(kind, "stop", "queue.attention.stop_done"),
+    showAgain: (kind) =>
+      act(
+        () => api.chooseAttention(kind, "show"),
+        () => ({ message: t("brief.show_again.done", { kind: kindWords(kind) }), undo: () => api.chooseAttention(kind, "quiet") }),
+      ),
     keep: (kind) =>
       act(
         () => api.keepShowing(kind),

@@ -514,6 +514,10 @@ export const api = {
   tieTodo: (action: string) => call<S["TieDone"]>("POST", `actions/${id(action)}/tie`),
   /** Say the entry proposed for a to-do isn't its one: it isn't proposed again. Undo is `undoNotNowSuggestion`. */
   notThisEntry: (action: string) => call<S["NotNowDone"]>("POST", `actions/${id(action)}/not-this`),
+  /** Record the people proposed for a calendar entry from its title as on it, as the person's own change with Undo. */
+  confirmGuests: (entry: string) => call<S["GuestsDone"]>("POST", `events/${id(entry)}/guests/confirm`),
+  /** Say the people proposed for an entry aren't the ones on it: that set isn't proposed again. Undo is `undoNotNowSuggestion`. */
+  notTheseGuests: (entry: string) => call<S["NotNowDone"]>("POST", `events/${id(entry)}/guests/not-them`),
   /** Keep a kind of suggestion for the morning brief (`quiet`) or stop offering it (`stop`), as the person's own yes; `show` is its undo. */
   chooseAttention: (kind: string, how: "quiet" | "stop" | "show") => call<S["AttentionChosen"]>("POST", `attention/${id(kind)}/${how}`),
   /** Keep showing a kind of suggestion: the question about it isn't raised again for a while. Undo is `undoNotNowSuggestion`. */

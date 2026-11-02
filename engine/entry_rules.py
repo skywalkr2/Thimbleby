@@ -4,10 +4,10 @@ An entry of a calendar source with nobody else invited, no description and no ch
 plain: it is kept in the calendar by rule, with no run of the assistant and no Review line. The assistant still reads an
 invitation from someone else, an entry with a description (or one whose connector doesn't say), and one that changed a
 date a promise is due at. A plain entry whose title starts with one of the language's task verbs is offered as a to-do
-with one click; one whose title names a known person is linked to them, and one that names a promise's words on that
-promise's day is only proposed to the promise: the person ties it (`engine.entry_ties`), and only then does the
-promise move with the entry. Nothing here calls AI, and the words come from the language settings. Reads only, except
-`link`, which writes the links and proposals it finds."""
+with one click; one whose title names a known person has them proposed as its guests, and one that names a promise's
+words on that promise's day is only proposed to the promise: the person ties it (`engine.entry_ties`), and only then
+does the promise move with the entry; the guests are proposed the same way (`engine.entry_guests`). Nothing here calls
+AI, and the words come from the language settings. Reads only, except `link`, which writes the proposals it finds."""
 
 from __future__ import annotations
 
@@ -115,20 +115,24 @@ def people_named(title: str, people: list[Any], pm: str | None) -> list[str]:
 
 
 def link(tx: Any, entry_id: str, writer: Any, pm: str | None) -> None:
-    """Link a plain, kept calendar entry by its title to the known people it names (`people`), and propose it to each
+    """Propose the known people a plain, kept calendar entry's title names as its guests (`proposed_guests`; the person
+    or the assistant confirms them into `people`), and propose the entry to each
     open, untied promise due on its day whose words the title names, or that names the title's words
     (`proposed_event`). The overlap only proposes: the promise moves with the entry once the person ties it
     (`engine.entry_ties`). A promise on another day or with none, or one the person said isn't this entry's, is left as
     it is."""
-    from engine import entry_ties
+    from engine import entry_guests, entry_ties
 
     entry = tx.get("event", entry_id)
     if entry is None or not entry.data.get("plain") or entry.data.get("cancelled"):
         return
     title, day = str(entry.data["title"]), str(entry.data["start"])[:10]
-    named = people_named(title, tx.list("person"), pm)
-    if named != entry.data.get("people", []):
-        tx.update("event", entry_id, {"people": named}, writer, read_version=entry.version)
+    confirmed = entry.data.get("people") or []
+    named = [p for p in people_named(title, tx.list("person"), pm) if p not in confirmed]
+    if named and entry_guests.subject(entry_id, named) in entry_guests.declined(tx):
+        named = []
+    if named != (entry.data.get("proposed_guests") or []):
+        tx.update("event", entry_id, {"proposed_guests": named}, writer, read_version=entry.version)
     refused = entry_ties.declined(tx)
     for action in tx.list("action"):
         d = action.data

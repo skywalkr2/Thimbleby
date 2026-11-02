@@ -28,6 +28,12 @@ from tests.test_sides import (
 base, env = shared.base, shared.env
 
 
+def personal_questions(view, cfg, now):
+    """The questions about items waiting under Personal: the ones the rules filed beside a side are asked apart
+    (`kept_under` names the side), and these tests are about Personal's."""
+    return [q for q in filing.questions(view, cfg, now) if q.kept_under is None]
+
+
 def sides_of(env, ops):
     _, cfg, store = env
     from engine.names import People
@@ -53,20 +59,21 @@ def test_a_first_read_for_one_mailbox_serving_both_sides_ends_with_one_question_
     _, cfg, store = env
     projects, _, _ = run_week(env)
     view = store.read()
-    asked = filing.questions(view, cfg, NOW + timedelta(days=0))
+    asked = personal_questions(view, cfg, NOW + timedelta(days=0))
     # one question, for the one other side, naming its items; the rest was placed by people or words
     assert len(asked) == 1 and asked[0].side == BUSINESS_ID
     unclear = {pid for mail_id, pid in projects.items() if pid == PERSONAL_ID}
     assert len(asked[0].items) >= 5 and unclear == {PERSONAL_ID}
     assert unfiled(view) == []  # no Unfiled row at all
     line = filing.summary(view, cfg, NOW)
-    assert line is not None and line.count == len(asked[0].items) and line.subject == asked[0].name
+    everyone = {(i.kind, i.id) for q in filing.questions(view, cfg, NOW) for i in q.items}
+    assert line is not None and line.count == len(everyone) >= len(asked[0].items)
 
 
 def test_move_is_the_persons_own_change_with_undo_and_each_item_is_a_correction(env):
     _, cfg, store = env
     run_week(env)
-    first = filing.questions(store.read(), cfg, NOW)[0]
+    first = personal_questions(store.read(), cfg, NOW)[0]
     items = [(i.kind, i.id, i.version) for i in first.items[:2]]
     done = filing.move(store, cfg, first.side, items, NOW)
     view = store.read()
@@ -86,27 +93,27 @@ def test_move_is_the_persons_own_change_with_undo_and_each_item_is_a_correction(
 def test_a_side_is_asked_once_a_day(env):
     _, cfg, store = env
     run_week(env)
-    first = filing.questions(store.read(), cfg, NOW)[0]
+    first = personal_questions(store.read(), cfg, NOW)[0]
     filing.move(store, cfg, first.side, [(i.kind, i.id, i.version) for i in first.items[:1]], NOW)
-    assert filing.questions(store.read(), cfg, NOW) == []  # answered today: the rest wait
-    assert filing.questions(store.read(), cfg, NOW + timedelta(days=1))  # and come back tomorrow
+    assert personal_questions(store.read(), cfg, NOW) == []  # answered today: the rest wait
+    assert personal_questions(store.read(), cfg, NOW + timedelta(days=1))  # and come back tomorrow
 
 
 def test_keep_leaves_the_items_under_personal_and_they_are_never_asked_again(env):
     _, cfg, store = env
     run_week(env)
-    first = filing.questions(store.read(), cfg, NOW)[0]
+    first = personal_questions(store.read(), cfg, NOW)[0]
     kept = [(i.kind, i.id, i.version) for i in first.items]
     filing.keep(store, cfg, first.side, kept, NOW)
     view = store.read()
     assert all(view.get(kind, rid).data["project"] == PERSONAL_ID for kind, rid, _ in kept)
-    assert filing.questions(view, cfg, NOW + timedelta(days=3)) == []
+    assert personal_questions(view, cfg, NOW + timedelta(days=3)) == []
 
 
 def test_a_move_is_refused_for_an_item_no_longer_under_personal(env):
     _, cfg, store = env
     run_week(env)
-    first = filing.questions(store.read(), cfg, NOW)[0]
+    first = personal_questions(store.read(), cfg, NOW)[0]
     item = first.items[0]
     filing.move(store, cfg, first.side, [(item.kind, item.id, item.version)], NOW)
     with pytest.raises(ValueError, match="meanwhile"):
@@ -261,7 +268,7 @@ def test_a_source_serving_two_sides_offers_only_those_sides(env):
         )
     (waiting,) = filing.waiting(store.read(), cfg)
     assert set(waiting.could_be) == {BUSINESS_ID, second}  # the third side isn't served, so it isn't offered
-    (asked,) = filing.questions(store.read(), cfg, NOW)  # one question, with a choice of the two sides it could be
+    (asked,) = personal_questions(store.read(), cfg, NOW)  # one question, with a choice of the two sides it could be
     assert {c.project for c in asked.sides} == {BUSINESS_ID, second}
     assert filing.summary(store.read(), cfg, NOW).subject is None  # two sides to pick from: the line names none
 
@@ -279,26 +286,27 @@ def test_a_job_and_a_business_beside_personal_get_one_question_with_a_choice_and
     job = add_side(env, "Weekday job", kind="job")
     run_week(env)
     view = store.read()
-    (asked,) = filing.questions(view, cfg, NOW)  # one question, not one for each side
+    (asked,) = personal_questions(view, cfg, NOW)  # one question, not one for each side
     assert [c.project for c in asked.sides] == [BUSINESS_ID, job]  # a choice of the sides, in the person's order
     assert asked.side == BUSINESS_ID  # it starts on the first
     both = {(i.kind, i.id) for i in asked.items}
     assert both and len(both) == len(asked.items) and unfiled(view) == []  # each item once
     # Today: one line for the question, counting each item once, naming neither side.
     shown = [x for x in today_queue.queue(ws, store, cfg, NOW) if x.kind == "unfiled" and x.state == "which_side"]
-    assert len(shown) == 1 and shown[0].subject is None and shown[0].count == len(both)
-    # The items wait under Personal, so the line is Personal's: no other side's tab shows it.
-    assert shown[0].side == sides.personal_project(view, cfg)
+    everyone = {(i.kind, i.id) for q in filing.questions(view, cfg, NOW) for i in q.items}
+    assert len(shown) == 1 and shown[0].subject is None and shown[0].count == len(everyone) > len(both)
+    # The items sit under Personal and beside a side, so the line is on no one side (every side's tab shows it).
+    assert shown[0].side is None
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" not in sheet["queue.sides.many.other"] and "{business}" not in sheet["queue.sides.meta.many"]
     # Moving one item to the business answers the business for today; the job is still unanswered, so the rest are asked
     # again, once, and tomorrow all of them are.
     first = asked.items[0]
     filing.move(store, cfg, BUSINESS_ID, [(first.kind, first.id, first.version)], NOW)
-    (after,) = filing.questions(store.read(), cfg, NOW)
+    (after,) = personal_questions(store.read(), cfg, NOW)
     assert len(after.items) == len(both) - 1
     filing.keep(store, cfg, job, [(i.kind, i.id, i.version) for i in after.items], NOW)
-    assert filing.questions(store.read(), cfg, NOW) == []  # every side answered today, and the rest are kept
+    assert personal_questions(store.read(), cfg, NOW) == []  # every side answered today, and the rest are kept
 
 
 def test_an_item_of_a_source_serving_one_side_is_asked_about_only_for_that_side(env):
@@ -316,5 +324,114 @@ def test_an_item_of_a_source_serving_one_side_is_asked_about_only_for_that_side(
             {"text": "Look into it", "owners": [{"person": shared.ME}], "project": PERSONAL_ID, "source": source},
             WriteContext(actor="assistant", trust="untrusted", op="test.filing"),
         )
-    (asked,) = [q for q in filing.questions(store.read(), cfg, NOW) if q.items[0].text == "Look into it"]
+    (asked,) = [q for q in personal_questions(store.read(), cfg, NOW) if q.items[0].text == "Look into it"]
     assert [c.project for c in asked.sides] == [BUSINESS_ID] and job not in {c.project for c in asked.sides}
+
+
+# ---- items the rules filed beside a side on a guess (P110 J10 leftover) ----------------------------------------------
+
+
+def guessed_beside(store):
+    """The actions the rules filed under the business on a guess: no project from the assistant, an unsure reason."""
+    return [
+        a
+        for a in store.read().list("action")
+        if (a.data.get("filed_by") or {}).get("unsure") and a.data.get("project") == BUSINESS_ID
+    ]
+
+
+def beside_questions(view, cfg, now):
+    return [q for q in filing.questions(view, cfg, now) if q.kept_under is not None]
+
+
+def test_what_the_rules_filed_beside_a_side_on_a_guess_is_asked_about_grouped_by_that_side(env):
+    _, cfg, store = env
+    run_week(env)
+    guessed = {a.id for a in guessed_beside(store)}
+    assert len(guessed) == 4
+    (asked,) = beside_questions(store.read(), cfg, NOW)  # one question: they all sit on the business
+    assert asked.kept_under == filing.Choice(BUSINESS_ID, asked.kept_under.name)
+    assert {i.id for i in asked.items} == guessed
+    assert [c.project for c in asked.sides] == [PERSONAL_ID]  # they could be Personal's, the only other place
+    assert all(i.filed_to == BUSINESS_ID for i in asked.items)
+    # An item the assistant filed itself (no reason kept) and Personal's own are not in it.
+    assert guessed.isdisjoint({i.id for q in personal_questions(store.read(), cfg, NOW) for i in q.items})
+
+
+def test_with_a_job_beside_the_business_the_question_offers_personal_and_the_other_side(env):
+    from tests.test_many_sides import add_side
+
+    _, cfg, store = env
+    job = add_side(env, "Weekday job", kind="job")
+    run_week(env)
+    (asked,) = beside_questions(store.read(), cfg, NOW)
+    assert asked.kept_under.project == BUSINESS_ID
+    assert [c.project for c in asked.sides] == [PERSONAL_ID, job]  # Personal first, then the other side, never its own
+
+
+def test_moving_a_guess_to_personal_is_the_persons_own_change_clears_the_rules_reason_and_undo_restores_it(env):
+    _, cfg, store = env
+    run_week(env)
+    (asked,) = beside_questions(store.read(), cfg, NOW)
+    first = asked.items[0]
+    done = filing.move(store, cfg, PERSONAL_ID, [(first.kind, first.id, first.version)], NOW)
+    moved = store.read().get(first.kind, first.id).data
+    assert (moved["project"], moved["filed_by"]) == (PERSONAL_ID, None)
+    assert first.id not in {i.id for q in filing.questions(store.read(), cfg, NOW + timedelta(days=1)) for i in q.items}
+    edits = [s for s in store.read().list("signal") if s.data["kind"] == "edited" and first.id in s.data["refs"]]
+    assert len(edits) == 1  # a correction like any other move
+    undo(store, done.changeset)
+    back = store.read().get(first.kind, first.id).data
+    assert back["project"] == BUSINESS_ID and back["filed_by"]["unsure"] is True
+    with pytest.raises(ValueError, match="already"):
+        filing.move(store, cfg, BUSINESS_ID, [(first.kind, first.id, None)], NOW)
+
+
+def test_keep_leaves_a_guess_where_it_is_and_it_is_never_asked_again(env):
+    _, cfg, store = env
+    run_week(env)
+    (asked,) = beside_questions(store.read(), cfg, NOW)
+    kept = [(i.kind, i.id, i.version) for i in asked.items]
+    filing.keep(store, cfg, PERSONAL_ID, kept, NOW)
+    view = store.read()
+    assert all(view.get(kind, rid).data["project"] == BUSINESS_ID for kind, rid, _ in kept)
+    assert beside_questions(view, cfg, NOW + timedelta(days=3)) == []
+
+
+def test_a_guess_the_person_moved_by_hand_or_the_assistant_filed_itself_is_not_asked_about(env):
+    _, cfg, store = env
+    run_week(env)
+    (asked,) = beside_questions(store.read(), cfg, NOW)
+    edited = asked.items[0]
+    with store.transaction() as tx:
+        current = tx.get(edited.kind, edited.id)
+        tx.update(edited.kind, edited.id, {"project": PERSONAL_ID}, _PM, read_version=current.version)
+    again = {i.id for q in beside_questions(store.read(), cfg, NOW) for i in q.items}
+    assert edited.id not in again and len(again) == 3
+    # The six the assistant filed under the business itself carry no reason, so they are never in a question.
+    own = [
+        a for a in store.read().list("action") if a.data.get("project") == BUSINESS_ID and not a.data.get("filed_by")
+    ]
+    assert len(own) == 6 and {a.id for a in own}.isdisjoint(again)
+
+
+def test_a_move_is_refused_for_an_item_that_is_neither_under_personal_nor_a_guess(env):
+    _, cfg, store = env
+    run_week(env)
+    own = next(
+        a for a in store.read().list("action") if a.data.get("project") == BUSINESS_ID and not a.data.get("filed_by")
+    )
+    with pytest.raises(ValueError, match="meanwhile"):
+        filing.move(store, cfg, PERSONAL_ID, [("action", own.id, None)], NOW)
+
+
+def test_the_line_names_no_single_side_when_the_items_sit_on_several_and_the_one_it_sits_on_when_they_share_one(env):
+    _, cfg, store = env
+    run_week(env)
+    both = filing.summary(store.read(), cfg, NOW)
+    assert both.side is None  # under Personal and under the business
+    (asked,) = beside_questions(store.read(), cfg, NOW)
+    filing.keep(store, cfg, PERSONAL_ID, [(i.kind, i.id, i.version) for i in asked.items], NOW)
+    for q in personal_questions(store.read(), cfg, NOW):
+        filing.keep(store, cfg, q.side, [(i.kind, i.id, i.version) for i in q.items], NOW)
+    assert filing.summary(store.read(), cfg, NOW + timedelta(days=2)) is None

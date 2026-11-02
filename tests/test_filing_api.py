@@ -71,3 +71,32 @@ def test_a_move_of_something_already_moved_or_to_a_place_that_is_no_side_is_refu
     assert again.status_code == 409 and "meanwhile" in again.json()["detail"]
     nowhere = client.post("/api/filing/move", json={"side": "PRJ-999", "items": refs(ids[1:], store)})
     assert nowhere.status_code == 409
+
+
+def test_an_item_the_rules_filed_beside_a_side_on_a_guess_is_a_question_of_its_own_and_moves_to_personal(app):
+    client, store, side, personal, ids = app
+    me = store.read().get("action", ids[0]).data["owners"][0]["person"]
+    with store.transaction() as tx:
+        guessed = tx.create(
+            "action",
+            {
+                "text": "Reply about the quote",
+                "owners": [{"person": me}],
+                "project": side,
+                "filed_by": {"by": "word", "word": "quote", "project": side, "unsure": True},
+            },
+            ASSISTANT,
+        ).id
+    found = client.get("/api/filing/questions").json()["questions"]
+    beside = [q for q in found if q["kept_under"] is not None]
+    assert len(beside) == 1 and beside[0]["kept_under"] == {"side": side, "name": BUSINESS_NAME}
+    assert [s["side"] for s in beside[0]["sides"]] == [personal]
+    assert [i["id"] for i in beside[0]["items"]] == [guessed]
+    assert any(q["kept_under"] is None for q in found)  # Personal's own question has none
+    done = client.post("/api/filing/move", json={"side": personal, "items": refs([guessed], store)})
+    assert done.status_code == 200, done.text
+    moved = store.read().get("action", guessed).data
+    assert (moved["project"], moved["filed_by"]) == (personal, None)
+    assert [q for q in client.get("/api/filing/questions").json()["questions"] if q["kept_under"] is not None] == []
+    assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={"ops": None}).status_code == 200
+    assert store.read().get("action", guessed).data["project"] == side
