@@ -65,7 +65,10 @@ const SKILLS: S["AiSkillsView"] = {
   ],
 };
 
-const estimate = (usd: number | null, needs_go = false): S["AiMeasureEstimate"] => ({ models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd, confirm_above_usd: 0.1, per_day_usd: 2, needs_go });
+const estimate = (usd: number | null, needs_go = false, left_today_usd = 1.4): S["AiMeasureEstimate"] => {
+  const passes_limit = usd != null && usd > left_today_usd;
+  return { models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd, confirm_above_usd: 0.1, per_day_usd: 2, left_today_usd, passes_limit, needs_go: needs_go || passes_limit };
+};
 
 function api(extra: Record<string, (body: unknown) => unknown> = {}, skills: S["AiSkillsView"] = SKILLS) {
   return fakeApi({
@@ -271,11 +274,11 @@ test("with no account at all the page asks for one first", async () => {
   expect(screen.queryByText(/Nothing measured yet/)).toBeNull();
 });
 
-test("the price is on the button before any click, with the amount that is asked about first and the daily limit it is not counted in", async () => {
+test("the price is on the button before any click, with the amount that is asked about first and how much of the daily limit is left", async () => {
   api({}, UNMEASURED);
   renderApp(<AiCompare onBack={() => undefined} />);
   const measure = await screen.findByRole("button", { name: "Measure (about $0.48)" });
-  const note = "You are asked first above $0.10. A test is paid for on your own account, and it isn't counted in your daily limit of $2.00.";
+  const note = "You are asked first above $0.10. A test is paid for on your own account and counts toward your daily limit: $1.40 of $2.00 left today.";
   expect(await screen.findByText(note)).toBeInTheDocument();
   expect(measure).toHaveAccessibleDescription(note);
 });
@@ -325,4 +328,23 @@ test("each kind of work says what it means, in the words its list gives", async 
   api({}, explained);
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByRole("rowheader", { name: "Use a known term Reads a word the way your glossary says." })).toBeInTheDocument();
+});
+
+test("a test that would cost more than is left of the daily limit asks first and says it stops at the limit and keeps what it measured", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    {
+      "POST ai/skills/main/estimate": (body) => estimate((body as { model?: string } | undefined)?.model ? 0.05 : 0.4, false, 0.2),
+      "POST ai/skills/second/estimate": () => estimate(0.08, false, 0.2),
+      "POST ai/skills/main/measure": () => ({ started: ["everyday"], already: [], estimate: estimate(0.05, true, 0.2) }),
+    },
+    UNMEASURED,
+  );
+  renderApp(<AiCompare onBack={() => undefined} />);
+  expect(await screen.findByText(/counts toward your daily limit: \$0\.20 of \$2\.00 left today\./)).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Measure (about $0.48)" }));
+  expect(await screen.findByText("This would cost about $0.48, more than the $0.20 left of your daily limit. It stops when the limit is reached and keeps what it measured.")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route.endsWith("/measure"))).toHaveLength(0);
+  await user.click(screen.getByRole("button", { name: "Test anyway" }));
+  await waitFor(() => expect(calls.filter((c) => c.route.startsWith("POST ai/skills/") && c.route.endsWith("/measure"))).toHaveLength(2));
 });

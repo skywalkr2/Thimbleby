@@ -2188,7 +2188,20 @@ evaluation reports.
   refused above `ai.budgets.confirm_above_usd` (or with no price, when `confirm_unpriced` is on) unless `confirmed` is
   sent, then runs on a thread of its own and fills the matrix (`engine/ai/measure.py`). What was asked for is kept in the
   private folder (`ai-measures.json`) so a restart finishes it; one that was answered not at all, or couldn't finish, is
-  `failed` with why in `GET /api/ai/skills`, never a result. A case, pair or scenario may say its `data_level` (default
+  `failed` with why in `GET /api/ai/skills`, never a result. **A measuring counts toward the daily and monthly limits**
+  (owner, 2026-11-02: "sure otherwise its not honest"; 6.16). The cases run on a scratch copy with a store of its own, so
+  each finished case's cost (from its recorded calls) is written to the person's own store as a run of the kind and tier
+  `measurement` on the account it called (`measure.Meter.count`), where every total the limits read adds it up, and the
+  usage reports name it. A case that made no call, or whose cost isn't known, adds no run. The limits apply like any other
+  work: a limit already used up refuses the request (409, "Paused until tomorrow" or "Paused", as the router words it);
+  an estimate above what is left today (`AiMeasureEstimate.left_today_usd`, the day's limit or the month's, whichever is
+  nearer, less what every run has cost) needs the person's go (`passes_limit`, in `needs_go`), even when it is under the
+  amount they asked to be asked about; and before each case the limit is looked at again: the case that began is finished,
+  the cases after it are not made (`Meter.stops`, so one case may pass the limit, as any run in flight does), what was
+  measured stays in the matrix and the measuring is kept `failed` with `limit-day` or `limit-month`, worded "It stopped
+  at your daily spending limit. What was measured is kept; test again when the limit allows." Not built: a per-task limit
+  on `measurement`; counting the switch check's and the model watch's runs the same way (they share `evaluate_on`, which
+  takes the same `meter`). A case, pair or scenario may say its `data_level` (default
   `internal`, the level a handed-in note has); an account runs and is priced only for those no more private than its most
   private `allowed_data`, and the report still names every case, so the set measured doesn't change.
   Real use adds evidence too: a correction of a run counts against that model for the skills the correction's kind

@@ -3957,6 +3957,11 @@
             "title": "Confirm Above Usd",
             "type": "number"
           },
+          "left_today_usd": {
+            "description": "What may still be spent today: the day's limit or the month's, whichever is nearer, less what every recorded run (a measuring's too) has cost, never below nothing.",
+            "title": "Left Today Usd",
+            "type": "number"
+          },
           "level": {
             "anyOf": [
               {
@@ -3983,12 +3988,17 @@
             "type": "array"
           },
           "needs_go": {
-            "description": "Starting it needs `confirmed`: the estimate is above that amount.",
+            "description": "Starting it needs `confirmed`: the estimate is above the amount to be asked about, or more than is left today.",
             "title": "Needs Go",
             "type": "boolean"
           },
+          "passes_limit": {
+            "description": "The estimate is more than `left_today_usd`: the measuring would stop when the limit is reached, keeping what it measured, so starting it needs `confirmed`.",
+            "title": "Passes Limit",
+            "type": "boolean"
+          },
           "per_day_usd": {
-            "description": "The most the assistant's everyday work may spend in a day (`ai.budgets.per_day_usd`). Measuring runs on a scratch copy and isn't counted in it; the screen says so beside the price.",
+            "description": "The most the assistant's work may spend in a day (`ai.budgets.per_day_usd`). A measuring is counted in it, like any other work; the screen says so beside the price.",
             "title": "Per Day Usd",
             "type": "number"
           },
@@ -4022,6 +4032,8 @@
           "runs",
           "confirm_above_usd",
           "per_day_usd",
+          "left_today_usd",
+          "passes_limit",
           "needs_go"
         ],
         "title": "AiMeasureEstimate",

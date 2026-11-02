@@ -301,7 +301,10 @@ def run_waiting(
             continue
         try:
             cfg = load_config(ws.config_dir, env=dict(env))
-            verdict = judge(ws, cfg, run(entry["after"], cfg, ws, env))
+            from engine.ai.measure import metered
+
+            # A check spends the person's own money, so it counts toward their limits like any run.
+            verdict = judge(ws, cfg, metered(run, store, cfg)(entry["after"], cfg, ws, env))
         except Exception:  # a check that can't run is shown as one that didn't finish, never as a pass
             verdict = {"state": FAILED, "failed": [], "unfinished": True}
         with changing(path_of(store)):

@@ -141,6 +141,10 @@ MEASURE_WHY = {
     "no-answer": "The account didn't take any of the cases (it asked to slow down or its plan was used up), so nothing "
     "was measured.",
     "unfinished": "Measuring couldn't finish; nothing was added.",
+    "limit-day": "It stopped at your daily spending limit. What was measured is kept; test again when the limit "
+    "allows.",
+    "limit-month": "It stopped at your monthly spending limit. What was measured is kept; test again when the limit "
+    "allows.",
 }
 
 #: Settings an add-on's setup step may never suggest: where keys come from and which accounts get the work.
@@ -1898,6 +1902,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def measure_view(now: Config, plan: Any) -> AiMeasureEstimate:
         from engine.ai import measure
 
+        room = measure.left(store, now)
         return AiMeasureEstimate(
             models=plan.models,
             level=plan.level,
@@ -1907,7 +1912,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             usd=plan.usd,
             confirm_above_usd=now.ai.budgets.confirm_above_usd,
             per_day_usd=now.ai.budgets.per_day_usd,
-            needs_go=measure.needs_go(now, plan),
+            left_today_usd=room.today_usd,
+            passes_limit=room.passed_by(plan),
+            needs_go=measure.needs_go(now, plan, room),
         )
 
     @r.post("/ai/skills/{account}/estimate")
@@ -1932,12 +1939,32 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 status_code=409,
                 detail="Nothing to measure: this account isn't allowed to see the material of any case.",
             )
-        if measure.needs_go(now, plan) and not body.confirmed:
-            cost = "its cost can't be estimated" if plan.usd is None else f"it would cost about {usd(plan.usd)}"
+        budgets = now.ai.budgets
+        reached = measure.limit_reached(store, now)
+        if reached == measure.LIMIT_MONTH:
             raise HTTPException(
                 status_code=409,
-                detail=f"Testing needs your confirmation first: {cost}, and you asked to be asked about that.",
+                detail=f"Paused: this month's AI budget ({usd(budgets.per_month_usd)}) is used up, and testing is "
+                "paid for out of it.",
             )
+        if reached == measure.LIMIT_DAY:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Paused until tomorrow: today's AI budget ({usd(budgets.per_day_usd)}) is used up, and "
+                "testing is paid for out of it.",
+            )
+        room = measure.left(store, now)
+        if measure.needs_go(now, plan, room) and not body.confirmed:
+            if room.passed_by(plan):
+                detail = (
+                    f"Testing needs your confirmation first: it would cost about {usd(plan.usd or 0.0)}, more than "
+                    f"the {usd(room.today_usd)} left of your daily limit. It stops when the limit is reached and "
+                    "keeps what it measured."
+                )
+            else:
+                cost = "its cost can't be estimated" if plan.usd is None else f"it would cost about {usd(plan.usd)}"
+                detail = f"Testing needs your confirmation first: {cost}, and you asked to be asked about that."
+            raise HTTPException(status_code=409, detail=detail)
         refs = [f"{account}/{short}" for short in plan.models]
         already = measure.begin(ws, refs)
         worker.measure_soon()

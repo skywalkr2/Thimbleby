@@ -929,7 +929,7 @@ class Worker:
         def run() -> None:
             try:
                 while measure.waiting(self.ws) and not self._stop.is_set():
-                    measure.run_waiting(self.ws, os.environ)
+                    measure.run_waiting(self.ws, os.environ, store=self.store, now=self.now)
                     self.events.changed()
             except (
                 Exception

@@ -69,7 +69,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from engine import action_work, new_terms
 from engine.ai.adapters import make_adapter
@@ -99,6 +99,15 @@ ONE_ACCOUNT_LINE = (
 )
 _STARTING = WriteContext(actor="import", trust="trusted", op="import")
 AdapterFactory = Callable[[str, Any, str | None], Any]
+
+
+class Spending(Protocol):
+    """Whatever counts a run's cost in the person's own spending (`engine.ai.measure.Meter`): asked before each run
+    whether a limit stops it, and told each result."""
+
+    def stops(self) -> bool: ...
+
+    def count(self, result: RunResult) -> None: ...
 
 
 @dataclass
@@ -338,6 +347,7 @@ def evaluate(
     packs_of: Path | None = None,
     most_private: str | None = None,
     pause: Callable[[float], None] = time.sleep,
+    meter: Spending | None = None,
 ) -> Report:
     """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
     checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
@@ -345,7 +355,8 @@ def evaluate(
     in `packs_of` (default: the template) run after the core's. With `most_private`, a case whose `data_level` is more
     private than that is left out (the account may not see its material); the report still names every case. A run that
     finds no network waits for it as the app's own work does (`pause` is how it waits), uses up no try and fails no
-    case."""
+    case. With `meter`, each run's cost is counted in the person's spending, and a run a limit stops is not made
+    (`stopped`)."""
     env = os.environ if env is None else env
     results: list[RunResult] = []
     versions: dict[str, str | None] = {}
@@ -355,6 +366,11 @@ def evaluate(
     for case, n in ((case, n) for case in cases for n in range(1, runs + 1)):
         if results and results[-1].out_of_quota:
             results.append(not_made(case["id"], n, results[-1]))
+            if progress is not None:
+                progress(results[-1], len(results), total)
+            continue
+        if meter is not None and meter.stops():
+            results.append(stopped(case["id"], n))
             if progress is not None:
                 progress(results[-1], len(results), total)
             continue
@@ -382,6 +398,8 @@ def evaluate(
                 adapter_factory=adapter_factory,
             )
         )
+        if meter is not None:
+            meter.count(results[-1])
         if progress is not None:
             progress(results[-1], len(results), total)
     return Report(
@@ -405,6 +423,11 @@ def not_made(case_id: str, n: int, spent: RunResult) -> RunResult:
         not_run=True,
         out_of_quota=True,
     )
+
+
+def stopped(case_id: str, n: int) -> RunResult:
+    """A run left out because a spending limit was reached before it started: not run, and never called."""
+    return RunResult(case_id, n, False, error="Not run: a spending limit was reached.", not_run=True)
 
 
 def _run_case(

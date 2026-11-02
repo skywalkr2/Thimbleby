@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 305. A measuring counts toward the daily and monthly spending limits (2026-11-02; P97, owner: "sure otherwise its not honest")
+
+| Where | Before | Now |
+|---|---|---|
+| Measure, cost (6.16, 6.22; `engine/ai/measure.py`) | The cases ran on a scratch copy with a store of its own, so what a measuring spent never reached the daily or monthly total | Each finished case's cost is recorded in the person's store as a run of the kind and tier `measurement` on the account it called, and every total adds it (`measure.Meter`, `evaluate(…, meter=)`, `evaluate_pairs(…, meter=)`, `evaluate_on(…, meter=)`) |
+| Measure, limits (6.16; 7.16) | No limit applied | A limit already used up refuses the request; an estimate above what is left today needs the go (`AiMeasureEstimate.left_today_usd`, `passes_limit`, in `needs_go`); before each case the limit is checked again and the cases after it are not made, what was measured is kept, and the measuring is `failed` with `limit-day` or `limit-month` in plain words |
+| Compare's note (7.16) | "A test … isn't counted in your daily limit of $2.00" | "A test is paid for on your own account and counts toward your daily limit: $1.40 of $2.00 left today." and a go with its own sentence above what is left. **Built** (`tests/test_measure_account.py`, `web/src/components/AiCompare.test.tsx`) |
+| Not built | | A per-task limit on `measurement`; the same counting for the switch check and the model watch's checks (the `meter` is there to pass); a per-account split of a case's cost that is more exact than sharing it among the accounts the case called |
+
 ## 304. Compare shows its price and progress; Settings search finds beginners' words; the logo is uploaded and the color picked (2026-11-02; X51, X55, X56)
 
 | Where | Before | Now |
@@ -1035,7 +1044,7 @@ yet follow, that it is *designed*, with its phase.
 | Settings search (7.9; X55) | Looked at setting rows only, by the setting's own words | Also sections (with a line about each), AI accounts, the backup key and an add-on's keys, and the words beginners use through `language.settings_search_words` (shipped data, replaced whole by the workspace's own list, live). `GET /api/settings` carries it as `search_words`. **Built** (`web/src/lib/settings-find.test.ts`, `Settings.test.tsx`, `tests/test_settings_search_words.py`, `tests/test_language_words.py`) |
 | Logo (4.11, 7.12; X56) | A file name in the config folder, typed; a missing file was accepted | Uploaded in Settings: `POST /api/brand/logo` keeps the picture (PNG, JPEG, WebP or SVG with nothing that runs) under a content-made name and the name is saved as `ui.brand.logo`; a missing or non-picture name is refused when chosen with a plain reason; `ui.brand.logo_max_kb` (512) limits the size. **Built** (`tests/test_brand.py`, `Settings.test.tsx`) |
 | Accent color (7.12; X56) | `#rrggbb` typed, with a "WCAG AA" ratio | The browser's color picker, saved when the person is done; a note in plain words when the color is hard to see on white or text on a button is hard to read. `SettingItem.widget` ("color", "image") says which control a setting has. **Built** (`Settings.test.tsx`) |
-| Not built | | Counting a measuring in the daily limit; a cache-proof address for a replaced logo in the header; removing older uploaded logo files |
+| Not built | | (Counting a measuring in the daily limit: built in 305.) A cache-proof address for a replaced logo in the header; removing older uploaded logo files |
 
 ## 303. A file can be renamed, described and removed, with Undo; Add a file speaks of documents, pictures and sounds (2026-11-02; sweep X46)
 

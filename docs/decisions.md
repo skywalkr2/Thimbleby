@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: A measuring counts toward the daily and monthly spending limits (P97; section 305)
+
+**Decided:** what Compare › Measure spends is counted in the person's own spending, so the limits are honest. (1) Each case
+a measuring finishes is recorded in the person's store as a run of the kind and tier `measurement` on the account it called
+(its cost shared among the accounts it called, as the capability matrix shares it); a case with no call or no known cost adds
+none. The daily and monthly totals, the status line and the usage reports all see it. (2) The limits apply as to any other
+work: one already used up refuses the request with the router's own words; an estimate above what is left today (the day's
+limit or the month's, whichever is nearer) needs the person's go even when it is under the amount they asked to be asked
+about; the limit is checked again before each case, the case that began is finished (so one case may pass it, as any run in
+flight does) and the rest are not made, what was measured stays in the matrix, and the measuring is kept as failed saying
+which limit stopped it. (3) The note on Compare says a test counts toward the daily limit and what is left of it. This
+reverses the 2026-11-02 line that a test "is not counted in the daily limit".
+
+**Impact:** `engine/ai/measure.py` (`Meter`, `Left`, `limit_reached`), the harness loops in `engine/evaluate.py` and
+`engine/pairs.py` take an optional `meter`, `evaluate_on` passes it, `AiMeasureEstimate` gains `left_today_usd` and
+`passes_limit`. Design 6.16 (Measuring), 7.16 (Compare). Change log: section 305.
+
+**Needs the owner:** the switch check and the model watch's checks (`evaluate_on` too) still run on the scratch copy and are
+not counted; they take the same `meter`, so counting them is one argument each. Say if they should be. A case's cost is shared
+evenly among the accounts it called (almost always one); a per-call split would need the scratch store's runs carried out.
+
+**Who:** the owner ("sure otherwise its not honest", 2026-11-02); the main session for the rest.
+
 ## 2026-11-02: Compare shows its price and progress, Settings search finds beginners' words, the logo is uploaded and the color picked (X51, X55, X56; section 304)
 
 **Decided:** (1) **Compare, Measure (X51):** the price is on the button before anything is clicked ("Measure (about $x)", or
@@ -22,8 +45,7 @@ is refused when chosen, with a plain reason; the largest size is `ui.brand.logo_
 the browser's color picker, saved when the person is done, with a note in plain words when the color is hard to see on white
 or text on a button in it is hard to read; no standard's name or ratio is shown.
 
-**Needs the owner:** whether a measuring should count toward the daily limit (today it does not; counting it means running the
-cases through the person's own budget, an engine change); the header's logo keeps its address when one picture replaces
+**Needs the owner:** (answered 2026-11-02: it should count; built, see the entry above) whether a measuring should count toward the daily limit; the header's logo keeps its address when one picture replaces
 another, so a browser that cached the first may show it until a reload.
 
 **Who:** the owner ("every open P1 built before the reviewer's re-sweep", 2026-11-02); the main session for the rest.

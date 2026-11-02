@@ -4848,10 +4848,21 @@ class AiMeasureEstimate(BaseModel):
     usd: float | None = Field(None, description="About what all of it costs; none when a model has no known price.")
     confirm_above_usd: float = Field(description="The amount above which the person is asked first.")
     per_day_usd: float = Field(
-        description="The most the assistant's everyday work may spend in a day (`ai.budgets.per_day_usd`). Measuring "
-        "runs on a scratch copy and isn't counted in it; the screen says so beside the price.",
+        description="The most the assistant's work may spend in a day (`ai.budgets.per_day_usd`). A measuring is "
+        "counted in it, like any other work; the screen says so beside the price.",
     )
-    needs_go: bool = Field(description="Starting it needs `confirmed`: the estimate is above that amount.")
+    left_today_usd: float = Field(
+        description="What may still be spent today: the day's limit or the month's, whichever is nearer, less what "
+        "every recorded run (a measuring's too) has cost, never below nothing."
+    )
+    passes_limit: bool = Field(
+        description="The estimate is more than `left_today_usd`: the measuring would stop when the limit is reached, "
+        "keeping what it measured, so starting it needs `confirmed`."
+    )
+    needs_go: bool = Field(
+        description="Starting it needs `confirmed`: the estimate is above the amount to be asked about, or more than "
+        "is left today."
+    )
 
 
 class AiMeasureStarted(BaseModel):

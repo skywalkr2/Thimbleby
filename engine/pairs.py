@@ -90,6 +90,7 @@ from engine.evaluate import (
     Extras,
     Report,
     RunResult,
+    Spending,
     _create_starting_records,
     _describe,
     _forbidden,
@@ -105,6 +106,7 @@ from engine.evaluate import (
     not_made,
     received_of,
     starting_records,
+    stopped,
 )
 from engine.extract import EXTENSIONS, read_file
 from engine.extract import fixtures as file_fixtures
@@ -1143,11 +1145,13 @@ def evaluate_pairs(
     adapter_factory: AdapterFactory = make_adapter,
     most_private: str | None = None,
     pause: Callable[[float], None] = time.sleep,
+    meter: Spending | None = None,
 ) -> Report:
     """Run every pair and scenario (or `only` these) `runs` times. With `stub`, each stage answers from the pair's
     `ideal`, which checks the pairs and the plumbing rather than a model. With `most_private`, one whose `data_level`
     is more private than that is left out; the report still names every pair. A stage that finds no network waits for it
-    as the app's own work does (`pause` is how), using up no try and failing no pair."""
+    as the app's own work does (`pause` is how), using up no try and failing no pair. With `meter`, each run's cost is
+    counted in the person's spending, and a run a limit stops is not made."""
     env = os.environ if env is None else env
     versions: dict[str, str | None] = {}
     items = everything = [
@@ -1164,6 +1168,11 @@ def evaluate_pairs(
     for run, item, n in ((run, item, n) for run, item in items for n in range(1, runs + 1)):
         if results and results[-1].out_of_quota:
             results.append(not_made(item["id"], n, results[-1]))
+            if progress is not None:
+                progress(results[-1], len(results), total)
+            continue
+        if meter is not None and meter.stops():
+            results.append(stopped(item["id"], n))
             if progress is not None:
                 progress(results[-1], len(results), total)
             continue
@@ -1191,6 +1200,8 @@ def evaluate_pairs(
                 adapter_factory=adapter_factory,
             )
         )
+        if meter is not None:
+            meter.count(results[-1])
         if progress is not None:
             progress(results[-1], len(results), total)
     return Report(

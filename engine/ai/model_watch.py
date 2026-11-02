@@ -466,7 +466,10 @@ def try_move(
             return False
         try:
             run_check = evaluator or switch_check.evaluate_on
-            report = run_check(ref, after, ws, env, ai_config=aside)
+            from engine.ai.measure import metered
+
+            # The check spends the person's own money, so it counts toward their limits like any run.
+            report = metered(run_check, store, after)(ref, after, ws, env, ai_config=aside)
             verdict = switch_check.judge(ws, after, report)
         except Exception:  # a check that can't run is one that didn't finish, never a pass
             verdict = {"state": switch_check.FAILED, "failed": [], "unfinished": True}

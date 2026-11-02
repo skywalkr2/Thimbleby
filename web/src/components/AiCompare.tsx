@@ -84,7 +84,9 @@ export function AiCompare(props: { onBack: () => void }) {
   const running = grid.columns.filter((c) => c.measure === "measuring");
   const waiting = grid.columns.filter((c) => c.measure === "waiting");
   const failed = grid.columns.filter((c) => c.measure === "failed");
-  const allNeedGo = accountCost.some((q) => q.data?.needs_go) || (total != null && total > limit);
+  // Every account's test counts toward the same daily limit, so all of them together may pass what is left today.
+  const allPassLimit = accountCost.some((q) => q.data?.passes_limit) || (total != null && known != null && total > known.left_today_usd);
+  const allNeedGo = accountCost.some((q) => q.data?.needs_go) || (total != null && total > limit) || allPassLimit;
 
   const run = async (account: string, body: S["AiMeasureIn"]) => {
     setProblem("");
@@ -138,7 +140,9 @@ export function AiCompare(props: { onBack: () => void }) {
       ) : asking === key ? (
         <>
           <p className={styles.confirm} role="alert">
-            {t("ai_compare.confirm", { amount: money(estimate?.usd ?? 0), limit: money(estimate?.confirm_above_usd ?? 0) })}
+            {estimate?.passes_limit
+              ? t("ai_compare.confirm_limit", { amount: money(estimate.usd ?? 0), left: money(estimate.left_today_usd) })
+              : t("ai_compare.confirm", { amount: money(estimate?.usd ?? 0), limit: money(estimate?.confirm_above_usd ?? 0) })}
           </p>
           <div className={styles.actions}>
             <Button size="sm" variant="primary" onClick={() => void measureColumn(c, true)}>
@@ -229,7 +233,7 @@ export function AiCompare(props: { onBack: () => void }) {
       {skills.data && <p className={styles.sub}>{t("ai_compare.sub", { percent: percent(skills.data.min_score) })}</p>}
       {known && (
         <p className={styles.sub} id="ai-compare-cost-note">
-          {t("ai_compare.cost_note", { ask: money(known.confirm_above_usd), day: money(known.per_day_usd) })}
+          {t("ai_compare.cost_note", { ask: money(known.confirm_above_usd), left: money(known.left_today_usd), day: money(known.per_day_usd) })}
         </p>
       )}
       {(running.length > 0 || waiting.length > 0) && (
@@ -246,7 +250,11 @@ export function AiCompare(props: { onBack: () => void }) {
         ))}
       {asking === "*" && (
         <div role="alert">
-          <p className={styles.confirm}>{t("ai_compare.confirm", { amount: money(total ?? 0), limit: money(limit) })}</p>
+          <p className={styles.confirm}>
+            {allPassLimit
+              ? t("ai_compare.confirm_limit", { amount: money(total ?? 0), left: money(known?.left_today_usd ?? 0) })
+              : t("ai_compare.confirm", { amount: money(total ?? 0), limit: money(limit) })}
+          </p>
           <div className={styles.actions}>
             <Button size="sm" variant="primary" onClick={() => void measureAll(true)}>
               {t("ai_compare.confirm_go")}
