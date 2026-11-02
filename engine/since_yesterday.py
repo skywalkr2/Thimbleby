@@ -258,7 +258,7 @@ def _who(ws: Any, view: Any, cfg: Any, people: Any, request: Any, cs: Any) -> _W
         min_words=cfg.language.title_min_words,
         head=head_of(ws.sources_dir, source.data.get("content_hash") if source is not None else None),
     )
-    name = people.name(title.person) if title.person else title.sender
+    name = (people.name(title.person) if title.person else None) or title.sender
     return _Who(title.person, name, title.person is not None and title.person == people.pm)
 
 

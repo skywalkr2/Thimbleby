@@ -68,7 +68,13 @@ def test_a_pasted_message_is_titled_by_its_sender_and_subject():
         skip=SKIP,
         head=head,
     )
-    assert (title.kind, title.person, title.sender, title.topic) == ("email", person["id"], None, "Proof dates")
+    # The sender's name stays beside the person's id, for when the person's name can't be shown.
+    assert (title.kind, title.person, title.sender, title.topic) == (
+        "email",
+        person["id"],
+        person["full_name"],
+        "Proof dates",
+    )
 
 
 def test_the_persons_answer_to_a_question_is_titled_as_an_answer_not_as_a_note():

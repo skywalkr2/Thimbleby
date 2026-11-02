@@ -157,17 +157,17 @@ def _headers(head: str) -> dict[str, str]:
 
 
 def _who(sender: str | None, people: People) -> tuple[str | None, str | None]:
-    """The person id a sender names when it is one known person, else the sender's name as written (address parts
-    removed)."""
+    """The person id a sender names when it is one known person, and the sender's name as written (address parts
+    removed) either way, so a title still names the sender when the person's name can't be shown."""
     if not sender:
         return None, None
     name = _ADDRESS.sub(" ", sender).strip().strip('"').strip() or sender.strip()
     # An address a person can be reached at says who on its own, whatever title or spelling the name is written with.
     if "@" in sender and (by_address := people.resolve(sender)).status == "ok" and by_address.person:
-        return by_address.person, None
+        return by_address.person, name
     resolved = people.resolve(name)
     if resolved.status == "ok" and resolved.person:
-        return resolved.person, None
+        return resolved.person, name
     return None, name
 
 

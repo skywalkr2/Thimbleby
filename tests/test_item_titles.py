@@ -112,3 +112,18 @@ def test_what_work_the_app_started_is_about_comes_from_the_record_it_names_or_it
     assert subject_of(view, {"about": {"kind": "person", "id": "H-1"}}) == ""
     assert subject_of(view, {"about": {"kind": "action", "id": "gone"}}) == ""
     assert subject_of(view, {}) == ""
+
+
+class _Known:
+    """Knows one person by name, whose record can no longer be shown."""
+
+    def resolve(self, name: str) -> Resolved:
+        return Resolved("ok", person="P-1") if name == "Corner Shop" else Resolved("unknown")
+
+
+def test_mail_from_a_known_name_keeps_the_sender_so_the_title_never_says_someone():
+    """The person's path: some mail read "Email from someone" when the sender's name matched a person, because the
+    title kept only the person's id."""
+    head = "From: Corner Shop <orders@example.com>\nSubject: Your receipt\n\nThanks for your order."
+    title = title_for({"origin": "input"}, {"trust": "untrusted"}, None, people=_Known(), skip=SKIP, head=head)
+    assert title.person == "P-1" and title.sender == "Corner Shop"
