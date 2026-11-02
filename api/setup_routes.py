@@ -2379,7 +2379,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return AiModelsView(problem=str(err))
         found, problem = setup.list_models(kind, base_url, key)
         from engine.ai.presets import suggest_models, usable_models
+        from engine.ai.shipped_prices import with_prices
 
+        found = list(with_prices(kind.get("id"), dict(found)).items())
         usable = usable_models(dict(found))
         easy, hard = suggest_models(kind, usable)
         models = [(name, info) for name, info in found if name in usable]

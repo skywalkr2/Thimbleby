@@ -876,6 +876,16 @@ class Router:
             info.cached_input_per_million = price.cached_input_per_million
             if price.audio_per_minute is not None:
                 info.audio_per_minute = price.audio_per_minute
+        elif info.input_per_million is None or info.output_per_million is None:
+            # The service lists no price: the price the app ships for its kind of service, so estimates and the
+            # spending limits count its runs.
+            from engine.ai.shipped_prices import price_for
+
+            known = price_for(getattr(settings, "kind", None), choice.model_id)
+            if known is not None:
+                info.input_per_million = known["input"]
+                info.output_per_million = known["output"]
+                info.cached_input_per_million = known["cached_input"]
         if {choice.model_key, choice.model_id} & set(settings.transcribe_models):
             info.transcribes = True  # the account lists this model as taking speech; nothing else is assumed
         if {choice.model_key, choice.model_id} & set(settings.image_models):

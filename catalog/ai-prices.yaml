@@ -1,0 +1,31 @@
+# What each service's models cost, as the service publishes it, for services whose model list carries no prices. The
+# app estimates and counts spending from these, so the spending limits work from the first run. A price the workspace
+# sets (ai.yaml `prices`, by account and model) wins over these. Each entry names a model family (a word in the model's
+# id) and its version (the numbers in the id, a date stamp left out), never an exact id, so a dated release of the same
+# version matches. A model none of these matches has no price until the person gives one. Prices are US dollars per
+# million tokens: input, output, and cached input (a read from the service's prompt cache).
+services:
+  anthropic:
+    checked: "2026-11-02"
+    page: https://platform.claude.com/docs/en/about-claude/pricing
+    models:
+      - {family: fable, version: "5.1", input: 10, output: 50, cached_input: 0.25}
+      - {family: fable, version: "5", input: 10, output: 50, cached_input: 1}
+      - {family: mythos, version: "5.1", input: 10, output: 50, cached_input: 0.25}
+      - {family: mythos, version: "5", input: 10, output: 50, cached_input: 1}
+      - {family: opus, version: "5.5", input: 4, output: 20, cached_input: 0.20}
+      - {family: opus, version: "5", input: 5, output: 25, cached_input: 0.50}
+      - {family: opus, version: "4.8", input: 5, output: 25, cached_input: 0.50}
+      - {family: opus, version: "4.7", input: 5, output: 25, cached_input: 0.50}
+      - {family: opus, version: "4.6", input: 5, output: 25, cached_input: 0.50}
+      - {family: opus, version: "4.5", input: 5, output: 25, cached_input: 0.50}
+      - {family: opus, version: "4.1", input: 15, output: 75, cached_input: 1.50}
+      - {family: opus, version: "4", input: 15, output: 75, cached_input: 1.50}
+      - {family: sonnet, version: "5.5", input: 2, output: 10, cached_input: 0.10}
+      - {family: sonnet, version: "5", input: 2, output: 10, cached_input: 0.20}
+      - {family: sonnet, version: "4.6", input: 3, output: 15, cached_input: 0.30}
+      - {family: sonnet, version: "4.5", input: 3, output: 15, cached_input: 0.30}
+      - {family: sonnet, version: "4", input: 3, output: 15, cached_input: 0.30}
+      # The price for a prompt of up to 100,000 tokens; above that the service charges five times as much.
+      - {family: haiku, version: "5.5", input: 0.10, output: 0.50, cached_input: 0.01}
+      - {family: haiku, version: "4.5", input: 1, output: 5, cached_input: 0.10}

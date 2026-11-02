@@ -4,6 +4,25 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The app ships published prices for services whose model list has none (P97)
+
+**Decided:**
+- For a service whose model list carries no prices, the app ships its published prices, per model family and version,
+  with the day they were checked and the service's price page (`catalog/ai-prices.yaml`).
+- They are used after the workspace's own prices and the service's list. So estimates, run costs and the daily,
+  monthly and per-run limits count every run from the first.
+- Entries name families and versions, never exact ids, matching the catalog's presets.
+- A model none of them covers stays unpriced. The Add account form asking for its price is the fallback still to build.
+
+**Decided by:** the owner ("Yes approved", option A of three); the shape is the main session's.
+
+**Why:** the second cause of the week on the dearest model. That service's list has no prices and the app shipped
+none, so its runs cost nothing in the app's books and no spending limit ever stopped them.
+
+**Impact:** design 6.16, a new shipped data file, the router's price lookup and the model picker. The prices must be
+checked against the service's page when it changes them, as the catalog's entries are. No new setting. No change to
+scope. Change log: section 280.
+
 ## 2026-11-02: A file nothing reads is never a question (P108 d)
 
 **Decided:** an attached file of a type no reader takes is named in the item it came with, and nothing is asked. The

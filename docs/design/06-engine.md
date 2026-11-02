@@ -2334,6 +2334,13 @@ A person who adds an account gets every tier filled in, so routine work never la
   reading the service's words) gives the kind `model_retired`; the check says "{model} is no longer offered by this
   service", keeps that model out of the list for the rest of the setup, and offers the next fitting model from the listing
   with one button.
+- **The app ships the published prices of a service whose model list has none** (owner, 2026-11-02, P97; change log
+  280; *built*, `tests/test_shipped_prices.py`): `catalog/ai-prices.yaml` holds, per kind of service, each model
+  family and version's price per million tokens (input, output, cached input), the day it was checked and the
+  service's price page. A model's price is the workspace's own (`ai.prices`) first, then what the service's list says,
+  then the shipped one, found by the family word and version numbers in the id (a date stamp left out). So every
+  estimate and run cost counts, and the daily, monthly and per-run limits apply from the first run. A model none of
+  these prices stays unpriced; the add form asking for its price is still to build (P97).
 - **A paid service's model is never picked by its place in the list** (owner, 2026-11-02, P97; change log 275;
   *built*, `tests/test_retired_model.py`, `WelcomeAi.test.tsx`): a service lists its newest, often dearest, model
   first. Setup chooses for the person only by the service's preset family or by price; the first listed model only for

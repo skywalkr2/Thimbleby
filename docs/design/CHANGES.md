@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 280. Shipped prices for a service whose model list has none (2026-11-02; P97)
+
+| Where | Before | Now |
+|---|---|---|
+| A run's price (6.16, the router) | The workspace's price, else the service's list; a service whose list has none ran unpriced, so the spending limits never counted its runs | Then the price the app ships for its kind of service (`catalog/ai-prices.yaml`, by family and version, with the day checked and the price page), so estimates, run costs and the limits work from the first run |
+| The model picker (Add account) | No cost shown for such a service's models | The shipped price, so each model's cost is beside it |
+
 ## 279. A file nothing reads is never a question (2026-11-02; P108 d)
 
 | Where | Before | Now |
