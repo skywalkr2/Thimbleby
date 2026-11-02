@@ -165,10 +165,13 @@ async function go(page: Page, label: string) {
   const name = new RegExp(`^${label}`);
   const link = nav.getByRole("link", { name });
   if (await link.count()) {
-    await link.click();
     // The address changes, then the view with it: wait for the entry to say it is the current one. A heavy view (Settings)
-    // can take longer to load while the server is busy with what earlier tests handed in.
-    await expect(link).toHaveAttribute("aria-current", "page", { timeout: 20_000 });
+    // can take longer to load while the server is busy with what earlier tests handed in, and a click made before the
+    // menu is ready is lost, so the click is made again until the entry is current.
+    await expect(async () => {
+      if ((await link.getAttribute("aria-current")) !== "page") await link.click();
+      await expect(link).toHaveAttribute("aria-current", "page", { timeout: 5_000 });
+    }).toPass({ timeout: 30_000 });
     return;
   }
   for (const sheet of ["Work", "More"]) {
