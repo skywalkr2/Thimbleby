@@ -4,6 +4,35 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The assistant decides which unknown words to ask about; the scan only lists them (P106)
+
+**Decided:**
+- The scan for new terms no longer makes questions. It lists, for an input from any source (notes, mail, calendar), the
+  words the workspace doesn't know, less the cheap filters: the words in a link, a path or a query string; currency
+  codes and place names (shipped data); a word in capitals or a name joined from everyday words (a shipped list); the
+  sender's own name and domain; and every term already asked about or dropped.
+- The list is a short block in the notes run's request. The assistant, which has the glossary, the context and what it
+  learned, asks about a word only when it would need the person to explain it to understand their work, never about an
+  ordinary company, product, place or person name, a currency, or a word the input explains. It asks with `question.add`
+  and a new optional `term` field. The core keeps each such question to a listed word and to the per-input and per-day
+  limits, and writes its title and where the word came up ("in mail from Pat", "in your notes", "in your calendar",
+  "in a file you handed in").
+- Today shows one word question at a time, with its answer box, Skip, "Not a term" and "1 of 6". "Not a term" is the
+  existing question drop (the term is never listed again, a signal is recorded), with Undo.
+
+**Decided by:** the owner (2026-11-02: the questions "What does USD / MISSOURI / PECO / AutoPay / UnclaimedProperty /
+ClaimStatus mean here?" are noise; "it should be asking me about words it doesn't know from any source, but it needs
+to not be dumb"; then: the assistant should decide, since it has the glossary, the context and the learnings).
+
+**Why:** a plain function can't tell a team's own shorthand from a company's name; the assistant can, and what the
+person drops or answers is knowledge it reads next time. The cheap filters stay because they cost nothing and keep the
+list short.
+
+**Impact:** design 6.22, 6.8, 7.7; `engine/new_terms.py`, the notes packet and prompt, the dispatcher, the applier and
+`question.add` (one optional field; the plugin guide is regenerated), `engine/defaults/known_terms.yaml` (currencies,
+places and everyday words), the wording sheet (`terms.came_up_in.*`), the Today card. No new setting; the two limits'
+descriptions change. A new evaluation case in both fictional workspaces. No change to scope. Change log: section 283.
+
 ## 2026-11-02: The visible rename comes forward, and every button is a pill (P102, P101)
 
 **Decided:**

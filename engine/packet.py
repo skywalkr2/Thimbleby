@@ -14,7 +14,7 @@ from datetime import date
 from html import escape
 from typing import Any
 
-from engine import areas, audience
+from engine import areas, audience, new_terms
 from engine.ai.task import AiTask
 from engine.blocked import standing_hold
 from engine.cleaning import Cleaned, clean
@@ -180,6 +180,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         request_parts.append(f"This is about the project {about_project.data['name']} ({about_project.id}).")
     if learned.per_input:
         request_parts.append(learned.per_input)
+    if kind.name == "notes" and request_learns(store, req.data):
+        words = new_terms.packet_section(store, cfg, req.data, f"{raw}\n{note}")
+        if words:
+            request_parts.append(words)
     if kind.name == "notes" and own_words and req.data.get("about"):
         request_parts.append(_item_block(ws, store, cfg, req, saved))
     if kind.name == "notes" and own_words and saved.data["kind"] == MISSED_KIND:

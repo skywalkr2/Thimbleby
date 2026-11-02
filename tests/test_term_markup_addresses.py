@@ -160,41 +160,50 @@ def watch_workspace(tmp_path, items):
     return ws, cfg, Store(ws.db_path, cfg=cfg)
 
 
-def questions(store) -> list[str]:
-    return [str(new_terms.term_of(q)) for q in store.read().list("question") if new_terms.term_of(q)]
-
-
 def read_in(tmp_path, items):
-    """Read the items once; the stored text of each, the packet's input and the terms the scan asked about."""
+    """Read the items once; the stored text of each, the packet's input, the unknown words listed for each input and the
+    line each was found on."""
     ws, cfg, store = watch_workspace(tmp_path, items)
     try:
-        cfg.dispatch.knowledge.new_terms_per_input = 10
-        cfg.dispatch.knowledge.new_terms_per_day = 10
-        stored, asked = [], []
+        stored, shown, words, lines = [], [], [], []
         for request_id in refresh(ws, store, cfg, "s", NOW).new:
             record = store.read().get("source", store.read().get("request", request_id).data["source"])
             stored.append((ws.sources_dir / f"{record.data['content_hash']}.txt").read_text())
             packet = build(ws, store, cfg, request_id, NOW.date())
-            new_terms.scan(store, cfg, request_id, f"{packet.raw_input}\n{packet.note}", NOW, trust="untrusted")
-            asked.append(packet.raw_input)
-        quotes = [str(q.data["text"]) for q in store.read().list("question") if new_terms.term_of(q)]
-        return stored, asked, questions(store), quotes
+            for word, line in new_terms.unknown_words(store, cfg, f"{packet.raw_input}\n{packet.note}"):
+                words.append(word)
+                lines.append(line)
+            shown.append(packet.raw_input)
+        return stored, shown, words, lines
     finally:
         store.close()
 
 
-def test_a_mail_whose_plain_part_is_a_table_is_stored_and_quoted_as_text_and_asks_only_what_is_unknown(tmp_path):
+def test_a_watched_mail_whose_plain_part_is_a_table_is_stored_as_text_and_lists_only_what_is_unknown(tmp_path):
     body = MARKUP.format("Thank you for filing a claim. The attached PDF has the details.") + MARKUP.format(
         "Mail it to 41 Quarry Lane NW, Fairhaven, MO 65810, USA. Ask the QXZ desk first."
     )
     mail = {"key": "m1", "title": "Your claim", "text": f"From: {SENDER}\nSubject: Your claim\n\n{body}"}
-    stored, shown, asked, quotes = read_in(tmp_path, [mail])
+    stored, shown, listed, lines = read_in(tmp_path, [mail])
     body_of = lambda text: text.split("Subject: Your claim\n\n", 1)[1]  # noqa: E731 - the headers keep their brackets
     assert "<" not in body_of(stored[0]) and "<" not in body_of(shown[0])
     assert "Thank you for filing a claim" in stored[0] and "Fairhaven, MO 65810" in stored[0]
-    assert asked == ["QXZ"]
-    assert quotes and all("<" not in quote and "td" not in quote.split() for quote in quotes)
-    assert quotes[0].endswith("Ask the QXZ desk first.") or "QXZ" in quotes[0]
+    assert listed == ["QXZ"]
+    assert lines and all("<" not in line and "td" not in line.split() for line in lines)
+    assert "QXZ" in lines[0]
+
+
+def test_a_pasted_table_lists_only_what_is_unknown_and_quotes_it_as_text(tmp_path):
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    cfg = ws.config(env={})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        pasted = MARKUP.format("Mail it to 41 Quarry Lane NW, Fairhaven, MO 65810, USA. Ask the QXZ desk first.")
+        hand_in(ws, store, pasted=pasted, now=NOW)
+        ((word, line),) = new_terms.unknown_words(store, cfg, pasted)
+        assert word == "QXZ" and "<" not in line and "QXZ" in line
+    finally:
+        store.close()
 
 
 def test_a_calendar_entry_whose_where_line_is_an_address_asks_nothing(tmp_path):

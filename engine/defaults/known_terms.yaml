@@ -36,3 +36,63 @@ file_types: [
 mail_abbreviations: [
   faq, eta, rsvp, asap, fyi, tbd, tbc, tba, eod, aka, etc, zip, us, eu, am, pm, ok, fwd, cc, bcc,
 ]
+currencies: [
+  aed, afn, all, amd, ang, aoa, ars, aud, awg, azn, bam, bbd, bdt, bgn, bhd, bif, bmd, bnd, bob, brl, bsd, btn, bwp, byn,
+  bzd, cad, cdf, chf, clp, cny, cop, crc, cup, cve, czk, djf, dkk, dop, dzd, egp, ern, etb, eur, fjd, fkp, gbp, gel,
+  ghs, gip, gmd, gnf, gtq, gyd, hkd, hnl, htg, huf, idr, ils, inr, iqd, irr, isk, jmd, jod, jpy, kes, kgs, khr, kmf,
+  kpw, krw, kwd, kyd, kzt, lak, lbp, lkr, lrd, lsl, lyd, mad, mdl, mga, mkd, mmk, mnt, mop, mru, mur, mvr, mwk, mxn,
+  myr, mzn, nad, ngn, nio, nok, npr, nzd, omr, pab, pen, pgk, php, pkr, pln, pyg, qar, ron, rsd, rub, rwf, sar, sbd,
+  scr, sdg, sek, sgd, shp, sle, sos, srd, ssp, stn, svc, syp, szl, thb, tjs, tmt, tnd, top, try, ttd, twd, tzs, uah,
+  ugx, usd, uyu, uzs, ves, vnd, vuv, wst, xaf, xcd, xof, xpf, yer, zar, zmw, zwl,
+]
+# The names of states, provinces and territories of the larger countries, a word each (a name of two words is both
+# words). A word written in capitals that is one of these is a place, not a term.
+places: [
+  alabama, alaska, arizona, arkansas, california, colorado, connecticut, delaware, florida, georgia, hawaii, idaho,
+  illinois, indiana, iowa, kansas, kentucky, louisiana, maine, maryland, massachusetts, michigan, minnesota,
+  mississippi, missouri, montana, nebraska, nevada, hampshire, jersey, york, carolina, dakota, ohio, oklahoma, oregon,
+  pennsylvania, rhode, island, tennessee, texas, utah, vermont, virginia, washington, wisconsin, wyoming, columbia,
+  ontario, quebec, alberta, manitoba, saskatchewan, brunswick, scotia, newfoundland, labrador, edward, yukon, nunavut,
+  victoria, queensland, tasmania, bavaria, catalonia, andalusia, lombardy, tuscany, sicily, normandy,
+  brittany, provence, london, paris, berlin, madrid, rome, dublin, toronto, chicago, boston, seattle, denver, dallas,
+  houston, atlanta, miami, phoenix, philadelphia, pittsburgh, cleveland, detroit, nashville, memphis, portland, sydney,
+  melbourne, brisbane, perth, vancouver, montreal, ottawa, calgary, edmonton, europe, asia, africa, oceania,
+  antarctica, north, south, east, west, central, pacific, atlantic,
+]
+# Everyday English words, by hand, for two uses only: a word in capitals that is one of them (four letters or more) is
+# shouting, not a term, and a name joined from words that are all among them (a capital at each joint) is ordinary
+# words run together, not the name of a system. Short and ambiguous abbreviations never belong here.
+ordinary_words: [
+  about, above, access, account, accounts, action, active, add, address, admin, after, again, agent, agree, ahead, alert,
+  all, allow, also, always, amount, and, annual, answer, any, appeal, apply, approve, area, around, ask, asset, assign,
+  attach, auto, available, away, back, balance, bank, base, basic, because, before, begin, benefit, best, better,
+  bill, billing, black, block, blue, board, book, booking, both, box, brand, break, bring, budget, build, business,
+  button, buy, call, can, cancel, card, care, case, cash, center, change, charge, chat, check, choose, city, claim,
+  claims, clean, clear, click, client, close, code, collect, color, come, comment, company, complete, confirm, connect,
+  contact, content, continue, control, copy, cost, count, county, course, cover, create, credit, current, customer,
+  daily, data, date, day, deal, debit, decide, default, delay, delete, deliver, desk, detail, details, device, direct,
+  disable, discount, display, document, doing, done, door, down, draft, drive, drop, due, duty, each, early, earn,
+  easy, edit, email, enable, end, energy, enter, entry, error, estimate, event, every, exam, expense, expire, export,
+  extra, fail, family, feature, fee, field, file, fill, final, find, finish, first, fix, flag, flight, flow, follow,
+  food, form, free, from, front, fuel, full, fund, gas, get, give, goal, good, grant, green, group, guest, guide,
+  half, hand, have, health, help, here, hide, high, history, hold, home, hotel, hour, house, idea, import, inbox,
+  income, info, inform, input, insurance, interest, invite, invoice, issue, item, join, jump, keep, key, kind, label,
+  land, last, late, launch, lead, learn, leave, left, legal, letter, level, license, life, light, limit, line, link,
+  list, live, load, loan, local, lock, log, login, long, look, loss, low, mail, main, make, manage, many, map, mark,
+  market, match, meal, meet, member, menu, message, meter, minute, miss, mobile, mode, money, month, more, move,
+  name, near, need, net, network, new, news, next, note, notice, notify, number, offer, office, online, open, option,
+  order, other, outage, over, owner, page, paid, panel, paper, park, part, pass, past, pay, payment, pending, people,
+  period, permit, person, phone, photo, plan, plate, play, plus, point, policy, post, power, price, print, private,
+  problem, process, product, profile, program, project, promo, property, public, pull, purchase, push, quick, quote,
+  rate, read, ready, real, reason, receipt, record, red, refund, register, release, remind, reminder, remove, rent,
+  repair, reply, report, request, require, reset, resolve, rest, result, return, review, reward, right, rise, road,
+  room, route, rule, run, safe, sale, save, school, score, screen, search, season, second, secure, see, select, self,
+  sell, send, sent, series, server, service, session, set, settings, share, sheet, ship, shop, show, sign, site,
+  size, skip, slot, smart, snooze, some, soon, sort, source, space, speed, split, staff, stage, standard, start,
+  state, status, stay, step, stop, store, street, submit, success, summary, supply, support, sure, survey, switch,
+  system, table, take, task, tax, team, tell, term, test, text, thanks, ticket, time, tip, title, today, tool, top,
+  total, track, trade, train, transfer, travel, trip, true, trust, turn, type, under, unclaimed, undo, unit, unpaid,
+  until, update, upload, urgent, usage, use, user, utility, valid, value, vehicle, verify, version, video, view,
+  visit, wait, wallet, warning, water, week, welcome, white, will, window, wire, with, work, world, write, year,
+  yellow, your, zone,
+]

@@ -32,9 +32,10 @@ action to the assistant, as the button on its row does, with no input handed in;
 by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a held op (`held:
 <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A case may forbid a
 question about what a word means (`forbid: [{term_question: true}]` for any, or a word or a list of words), which the
-scan for new terms makes with no op: a note of common words, or of an acronym the glossary already holds, must raise
-none. A hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed
-under `injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for
+assistant asks with a `question.add` that names the word (`term`): a note of common words, or of an acronym the
+glossary already holds, must raise none, and a word the request lists as unknown may be asked about once.
+A hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed under
+`injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for
 each plugin enabled in the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a
 scorer of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything
 else. The report says which accounts ran, the version of each command-line agent, and whether every tier ran on one

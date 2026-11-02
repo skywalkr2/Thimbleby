@@ -15,6 +15,7 @@ import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
 import { ReassignForm } from "./ReassignAction";
 import { SideChoose } from "./SideChoose";
+import { TermsCard } from "./TermsCard";
 import { BatchDetail } from "./BatchDetail";
 import { HeldDetail } from "./HeldDetail";
 import { MadeBy } from "./MadeBy";
@@ -188,20 +189,14 @@ function MovedDetail(props: { line: QueueLine }) {
   );
 }
 
-/** The questions about words, together: one row for each, each with its own answer box and a way to drop it. */
+/** The questions about words, together: one word at a time, with its answer box, Skip and Not a term. */
 function TermsDetail(props: { line: QueueLine }) {
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   if (followups.isPending) return <Skeleton />;
   const mine = followups.data?.find((s) => s.is_pm)?.questions ?? [];
   const rows = (props.line.questions ?? []).map((id) => mine.find((q) => q.id === id)).filter((q) => q !== undefined);
   if (rows.length === 0) return <Gone />;
-  return (
-    <ItemList>
-      {rows.map((question) => (
-        <DecisionRow key={question.id} question={question} reveal={0} />
-      ))}
-    </ItemList>
-  );
+  return <TermsCard questions={rows} />;
 }
 
 /** What is ready to send to a person: the message in a box, to copy and then mark as sent. */

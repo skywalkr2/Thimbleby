@@ -737,6 +737,12 @@ class QuestionAddOp(OpModel):
         description='Who asked it, by name or id, when the input says who put the question to the user ("Ana asks '
         "which trim size to use\"). Leave it out when the input doesn't say; never guess.",
     )
+    term: str | None = Field(
+        None,
+        description="A question to the user asking what a word or acronym means here: the word, copied from the "
+        '"unknown_words" block of the request. The title and text are then written for you and the question goes '
+        "to the user. Leave it out for every other question.",
+    )
 
 
 class QuestionUpdateOp(OpModel):

@@ -1420,8 +1420,9 @@ class KnowledgeSettings(ConfigModel):
         3,
         ge=0,
         le=50,
-        description="The most unknown terms (acronyms and system names the glossary lacks) the assistant asks about "
-        "from one input, found by the patterns in the language settings. 0 turns the scan off.",
+        description="The most unknown terms (acronyms and system names the glossary lacks) the assistant may ask about "
+        "from one input, chosen by the assistant from the words the language settings' patterns find. 0 turns "
+        "these questions off.",
     )
     new_terms_per_day: int = Field(
         3,

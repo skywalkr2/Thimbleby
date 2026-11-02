@@ -1,0 +1,21 @@
+id: unknown-acronym-asked-once
+title: An acronym nothing in the workspace explains is asked about once, with the standard question
+skills: [use-term]
+received: '2026-10-14'
+pasted: |-
+  From: Maya Okafor
+
+  Please send the QBR deck to the team before the review on Friday.
+expect:
+- op: question.add
+  text_has:
+  - QBR
+allow:
+- fact
+stub_answer:
+  summary: A request to send a deck; the word QBR is not known here, so the person is asked what it means.
+  ops:
+  - op: question.add
+    to: Maya Okafor
+    title: What does QBR mean here?
+    term: QBR

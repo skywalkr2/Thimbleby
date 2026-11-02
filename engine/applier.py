@@ -3919,6 +3919,11 @@ def _apply_op(
             "matters_for": " ".join(op.matters_for.split()) if op.matters_for else None,
             "asker": _asker(ctx, op.asker, to),
         }
+        if op.term:
+            from engine import new_terms
+
+            asked_on = new_terms.day_of(tx, ctx.cfg, ctx.inputs.request)
+            data["resolves"] = new_terms.resolves_for(op.term, source, ctx.inputs.request, asked_on)
         made("question", tx.create("question", data, w).id)
     elif isinstance(op, QuestionDoneOp):
         cur = tx.get("question", op.id)

@@ -41,7 +41,7 @@ def _first_words(body: str) -> str:
     return ""
 
 
-def _sender_name(sender: str, people: Any) -> str:
+def sender_name(sender: str, people: Any) -> str:
     person, shown = _who(sender, people)
     if person:
         return str(people.name(person))
@@ -58,7 +58,7 @@ def title_of(cfg: Any, people: Any, raw_input: str | None) -> str | None:
         return None
     headers, body = found
     subject = _subject_of(raw_input or "", headers) or _first_words(body)
-    sender = _sender_name(headers["from"], people)
+    sender = sender_name(headers["from"], people)
     if not subject:
         return None
     key = "note.title_from" if sender else "note.title_from_unknown"

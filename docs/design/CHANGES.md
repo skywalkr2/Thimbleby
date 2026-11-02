@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 283. Word questions: the assistant decides, the scan only lists, one at a time on Today (2026-11-02; P106)
+
+| Where | Before | Now |
+|---|---|---|
+| Term questions (6.22, 6.8) | The scan itself asked "What does USD / MISSOURI / PECO / AutoPay / UnclaimedProperty / ClaimStatus mean here?" about every unknown-looking word | **Built** (`tests/test_term_questions.py`, `tests/test_learn_input.py`, `tests/test_term_markup_addresses.py`): the scan lists the words of an input from any source, less links, paths and query strings, currency codes, place names, joined everyday words, the sender's own name and terms already asked or dropped; the notes run's request carries them as an `<unknown_words>` block; the assistant asks with `question.add` and `term`, and the core keeps the question to a listed word and to the limits and writes its title and where the word came up |
+| Op reference (3.3) | `question.add` had no way to say it asks a word's meaning | One optional field, `term`; the plugin guide is regenerated |
+| Evaluation (6.16) | A case forbade the scan's question | The same cases now forbid the assistant's question; `unknown-acronym-asked-once` expects one (both fictional workspaces) |
+| Word questions on Today (7.7) | The line opened every question at once, each with an answer box | **Built** (`web/src/components/TodayTerms.test.tsx`): one word at a time with its answer box, where it came up, Skip, "Not a term" (the existing drop, with Undo) and "1 of N" |
+
 ## 282. Setup's People step, and a step count that matches the rail (2026-11-02; P103, X68)
 
 | Where | Before | Now |
@@ -2092,7 +2101,7 @@ Built: `tests/test_versions.py`. (The log's top entry was 211, so this takes 212
   from mail sorted as automatic, bulk or set aside. A project's Still unknown lists only what a question was asked about,
   with who and the day; a one-time retirement (as one change, with Undo) turns the old "not known yet" proposals into
   questions. **Built:** `tests/test_learn_input.py` (`test_a_note_mentioning_the_owners_five_terms_raises_none`,
-  `test_a_term_in_automatic_mail_is_never_asked_about`,
+  `test_a_term_in_automatic_mail_is_listed_like_any_other_and_the_question_says_where_it_came_from`,
   `test_answering_the_question_keeps_the_term_in_the_persons_words_and_dismissing_it_records_a_signal`,
   `test_the_migration_retires_the_old_entries_into_questions_with_one_undo`), `tests/test_project_knows.py`,
   `web/src/components/ProjectKnows.test.tsx`

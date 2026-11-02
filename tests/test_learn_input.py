@@ -6,6 +6,7 @@ question that teaches at once. Names and ids come from the fixtures; the AI is t
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime
 
 import pytest
@@ -195,17 +196,30 @@ def seed_known(store) -> dict:
     }
 
 
-def scan(env, text: str, **more) -> tuple[str, list[str]]:
-    ws, cfg, store = env
-    handed = hand_in(ws, store, pasted=text, now=NOW)
-    return handed.request, new_terms.scan(store, cfg, handed.request, text, NOW, **more)
-
-
 def asked(store) -> list:
     return [q for q in entries(store, "question") if new_terms.term_of(q)]
 
 
-def test_the_scan_asks_the_person_what_each_new_term_means_and_proposes_nothing(env):
+def ask_every_listed(task) -> str:
+    """A stub assistant that asks about every word the request lists as unknown, the way an assistant that finds each
+    one worth a question would."""
+    block = re.search(r"<unknown_words[^>]*>\n(.*?)\n</unknown_words>", task.request, re.S)
+    words = [w.strip() for w in block.group(1).split(",")] if block else []
+    ops = [{"op": "question.add", "to": "the user", "title": "-", "term": w} for w in words]
+    return json.dumps({"summary": "Read it.", "topic": "a topic", "ops": ops})
+
+
+def scan(env, text: str, now=NOW, responder=ask_every_listed) -> tuple[str, list[str]]:
+    """Hand a note in and let the assistant read it; the request and the ids of the term questions it made."""
+    ws, cfg, store = env
+    before = {q.id for q in asked(store)}
+    set_responder(responder)
+    handed = hand_in(ws, store, pasted=text, now=now)
+    process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=now)
+    return handed.request, [q.id for q in asked(store) if q.id not in before]
+
+
+def test_the_assistant_asks_the_person_what_each_listed_term_means_and_proposes_nothing(env):
     _, cfg, store = env
     seed_known(store)
     text = (
@@ -222,19 +236,19 @@ def test_the_scan_asks_the_person_what_each_new_term_means_and_proposes_nothing(
     assert scan(env, text)[1] == []  # nothing is new the second time
 
 
-def test_the_scan_stops_at_the_configured_number_for_one_input_and_never_when_it_is_zero(env):
+def test_the_assistant_asks_at_most_the_configured_number_for_one_input_and_never_when_it_is_zero(env):
     _, cfg, store = env
     text = "AAA, BBB, CCC, DDD and EEE are all new."
     cfg.dispatch.knowledge.new_terms_per_input = 2
     request, made = scan(env, text)
     assert len(made) == 2
-    again = new_terms.scan(store, cfg, request, text, NOW)
-    assert again == []  # the input already has its two
+    source = store.read().get("request", request).data["source"]
+    assert new_terms.room(store, cfg, source, NOW.date().isoformat()) == 0  # the input already has its two
     cfg.dispatch.knowledge.new_terms_per_input = 0
     assert scan(env, "FFF and GGG are new.")[1] == []
 
 
-def test_the_scan_does_not_ask_again_about_a_term_the_person_dismissed(env):
+def test_a_term_the_person_dismissed_is_not_listed_again(env):
     _, _, store = env
     request, made = scan(env, "The HHH gateway is new.")
     (qid,) = made
@@ -244,12 +258,16 @@ def test_the_scan_does_not_ask_again_about_a_term_the_person_dismissed(env):
     assert scan(env, "The HHH gateway is mentioned again.")[1] == []
 
 
-def test_a_run_on_an_input_scans_it_after_the_answer_applies_and_work_that_learns_on_its_own_is_left_alone(env):
-    _, _, store = env
-    _, cs_id = read(env, "The QXZ gateway moves next week.", [])
-    assert statuses(store, cs_id) == []
+def test_a_run_on_an_input_lists_its_unknown_words_and_the_assistants_question_is_a_term_question(env):
+    ws, cfg, store = env
+    handed = hand_in(ws, store, pasted="The QXZ gateway moves next week.", now=NOW)
+    packet = build(ws, store, cfg, handed.request, TODAY)
+    assert '<unknown_words ask_at_most="3">\nQXZ\n</unknown_words>' in packet.task.request
+    _, made = scan(env, "The QXZ gateway moves next week.")
     (question,) = asked(store)
+    assert made == [question.id]
     assert question.data["title"] == "What does QXZ mean here?"
+    assert question.data["text"] == "It came up in your notes: The QXZ gateway moves next week."
     assert entries(store, "glossary_entry") == []
 
 
@@ -289,52 +307,19 @@ def test_the_names_of_the_configured_sources_are_never_asked_about(env):
     assert source.id.lower() in new_terms.never_asked(cfg)
 
 
-def test_a_term_in_automatic_mail_is_never_asked_about(env):
-    ws, cfg, store = env
-    src = make(
-        store,
-        "source",
-        {
-            "received_at": NOW.isoformat(),
-            "kind": "email",
-            "title": "A notice",
-            "projects": [],
-            "content_hash": "h",
-            "watched": {"source": "mail", "key": "m1", "change": "new"},
-            "trust": "untrusted",
-        },
+def test_a_term_in_automatic_mail_is_listed_like_any_other_and_the_question_says_where_it_came_from(env):
+    _, cfg, store = env
+    text = f"From: {SPEAKER['full_name']} <{MAIL}>\nSubject: A notice\n\nThe XYZ gateway is new."
+    assert [w for w, _ in new_terms.unknown_words(store, cfg, text)] == ["XYZ"]
+    (qid,) = scan(env, text)[1]
+    assert store.read().get("question", qid).data["text"] == (
+        f"It came up in mail from {SPEAKER['full_name']}: The XYZ gateway is new."
     )
-    make(
-        store,
-        "snapshot",
-        {
-            "source": "mail",
-            "key": "m1",
-            "title": "Your access token was added",
-            "message": {"bulk": True},
-            "set_aside": None,
-            "content_hash": "h",
-            "seen_at": NOW.isoformat(),
-        },
-    )
-    request = make(
-        store,
-        "request",
-        {"task": "notes", "origin": "input", "state": "done", "source": src, "created_at": NOW.isoformat()},
-    )
-    assert new_terms.scan(store, cfg, request, "The XYZ gateway is new.", NOW) == []
-    assert asked(store) == []
 
 
 def test_answering_the_question_keeps_the_term_in_the_persons_words_and_dismissing_it_records_a_signal(api):
     client, store, cfg, ws = api
-    (qid,) = new_terms.scan(
-        store,
-        cfg,
-        make(store, "request", {"task": "notes", "origin": "pm", "state": "done", "created_at": NOW.isoformat()}),
-        "The XYZ gateway is new.",
-        NOW,
-    )
+    (qid,) = scan((ws, cfg, store), "The XYZ gateway is new.")[1]
     done = client.post(f"/api/questions/{qid}/answer", json={"text": "the exchange gateway"})
     assert done.status_code == 200, done.text
     (entry,) = [e for e in entries(store, "glossary_entry") if e.data["term"] == "XYZ"]
@@ -343,13 +328,7 @@ def test_answering_the_question_keeps_the_term_in_the_persons_words_and_dismissi
         "person",
         "the exchange gateway",
     )
-    (other,) = new_terms.scan(
-        store,
-        cfg,
-        make(store, "request", {"task": "notes", "origin": "pm", "state": "done", "created_at": NOW.isoformat()}),
-        "The LMN gateway is new.",
-        NOW,
-    )
+    (other,) = scan((ws, cfg, store), "The LMN gateway is new.")[1]
     before = len(entries(store, "signal"))
     from engine.applier import apply_as_person
 

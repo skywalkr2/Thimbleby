@@ -486,8 +486,6 @@ def process(
         learn.finish(store, request_id, cs_id)
     if kind.name == follow_on.TASK:
         follow_on.finish(store, request_id, cs_id)
-    if kind.name == "notes" and learns:
-        new_terms.scan(store, cfg, request_id, f"{packet.raw_input}\n{packet.note}", now, trust=trust)
     if _applied_something(store, cs_id):
         retire_earlier_attempts(store, request_id)
     return cs_id
@@ -1023,6 +1021,14 @@ def _rounds(
                 return _Outcome(run_id=out.run_id, stop=stop)
             log.warning("The assistant's answer couldn't be read after a second try: %s", err)
             return _Outcome(run_id=out.run_id, stop=UNREADABLE, escalate=True, retry=UNREADABLE_WHY)
+        if (
+            task.kind == "notes"
+            and (req := store.read().get("request", request_id)) is not None
+            and request_learns(store, req.data)
+        ):
+            # The questions about unknown words are held to the words listed and the limits, and written the same way,
+            # before the checks, so they never cost a fix round.
+            changeset = new_terms.limit_questions(changeset, store, cfg, ctx.inputs)
         if learn.is_learning(task.kind):
             # Linked before the checks, so what the answer wrote there never costs a fix round.
             request = store.read().get("request", request_id)

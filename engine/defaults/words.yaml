@@ -51,3 +51,11 @@ greeting.relation_words.tradesperson: tradesperson, plumber, electrician, builde
 greeting.relation.tradesperson: "Hello {first_name},"
 greeting.relation_words.doctor: doctor, dentist, nurse
 greeting.relation.doctor: "Hello {first_name},"
+
+# Where a word the assistant asks the meaning of came up, in the question's text: {line} is the line it was found on.
+terms.came_up_in.notes: "It came up in your notes: {line}"
+terms.came_up_in.mail: "It came up in mail from {sender}: {line}"
+terms.came_up_in.mail_unknown: "It came up in a mail: {line}"
+terms.came_up_in.calendar: "It came up in your calendar: {line}"
+terms.came_up_in.file: "It came up in a file you handed in: {line}"
+terms.came_up_in.source: "It came up in {source}: {line}"

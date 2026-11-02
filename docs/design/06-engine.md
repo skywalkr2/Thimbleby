@@ -1088,7 +1088,7 @@ the project management pack (6.24), which builds on these links. From the functi
 ## 6.8 Questions service
 
 
-*Term questions (2026-10-26).* "What does X mean here?" is an ordinary question to the person with an answer box; answering it keeps the term as a glossary entry in their words, and nothing waits on it, so it can be dropped. It is made by the scan for new terms (6.22). At most `dispatch.knowledge.new_terms_per_day` (default 3) are asked in a day, and the open ones reach Today as one Review line, "Answer 3 questions about words", that opens them together; none is a line of its own (and none ranks among the top priorities). A dropped term question means that term is never raised again in this workspace, whatever the input or the day. Nothing inside a postal address is asked about: the address is recognized whole by the language data's address formats (street, city, state or province code, postal code, country), and file types and everyday mail abbreviations are among the shipped known words; a bare short code outside an address can still be asked, since it may mean something particular here. Text that comes in as HTML, from any source, is turned into plain text where it enters, so no question, quote or packet shows markup.
+*Term questions (2026-10-26; the assistant decides, 2026-11-02).* "What does X mean here?" is an ordinary question to the person with an answer box; answering it keeps the term as a glossary entry in their words, and nothing waits on it, so it can be dropped. A rules-only scan (6.22) only lists the words of an input, from any source, that the workspace doesn't know; the notes run's request carries them as a short block, and the assistant, which has the glossary, the context and what it learned, decides whether any is worth asking about, and asks with `question.add` naming the word (`term`). The core keeps the question to a listed word and to the limits, and writes its title ("What does X mean here?") and where the word came up ("It came up in mail from Pat", "in your notes", "in your calendar", "in a file you handed in"). At most `dispatch.knowledge.new_terms_per_day` (default 3) are asked in a day and `new_terms_per_input` for one input, and the open ones reach Today as one Review line, "Answer 3 questions about words", that opens them one at a time; none is a line of its own (and none ranks among the top priorities). A dropped term question means that term is never listed again in this workspace, whatever the input or the day. Never listed: the words in a link, a path or a query string; currency codes and place names (shipped data); a word in capitals or a name joined from words that are all everyday English words (a shipped list); the sender's own name and domain in a mail header. On Today the card shows one question with its answer box, Skip (the next one), "Not a term" (the drop above, with Undo) and "1 of N". Nothing inside a postal address is listed: the address is recognized whole by the language data's address formats (street, city, state or province code, postal code, country), and file types and everyday mail abbreviations are among the shipped known words; a bare short code outside an address can still be listed, since it may mean something particular here. Text that comes in as HTML, from any source, is turned into plain text where it enters, so no question, quote or packet shows markup.
 *As built today* there is no separate questions service: a question is written by the `question.add` op (a recipient, a
 title, text, links, one project and a kind), by the engine for its own problems (a sign-in that needs attention, a watched
 source that fails), and by the applier for its routing decisions. Below, what the design says and the code does not yet do
@@ -3271,20 +3271,24 @@ putting an action on or off hold is the person's own planning, not a correction 
 12), as it is now, marked taken back, kept, or not applied, inside a block marked as records. **Built:**
 `tests/test_catch_up_learning.py::test_a_send_backs_packet_shows_each_item_the_work_touched_as_it_is_now_and_where_it_is`.
 
-**Learning from inputs too.** A rules-only scan (no AI) finds the terms in an input that look like acronyms or project
+**Learning from inputs too.** A rules-only scan (no AI) lists the terms in an input that look like acronyms or project
 names (`language.new_term_patterns`, less `language.new_term_ignore`) and are not in the glossary or among the
 workspace's names, the shipped list of well-known words (common abbreviations, time zones, mail folder labels, service
 names; `language.known_terms_shipped`, `language.known_terms`) or the names of the configured sources. The shipped list
 holds only unmistakable names (countries, time zones, mail folder names, well-known services) and no short acronym,
 since two to four letters often mean something particular where the person works; the glossary is where such a meaning
-is recorded, and a word the glossary holds is never asked. *As built,* it runs
-after the person's own note, or mail from a person, is read (never mail sorted as automatic, bulk or set aside), and asks
-the person "What does X mean here?" as a question (6.8) with an answer box, at most `knowledge.new_terms_per_input`
-for one input and `knowledge.new_terms_per_day` in a day (0 turns it off), never about a term already asked or
-dismissed (a dropped question is a term never raised again), and shown on Today as one line for the day's questions. A term with no meaning is not knowledge, so nothing
-goes to Knowledge's Proposed tab; only the person's answer becomes a glossary term, in their own words. Dropping the
-question records a `dropped` signal. A project's Still unknown lists only what a question was asked about ("Asked {who}
-on {day}"), never "nobody has been asked". The run that processes an input may also propose:
+is recorded, and a word the glossary holds is never asked. *As built,* it only lists: for any input of the
+core's notes work that learns (mail and calendar entries included), the words are one short block in the run's request
+(`<unknown_words ask_at_most="N">`), and the prompt tells the assistant to ask about one only when it would need the
+person to explain it to understand their work, never about the ordinary name of a company, product, place or person, a
+currency, or a word the rest of the input explains. The assistant asks "What does X mean here?" as a question (6.8)
+with an answer box (`question.add` with `term`); the core drops a question about a word not listed, a word asked
+twice, and any past `knowledge.new_terms_per_input` for one input or `knowledge.new_terms_per_day` in a day (0 turns it
+off), never about a term already asked or dismissed (a dropped question is a term never listed again), and the day's
+questions show on Today as one line. A term with no meaning is not knowledge, so nothing goes to Knowledge's Proposed
+tab; only the person's answer becomes a glossary term, in their own words. Dropping the question records a `dropped`
+signal. A project's Still unknown lists only what a question was asked about ("Asked {who} on {day}"), never "nobody
+has been asked". The run that processes an input may also propose:
 - glossary entries for new acronyms or terms. An assumed or unknown one that blocks understanding can carry one short question
   to whoever routing says knows it.
 - routing entries when the input shows who answers what ("not me, ask X" in a reply: a routing proposal, and the question

@@ -3256,6 +3256,7 @@ A question for a person, written for its reader. A decision is a question to who
 | `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the user when nobody is named. |
 | `matters_for` | str \| None | `None` | For a question to anyone but the user: which of the user's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
 | `asker` | str \| None | `None` | Who asked it, by name or id, when the input says who put the question to the user ("Ana asks which trim size to use"). Leave it out when the input doesn't say; never guess. |
+| `term` | str \| None | `None` | A question to the user asking what a word or acronym means here: the word, copied from the "unknown_words" block of the request. The title and text are then written for you and the question goes to the user. Leave it out for every other question. |
 
 ### `question.done`
 

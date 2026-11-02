@@ -84,7 +84,7 @@ afterEach(() => {
 
 const row = (kind: string) => document.querySelector<HTMLElement>(`[data-queue-line="${kind}"]`)!;
 
-test("the day's questions about words are one line that opens them together", async () => {
+test("the day's questions about words are one line, and it opens one word at a time", async () => {
   const user = userEvent.setup();
   show([line("terms", "review", { key: "terms", count: 3, questions: ["Q-1", "Q-2", "Q-3"] })]);
   expect(await screen.findByText("Answer 3 questions about words")).toBeInTheDocument();
@@ -92,7 +92,73 @@ test("the day's questions about words are one line that opens them together", as
   // The questions are not lines of their own.
   expect(screen.queryByText("What does AAA mean here?")).not.toBeInTheDocument();
   await user.click(within(row("terms")).getByRole("button", { name: "Answer" }));
-  for (const term of ["AAA", "BBB", "CCC"]) expect(await screen.findByText(`What does ${term} mean here?`)).toBeInTheDocument();
+  expect(await screen.findByText("What does AAA mean here?")).toBeInTheDocument();
+  expect(screen.getByText("1 of 3")).toBeInTheDocument();
+  // Only the one word is open, with its one answer box.
+  for (const term of ["BBB", "CCC"]) expect(screen.queryByText(`What does ${term} mean here?`)).not.toBeInTheDocument();
+  expect(screen.getAllByRole("textbox")).toHaveLength(1);
+});
+
+test("the word says where it came up", async () => {
+  const user = userEvent.setup();
+  show([line("terms", "review", { key: "terms", count: 1, questions: ["Q-1"] })], {
+    "GET followups": () => [{ ...mine, questions: [{ ...mine.questions[0], text: "It came up in mail from Casey Moor: Send the AAA deck." }] }],
+  });
+  await user.click(await screen.findByRole("button", { name: "Answer" }));
+  expect(await screen.findByText("It came up in mail from Casey Moor: Send the AAA deck.")).toBeInTheDocument();
+  expect(screen.getByText("Words that are new here")).toBeInTheDocument();
+});
+
+test("Skip moves to the next word and keeps the others", async () => {
+  const user = userEvent.setup();
+  show([line("terms", "review", { key: "terms", count: 3, questions: ["Q-1", "Q-2", "Q-3"] })]);
+  await user.click(await screen.findByRole("button", { name: "Answer" }));
+  await user.click(await screen.findByRole("button", { name: "Skip" }));
+  expect(await screen.findByText("What does BBB mean here?")).toBeInTheDocument();
+  expect(screen.getByText("2 of 3")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Skip" }));
+  await user.click(screen.getByRole("button", { name: "Skip" }));
+  expect(await screen.findByText("What does AAA mean here?")).toBeInTheDocument();
+});
+
+test("Not a term drops the word with the existing drop and shows the next one", async () => {
+  const user = userEvent.setup();
+  const gone = new Set<string>();
+  const calls = show([line("terms", "review", { key: "terms", count: 3, questions: ["Q-1", "Q-2", "Q-3"] })], {
+    "GET followups": () => [{ ...mine, questions: mine.questions.filter((q) => !gone.has(q.id)) }],
+    "POST questions/Q-1/drop": () => {
+      gone.add("Q-1");
+      return { changeset: "CS-1" };
+    },
+    "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Answer" }));
+  await user.click(await screen.findByRole("button", { name: "Not a term" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/drop")?.body).toEqual({ reason: "Not a term" }));
+  expect(await screen.findByText("What does BBB mean here?")).toBeInTheDocument();
+  expect(screen.getByText("1 of 2")).toBeInTheDocument();
+  expect(screen.queryByText("What does AAA mean here?")).not.toBeInTheDocument();
+});
+
+test("answering a word keeps it as the person's own words", async () => {
+  const user = userEvent.setup();
+  const calls = show([line("terms", "review", { key: "terms", count: 3, questions: ["Q-1", "Q-2", "Q-3"] })], {
+    "POST questions/Q-1/answer": () => ({ ok: "Q-1", request: null }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Answer" }));
+  const box = await screen.findByRole("textbox");
+  await user.type(box, "The third gateway");
+  await user.click(within(document.querySelector<HTMLElement>("[data-terms-card]")!).getByRole("button", { name: "Answer" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/answer")?.body).toEqual({ text: "The third gateway" }));
+});
+
+test("with one word left there is no Skip", async () => {
+  const user = userEvent.setup();
+  show([line("terms", "review", { key: "terms", count: 1, questions: ["Q-1"] })], { "GET followups": () => [{ ...mine, questions: [mine.questions[0]] }] });
+  await user.click(await screen.findByRole("button", { name: "Answer" }));
+  expect(await screen.findByText("1 of 1")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Skip" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Not a term" })).toBeInTheDocument();
 });
 
 test("one question about a word is the same line, in the singular", async () => {
