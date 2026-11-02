@@ -338,22 +338,18 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await status.getByRole("button", { name: "Open AI account setup" }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
-    // The cursor starts in the screen's first field (design 7.0, "the cursor starts where you type").
-    await expect
-      .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
-      .toBe(true);
+    // The cursor starts on the screen's heading, never in a field (design 7.0; owner, 2026-10-28).
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe("H2");
     await checkAccessibility(page);
     // Finish later leaves the walkthrough, and Today's setup line stays as it was.
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     // The next step is still the first one not done or skipped: the work question comes before the AI account.
     await expect(line).toContainText("Next: Say what you'll use it for");
-    // Continue setup opens the walkthrough at that step, with the cursor in its first field.
+    // Continue setup opens the walkthrough at that step, with the cursor on its heading.
     await line.getByRole("button", { name: "Continue setup" }).click();
     await expect(page.getByRole("heading", { level: 2, name: "What it's for" })).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
-      .toBe(true);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe("H2");
     const screens = page.getByRole("navigation", { name: "Setup steps" });
     const kept = page.waitForResponse(
       (r) => r.url().includes("setup/walkthrough") && (r.request().postData() ?? "").includes('"done"'),
@@ -373,9 +369,9 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     await screens.getByRole("button", { name: /^People/ }).click();
     // The People step lists the people already there, each with an empty relation to pick, above the form to add someone;
-    // the cursor is in the first of its fields, the first person's relation.
-    await expect(page.getByRole("heading", { level: 2, name: "People", exact: true })).toBeVisible();
-    await expect(page.getByRole("combobox", { name: /relates to you/ }).first()).toBeFocused();
+    // the cursor is on its heading, never in a field.
+    await expect(page.getByRole("heading", { level: 2, name: "People", exact: true })).toBeFocused();
+    await expect(page.getByRole("combobox", { name: /relates to you/ }).first()).toBeVisible();
     await expect(page.getByRole("form", { name: "Add someone" }).getByRole("textbox", { name: "Name" })).toBeVisible();
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
