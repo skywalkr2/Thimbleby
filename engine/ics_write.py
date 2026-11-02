@@ -8,7 +8,7 @@ from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 #: The calendar product identifier written into every file; the product's name changes here only.
-PRODID = "-//PM Cockpit//Calendar Writer//EN"
+PRODID = "-//Thimbleby//Calendar Writer//EN"
 
 
 def event_ics(

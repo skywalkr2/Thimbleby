@@ -3067,6 +3067,13 @@ class QueueLineView(BaseModel):
     `unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its
     label) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how
     far back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);
+    `sent_folder` is a connected mailbox that reads no sent folder, so promises the person makes in their own mail
+    can't be found (`source` its first source's id, `subject` the mailbox's name; it opens where the source's folders
+    are chosen, and Dismiss is POST /api/watch/{source}/sent-folder/dismiss, which ends it for good);
+    `folder_rename` offers once to rename a folder made under the product's earlier name (`state` backups or
+    workspace, `subject` the folder as it is named now, `text` as it would be named; Rename is POST
+    /api/folder-offers/{state}/rename and Keep POST /api/folder-offers/{state}/keep; nothing moves without the
+    person's yes, and the workspace folder is renamed the next time the app starts);
     `intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with
     something to look over, `outcome` their results counted, `items` what needs a look), one line in place of a line
     for each; the list opens on Today and "All looks good" confirms it (POST /api/changesets/confirm); `batches` is
@@ -3200,6 +3207,8 @@ class QueueLineView(BaseModel):
         "account_check",
         "switch_failed",
         "account_move",
+        "sent_folder",
+        "folder_rename",
         "model_watch",
         "model_moved",
         "identity",
@@ -3438,6 +3447,8 @@ class QueueLineView(BaseModel):
             "replies",
             "quiet",
             "stopped",
+            "backups",
+            "workspace",
         ]
         | None
     ) = Field(
@@ -3457,7 +3468,8 @@ class QueueLineView(BaseModel):
         "business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise "
         "line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: "
         "moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, "
-        "moved the same way) or replies (the same person was owed `count` replies).",
+        "moved the same way) or replies (the same person was owed `count` replies). For a folder_rename line: backups "
+        "or workspace, which folder is offered a rename.",
     )
     choices: list[str] = Field(
         default_factory=list,
@@ -4851,6 +4863,34 @@ class LocalServerView(BaseModel):
     models: list[str]
 
 
+class AiPriceIn(BaseModel):
+    """What a model costs, in US dollars per million tokens, as the person gave it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    input_per_million: float = Field(ge=0, description="Per million input tokens, in US dollars.")
+    output_per_million: float = Field(ge=0, description="Per million output tokens, in US dollars.")
+
+
+class AiPricesAsk(BaseModel):
+    """Which of these models has no price the app knows."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(description="The kind of account chosen, from GET /api/ai/endpoints.")
+    models: list[str] = Field(description="Model ids the person picked.")
+    base_url: str | None = Field(
+        None, description="The address the person typed, for a kind of account that asks for one."
+    )
+
+
+class AiPricesMissing(BaseModel):
+    unpriced: list[str] = Field(
+        description="The asked models that have no price in the app's own table, so the form asks the person for it. "
+        "Empty for a service on this computer or a program that is not paid by the token."
+    )
+
+
 class AiAccountAdd(BaseModel):
     """A new AI account from the Add account screen. A pasted key is kept on this computer, never in ai.yaml."""
 
@@ -4885,6 +4925,12 @@ class AiAccountAdd(BaseModel):
         default_factory=dict,
         description="Tiers to one of this account's models by its short name, such as an everyday model for "
         "routine and a stronger one for deep; it wins over use_for for the tiers it names.",
+    )
+    prices: dict[str, AiPriceIn] = Field(
+        default_factory=dict,
+        description="What the person said a model costs when neither the service's list nor the app's own table has a "
+        "price for it, by the model's short name from `models`: each is kept as a price in the settings "
+        "(`ai.prices`, under the account and the short name), where the estimates and the spending limits read it.",
     )
     fingerprint: str
 
@@ -5569,6 +5615,24 @@ class SortingRuleIn(BaseModel):
     )
     senders: list[str] = Field(default_factory=list)
     domains: list[str] = Field(default_factory=list)
+
+
+class FolderRenameIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str = Field(
+        "", description="The settings fingerprint the screen read, for the backup folder's rename."
+    )
+
+
+class FolderRenamed(BaseModel):
+    state: str = Field(description="Which folder: backups or workspace.")
+    renamed: int = Field(
+        description="How many folders were renamed now; the workspace folder is renamed at the next start."
+    )
+    saved: SettingsSaved | None = Field(
+        None, description="The backup targets that followed the rename, with Undo; none when none pointed there."
+    )
 
 
 class FingerprintIn(BaseModel):

@@ -424,9 +424,15 @@ class BackupSettings(ConfigModel):
         "they are offered. The first one found is recommended.",
     )
     cloud_path: list[str] = Field(
-        default_factory=lambda: ["Backups", "PM Cockpit"],
+        default_factory=lambda: ["Backups", "Thimbleby"],
         description="The folders, one inside the next, that the guide makes inside a cloud drive for backups. They are "
         "shown to the person by name, joined with arrows.",
+    )
+    former_cloud_path: list[str] = Field(
+        default_factory=lambda: ["Backups", "PM Cockpit"],
+        description="The folders an earlier version made inside a cloud drive for backups. When one is found where the "
+        "folders above would be, Today offers once to rename it; nothing is moved without the person's yes. Empty: "
+        "never offered.",
     )
     every_hours: int = Field(
         24, ge=1, description="How often a full backup is made.", json_schema_extra={"enabled_by": "automatic"}

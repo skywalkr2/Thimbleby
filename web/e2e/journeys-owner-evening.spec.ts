@@ -49,12 +49,14 @@ test.describe.serial("journey: the owner's first evening", () => {
     await pressStart(page);
     const main = page.locator("main#main");
 
-    // 1. You: the cursor is in the first field; only the name and the time zone are asked (the workspace's name and the
-    // assistant's, Reginald, are Settings'); the time zone is one searchable list.
+    // 1. You: the cursor is on the step's heading, not in a field; only the name and the time zone are asked (the
+    // workspace's name and the assistant's, Reginald, are Settings'); the time zone is one searchable list.
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
     expect(await widerThanWindow(page, "You")).toEqual([]);
     const fullName = main.getByLabel("Your full name");
-    await expect(fullName).toBeFocused();
+    await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeFocused();
+    await expect(fullName).not.toBeFocused();
+    await fullName.click();
     await page.keyboard.type(me);
     await expect(main.getByLabel("Name shown at the top")).toHaveCount(0);
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);

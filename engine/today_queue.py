@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from engine import (
@@ -130,6 +131,11 @@ class Line:
     action: its id in `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody
     known, `sender` as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest
     first),
+    sent_folder (a connected mailbox that reads no sent folder: its first source's id in `source`, the mailbox's name in
+    `subject`; the line opens where the source's folders are chosen, and Dismiss ends it for good),
+    folder_rename (a folder made under the product's earlier name, found where the new default would be: `state` is
+    backups or workspace, `subject` the folder as it is named now and `text` as it would be named; Rename is the
+    person's own change and Keep stops the offer for good),
     sent_check (a message the person copied that no sent message has matched, asked about once a sent folder is
     being read: its copy's id in `sent_copy`, who it was for in `person`, what it covered in `questions` and
     `actions`),
@@ -286,6 +292,45 @@ class Line:
     #: For a pattern line, a stale line and the like: the choices the line offers, in order, as ids the screen words.
     choices: list[str] = field(default_factory=list)
     since: str = ""
+
+
+def _folder_lines(ws: Any, store: Any, cfg: Any, home: Path | None = None) -> list[Line]:
+    """Lines about folders: a connected mailbox that reads no sent folder, and a folder made under the product's earlier
+    name that is offered a rename once."""
+    from engine import folder_rename, sent_folders
+
+    lines: list[Line] = []
+    private = ws.private_dir
+    gone = sent_folders.dismissed(private)
+    for box in sent_folders.missing(cfg, watch.connectors(store)):
+        if box.source not in gone:
+            lines.append(
+                Line(
+                    key=f"sent_folder:{box.source}",
+                    group="decide",
+                    kind="sent_folder",
+                    source=box.source,
+                    subject=box.label,
+                )
+            )
+    if cfg.server.mode != "hosted":
+        here = home or Path.home()
+        for which in folder_rename.offers(cfg, private, ws.root, here):
+            if which == folder_rename.BACKUPS:
+                old, new = cfg.storage.backups.former_cloud_path, cfg.storage.backups.cloud_path
+            else:
+                old, new = [folder_rename.FORMER_FOLDER], [folder_rename.DEFAULT_FOLDER]
+            lines.append(
+                Line(
+                    key=f"folder_rename:{which}",
+                    group="decide",
+                    kind="folder_rename",
+                    state=which,
+                    subject=folder_rename.shown(list(old)),
+                    text=folder_rename.shown(list(new)),
+                )
+            )
+    return lines
 
 
 def _model_lines(store: Any, cfg: Any) -> list[Line]:
@@ -821,6 +866,7 @@ def _everything(
         )
 
     lines.extend(_model_lines(store, cfg))
+    lines.extend(_folder_lines(ws, store, cfg))
 
     # Decide: an account the person said "Not now" about reading their work mail and notes, until they allow it (the
     # line goes the moment the account may see the internal level, however that came about).
@@ -1846,6 +1892,8 @@ _KIND_ORDER = {
     "account_check": 1,
     "switch_failed": 1,
     "account_move": 2,
+    "sent_folder": 2,
+    "folder_rename": 3,
     "model_watch": 2,
     "model_moved": 2,
     "identity": 0,

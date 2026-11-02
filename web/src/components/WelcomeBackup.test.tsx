@@ -266,7 +266,7 @@ describe("the cloud drives found on this computer", () => {
   test("with none found it says so and asks for a folder", async () => {
     api({ ...NONE, ...drives() });
     open();
-    expect(await screen.findByText(/We didn't find a cloud drive folder on this computer/)).toBeInTheDocument();
+    expect(await screen.findByText(/No cloud drive folder was found on this computer/)).toBeInTheDocument();
     expect(screen.getByLabelText("Folder")).toBeInTheDocument();
   });
 

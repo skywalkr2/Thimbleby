@@ -18,11 +18,11 @@
 /* The words keep a readable width: with several buttons the buttons wrap under them rather than squeeze them. */
 .message { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
 .action {
-  min-height: var(--btn-h-sm); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: inherit; cursor: pointer;
+  min-height: var(--btn-h-sm); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-btn); background: transparent; color: inherit; cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: underline; text-underline-offset: 3px;
 }
 .dismiss {
-  display: grid; place-items: center; width: var(--btn-h-sm); height: var(--btn-h-sm); border: 0; border-radius: var(--radius-sm);
+  display: grid; place-items: center; width: var(--btn-h-sm); height: var(--btn-h-sm); border: 0; border-radius: var(--radius-full);
   background: transparent; color: inherit; cursor: pointer;
 }
 .action:hover, .dismiss:hover { background: var(--text-muted); }

@@ -354,7 +354,7 @@ test("a catalog with no packs says none are listed yet", async () => {
 
 test("the app's own catalog is shown as its add-on list with when it was read, never its address; catalogs the person added keep their domain", async () => {
   open(view({ feeds: [feed({ own: true, domain: "shipped.example.net" }), feed({ domain: "more.example.com", removable: true, address: "https://" + "more.example.com/packs.yaml" })] }));
-  expect(await screen.findByText(/^PM Cockpit's add-on list · read /)).toBeInTheDocument();
+  expect(await screen.findByText(/^Thimbleby's add-on list · read /)).toBeInTheDocument();
   // The address of the app's own catalog is not on the screen at all, in text or in a label.
   expect(document.body.textContent ?? "").not.toContain("shipped.example.net");
   expect(screen.queryByRole("button", { name: /shipped\.example\.net/ })).toBeNull();

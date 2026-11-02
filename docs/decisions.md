@@ -4,6 +4,32 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Thimbleby on screen, a home for the Sent-folder note, a price asked for, the cursor on headings, pills (P102, P99, P97, P101)
+
+**Decided:** (1) The product is called **Thimbleby** on screen: the wording entry `app.name` (the one source; `catalog/product.yaml`
+stays facts about the build) and the page title. The command line, the package and the code names stay until phase I. The
+default folders become `Thimbleby` (the home folder's, `engine/folder_names.py`) and `Backups › Thimbleby`
+(`storage.backups.cloud_path`); a folder found under the earlier name (`storage.backups.former_cloud_path`, and the home
+folder's `Cockpit`) is never moved: Today offers once to rename it (Rename, or Keep the old name for good). The workspace
+folder can't be renamed while it is open, so its yes is remembered and made at the next start. A backup folder the settings
+name themselves is not offered. Wording that spoke as "we" now has the app or the assistant as the subject, and a test keeps
+it so. (2) The note that no Sent folder is read, which the setup step no longer shows, is a Today line for each connected
+mailbox that reads none, with Dismiss for good. (3) A model with no price in the service's list, the shipped table or
+`ai.prices` is asked for its price in the Add account form, saved with the account in `ai.prices` (P97 option B). (4) Every
+setup screen opens with the cursor on its heading, as the rule says. (5) Every button and filter chip is a pill and an
+icon-only button a circle, through one token.
+
+**Who:** the owner, 2026-11-02 ("Yes, rename now"; "Pills everywhere"; option B for the price form).
+
+**Why:** the owner's install still said the earlier name; a note that lost its screen was lost; a model with no price let
+spending go uncounted; the walkthrough put the cursor in a field against the owner's rule; the pill shape is the brand's.
+
+**Impact:** a new config key (`storage.backups.former_cloud_path`, demo values in both workspaces), two Today line kinds
+(`sent_folder`, `folder_rename`) and their routes, `prices` on adding an account and `POST /api/ai/prices/missing`, one
+radius token; the setup walkthrough's focus. Open: the workspace-folder offer can't tell a folder named by the person's
+own flag or environment from the default (there is no setting that names it), so Keep covers it; "the configured currency"
+for the price form is US dollars, as every amount in the app is. Change log: section 295.
+
 ## 2026-11-02: Mail leaving a folder is not news, only a reply is a non-answer, "before" a date is the day before, a vague question is returned (P108e, P109c, P109e)
 
 **Decided:** Four fixes from the owner's install, each by the rule that rules handle the mechanical and the assistant

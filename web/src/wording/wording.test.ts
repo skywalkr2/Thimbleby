@@ -407,3 +407,30 @@ test("an amount is written through the sheet's one entry, and no screen builds i
   const own = [...code.matchAll(/`\$\$\{|"\$"\s*\+|\.toFixed\(2\)/g)].map((m) => m[0]);
   expect(own).toEqual([]);
 });
+
+// The app speaks as itself or as the assistant, never as "we": nothing on screen says there is a team behind it that
+// copies, checks or finds things. The entries that quote the person's own phrases (the relations they name, the list of
+// words that mark a sentence as the person's own) are the only ones that may say "we", "us" or "our".
+const SPEAKS_AS_WE = /\b(we|we're|we'll|we've|we'd|our|ours|ourselves)\b|\bus\b/i;
+const QUOTES_THE_PERSON = /^(walkthrough\.people\.relation\.|fact\.says\.lowercase_words$)/;
+
+test("the check for an entry that speaks as 'we' finds what it should and lets look-alikes through", () => {
+  for (const said of ["We copy it every day.", "You've added everyone we found.", "Ask us.", "Our service."]) expect(SPEAKS_AS_WE.test(said), said).toBe(true);
+  for (const said of ["AI spending limit (US dollars)", "Prices are in US dollars.", "Your work is still there."]) {
+    expect(SPEAKS_AS_WE.test(said.replace(/\bUS dollars\b/g, "dollars")), said).toBe(false);
+  }
+});
+
+test("no entry speaks as 'we', 'us' or 'our', except the ones that quote the person's own phrases", () => {
+  const said = Object.entries(words)
+    .filter(([key]) => !QUOTES_THE_PERSON.test(key))
+    .filter(([, text]) => SPEAKS_AS_WE.test(text.replace(/\bUS dollars\b/g, "dollars")));
+  expect(said.map(([key, text]) => `${key}: ${text}`)).toEqual([]);
+});
+
+// The product's name comes from one entry, `app.name`; nothing else on screen names it by its earlier name.
+test("the product's name is one entry, and no entry still uses its earlier name", () => {
+  expect(words["app.name"]).toBe("Thimbleby");
+  const earlier = Object.entries(words).filter(([, text]) => /\bPM Cockpit\b/.test(text));
+  expect(earlier.map(([key]) => key)).toEqual([]);
+});

@@ -1,10 +1,10 @@
-/* The one button (design 7.12): three weights, primary solid, secondary outline, quiet text. Same height, radius and type on
-   all of them, so a row of mixed buttons lines up. */
+/* The one button (design 7.12): three weights, primary solid, secondary outline, quiet text. Same height, radius (a pill; an
+   icon-only button is a circle) and type on all of them, so a row of mixed buttons lines up. */
 .wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); max-width: 100%; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   height: var(--btn-h); padding: 0 var(--btn-px);
-  border: 1px solid var(--btn-border); border-radius: var(--radius-md);
+  border: 1px solid var(--btn-border); border-radius: var(--radius-btn);
   background: var(--surface); color: var(--text);
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold);
   white-space: nowrap; text-decoration: none; cursor: pointer;
@@ -13,7 +13,7 @@
 .btn:hover { background: var(--surface-sunk); }
 .btn:active { transform: translateY(1px); }
 .sm { height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
-.icon-only { width: var(--btn-h); min-width: var(--target-icon); min-height: var(--target-icon); padding: 0; flex: none; }
+.icon-only { width: var(--btn-h); min-width: var(--target-icon); min-height: var(--target-icon); padding: 0; flex: none; border-radius: var(--radius-full); }
 .icon-only.sm { width: var(--btn-h-sm); min-width: var(--target-icon); }
 
 .primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }

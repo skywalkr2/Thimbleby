@@ -133,6 +133,16 @@ export const api = {
   /** The folders of a mailbox source, and which one its server marks as sent mail. */
   watchFolders: (src: string) => call<S["MailFoldersView"]>("GET", `watch/${id(src)}/folders`),
   addSentFolder: (src: string, body: S["SentFolderIn"]) => call<S["SettingsSaved"]>("POST", `watch/${id(src)}/sent-folder`, body),
+  /** Dismisses, for good, Today's line about a mailbox that reads no sent folder. */
+  dismissSentFolder: (src: string) => call<S["Ok"]>("POST", `watch/${id(src)}/sent-folder/dismiss`),
+  dismissSentFolderUndo: (src: string) => call<S["Ok"]>("POST", `watch/${id(src)}/sent-folder/dismiss/undo`),
+  /** The person's yes to renaming a folder made under the earlier name (`backups` or `workspace`). */
+  renameFolder: (which: string, fingerprint: string) =>
+    call<S["FolderRenamed"]>("POST", `folder-offers/${id(which)}/rename`, { fingerprint } satisfies S["FolderRenameIn"]),
+  renameFolderUndo: () => call<S["Ok"]>("POST", "folder-offers/workspace/rename/undo"),
+  /** Keeps the earlier name: the offer never comes back. */
+  keepFolderName: (which: string) => call<S["Ok"]>("POST", `folder-offers/${id(which)}/keep`),
+  keepFolderNameUndo: (which: string) => call<S["Ok"]>("POST", `folder-offers/${id(which)}/keep/undo`),
   readSource: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/read`),
   handInRecent: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/recent`),
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
@@ -713,6 +723,8 @@ export const api = {
   aiModels: (body: S["AiModelsAsk"]) => call<S["AiModelsView"]>("POST", "ai/models", body),
   checkAccount: (body: S["AiAccountCheck"]) => call<S["AiAccountChecked"]>("POST", "ai/account-check", body),
   aiLocal: () => call<S["LocalServerView"][]>("GET", "ai/local"),
+  /** Which of the picked models has no price the app knows, so the form asks for it. */
+  aiPricesMissing: (body: S["AiPricesAsk"]) => call<S["AiPricesMissing"]>("POST", "ai/prices/missing", body),
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
   aiSkills: () => call<S["AiSkillsView"]>("GET", "ai/skills"),

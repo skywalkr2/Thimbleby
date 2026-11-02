@@ -40,10 +40,11 @@
   --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
 
   /* Radius */
-  --radius-sm: 4px;   /* pills, kbd, small inputs */
-  --radius-md: 8px;   /* buttons, inputs, menus */
+  --radius-sm: 4px;   /* kbd, tags, small inputs */
+  --radius-md: 8px;   /* inputs, menus */
   --radius-lg: 12px;  /* panes, dialogs */
   --radius-full: 999px;
+  --radius-btn: var(--radius-full);  /* every button and filter chip is a pill; an icon-only button is a circle */
 
   /* Elevation: only floating things get shadows */
   --elev-0: none;

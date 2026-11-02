@@ -2368,7 +2368,16 @@ A person who adds an account gets every tier filled in, so routine work never la
   service's price page. A model's price is the workspace's own (`ai.prices`) first, then what the service's list says,
   then the shipped one, found by the family word and version numbers in the id (a date stamp left out). So every
   estimate and run cost counts, and the daily, monthly and per-run limits apply from the first run. A model none of
-  these prices stays unpriced; the add form asking for its price is still to build (P97).
+  these prices stays unpriced; the add form asks for its price (below).
+- **A model with no price anywhere is asked for its price when the account is added** (owner, 2026-11-02, P97 option B;
+  change log 295; *built*, `tests/test_account_price_form.py`, `web/src/components/WelcomeAiDrawer.test.tsx`): when a
+  model the person picks has no price in the service's list, in the app's shipped table or in `ai.prices`, the form asks
+  for what it costs to read and to write, per million text units, in US dollars, with the line "Without a price,
+  {app} can't keep to your spending limits", and the account can't be added until both are given (0 is allowed, for a free
+  model). A service on this computer, a program and a typed address on this computer are never asked, and neither is a model
+  with a listed price (even a price of 0). The answer is saved with the account where `ai.prices` keeps prices (account and
+  short model name), so estimates and the limits count its runs. `POST /api/ai/prices/missing` says which picked models the
+  shipped table has no price for; `POST /api/ai/accounts` takes `prices`.
 - **A paid service's model is never picked by its place in the list** (owner, 2026-11-02, P97; change log 275;
   *built*, `tests/test_retired_model.py`, `WelcomeAi.test.tsx`): a service lists its newest, often dearest, model
   first. Setup chooses for the person only by the service's preset family or by price; the first listed model only for

@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from engine.cli import main
+from engine.folder_names import DEFAULT_FOLDER, FORMER_FOLDER
 from engine.storage import Store
 from engine.storage.lease import Lease
 from tests.conftest import DEMO_B, fixture_records
@@ -277,8 +278,8 @@ def test_cockpit_on_its_own_makes_a_workspace_in_the_home_folder_the_first_time(
     served = _start_without_serving(monkeypatch, tmp_path)
     assert main([]) == 0
     home = tmp_path / "home"
-    assert (home / "Cockpit" / "config").is_dir()
-    assert served == [home / "Cockpit"]
+    assert (home / DEFAULT_FOLDER / "config").is_dir()
+    assert served == [home / DEFAULT_FOLDER]
     assert "Made your workspace in" in capsys.readouterr().out
 
 
@@ -292,7 +293,7 @@ def test_cockpit_on_its_own_reopens_the_workspace_started_last(tmp_path, monkeyp
     cli.remember_workspace(other)
     assert main([]) == 0
     assert served == [other]
-    assert not (tmp_path / "home" / "Cockpit").exists()
+    assert not (tmp_path / "home" / DEFAULT_FOLDER).exists()
 
 
 def test_a_workspace_in_a_temporary_folder_is_never_the_one_cockpit_reopens(tmp_path, monkeypatch):
@@ -308,12 +309,22 @@ def test_a_workspace_in_a_temporary_folder_is_never_the_one_cockpit_reopens(tmp_
     (tmp_path / "home" / cli.LAST_FILE).parent.mkdir(parents=True)
     (tmp_path / "home" / cli.LAST_FILE).write_text(str(throwaway) + "\n")
     assert main([]) == 0
-    assert served == [tmp_path / "home" / "Cockpit"]
+    assert served == [tmp_path / "home" / DEFAULT_FOLDER]
+
+
+def test_cockpit_on_its_own_opens_a_workspace_under_the_earlier_folder_name_and_makes_no_new_one(tmp_path, monkeypatch):
+    from engine.workspace import init_workspace
+
+    served = _start_without_serving(monkeypatch, tmp_path)
+    earlier = init_workspace(tmp_path / "home" / FORMER_FOLDER, git=False).root
+    assert main([]) == 0
+    assert served == [earlier]
+    assert not (tmp_path / "home" / DEFAULT_FOLDER).exists()
 
 
 def test_cockpit_on_its_own_never_makes_a_workspace_in_a_folder_with_other_files(tmp_path, monkeypatch, capsys):
     served = _start_without_serving(monkeypatch, tmp_path)
-    folder = tmp_path / "home" / "Cockpit"
+    folder = tmp_path / "home" / DEFAULT_FOLDER
     folder.mkdir()
     (folder / "notes.txt").write_text("mine")
     assert main([]) == 1

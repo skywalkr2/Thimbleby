@@ -8,7 +8,7 @@ import { MAIL_LINK_MAX } from "../lib/mail";
 import { Feedback } from "./Feedback";
 
 const TO = "feedback@example.com";
-const SUBJECT = "Feedback on PM Cockpit";
+const SUBJECT = "Feedback on Thimbleby";
 
 type Problem = S["FeedbackProblem"];
 

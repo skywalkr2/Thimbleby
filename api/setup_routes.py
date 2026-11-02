@@ -36,6 +36,8 @@ from api.schemas import (
     AiModelView,
     AiMoved,
     AiMoveReadback,
+    AiPricesAsk,
+    AiPricesMissing,
     AiRouteRuleView,
     AiRoutingView,
     AiRuleSuggestion,
@@ -59,6 +61,8 @@ from api.schemas import (
     FingerprintIn,
     FolderCheckView,
     FolderListView,
+    FolderRenamed,
+    FolderRenameIn,
     LocalServerView,
     MailFoldersView,
     MailServiceView,
@@ -1273,6 +1277,91 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             with_sent=False,
         )
 
+    @r.post("/watch/{source_id}/sent-folder/dismiss")
+    def watch_sent_folder_dismiss(source_id: str) -> Ok:
+        """Dismiss, for good, Today's line about the mailbox this source reads having no sent folder."""
+        from engine import sent_folders
+
+        source_now(source_id)
+        sent_folders.dismiss(ws.private_dir, source_id)
+        events.changed()
+        return Ok(ok=source_id)
+
+    @r.post("/watch/{source_id}/sent-folder/dismiss/undo")
+    def watch_sent_folder_dismiss_undo(source_id: str) -> Ok:
+        """Take the dismissal back: the line is on Today again while the mailbox reads no sent folder."""
+        from engine import sent_folders
+
+        sent_folders.dismiss(ws.private_dir, source_id, on=False)
+        events.changed()
+        return Ok(ok=source_id)
+
+    def folder_offer(which: str) -> None:
+        from engine import folder_rename
+
+        if which not in (folder_rename.BACKUPS, folder_rename.WORKSPACE):
+            raise HTTPException(status_code=404, detail="There is no such folder to rename.")
+
+    @r.post("/folder-offers/{which}/keep")
+    def folder_offer_keep(which: str) -> Ok:
+        """Keep a folder under its earlier name: Today never offers to rename it again."""
+        from engine import folder_rename
+
+        folder_offer(which)
+        folder_rename.keep(ws.private_dir, which)
+        events.changed()
+        return Ok(ok=which)
+
+    @r.post("/folder-offers/{which}/keep/undo")
+    def folder_offer_keep_undo(which: str) -> Ok:
+        """Take Keep back: the offer is on Today again while the folder is still under its earlier name."""
+        from engine import folder_rename
+
+        folder_offer(which)
+        folder_rename.unkeep(ws.private_dir, which)
+        events.changed()
+        return Ok(ok=which)
+
+    @r.post("/folder-offers/{which}/rename")
+    def folder_offer_rename(which: str, body: FolderRenameIn) -> FolderRenamed:
+        """The person's yes to renaming a folder made under the product's earlier name. The backup folders found are
+        renamed now and the backup targets that sat in them follow, as one settings change with Undo. The workspace
+        folder is open, so the yes is remembered and the rename is made the next time the app starts."""
+        from engine import folder_rename
+
+        folder_offer(which)
+        if which == folder_rename.WORKSPACE:
+            if folder_rename.workspace_pending(ws.root, Path.home()) is None:
+                raise HTTPException(status_code=409, detail="That folder isn't there to rename any more.")
+            folder_rename.agree(ws.private_dir)
+            events.changed()
+            return FolderRenamed(state=which, renamed=1, saved=None)
+        done = folder_rename.rename_backups(current(), Path.home())
+        if not done:
+            raise HTTPException(status_code=409, detail="That folder isn't there to rename any more.")
+        targets = [t.model_dump() for t in current().storage.backups.targets]
+        moved = folder_rename.retarget(targets, done)
+        result = None
+        try:
+            if moved != targets:
+                result = saved(
+                    save({"storage.backups.targets": moved}, [], body.fingerprint, allow=("storage.backups.",))
+                )
+        except HTTPException:
+            folder_rename.undo_backups(done)
+            raise
+        events.changed()
+        return FolderRenamed(state=which, renamed=len(done), saved=result)
+
+    @r.post("/folder-offers/workspace/rename/undo")
+    def folder_offer_rename_undo() -> Ok:
+        """Take the yes to renaming the workspace folder back, before the next start."""
+        from engine import folder_rename
+
+        folder_rename.agree(ws.private_dir, on=False)
+        events.changed()
+        return Ok(ok="workspace")
+
     @r.post("/watch/sources/{source_id}")
     def watch_change(source_id: str, body: WatchSourceChange) -> SettingsSaved:
         """Change a source's name, how often it is read, whether it is read, or its settings, with Undo."""
@@ -2338,6 +2427,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             changes[f"ai.tiers.{tier_name}.effort"] = effort
         for tier_name, higher in plan.escalate_to.items():
             changes[f"ai.tiers.{tier_name}.escalate_to"] = higher
+        for short, price in body.prices.items():
+            if short not in models:
+                raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
+            changes[f"ai.prices.{body.name}/{short}"] = price.model_dump()
         # Unless the person said what it is for, a real account takes over every tier still on the stand-in, so the
         # assistant does real work once one is added; tiers on another real account stay where the person put them.
         for tier_name in stand_in if not chosen else ():
@@ -2345,7 +2438,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if key not in changes:
                 changes[key] = f"{body.name}/{first}"
         try:
-            result = save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers."))
+            result = save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers.", "ai.prices."))
         except HTTPException:
             if kept is not None:
                 setup.secret_path(ws, kept).unlink(missing_ok=True)
@@ -2399,6 +2492,32 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             ],
             problem=problem,
         )
+
+    def on_this_computer(address: str | None) -> bool:
+        """Whether a typed address is a server on this computer, whose models cost nothing by the token."""
+        import ipaddress
+
+        host = (urlsplit(address or "").hostname or "").lower()
+        if host == "localhost":
+            return True
+        try:
+            return ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            return False
+
+    @r.post("/ai/prices/missing")
+    def ai_prices_missing(body: AiPricesAsk) -> AiPricesMissing:
+        """Which of the models the person picked has no price the app knows (the service's own list is read where the
+        models are listed; this is the app's shipped table). The form asks the person for the price of each, since
+        without one the spending limits can't count its runs. A service on this computer is never asked."""
+        from engine.ai.shipped_prices import price_for
+
+        kind = setup.endpoint(body.endpoint)
+        if kind is None:
+            raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.endpoint}.")
+        if kind["local"] or kind["program"] or on_this_computer(body.base_url):
+            return AiPricesMissing(unpriced=[])
+        return AiPricesMissing(unpriced=[m for m in body.models if price_for(kind["id"], m) is None])
 
     @r.post("/ai/account-check")
     def ai_account_check(body: AiAccountCheck) -> AiAccountChecked:

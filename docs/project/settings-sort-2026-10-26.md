@@ -55,6 +55,7 @@ Counts: basic 32, advanced 156, files only 198.
 | `storage.export.remote` | internal | Size limit, retry or interval; technical. |
 | `storage.backups.automatic` | basic | On screen first: what most people set in their first week. |
 | `storage.backups.cloud_path` | internal | Size limit, retry or interval; technical. |
+| `storage.backups.former_cloud_path` | internal | Where an earlier version kept backups; only used to offer a one-time rename. |
 | `storage.backups.every_hours` | basic | On screen first: what most people set in their first week. |
 | `storage.backups.keep` | basic | On screen first: what most people set in their first week. |
 | `storage.backups.encrypt` | advanced | Export and sync behaviour; rarely changed. |

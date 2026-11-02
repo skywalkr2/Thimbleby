@@ -249,6 +249,29 @@ describe("opening", () => {
     window.location.hash = "";
   });
 
+  // Design 7.0: a step that opens by itself starts at its heading, never in a field, on a label or on the button that brought
+  // the person there. A form the person opens inside a step is another matter: it takes the cursor in its first field.
+  test.each(["welcome", "you", "work", "ai", "mail", "promises", "backup", "people", "done"] as const)(
+    "the %s screen opens with the cursor on its heading",
+    async (id) => {
+      fakeApi({ ...routes({}, CORE.map((c) => step(c)), { step: id }), ...WITH_SERVICE });
+      open();
+      const heading = await screenTitle();
+      await waitFor(() => expect(heading).toHaveFocus());
+      expect(document.activeElement?.tagName).toBe("H2");
+    },
+  );
+
+  test("going to another screen puts the cursor on its heading, not on the button that went there", async () => {
+    const user = userEvent.setup();
+    fakeApi({ ...routes({ "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }) }, CORE.map((c) => step(c)), { step: "you" }), ...WITH_SERVICE });
+    open();
+    await user.type(await screen.findByLabelText("Your full name"), "Sam Tester");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    const next = await screen.findByRole("heading", { level: 2, name: "What it's for" }, { timeout: 5000 });
+    await waitFor(() => expect(next).toHaveFocus());
+  });
+
   test("it opens by itself on a fresh workspace, on Welcome, and Start goes to You", async () => {
     const user = userEvent.setup();
     const calls = fakeApi({
@@ -281,8 +304,9 @@ describe("opening", () => {
     await user.click(screen.getByRole("button", { name: "Start" }));
     expect(await screenTitle()).toHaveTextContent("You");
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/walkthrough" && (c.body as S["WalkthroughIn"]).step === "you")).toBe(true));
-    // The cursor starts where the person types.
-    await waitFor(() => expect(screen.getByLabelText("Your full name")).toHaveFocus());
+    // A step that opens by itself starts at its heading, never in a field.
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "You" })).toHaveFocus());
+    expect(screen.getByLabelText("Your full name")).not.toHaveFocus();
     expect(screen.getByText("You · 1 of 8")).toBeInTheDocument();
   });
 
@@ -775,7 +799,8 @@ describe("each screen", () => {
     );
     open();
     const full = await screen.findByLabelText("Your full name");
-    expect(full).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2 })).toHaveFocus());
+    expect(full).not.toHaveFocus();
     await user.type(full, "Sam Tester");
     const zone = screen.getByLabelText("Your time zone");
     await user.clear(zone);
@@ -799,7 +824,8 @@ describe("each screen", () => {
     open();
     expect(await screenTitle()).toHaveTextContent("What it's for");
     const first = await screen.findByRole("checkbox", { name: "A job" });
-    expect(first).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "What it's for" })).toHaveFocus());
+    expect(first).not.toHaveFocus();
     // One control: a line, then two tick boxes. No radio beside a box of tick boxes, no bordered frame with a legend.
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
     const control = screen.getByRole("group", { name: "What will you use it for?" });
@@ -1656,7 +1682,7 @@ describe("each screen", () => {
       const list = await screen.findByRole("region", { name: "People you write to" });
       for (const box of within(list).getAllByRole("checkbox")) await user.click(box);
       await user.click(within(list).getByRole("button", { name: "Add these" }));
-      expect(await screen.findByText("You've added everyone we found in your mail. Add anyone else below.")).toBeInTheDocument();
+      expect(await screen.findByText("You've added everyone found in your mail. Add anyone else below.")).toBeInTheDocument();
       expect(screen.queryByText(/No one to suggest yet/)).toBeNull();
     });
 

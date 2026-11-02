@@ -10,7 +10,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
-import { useAmount, useSmallMoney } from "../lib/money";
+import { parseAmount, useAmount, useSmallMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { asReference } from "../lib/secret-ref";
 import { setAccountCheck } from "../lib/account-checks";
@@ -149,6 +149,8 @@ export function WelcomeAi(props: {
   const [workData, setWorkData] = useState<WorkData | null>(null);
   const [verdict, setVerdict] = useState<Verdict>({ state: "idle" });
   const [elseOpen, setElseOpen] = useState(false);
+  /** What the person typed for the price of a model nothing lists a price for, by model id. */
+  const [prices, setPrices] = useState<Record<string, { read: string; write: string }>>({});
   // Which of the three lines under Something else is open: null until one is pressed (the chosen kind's line is open then).
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   // Setup makes the account the assistant's own while none does the work yet; another account is added from Settings.
@@ -211,6 +213,36 @@ export function WelcomeAi(props: {
 
   const list: ModelInfo[] = server ? server.models.map((id) => ({ id })) : (models ?? []);
   const asked = models !== null || listProblem !== "";
+  // A model the service lists no price for, that the app's own table has none for either, is asked for its price: without
+  // one the spending limits can't count its runs. A service on this computer, a program and a listed price (even none to
+  // pay) are never asked.
+  const usedModels = [
+    { short: "everyday", id: everyday.trim() },
+    ...(harder !== HARDER_SAME && harder !== everyday ? [{ short: "harder", id: harder }] : []),
+  ].filter((m) => m.id !== "");
+  const mayBeUnpriced =
+    !!kind && !agent && !server && !kind.local && !programPicks
+      ? usedModels.filter((m) => {
+          const info = list.find((l) => l.id === m.id);
+          return info?.input_per_million == null || info?.output_per_million == null;
+        })
+      : [];
+  const typedAddress = kind && asksAddress(kind) ? address.trim() : "";
+  const priceAsk = useQuery({
+    queryKey: ["ai-prices-missing", kind?.id ?? "", typedAddress, mayBeUnpriced.map((m) => m.id).join("\u0001")],
+    queryFn: () => api.aiPricesMissing({ endpoint: kind?.id ?? "", models: mayBeUnpriced.map((m) => m.id), ...(typedAddress ? { base_url: typedAddress } : {}) }),
+    enabled: mayBeUnpriced.length > 0,
+  });
+  const unpriced = mayBeUnpriced.filter((m) => priceAsk.data?.unpriced.includes(m.id));
+  const priceOf = (id: string) => ({ read: prices[id]?.read ?? "", write: prices[id]?.write ?? "" });
+  const priceNumbers = (id: string) => {
+    const got = priceOf(id);
+    const read = got.read.trim() === "" ? null : parseAmount(got.read);
+    const write = got.write.trim() === "" ? null : parseAmount(got.write);
+    return read != null && write != null && read >= 0 && write >= 0 ? { input_per_million: read, output_per_million: write } : null;
+  };
+  /** Nothing says yet whether a price is missing, or every missing one has been given. */
+  const pricesGiven = (mayBeUnpriced.length === 0 || priceAsk.isSuccess || priceAsk.isError) && unpriced.every((m) => priceNumbers(m.id) !== null);
   const manualModel = builtin
     ? examples.length === 0 && !optional
     : generic || (!!kind && !server && (!canList || (asked && !listProblem && list.length === 0)));
@@ -447,6 +479,7 @@ export function WelcomeAi(props: {
     levels.length > 0 &&
     (generic ? command.trim() !== "" : builtin || !takesAddress(kind) || address.trim() !== "") &&
     (agent || keyReady) &&
+    pricesGiven &&
     !!settings.data &&
     !busy;
 
@@ -483,6 +516,7 @@ export function WelcomeAi(props: {
     if (!programPicks && everyday.trim() === "") return t(manualModel || builtin ? "welcome.ai.why.model" : "ai_add.why.models");
     if (noMatch) return t("welcome.ai.model_none");
     if (levels.length === 0) return t("ai_add.why.levels");
+    if (!pricesGiven) return t("welcome.ai.why.price");
     if (!settings.data) return t("ai_add.why.loading");
     return t("ai_add.why.other");
   })();
@@ -529,6 +563,11 @@ export function WelcomeAi(props: {
       else body.use = { routine: "everyday", deep: second ? "harder" : "everyday" };
     }
     if (takesAddress(kind) && address.trim()) body.base_url = address.trim();
+    // A price the person gave is kept with the account, by the model's short name.
+    for (const m of unpriced) {
+      const given = priceNumbers(m.id);
+      if (given) body.prices = { ...body.prices, [m.short]: given };
+    }
     if (generic) {
       body.agent = { command: command.trim().split(/\s+/), packet_via: packetVia, output_via: outputVia };
     } else if (!agent) {
@@ -805,6 +844,39 @@ export function WelcomeAi(props: {
       {!noMatch &&
         modelSelect({ id: "ai-model-harder", label: t("welcome.ai.model_harder"), value: harder, onChange: pickModel(setHarder, "harder"), same: true })}
     </>
+  );
+
+  /** The price of each model that has none anywhere: what it costs to read and to write, per million text units. */
+  const priceFields = unpriced.length > 0 && (
+    <FormBlock>
+      {unpriced.map((m) => (
+        <fieldset key={m.id} className="price-fields" data-price-fields="">
+          <legend>{t("welcome.ai.price.title", { model: m.id })}</legend>
+          <p className="hint">{t("welcome.ai.price.why", { app: t("app.name") })}</p>
+          <FormField id={`ai-price-read-${m.short}`} label={t("welcome.ai.price.read")}>
+            <input
+              id={`ai-price-read-${m.short}`}
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={priceOf(m.id).read}
+              onChange={(e) => setPrices((cur) => ({ ...cur, [m.id]: { ...priceOf(m.id), read: e.target.value } }))}
+            />
+          </FormField>
+          <FormField id={`ai-price-write-${m.short}`} label={t("welcome.ai.price.write")}>
+            <input
+              id={`ai-price-write-${m.short}`}
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={priceOf(m.id).write}
+              onChange={(e) => setPrices((cur) => ({ ...cur, [m.id]: { ...priceOf(m.id), write: e.target.value } }))}
+            />
+          </FormField>
+          <p className="hint">{t("welcome.ai.price.hint")}</p>
+        </fieldset>
+      ))}
+    </FormBlock>
   );
 
   /** The three levels of what an account may see: how the drawer asks, and what Advanced holds in the guide. */
@@ -1343,6 +1415,7 @@ export function WelcomeAi(props: {
                       </details>
                     )
                   )}
+                  {priceFields}
                 </>
               )}
               {guide && verdict.state === "works" && (

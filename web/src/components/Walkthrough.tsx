@@ -120,40 +120,10 @@ export function Walkthrough(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.at?.n]);
 
-  // On opening and on every move, the cursor goes to the screen's first field, so the person can start typing; a screen
-  // with no field puts it on its heading instead. A screen's fields can arrive a moment later (a slow answer), so the
-  // heading holds the cursor meanwhile and the first field takes it when it appears; a person who already put the
-  // cursor in a field or elsewhere keeps it there.
+  // On opening and on every move, the cursor goes to the screen's heading, never into a field or onto a button (design 7.0:
+  // a person who opens a form puts the cursor in its first field; a step that opens by itself starts at its heading).
   useEffect(() => {
-    if (!current) return;
-    const main = heading.current?.closest("main");
-    if (!main) return;
-    let watcher: MutationObserver | null = null;
-    const stop = () => watcher?.disconnect();
-    const place = (arriving = false) => {
-      const active = document.activeElement;
-      // A cursor the person put in a field of the screen, or on something else inside it, stays where it is. The one
-      // thing that does not count is the button that brought them here (Start, Continue or Back are the same button on
-      // every screen, so the cursor is still on it): on arriving, the cursor leaves it for the first field.
-      const arrivedOn = arriving && !!active && !!foot.current?.contains(active);
-      const parked = !active || active === document.body || active === heading.current || !main.contains(active) || arrivedOn;
-      if (!parked) return stop();
-      const field = main.querySelector<HTMLElement>(
-        "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
-      );
-      if (field) {
-        field.focus();
-        return stop();
-      }
-      if (active !== heading.current) heading.current?.focus();
-    };
-    place(true);
-    // The screen's fields can arrive a moment later (a slow answer): the cursor goes to the first one as it appears.
-    if (typeof MutationObserver !== "undefined") {
-      watcher = new MutationObserver(() => place());
-      watcher.observe(main, { childList: true, subtree: true });
-    }
-    return stop;
+    if (current) heading.current?.focus();
   }, [current]);
 
   // What a screen said in a toast is about that screen: moving to another one clears it.

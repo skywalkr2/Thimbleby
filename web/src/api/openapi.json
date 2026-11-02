@@ -3066,6 +3066,14 @@
             "title": "Name",
             "type": "string"
           },
+          "prices": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AiPriceIn"
+            },
+            "description": "What the person said a model costs when neither the service's list nor the app's own table has a price for it, by the model's short name from `models`: each is kept as a price in the settings (`ai.prices`, under the account and the short name), where the estimates and the spending limits read it.",
+            "title": "Prices",
+            "type": "object"
+          },
           "use": {
             "additionalProperties": {
               "type": "string"
@@ -4354,6 +4362,84 @@
           "moved"
         ],
         "title": "AiMoved",
+        "type": "object"
+      },
+      "AiPriceIn": {
+        "additionalProperties": false,
+        "description": "What a model costs, in US dollars per million tokens, as the person gave it.",
+        "properties": {
+          "input_per_million": {
+            "description": "Per million input tokens, in US dollars.",
+            "minimum": 0.0,
+            "title": "Input Per Million",
+            "type": "number"
+          },
+          "output_per_million": {
+            "description": "Per million output tokens, in US dollars.",
+            "minimum": 0.0,
+            "title": "Output Per Million",
+            "type": "number"
+          }
+        },
+        "required": [
+          "input_per_million",
+          "output_per_million"
+        ],
+        "title": "AiPriceIn",
+        "type": "object"
+      },
+      "AiPricesAsk": {
+        "additionalProperties": false,
+        "description": "Which of these models has no price the app knows.",
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The address the person typed, for a kind of account that asks for one.",
+            "title": "Base Url"
+          },
+          "endpoint": {
+            "description": "The kind of account chosen, from GET /api/ai/endpoints.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "models": {
+            "description": "Model ids the person picked.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "endpoint",
+          "models"
+        ],
+        "title": "AiPricesAsk",
+        "type": "object"
+      },
+      "AiPricesMissing": {
+        "properties": {
+          "unpriced": {
+            "description": "The asked models that have no price in the app's own table, so the form asks the person for it. Empty for a service on this computer or a program that is not paid by the token.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unpriced",
+            "type": "array"
+          }
+        },
+        "required": [
+          "unpriced"
+        ],
+        "title": "AiPricesMissing",
         "type": "object"
       },
       "AiRouteRuleView": {
@@ -11154,6 +11240,50 @@
           "folders"
         ],
         "title": "FolderListView",
+        "type": "object"
+      },
+      "FolderRenameIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "default": "",
+            "description": "The settings fingerprint the screen read, for the backup folder's rename.",
+            "title": "Fingerprint",
+            "type": "string"
+          }
+        },
+        "title": "FolderRenameIn",
+        "type": "object"
+      },
+      "FolderRenamed": {
+        "properties": {
+          "renamed": {
+            "description": "How many folders were renamed now; the workspace folder is renamed at the next start.",
+            "title": "Renamed",
+            "type": "integer"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsSaved"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The backup targets that followed the rename, with Undo; none when none pointed there."
+          },
+          "state": {
+            "description": "Which folder: backups or workspace.",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "renamed"
+        ],
+        "title": "FolderRenamed",
         "type": "object"
       },
       "FollowedUp": {
@@ -23433,7 +23563,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `stuck`\nis background work that stopped checking in (`waiting_since`, when it last did; the screen offers Restart\nnow). `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted, `items` what needs a look), one line in place of a line\nfor each; the list opens on Today and \"All looks good\" confirms it (POST /api/changesets/confirm); `batches` is\nthe batches left unopened for `ui.today.fold_batches_after_days`, folded into one line (`count` of them, each in\n`parts`, oldest first); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account\n(`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the\nread-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);\n`model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model\nof each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at\nthe current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,\nprice_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost\nwith the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST\n/api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by\n`usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed\n(the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the\nswitch routes above); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered \"Not now\"\nabout reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the\nline goes once the account may see the internal level); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `pack_tier` is a tier an add-on\ndeclared for its own work (`tier` its id, `subject` its label, `count` its kinds of work) that the person hasn't\nmapped to an account, so that work runs on the core tier named in `text` until they do (GET /api/ai/pack-tiers\nlists it for mapping); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `capacity` says the to-dos due today need more time than the calendar\nleaves (`minutes` free, `needed_minutes` needed, `count` to-dos proposed to move with their ids in `actions`, and in\n`due` the day to offer; the proposal is GET /api/capacity and each move is the person's own date change, with Undo);\n`clash` is two meetings that overlap or leave too little time to get from one place to the next (`state` overlap or\ntravel, `minutes`, `text` and `other` the two titles, `due` the day and `at` the later one's start,\n`entry` the entry to open); `tie` is a calendar entry proposed for an open to-do whose words and the entry's\ntitle contain one another on its day (the to-do's id in `actions` and its words in `text`, the entry in `entry`\nand its title in `other`, `due` the day; Tie it is POST /api/actions/{id}/tie and Not this is\nPOST /api/actions/{id}/not-this, both with Undo); `attention` is the question of whether to quiet a kind of\nsuggestion the person keeps putting off (the kind in `text`, how many times in `count`, `state` quiet or stopped;\nQuiet them is POST /api/attention/{kind}/quiet or /stop, Keep showing is POST /api/attention/{kind}/keep, both\nwith Undo); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `pattern` is\nsomething the person keeps putting off (`state` moved, redated or replies; `count` how many times or how many\nreplies, `text` the first to-do's words, `person` who the replies are owed to, the to-dos' ids in `actions`) with\nits `choices`; a `stale` line also carries `choices`; `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side\nthey belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is\nwaiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,\n`waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup\nthat works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);\n`invitation` is a calendar entry that came as an invitation, has not been answered and starts within\n`steward.meetings.invitation_days_ahead` days (`event`, its title in `text`, who invited in `subject`, `at` when it\nstarts; it opens the entry's page, where Accept, Maybe, Decline and Propose a time draft the answer for the\nperson's yes, and it goes once the person has answered); `meeting_prep` is a calendar entry with other people on it\nthat starts soon (`event`, its title in `text`, `at`\nwhen it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things\nare open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an\nentry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it\ngoes when the person writes down what happened or says there is nothing to note, POST /api/meetings/{id}/capture);\n`quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its\nwords in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they\npromised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is\nopen with them); `terms` is the questions the assistant asked about unknown words, as one line (`count` of them,\ntheir ids in `questions`; each is answered or dropped with the question routes, and a dropped one is never asked\nagain); `project_ending` is an ending of the project named in `subject` that was read from an input and waits for\nthe person, with the open items it would drop (`count`, their ids in `actions` and `questions`); the changeset is in\n`changeset` and the held op in `op`; GET /api/changesets/{id}/ops/{index}/project-ending lists the items to keep\nand what the add-ons leave open, and POST to it keeps the ticked items and ends the project with the rest.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `stuck`\nis background work that stopped checking in (`waiting_since`, when it last did; the screen offers Restart\nnow). `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`sent_folder` is a connected mailbox that reads no sent folder, so promises the person makes in their own mail\ncan't be found (`source` its first source's id, `subject` the mailbox's name; it opens where the source's folders\nare chosen, and Dismiss is POST /api/watch/{source}/sent-folder/dismiss, which ends it for good);\n`folder_rename` offers once to rename a folder made under the product's earlier name (`state` backups or\nworkspace, `subject` the folder as it is named now, `text` as it would be named; Rename is POST\n/api/folder-offers/{state}/rename and Keep POST /api/folder-offers/{state}/keep; nothing moves without the\nperson's yes, and the workspace folder is renamed the next time the app starts);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted, `items` what needs a look), one line in place of a line\nfor each; the list opens on Today and \"All looks good\" confirms it (POST /api/changesets/confirm); `batches` is\nthe batches left unopened for `ui.today.fold_batches_after_days`, folded into one line (`count` of them, each in\n`parts`, oldest first); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account\n(`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the\nread-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);\n`model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model\nof each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at\nthe current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,\nprice_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost\nwith the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST\n/api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by\n`usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed\n(the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the\nswitch routes above); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered \"Not now\"\nabout reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the\nline goes once the account may see the internal level); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `pack_tier` is a tier an add-on\ndeclared for its own work (`tier` its id, `subject` its label, `count` its kinds of work) that the person hasn't\nmapped to an account, so that work runs on the core tier named in `text` until they do (GET /api/ai/pack-tiers\nlists it for mapping); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `capacity` says the to-dos due today need more time than the calendar\nleaves (`minutes` free, `needed_minutes` needed, `count` to-dos proposed to move with their ids in `actions`, and in\n`due` the day to offer; the proposal is GET /api/capacity and each move is the person's own date change, with Undo);\n`clash` is two meetings that overlap or leave too little time to get from one place to the next (`state` overlap or\ntravel, `minutes`, `text` and `other` the two titles, `due` the day and `at` the later one's start,\n`entry` the entry to open); `tie` is a calendar entry proposed for an open to-do whose words and the entry's\ntitle contain one another on its day (the to-do's id in `actions` and its words in `text`, the entry in `entry`\nand its title in `other`, `due` the day; Tie it is POST /api/actions/{id}/tie and Not this is\nPOST /api/actions/{id}/not-this, both with Undo); `attention` is the question of whether to quiet a kind of\nsuggestion the person keeps putting off (the kind in `text`, how many times in `count`, `state` quiet or stopped;\nQuiet them is POST /api/attention/{kind}/quiet or /stop, Keep showing is POST /api/attention/{kind}/keep, both\nwith Undo); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `pattern` is\nsomething the person keeps putting off (`state` moved, redated or replies; `count` how many times or how many\nreplies, `text` the first to-do's words, `person` who the replies are owed to, the to-dos' ids in `actions`) with\nits `choices`; a `stale` line also carries `choices`; `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side\nthey belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is\nwaiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,\n`waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup\nthat works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);\n`invitation` is a calendar entry that came as an invitation, has not been answered and starts within\n`steward.meetings.invitation_days_ahead` days (`event`, its title in `text`, who invited in `subject`, `at` when it\nstarts; it opens the entry's page, where Accept, Maybe, Decline and Propose a time draft the answer for the\nperson's yes, and it goes once the person has answered); `meeting_prep` is a calendar entry with other people on it\nthat starts soon (`event`, its title in `text`, `at`\nwhen it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things\nare open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an\nentry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it\ngoes when the person writes down what happened or says there is nothing to note, POST /api/meetings/{id}/capture);\n`quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its\nwords in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they\npromised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is\nopen with them); `terms` is the questions the assistant asked about unknown words, as one line (`count` of them,\ntheir ids in `questions`; each is answered or dropped with the question routes, and a dropped one is never asked\nagain); `project_ending` is an ending of the project named in `subject` that was read from an input and waits for\nthe person, with the open items it would drop (`count`, their ids in `actions` and `questions`); the changeset is in\n`changeset` and the held op in `op`; GET /api/changesets/{id}/ops/{index}/project-ending lists the items to keep\nand what the add-ons leave open, and POST to it keeps the ticked items and ends the project with the rest.",
         "properties": {
           "account": {
             "anyOf": [
@@ -23809,6 +23939,8 @@
               "account_check",
               "switch_failed",
               "account_move",
+              "sent_folder",
+              "folder_rename",
               "model_watch",
               "model_moved",
               "identity",
@@ -24449,7 +24581,9 @@
                   "redated",
                   "replies",
                   "quiet",
-                  "stopped"
+                  "stopped",
+                  "backups",
+                  "workspace"
                 ],
                 "type": "string"
               },
@@ -24457,7 +24591,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a date_reminder line: the kind of day, deadline, renewal, expiry, warranty or bill. For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, moved the same way) or replies (the same person was owed `count` replies).",
+            "description": "For a date_reminder line: the kind of day, deadline, renewal, expiry, warranty or bill. For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, moved the same way) or replies (the same person was owed `count` replies). For a folder_rename line: backups or workspace, which folder is offered a rename.",
             "title": "State"
           },
           "subject": {
@@ -33097,7 +33231,7 @@
     }
   },
   "info": {
-    "title": "PM Cockpit",
+    "title": "Thimbleby",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
@@ -35277,6 +35411,45 @@
           }
         },
         "summary": "Ai Pack Tiers"
+      }
+    },
+    "/api/ai/prices/missing": {
+      "post": {
+        "description": "Which of the models the person picked has no price the app knows (the service's own list is read where the\nmodels are listed; this is the app's shipped table). The form asks the person for the price of each, since\nwithout one the spending limits can't count its runs. A service on this computer is never asked.",
+        "operationId": "ai_prices_missing_api_ai_prices_missing_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiPricesAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiPricesMissing"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Prices Missing"
       }
     },
     "/api/ai/routing": {
@@ -38356,6 +38529,155 @@
           }
         },
         "summary": "Filing Questions"
+      }
+    },
+    "/api/folder-offers/workspace/rename/undo": {
+      "post": {
+        "description": "Take the yes to renaming the workspace folder back, before the next start.",
+        "operationId": "folder_offer_rename_undo_api_folder_offers_workspace_rename_undo_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Folder Offer Rename Undo"
+      }
+    },
+    "/api/folder-offers/{which}/keep": {
+      "post": {
+        "description": "Keep a folder under its earlier name: Today never offers to rename it again.",
+        "operationId": "folder_offer_keep_api_folder_offers__which__keep_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "which",
+            "required": true,
+            "schema": {
+              "title": "Which",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folder Offer Keep"
+      }
+    },
+    "/api/folder-offers/{which}/keep/undo": {
+      "post": {
+        "description": "Take Keep back: the offer is on Today again while the folder is still under its earlier name.",
+        "operationId": "folder_offer_keep_undo_api_folder_offers__which__keep_undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "which",
+            "required": true,
+            "schema": {
+              "title": "Which",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folder Offer Keep Undo"
+      }
+    },
+    "/api/folder-offers/{which}/rename": {
+      "post": {
+        "description": "The person's yes to renaming a folder made under the product's earlier name. The backup folders found are\nrenamed now and the backup targets that sat in them follow, as one settings change with Undo. The workspace\nfolder is open, so the yes is remembered and the rename is made the next time the app starts.",
+        "operationId": "folder_offer_rename_api_folder_offers__which__rename_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "which",
+            "required": true,
+            "schema": {
+              "title": "Which",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderRenameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderRenamed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folder Offer Rename"
       }
     },
     "/api/followups": {
@@ -48520,6 +48842,86 @@
           }
         },
         "summary": "Watch Sent Folder"
+      }
+    },
+    "/api/watch/{source_id}/sent-folder/dismiss": {
+      "post": {
+        "description": "Dismiss, for good, Today's line about the mailbox this source reads having no sent folder.",
+        "operationId": "watch_sent_folder_dismiss_api_watch__source_id__sent_folder_dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Sent Folder Dismiss"
+      }
+    },
+    "/api/watch/{source_id}/sent-folder/dismiss/undo": {
+      "post": {
+        "description": "Take the dismissal back: the line is on Today again while the mailbox reads no sent folder.",
+        "operationId": "watch_sent_folder_dismiss_undo_api_watch__source_id__sent_folder_dismiss_undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Sent Folder Dismiss Undo"
       }
     },
     "/api/working-copies": {

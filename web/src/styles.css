@@ -35,8 +35,8 @@ main p { max-width: var(--measure); }
 .heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
 .heading h2 { font-size: var(--text-section); line-height: var(--lh-section); }
 .heading h3 { font-size: var(--text-md); line-height: var(--lh-md); }
-.filters { display: inline-flex; gap: var(--space-1); background: var(--surface-sunk); padding: var(--space-1); border-radius: var(--radius-md); }
-.filters button { border: 0; background: transparent; min-height: 24px; padding: 0 var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; }
+.filters { display: inline-flex; gap: var(--space-1); background: var(--surface-sunk); padding: var(--space-1); border-radius: var(--radius-btn); }
+.filters button { border: 0; background: transparent; min-height: 24px; padding: 0 var(--space-3); border-radius: var(--radius-btn); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; }
 .filters button:hover { color: var(--text); }
 .filters button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--elev-1); }
 .newbar { justify-self: center; border: 0; background: var(--accent); color: var(--text-on-accent); font-weight: var(--weight-semibold); font-size: var(--text-sm); border-radius: var(--radius-full); padding: var(--space-2) var(--space-4); cursor: pointer; box-shadow: var(--elev-2); }

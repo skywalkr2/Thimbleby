@@ -555,7 +555,7 @@ test("where the account's sign-in can't be told the question says so in plain wo
   await pasted(user);
   expect(await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." })).toBeInTheDocument();
   expect(screen.getByText("The service is Service A.")).toBeInTheDocument();
-  expect(screen.getByText("We can't tell which account it is signed in to. Check in that app that it is the one you mean.")).toBeInTheDocument();
+  expect(screen.getByText("The app can't tell which account it is signed in to. Check in that app that it is the one you mean.")).toBeInTheDocument();
   // What the server found about the program's answer is never put on the screen.
   expect(document.body.textContent).not.toMatch(/the service doesn't say whose account/);
 });

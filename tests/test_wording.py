@@ -40,8 +40,8 @@ def test_an_answer_is_shown_whole(tmp_path):
     assert view.title == long
 
 
-# The product's own name is "PM Cockpit" until the installers rename it; it is the one place the words may appear.
-_PRODUCT_NAME = "PM Cockpit"
+# The product's own name; it is the one place the words may appear.
+_PRODUCT_NAME = "Thimbleby"
 # "PM" as a word of capitals; a time written "6 pm" is not it.
 _PROJECT_MANAGER = re.compile(r"\bPMs?\b|[Pp]roject [Mm]anager")
 

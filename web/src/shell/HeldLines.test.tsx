@@ -938,3 +938,67 @@ test("an add-on's tier the person hasn't mapped is a line that says what it uses
   await user.click(within(row).getByRole("button", { name: "Choose a model" }));
   expect(onOpenAiAccounts).toHaveBeenCalledTimes(1);
 });
+
+// ---- the lines about folders ----------------------------------------------------------------------------------------
+
+const sentFolder = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("sent_folder", { key: "sent_folder:mail", group: "decide", source: "mail", subject: "Project mail", ...over });
+const folderRename = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("folder_rename", { key: "folder_rename:backups", group: "decide", state: "backups", subject: "Backups › PM Cockpit", text: "Backups › Thimbleby", ...over });
+
+test("a mailbox with no sent folder is a line that starts with the verb, opens where its folders are chosen and can be dismissed for good", async () => {
+  const user = userEvent.setup();
+  let lines = [sentFolder()];
+  const { calls, onOpenSources } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST watch/mail/sent-folder/dismiss": () => {
+      lines = [];
+      return { ok: "mail" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Sent folder" });
+  expect(row).toHaveTextContent("Add the Sent folder for Project mail so the promises you make are found");
+  await user.click(within(row).getByRole("button", { name: "Add the Sent folder for Project mail" }));
+  expect(onOpenSources).toHaveBeenCalledTimes(1);
+  await user.click(within(row).getByRole("button", { name: "More actions for Sent folder" }));
+  await user.click(await screen.findByRole("menuitem", { name: /Don't ask again/ }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST watch/mail/sent-folder/dismiss")).toBe(true));
+  expect(await screen.findByText("Okay. You won't be asked about the Sent folder for Project mail again.")).toBeInTheDocument();
+});
+
+test("the offer to rename a folder asks in the person's words, and nothing is renamed until Rename", async () => {
+  const user = userEvent.setup();
+  let lines = [folderRename()];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST folder-offers/backups/rename": () => {
+      lines = [];
+      return { state: "backups", renamed: 1, saved: null };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Folder name" });
+  expect(row).toHaveTextContent("Rename the folder 'Backups › PM Cockpit' to 'Backups › Thimbleby'?");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Rename", "Keep the old name"]);
+  expect(calls.some((c) => c.route.startsWith("POST folder-offers"))).toBe(false);
+  await user.click(within(row).getByRole("button", { name: "Rename 'Backups › PM Cockpit' to 'Backups › Thimbleby'" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST folder-offers/backups/rename")?.body).toEqual({ fingerprint: "fp-1" }));
+  expect(await screen.findByText("Renamed to 'Backups › Thimbleby'.")).toBeInTheDocument();
+});
+
+test("Keep the old name ends the offer for good, with Undo, and the workspace folder says it is renamed at the next start", async () => {
+  const user = userEvent.setup();
+  let lines = [folderRename({ key: "folder_rename:workspace", state: "workspace", subject: "Cockpit", text: "Thimbleby" })];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST folder-offers/workspace/keep": () => {
+      lines = [];
+      return { ok: "workspace" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Folder name" });
+  expect(row).toHaveTextContent("It is renamed the next time Thimbleby starts.");
+  await user.click(within(row).getByRole("button", { name: "Keep the name 'Cockpit'" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST folder-offers/workspace/keep")).toBe(true));
+  expect(await screen.findByText("Okay. The folder keeps the name 'Cockpit', and you won't be asked again.")).toBeInTheDocument();
+});

@@ -12,7 +12,8 @@ backups:
       macos: ["ExampleDrive"]
       windows: ["ExampleDrive"]
       linux: ["ExampleDrive"]
-  cloud_path: [Backups, PM Cockpit]
+  cloud_path: [Backups, Thimbleby]
+  former_cloud_path: [Backups, PM Cockpit]
   every_hours: 24
   keep: 14
   automatic: true

@@ -370,3 +370,47 @@ test("a long list of models can be narrowed by typing, and when nothing matches 
   await user.clear(within(details).getByLabelText("Find a model"));
   expect(screen.getByRole("button", { name: /^Add and check/ })).toBeEnabled();
 });
+
+// ---- a model nothing lists a price for -----------------------------------------------------------------------------------
+
+const NO_PRICE: S["AiModelView"][] = [{ id: "model-x" }, { id: "model-y", input_per_million: 1, output_per_million: 2 }];
+
+test("a model with no price anywhere asks for it, with why, and the account can't be added until both amounts are given", async () => {
+  const user = userEvent.setup();
+  const calls = api([MAIN], {
+    "POST ai/models": () => ({ models: NO_PRICE, suggested: "model-x" }),
+    "POST ai/prices/missing": () => ({ unpriced: ["model-x"] }),
+  });
+  const handlers = open();
+  await keyed(user);
+  const fields = await screen.findByRole("group", { name: "What model-x costs" });
+  expect(fields).toHaveTextContent("Without a price, Thimbleby can't keep to your spending limits.");
+  await user.click(screen.getByRole("radio", { name: /Nothing yet/ }));
+  expect(screen.getByRole("button", { name: "Add account" })).toBeDisabled();
+  await user.type(within(fields).getByLabelText("Cost to read, per million text units (US dollars)"), "0.25");
+  expect(screen.getByRole("button", { name: "Add account" })).toBeDisabled();
+  await user.type(within(fields).getByLabelText("Cost to write, per million text units (US dollars)"), "1.25");
+  expect(screen.getByRole("button", { name: "Add account" })).toBeEnabled();
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
+  expect(body(calls).prices).toEqual({ everyday: { input_per_million: 0.25, output_per_million: 1.25 } });
+  expect(calls.find((c) => c.route === "POST ai/prices/missing")?.body).toEqual({ endpoint: "service-a", models: ["model-x"] });
+});
+
+test("a model with a listed price, or one the app's own table prices, doesn't ask", async () => {
+  const user = userEvent.setup();
+  let calls = api([MAIN]);
+  open();
+  await keyed(user);
+  expect(screen.queryByRole("group", { name: /costs$/ })).toBeNull();
+  // Listed without a price, but the app's table has one: nothing is asked of the person.
+  calls = api([MAIN], {
+    "POST ai/models": () => ({ models: NO_PRICE, suggested: "model-x" }),
+    "POST ai/prices/missing": () => ({ unpriced: [] }),
+  });
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/prices/missing")).toBe(true));
+  expect(screen.queryByRole("group", { name: /costs$/ })).toBeNull();
+  await user.click(screen.getByRole("radio", { name: /Nothing yet/ }));
+  expect(screen.getByRole("button", { name: "Add account" })).toBeEnabled();
+});

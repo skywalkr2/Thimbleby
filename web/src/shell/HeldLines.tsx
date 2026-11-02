@@ -30,7 +30,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "stuck", "paused", "borrow", "credential", "no_account", "pack_tier", "offline", "handover", "account_check", "switch_failed", "account_move", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "stuck", "paused", "borrow", "credential", "no_account", "pack_tier", "offline", "handover", "account_check", "switch_failed", "account_move", "sent_folder", "folder_rename", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -66,6 +66,10 @@ export function HeldLine(props: {
       return <SwitchFailedLine line={line} />;
     case "account_move":
       return <AccountMoveLine line={line} />;
+    case "sent_folder":
+      return <SentFolderLine line={line} onOpen={props.onOpenSources} />;
+    case "folder_rename":
+      return <FolderRenameLine line={line} />;
     case "model_watch":
       return <ModelWatchLine line={line} />;
     case "model_moved":
@@ -527,6 +531,93 @@ function WorkAccessLine(props: { line: Line }) {
           {t("queue.work_access.allow")}
         </Button>
               </>
+      }
+    />
+  );
+}
+
+/** A connected mailbox that reads no sent folder: the one button opens where the mailbox's folders are chosen, and the
+ * menu ends the line for good. The line goes by itself once a sent folder is read. */
+function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
+  const { t } = useWords();
+  const act = useAct();
+  const { line } = props;
+  const source = line.source ?? "";
+  const account = line.subject ?? "";
+  const dismiss = () =>
+    void act(
+      () => api.dismissSentFolder(source),
+      () => ({ message: t("queue.sent_folder.dismissed", { account }), undo: () => api.dismissSentFolderUndo(source) }),
+    );
+  return (
+    <Row
+      as="section"
+      aria-label={t("queue.sent_folder.label")}
+      data-queue-line="sent_folder"
+      pill={<Pill tone="neutral">{t("queue.sent_folder.label")}</Pill>}
+      title={t("queue.sent_folder", { account })}
+      meta={t("queue.sent_folder.sub")}
+      primary={
+        <>
+          {props.onOpen && (
+            <Button size="sm" variant="primary" data-key="primary" aria-label={t("queue.sent_folder.open_named", { account })} onClick={props.onOpen}>
+              {t("queue.sent_folder.open")}
+            </Button>
+          )}
+          <MenuButton
+            groups={[{ id: "sent-folder", entries: [{ id: "dismiss", label: t("queue.sent_folder.dismiss"), note: t("queue.sent_folder.dismiss_note"), run: dismiss }] }]}
+            trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.sent_folder.label") })} tooltip={false} />}
+          />
+        </>
+      }
+    />
+  );
+}
+
+/** A folder made under the product's earlier name, offered a rename once. Rename is the person's own change (the backup
+ * folder is renamed at once, the workspace folder the next time the app starts); Keep ends the offer for good. */
+function FolderRenameLine(props: { line: Line }) {
+  const { t } = useWords();
+  const act = useAct();
+  const afterSave = useAfterSave();
+  const fingerprint = useFreshFingerprint();
+  const [busy, setBusy] = useState(false);
+  const { line } = props;
+  const which = line.state ?? "";
+  const old = line.subject ?? "";
+  const next = line.text ?? "";
+  const app = t("app.name");
+  const rename = async () => {
+    setBusy(true);
+    const done = await act(
+      async () => inOrder(async () => api.renameFolder(which, await fingerprint())),
+      () => (which === "workspace" ? { message: t("queue.folder_rename.renamed_later", { new: next, app }), undo: () => api.renameFolderUndo() } : { message: t("queue.folder_rename.renamed", { new: next }) }),
+    );
+    if (done?.saved) await afterSave(done.saved, { message: t("queue.folder_rename.renamed", { new: next }), quiet: true });
+    setBusy(false);
+  };
+  const keep = () =>
+    void act(
+      () => api.keepFolderName(which),
+      () => ({ message: t("queue.folder_rename.kept", { old }), undo: () => api.keepFolderNameUndo(which) }),
+    );
+  return (
+    <Row
+      as="section"
+      aria-label={t("queue.folder_rename.label")}
+      data-queue-line="folder_rename"
+      pill={<Pill tone="neutral">{t("queue.folder_rename.label")}</Pill>}
+      title={t("queue.folder_rename", { old, new: next })}
+      meta={t(which === "workspace" ? "queue.folder_rename.workspace.sub" : "queue.folder_rename.backups.sub", { app })}
+      primary={
+        <>
+          <Button size="sm" variant="primary" data-key="primary" loading={busy} disabled={busy} aria-label={t("queue.folder_rename.rename_named", { old, new: next })} onClick={() => void rename()}>
+            {t("queue.folder_rename.rename")}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={busy} aria-label={t("queue.folder_rename.keep_named", { old })} onClick={keep}>
+            {t("queue.folder_rename.keep")}
+          </Button>
+        </>
       }
     />
   );

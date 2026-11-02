@@ -11,7 +11,7 @@ from icalendar import Calendar, Event, vCalAddress
 
 type When = date | datetime
 
-PRODID = "-//PM Cockpit//Invitation Reply//EN"
+PRODID = "-//Thimbleby//Invitation Reply//EN"
 
 
 @dataclass(frozen=True)

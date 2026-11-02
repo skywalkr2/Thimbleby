@@ -743,7 +743,7 @@ def _commit(root: Path, paths: list[Path], keys: list[str]) -> None:
     """Commit the changed config files to the workspace's git repository, when there is one."""
     if not (root / ".git").exists():
         return
-    git = ["git", "-C", str(root), "-c", "user.name=PM Cockpit", "-c", "user.email=cockpit@localhost"]
+    git = ["git", "-C", str(root), "-c", "user.name=Thimbleby", "-c", "user.email=cockpit@localhost"]
     files = [str(p.relative_to(root)) for p in paths if p.exists()]
     try:
         subprocess.run([*git, "add", "--", *files], check=True, capture_output=True)

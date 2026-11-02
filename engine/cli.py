@@ -18,6 +18,8 @@ from typing import Any
 import yaml
 
 from engine.config import ConfigError
+from engine.folder_names import DEFAULT_FOLDER, FORMER_FOLDER
+from engine.folder_rename import apply_agreed
 from engine.local_guards import local_address_problem
 from engine.shipped import DEMOS, demo
 from engine.storage import Store, StoreError
@@ -88,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="cockpit", description="PM Cockpit")
+    p = argparse.ArgumentParser(prog="cockpit", description="Thimbleby")
     sub = p.add_subparsers(metavar="command")
 
     def ws_arg(sp: argparse.ArgumentParser) -> None:
@@ -447,7 +449,7 @@ def cmd_restore(args: argparse.Namespace) -> int:
 Runner = Callable[[list[str], Path, bool], tuple[int, str]]
 
 INSTALL_STEP = (
-    "This copy of PM Cockpit isn't a source checkout, so `cockpit update` can't update it. To update an installed "
+    "This copy of Thimbleby isn't a source checkout, so `cockpit update` can't update it. To update an installed "
     "copy, run the install step again with the newer package file (docs/install.md):\n"
     "  sh install.sh pm_cockpit-<version>-py3-none-any.whl                                  # macOS, Linux\n"
     "  powershell -ExecutionPolicy Bypass -File install.ps1 pm_cockpit-<version>-py3-none-any.whl   # Windows\n"
@@ -563,10 +565,15 @@ def cmd_update(args: argparse.Namespace) -> int:
     return update_checkout(repo_root(), run_command, shutil.which)
 
 
-#: Where `cockpit` on its own makes a workspace the first time, inside the person's home folder.
-DEFAULT_FOLDER = "Cockpit"
 #: The per-person file that remembers the workspace started last, so `cockpit` alone reopens it.
 LAST_FILE = Path(".pm-cockpit") / "last-workspace"
+
+
+def default_workspace(home: Path) -> Path:
+    """The folder `cockpit` on its own opens when nothing names one: the default folder, or, when only a workspace under
+    the folder's earlier name is there, that one (it is never left behind or made over; Today offers to rename it)."""
+    new, old = home / DEFAULT_FOLDER, home / FORMER_FOLDER
+    return old if not new.exists() and (old / "config").is_dir() else new
 
 
 def last_workspace() -> Path | None:
@@ -598,7 +605,9 @@ def cmd_start(args: argparse.Namespace) -> int:
     from engine.workspace import ENV_WORKSPACE, init_workspace
 
     chosen = os.environ.get(ENV_WORKSPACE)
-    root = Path(chosen).expanduser() if chosen else last_workspace() or Path.home() / DEFAULT_FOLDER
+    root = Path(chosen).expanduser() if chosen else last_workspace() or default_workspace(Path.home())
+    if not chosen:
+        root = apply_agreed(root, Path.home())
     if not (root / "config").is_dir():
         if root.exists() and any(root.iterdir()):
             print(

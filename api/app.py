@@ -237,7 +237,7 @@ def create_app(
                 on_shutdown()
 
     inner = FastAPI(
-        title="PM Cockpit",
+        title="Thimbleby",
         version=__version__,
         docs_url=None,
         redoc_url=None,
