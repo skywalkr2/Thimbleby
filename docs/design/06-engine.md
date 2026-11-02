@@ -4780,14 +4780,19 @@ ways, and the golden cases and harness pairs are in demo-b (`tests/test_followup
   dates.
 - **One promise per owner:** a promise with two owners is refused ("add one action for each person who owes it"); an
   owner that isn't a known person waits for "Pick an owner".
-- **One promise from several sources:** a new promise with the same one owner, owed to the same people, in nearly the
-  same words (`checks.tuning.near_duplicate_action.similarity`) and a date within
-  `checks.tuning.near_duplicate_action.date_window_days` (3) of an open one is added to it quietly (`also_said`, every
-  quote kept). When the dates disagree, the person's own words win, otherwise the newest, and the other date is a news
-  line on the promise. **A restatement with a new date** (the same owner, people and nearly the same words, but a date
-  outside the window: "I'll send it Friday", then a week later "I'll send it the Friday after") is an `action.move` on
-  the open promise, never a second promise: read from an input it waits for the person's Keep, and the line shows both
-  quotes.
+- **One promise from several sources: the likeness only flags** (P110 J4). A new promise with the same one owner, owed to
+  the same people, in nearly the same words (`checks.tuning.near_duplicate_action.similarity`) as an open one is never
+  merged or turned into a move by a rule: the lint `near-duplicate-promise` (default `return`) tells the assistant "This
+  looks like the open promise <id> '<text>' (owner, due). If it is the same promise, answer with action.move /
+  action.news on <id> instead of a new action; if it is a new one, keep the action.add." The open promises, with their
+  ids, owners, people and dates, are already in the packet's open-items part. The assistant decides on its return round:
+  a move or news read from an input waits for the person's Keep as any does, and the line shows both quotes; an add it
+  keeps stands as a separate promise. The question is put once (`JUDGMENT_LINTS`): keeping the add is the decision, not
+  a failed check, so it never causes a further return or a stronger tier. With the lint `off` nothing is returned and the add stands. The one fold that
+  stays is an identical repeat: the same words and the same quoted passage from the very same input already recorded
+  (the same input read twice) are added to the existing record (`also_said`) with a date within
+  `checks.tuning.near_duplicate_action.date_window_days` (3), because nothing is left to decide. The person's own add on
+  a screen is never flagged.
 - **Crediting and chasing:** the person's "I pinged her" is news and the promise stays open; "Sam sent it" closes it,
   credited to Sam and reported by the person.
 - **Two names, one person:** a second spelling of two or more words that the person confirms in "who is this?" becomes an

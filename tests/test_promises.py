@@ -10,11 +10,12 @@ import pytest
 
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.applier import ENDING_WAITS, release
+from engine.applier import ENDING_WAITS, Context, Inputs, apply_changeset, check, release
 from engine.dispatcher import process
 from engine.held_ask import describe
 from engine.intake import hand_in
 from engine.names import People
+from engine.ops import CHANGESET
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
@@ -392,88 +393,104 @@ def test_one_promise_per_owner(env):
     assert outcome["status"] == "refused" and "one promise per owner" in outcome["reason"]
 
 
-def test_the_same_promise_from_two_sources_is_one_record_with_both_quotes_and_a_shown_disagreement(env):
-    _, _, store = env
-    owner, person = someone()["id"], env[1].workspace.user.person
-    first = "I will send the floor plan by Tuesday."
-    later = "Following up from the meeting: I will send the floor plan by Wednesday."
-    for quote, words in ((first, "by Tuesday"), (later, "by Wednesday")):
-        answer(
-            {
-                "op": "action.add",
-                "text": "Send the floor plan",
-                "owners": [owner],
-                "promised_to": [person],
-                "due_words": words,
-                "evidence": {"quote": quote},
-            }
-        )
-        run(env, pasted=quote)
-    (promise,) = [a.data for a in store.read().list("action") if a.data["text"] == "Send the floor plan"]
-    assert promise["due"] == "2026-10-14"  # the newest wins when the person said neither
-    assert [e["quote"] for e in promise["also_said"]] == [later]
-    assert any("by Tuesday" in n["text"] for n in promise["news"])
+def answers(*bodies: dict) -> list:
+    """Make the stub answer with these changesets in turn (the last one repeats), and record what it was asked."""
+    asked = []
+    queue = [json.dumps({"summary": "Promises.", **body}) for body in bodies]
+
+    def responder(task):
+        asked.append(task)
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    set_responder(responder)
+    return asked
 
 
-def test_a_promise_said_again_with_a_date_outside_the_window_is_a_move_the_person_keeps_with_both_quotes(env):
+def add_floor_plan(cfg, words: str, quote: str) -> dict:
+    return {
+        "op": "action.add",
+        "text": "Send the floor plan",
+        "owners": [someone()["id"]],
+        "promised_to": [cfg.workspace.user.person],
+        "due_words": words,
+        "evidence": {"quote": quote},
+    }
+
+
+def floor_plans(store):
+    return [a for a in store.read().list("action") if a.data["text"] == "Send the floor plan"]
+
+
+FIRST = "I will send the floor plan by Tuesday."
+LATER = "Sorry for the delay: I will send the floor plan by October 30."
+
+
+def test_a_promise_that_looks_like_an_open_one_is_returned_once_naming_it_and_the_assistants_move_applies(env):
     _, cfg, store = env
-    owner, person = someone()["id"], cfg.workspace.user.person
-    first = "I will send the floor plan by Tuesday."
-    later = "Sorry for the delay: I will send the floor plan by October 30."
-    outcomes = []
-    for quote, words in ((first, "by Tuesday"), (later, "by October 30")):
-        answer(
-            {
-                "op": "action.add",
-                "text": "Send the floor plan",
-                "owners": [owner],
-                "promised_to": [person],
-                "due_words": words,
-                "evidence": {"quote": quote},
-            }
-        )
-        (outcome,), cs_id = run(env, pasted=quote)
-        outcomes.append((outcome, cs_id))
-    (promise,) = [a for a in store.read().list("action") if a.data["text"] == "Send the floor plan"]
-    (moved, cs_id) = outcomes[1]
+    answers({"ops": [add_floor_plan(cfg, "by Tuesday", FIRST)]})
+    run(env, pasted=FIRST)
+    (promise,) = floor_plans(store)
+    move = {"op": "action.move", "id": promise.id, "due_words": "by October 30", "evidence": {"quote": LATER}}
+    asked = answers({"ops": [add_floor_plan(cfg, "by October 30", LATER)]}, {"ops": [move]})
+    (moved,), cs_id = run(env, pasted=LATER)
+    assert len(asked) == 2, "the add went back once"
+    returned = asked[1].request
+    assert f"This looks like the open promise {promise.id} 'Send the floor plan'" in returned
+    assert f"action.move / action.news on {promise.id} instead of a new action" in returned
     assert moved["op"]["op"] == "action.move" and moved["op"]["id"] == promise.id
     assert moved["status"] == "held" and ENDING_WAITS in moved["reason"]
     shown = describe(store.read(), People(store, cfg), moved["op"])
-    assert (shown["quote"], shown["earlier"]) == (later, first)
-    assert promise.data["due"] == "2026-10-13"
+    assert (shown["quote"], shown["earlier"]) == (LATER, FIRST)
+    assert [a.id for a in floor_plans(store)] == [promise.id] and promise.data["due"] == "2026-10-13"
     release(store, cfg, cs_id, 0)
     assert action(store, promise.id)["due"] == "2026-10-30"
 
 
-def test_the_persons_own_date_wins_over_a_later_source(env):
-    _, _, store = env
-    owner, person = someone()["id"], env[1].workspace.user.person
-    mine = "Sam will send me the floor plan by Tuesday."
-    answer(
-        {
-            "op": "action.add",
-            "text": "Send the floor plan",
-            "owners": [owner],
-            "promised_to": [person],
-            "due_words": "by Tuesday",
-            "evidence": {"quote": mine},
-        }
-    )
-    run(env, note=mine)
-    theirs = "I will send the floor plan by Friday."
-    answer(
-        {
-            "op": "action.add",
-            "text": "Send the floor plan",
-            "owners": [owner],
-            "promised_to": [person],
-            "due_words": "by Friday",
-            "evidence": {"quote": theirs},
-        }
-    )
-    run(env, pasted=theirs)
-    (promise,) = [a.data for a in store.read().list("action") if a.data["text"] == "Send the floor plan"]
-    assert promise["due"] == "2026-10-13" and any("your date stays" in n["text"] for n in promise["news"])
+def test_a_promise_the_assistant_keeps_as_new_after_the_return_stands_beside_the_open_one(env):
+    _, cfg, store = env
+    answers({"ops": [add_floor_plan(cfg, "by Tuesday", FIRST)]})
+    run(env, pasted=FIRST)
+    (open_one,) = floor_plans(store)
+    again = "Following up from the meeting: I will send the floor plan by Wednesday."
+    asked = answers({"ops": [add_floor_plan(cfg, "by Wednesday", again)]})
+    (outcome,), _ = run(env, pasted=again)
+    # Asked once: the answer, one return naming the open promise, and no stronger tier. Keeping the add is the decision.
+    assert len(asked) == 2 and f"open promise {open_one.id}" in asked[1].request
+    assert outcome["status"] == "applied"
+    both = floor_plans(store)
+    assert len(both) == 2 and open_one.id in [a.id for a in both]
+    assert all(not a.data.get("also_said") and not a.data.get("news") for a in both)
+
+
+def test_with_the_lint_off_a_promise_like_an_open_one_stands_with_no_return_and_no_merge(env):
+    _, cfg, store = env
+    cfg.checks.lints["near-duplicate-promise"] = "off"
+    answers({"ops": [add_floor_plan(cfg, "by Tuesday", FIRST)]})
+    run(env, pasted=FIRST)
+    again = "Following up from the meeting: I will send the floor plan by Wednesday."
+    asked = answers({"ops": [add_floor_plan(cfg, "by Wednesday", again)]})
+    (outcome,), _ = run(env, pasted=again)
+    assert len(asked) == 1 and outcome["status"] == "applied" and outcome["problems"] == []
+    assert len(floor_plans(store)) == 2
+
+
+def test_the_very_same_promise_from_the_very_same_input_is_folded_with_no_return(env):
+    _, cfg, store = env
+    quote = "I will send the floor plan by Tuesday."
+    op = add_floor_plan(cfg, "by Tuesday", quote)
+    source = "SRC-REPEAT"
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(store, cfg, People(store, cfg), ("action.add",), Inputs("REQ-1", source, quote, "", "trusted"))
+    for _ in range(2):
+        problems = check(cs, ctx)
+        assert not [p for p in problems if p.check == "near-duplicate-promise"]
+        apply_changeset(cs, problems, ctx, run=None, now=NOW)
+    (promise,) = floor_plans(store)
+    assert [e["quote"] for e in promise.data["also_said"]] == [quote]
+    # The same words from another input are a question for the assistant, not a fold.
+    other = Context(store, cfg, People(store, cfg), ("action.add",), Inputs("REQ-2", "SRC-OTHER", quote, "", "trusted"))
+    (flag,) = [p for p in check(cs, other) if p.check == "near-duplicate-promise"]
+    assert flag.severity == "return" and promise.id in flag.message
 
 
 def test_chasing_is_news_and_a_reported_done_is_credited_to_its_owner(env):

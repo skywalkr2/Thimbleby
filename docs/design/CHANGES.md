@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 287. A new promise like an open one is flagged, never turned into a move or merged by a rule (2026-11-02; P110 J4)
+
+| Where | Before | Now |
+|---|---|---|
+| Promises (6.33, `engine/applier.py`) | An `action.add` with the same owner and people and words like an open promise's was turned by a rule into an `action.move` (date outside a window) or merged into it with a "Said before" news line, and a rule chose the date | **Built** (`tests/test_promises.py`): the likeness only flags. The new lint `near-duplicate-promise` (default `return`) names the open promise and asks the assistant to answer with a move or news on it, or keep the add; a kept add stands as its own promise. The only fold left is the same words and quoted passage from the very same input already recorded. The person's own add is never flagged. Judgment lints (`JUDGMENT_LINTS`) are put once: the assistant's answer on the return round stands and never escalates to a stronger tier (`tests/test_promises.py`) |
+| Settings (4.17) | `checks.tuning.near_duplicate_action.date_window_days` was the merge window | The same key now only bounds the date of an identical repeat of one input; the new lint is in both demo workspaces' `checks.yaml` |
+
 ## 285. A reply owed is closed by the assistant reading the person's sent mail, not by a rule (2026-11-02; P110 J6)
 
 | Where | Before | Now |

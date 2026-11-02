@@ -885,6 +885,7 @@ lints:                           # severities: refuse, return, warn, off
   blocked-wording: return
   run-on-list: return
   near-duplicate-action: warn
+  near-duplicate-promise: return
   evidence-fit: return
 projects:                        # severities for one project's work only, over the ones above
   PRJ-3: {run-on-list: off}
@@ -905,7 +906,9 @@ the lint is in `lints:` with underscores for hyphens, so each setting has a plai
 (`COCKPIT__CHECKS__TUNING__NEAR_DUPLICATE_ACTION__SIMILARITY`). `lints:` stays a map of severities, so plugin lints and their
 overrides are unchanged. **Built:** `near_duplicate_action.similarity`, a number from 0 to 1, default 0.8 (the first design's
 0.85 does not hold). `near-duplicate-action` compares a new action's text with open and done actions and fires at or above
-that similarity, and a message says which kind it matched. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
+that similarity, and a message says which kind it matched. `near-duplicate-promise` (default `return`) uses the same
+similarity to flag a new promise that looks like an open one of the same owner and people, and names that promise so the
+assistant answers with a move or news on it, or keeps the add (6.33); it never rewrites the answer. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
 values, and not below), `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too` and `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one` (the range and the default). `near-duplicate-question` (designed, phase L) gets its
 entry beside it, with `similarity` and `days` (default 14).
 

@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: A promise that looks like an open one is flagged for the assistant, never merged by a rule (P110, J4)
+
+**Decided:** When the assistant adds a promise that looks like an open one (the same one owner and people, words alike
+by `near_duplicate_action.similarity`), the applier no longer turns the add into a move or merges it with a "Said before"
+line, and no rule picks the date. The lint `near-duplicate-promise` (default `return`) names the open promise and asks
+whether it is the same (answer with `action.move` or `action.news` on it) or new (keep the add); the assistant decides
+on its return round, and a kept add stands as a separate promise. An identical repeat of one input (the same words and
+the same quote from the very same source) is still folded, being the removal of an identical item.
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's); the audit's row J4.
+
+**Why:** A rule's reading of "the same promise" and of "which date is right" overwrote or hid a date the person had not
+chosen between.
+
+**Impact:** design 6.33 and 4.17; `engine/applier.py`, the lint's default and both demo workspaces' `checks.yaml`. No new
+setting key; `date_window_days` now bounds only the identical-repeat fold. No change to scope. Change log: section 287.
+
 ## 2026-11-02: The person's sent mail only proposes which replies owed it answers; the assistant decides (P110, J6)
 
 **Decided:**

@@ -1537,6 +1537,7 @@ def _default_lints() -> dict[str, Severity]:
         "blocked-wording": "return",
         "run-on-list": "return",
         "near-duplicate-action": "warn",
+        "near-duplicate-promise": "return",
         "evidence-fit": "return",
         "already-known": "return",
         "near-duplicate-question": "warn",
@@ -1588,8 +1589,9 @@ class NearDuplicateActionTuning(ConfigModel):
         3,
         ge=0,
         le=60,
-        description="How many days apart two sources' dates for the same promise may be and still be one promise; a "
-        "repeat further apart is a new promise.",
+        description="How many days apart the dates of an identical repeat of the same input (the same words and the "
+        "same quoted passage) may be and still be folded into the promise it already made. Whether a different "
+        "input's promise is the same one is the assistant's to say, never a date window's.",
     )
 
 

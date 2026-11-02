@@ -254,30 +254,13 @@ def with_years(cs: ChangesetIn, ctx: Context, now: datetime | None = None) -> Ch
 
 
 def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
-    """A promise said again with a date outside the merge window is a move of the open promise, never a second one
-    (design 6.33): each such `action.add` becomes an `action.move` on the open promise, with the new words and quote.
-    A phone number in a known sender's signature that the answer doesn't offer is added as a `person.contact` op (held
-    for the person like any). An action, question, fact or note naming no project is filed under the personal or
-    business side by the people it names and the sender (`engine/sides.py`, design 6.32). The same changeset always
-    gives the same result, so a check and the apply that follows see the same ops."""
+    """A phone number in a known sender's signature that the answer doesn't offer is added as a `person.contact` op
+    (held for the person like any). An action, question, fact or note naming no project is filed under the personal or
+    business side by the people it names and the sender (`engine/sides.py`, design 6.32). A promise that looks like an
+    open one is never rewritten here: the `near-duplicate-promise` lint puts the question to the assistant (design
+    6.33). The same changeset always gives the same result, so a check and the apply that follows see the same ops."""
     view = ctx.store.read()
     ops = list(cs.ops)
-    for i, op in enumerate(ops):
-        if not isinstance(op, ActionAddOp) or op.due_at_event or op.waiting_for:
-            continue
-        same = _same_promise(view, ctx, op)
-        if same is None:
-            continue
-        due, _ = _due(view, ctx, ctx.inputs.source, op.due_words, op.due)
-        if due is None or _within_window(same.data.get("due"), due, ctx):
-            continue
-        ops[i] = ActionMoveOp(
-            id=same.id,
-            due_words=op.due_words,
-            due=None if (op.due_words or "").strip() else op.due,
-            evidence=op.evidence,
-            group=op.group,
-        )
     if ctx.actor != "pm" and not ctx.confirmed_by_pm and "person.contact" in ctx.allowed_ops:
         ops += signature_contact.proposals(
             ctx.inputs.raw_input, view, ctx.cfg, ctx.people, contact_kind(ctx.cfg, "phone"), ops
@@ -916,7 +899,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         "accepted is no action",
                     )
                 )
-            for existing in [] if _same_promise(view, ctx, op) is not None else known_actions:
+            same = _same_promise(view, ctx, op)
+            if same is not None and ctx.actor != "pm":
+                due, _ = _due(view, ctx, ctx.inputs.source, op.due_words, op.due)
+                if not _exact_repeat(same, op, ctx.inputs.source, due, ctx):
+                    lint(i, "near-duplicate-promise", _looks_like_promise(same, ctx))
+            for existing in [] if same is not None else known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
                     state = {"done": "done action", "dropped": "dropped action"}.get(
                         existing.data["status"], "open action"
@@ -1482,8 +1470,9 @@ def action_hold_problem(view: Any, op: Any) -> str | None:
 
 
 def _same_promise(view: Any, ctx: Context, op: Any) -> Any | None:
-    """The open promise a new one repeats (design 6.33): the same one owner, owed to the same people, in nearly the same
-    words. A promise said in a meeting, repeated in mail and noted by the person is one record."""
+    """The open promise a new one looks like (design 6.33): the same one owner, owed to the same people, in nearly the
+    same words. This only flags: whether it is the same promise, and which date is right, is the assistant's to say
+    (the `near-duplicate-promise` lint)."""
     if not isinstance(op, ActionAddOp) or not op.promised_to or len(op.owners) != 1:
         return None
     owner = ctx.people.resolve(op.owners[0]).person
@@ -1498,6 +1487,35 @@ def _same_promise(view: Any, ctx: Context, op: Any) -> Any | None:
         if set(data.get("promised_to") or []) == owed and _similar(op.text, data["text"]) >= similarity:
             return existing
     return None
+
+
+def _exact_repeat(existing: Any, op: ActionAddOp, source: str | None, due: date | None, ctx: Context) -> bool:
+    """Whether a new promise is the very same one already recorded from the very same input: the same source, the same
+    words, the same quoted passage and a date within the window. That is the same input read twice, so folding it
+    into the record is removing an identical item, not a judgment about two promises."""
+    data = existing.data
+    same_words = " ".join(op.text.split()).casefold() == " ".join(str(data["text"]).split()).casefold()
+    quote = (data.get("evidence") or {}).get("quote")
+    return (
+        source is not None
+        and data.get("source") == source
+        and same_words
+        and quote == op.evidence.quote
+        and _within_window(data.get("due"), due, ctx)
+    )
+
+
+def _looks_like_promise(existing: Any, ctx: Context) -> str:
+    """What the assistant is told when a new promise looks like an open one: the open promise, and the two ways to
+    answer."""
+    data = existing.data
+    owners = ", ".join(ctx.people.name(o["person"]) for o in data.get("owners") or [] if o.get("person"))
+    due = f", due {data['due']}" if data.get("due") else ""
+    return (
+        f"This looks like the open promise {existing.id} '{data['text']}' ({owners}{due}). If it is the same "
+        f"promise, answer with action.move / action.news on {existing.id} instead of a new action; if it is a new "
+        "one, keep the action.add."
+    )
 
 
 def _reply_owed_problem(view: Any, ctx: Context, op: ActionAddOp) -> str | None:
@@ -1774,8 +1792,17 @@ def _similar(a: str, b: str) -> float:
     return len(wa & wb) / len(wa | wb) if wa and wb else 0.0
 
 
-def needs_another_round(problems: list[Problem]) -> bool:
-    return any(p.severity in ("refuse", "return") for p in problems)
+def needs_another_round(problems: list[Problem], *, judgment_asked: bool = False) -> bool:
+    """Whether the answer goes back. A judgment lint (`JUDGMENT_LINTS`) is a question put to the assistant once: after
+    it was put, the answer the assistant gives to it stands, so it never sends the answer back again."""
+    return any(
+        p.severity in ("refuse", "return") and not (judgment_asked and p.check in JUDGMENT_LINTS) for p in problems
+    )
+
+
+def asks_judgment(problems: list[Problem]) -> bool:
+    """Whether a judgment lint is among the findings the answer goes back with."""
+    return any(p.severity in ("refuse", "return") and p.check in JUDGMENT_LINTS for p in problems)
 
 
 def feedback(problems: list[Problem]) -> str:
@@ -1988,9 +2015,9 @@ def _merge_promise(
     today: date,
     source: str | None,
 ) -> None:
-    """Add a repeat of an open promise to it: one record, every quote kept (design 6.33). When the dates disagree, the
-    person's own words win, otherwise the newest; the date that loses is shown on the promise, never dropped
-    silently."""
+    """Fold an identical repeat of an input into the open promise it already made (design 6.33): the same source, words
+    and quote, so there is nothing to decide. A date that still differs (inside the window) is shown on the promise as
+    news, never dropped silently; the person's own date stays."""
     data = cur.data
     changes: dict[str, Any] = {"also_said": [*data.get("also_said", []), ev]}
     own = _persons_own(tx, ctx)
@@ -2244,6 +2271,10 @@ def _record_changeset(
 
 
 WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
+#: Lints that ask the assistant to decide something only it can (is this the same promise, which reading is right). They
+#: are put once: whatever the assistant answers on the return round stands, and never costs another round or a stronger
+#: tier.
+JUDGMENT_LINTS = frozenset({"near-duplicate-promise", "due-reading-differs"})
 #: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
 OWNER_WORDING_LINTS = frozenset({"action-stands-alone", "reasoning-in-title"})
 #: Lints that hold a to-do after the return round when someone else owns it; on one the person owns they only warn.
@@ -3774,7 +3805,7 @@ def _apply_op(
             elif kind == "hold":
                 started_on_hold = {"waiting_for": " ".join(op.due_words.split()), "since": today.isoformat()}
         same = _same_promise(tx, ctx, op)
-        if same is not None and _within_window(same.data.get("due"), due, ctx):
+        if same is not None and _exact_repeat(same, op, source, due, ctx):
             _merge_promise(tx, same, op, ctx, w, due, check, ev, today, source)
             made("action", same.id)
             return touched, None

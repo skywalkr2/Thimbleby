@@ -38,6 +38,7 @@ from engine.applier import (
     Inputs,
     Problem,
     apply_changeset,
+    asks_judgment,
     check,
     feedback,
     needs_another_round,
@@ -852,6 +853,7 @@ def _rounds(
     #: must keep each of them (a correction fixes the failing op and never drops one that was fine).
     fine: list[str] | None = None
     wrong = ""
+    judgment_asked = False  # a judgment lint went back once: the assistant's answer to it stands (`JUDGMENT_LINTS`)
     for attempt in range(cfg.dispatch.fix_rounds + 1):
         last = attempt == cfg.dispatch.fix_rounds
         if attempt and _closed(store, request_id):
@@ -990,8 +992,9 @@ def _rounds(
                 searched=searches > 0,
                 fallback=out.fallback,
             )
-            if needs_another_round(problems):
+            if needs_another_round(problems, judgment_asked=judgment_asked):
                 if not last:
+                    judgment_asked = judgment_asked or asks_judgment(problems)
                     task = replace(task, request=shown + "\n\n" + feedback(problems))
                     continue
                 out.escalate = True
@@ -1050,8 +1053,9 @@ def _rounds(
         out = _Outcome(
             changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0, fallback=out.fallback
         )
-        if needs_another_round(problems):
+        if needs_another_round(problems, judgment_asked=judgment_asked):
             if not last:
+                judgment_asked = judgment_asked or asks_judgment(problems)
                 fine, wrong = fine_ops(changeset, problems), feedback(problems)
                 task = replace(task, request=shown + "\n\n" + wrong)
                 continue
