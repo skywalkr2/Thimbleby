@@ -7189,6 +7189,15 @@ class MeetingIn(BaseModel):
     time: str | None = Field(
         None, description="The time of day, as 15:00, in the person's time zone; none for all day."
     )
+    until: str | None = Field(
+        None,
+        description="The time of day it ends, as 16:00, on the same day; needs a start time. None for no end.",
+    )
+    side: str | None = Field(
+        None,
+        description="The id of the side it belongs to (a side's top project, as GET /api/setup/business lists them); "
+        "none when it is on no side in particular.",
+    )
 
 
 class MeetingAdded(BaseModel):

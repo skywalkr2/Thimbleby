@@ -28,6 +28,8 @@ export interface NavEntry {
 
 export interface NavModel {
   today: NavEntry;
+  /** The week of meetings and dates, beside Today. */
+  schedule: NavEntry;
   /** Whether there is no side beside Personal: the group below then has no name, and no work words anywhere in it. */
   justMe: boolean;
   /** What the first group is called: the work group, or, with no work, a plain "your things". */
@@ -64,6 +66,7 @@ export function useNav(): NavModel {
       ];
   return {
     today: { view: "today", label: t("nav.home"), icon: "home", count: some(needsYou), countWords: needsYou ? tn("nav.count.today", needsYou) : undefined },
+    schedule: { view: "schedule", label: t("nav.schedule"), icon: "calendar" },
     justMe,
     workTitle: t(justMe ? "nav.work.just_me" : "nav.work"),
     work: [

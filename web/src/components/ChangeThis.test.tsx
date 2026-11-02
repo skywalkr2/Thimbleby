@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person } from "../lib/learned-fixtures";
 import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
-import { FollowUps } from "./FollowUps";
+import { DecisionRow } from "./FollowUps";
 import { RecordPage } from "./RecordPage";
 
 // The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
@@ -27,20 +27,6 @@ const question = (id: string, over: Partial<S["FollowupQuestion"]> = {}): S["Fol
   options: [],
   ...over,
 });
-
-function followups(questions: S["FollowupQuestion"][]): S["FollowupSection"][] {
-  return [
-    {
-      person: "PER-1",
-      name: "Pat Example",
-      is_pm: true,
-      questions,
-      actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
-      message: "",
-      to_send: 0,
-    },
-  ];
-}
 
 const menuOf = async (user: ReturnType<typeof userEvent.setup>, name: RegExp | string) => {
   await user.click(await screen.findByRole("button", { name: typeof name === "string" ? `More actions for ${name}` : name }));
@@ -94,11 +80,10 @@ test("a note that couldn't be sent stays in its box", async () => {
 test("a decision's menu changes the question or asks for a change, and a decision is changed as a decision", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
-    "GET followups": () => followups([question("Q-5", { kind: "decision" })]),
     "GET people": () => [],
     "POST items/decision/Q-5/change": () => ({ ok: "Q-5", request: null, signal: "SIG-2" }),
   });
-  renderApp(<FollowUps />);
+  renderApp(<DecisionRow question={question("Q-5", { kind: "decision" })} reveal={0} />);
   expect(await menuOf(user, "Which cover?")).toEqual(["Reword", "Ask someone else", "Drop", "Change this"]);
   await user.click(screen.getByRole("menuitem", { name: "Change this" }));
   await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Ask me on Friday");

@@ -594,6 +594,9 @@ def save(
                     texts[name] = set_key(texts[name], [new_name], data[old_name])
     core = {name: text for name, text in texts.items() if name not in models}
     checked = _check_whole(config_dir, core, env) if core else cfg
+    chosen = str(changes.get("storage.sync.folder") or "").strip()
+    if chosen and (problem := _synced_folder_problem(ws, checked)):
+        raise SettingsError(problem)
     if "ai" in core:
         from engine.ai.checked import chain_problems
 
@@ -632,6 +635,20 @@ def save(
     if cfg.storage.export.commit:
         _commit(ws.root, [config_dir / f"{name}.yaml" for name in texts], [c["key"] for c in saved.changes])
     return saved
+
+
+def _synced_folder_problem(ws: Any, cfg: Any) -> str | None:
+    """Why a synced folder the person just chose can't be used, in plain words, or None: it has to be a full path to a
+    folder that is there, outside the app's own data and not another workspace's folder."""
+    from engine.sync import folder_problem, placement_problem
+
+    raw = cfg.storage.sync.folder.strip()
+    if raw and not Path(raw).expanduser().is_absolute():
+        return "The synced folder has to be a full path to a folder, such as one you picked with Choose."
+    found = placement_problem(ws, cfg) or folder_problem(ws, cfg)
+    if found is None:
+        return None
+    return found[:1].upper() + found[1:] + "."
 
 
 def _amounts(changes: dict[str, Any], shown: dict[str, Setting]) -> dict[str, Any]:

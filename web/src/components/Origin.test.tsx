@@ -4,7 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
-import { FollowUps } from "./FollowUps";
+import { DecisionRow, FollowUps } from "./FollowUps";
 
 // The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
 beforeEach(() => besidePane());
@@ -38,10 +38,6 @@ const question = (over: Partial<S["FollowupQuestion"]> = {}): S["FollowupQuestio
   chase_due: false, chases: 0,
   ...over,
 });
-
-const yours = (actions: S["FollowupAction"][], questions: S["FollowupQuestion"][] = []): S["FollowupSection"][] => [
-  { person: "PER-1", name: "Pat Example", is_pm: true, questions, actions, message: "", to_send: 0 },
-];
 
 // The person's own to-dos are one line on Follow-ups, so an action's origin shows on a row waiting on someone else.
 const theirs = (actions: S["FollowupAction"][]): S["FollowupSection"][] => [
@@ -78,14 +74,17 @@ test("an action whose input has an address links to the page, with its real doma
   expect(row).toHaveTextContent("(pages.example.com)");
 });
 
-test("a decision whose input has no address opens the saved text in a dialog", async () => {
+test("a question whose input has no address opens the saved text in a dialog", async () => {
   const user = userEvent.setup();
   fakeApi({
-    "GET followups": () => yours([], [question({ origin: { kind: "source", source: "SRC-3" } })]),
     "GET people": () => [],
     "GET sources/SRC-3": () => saved,
   });
-  renderApp(<FollowUps />);
+  renderApp(
+    <ol>
+      <DecisionRow question={question({ kind: "question", origin: { kind: "source", source: "SRC-3" } })} reveal={0} />
+    </ol>,
+  );
   const row = (await screen.findByText("Ship the proof now?")).closest("li") as HTMLElement;
   await user.click(within(row).getByRole("button", { name: "Where it came from" }));
   const dialog = await screen.findByRole("dialog", { name: "Where it came from" });

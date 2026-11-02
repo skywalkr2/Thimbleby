@@ -1076,9 +1076,9 @@ from the screens…" and "The app restarts only when it must, and only when the 
   written by the PM with op `config.set`, so it has history and can be put back.
 - **Live keys apply at once.** These are taken in without a restart because everything that reads them reads the shared
   config at the moment of use (`LIVE_KEYS` in `engine/worker.py`): `ai.*` (accounts, tiers, budgets), `ui.*`,
-  `workspace.user.*`, `workspace.name`, `workspace.assistant_name`, `workspace.our_accounts`, `storage.backups.*` and `watch.*`, and the language word lists (4.6).
+  `workspace.user.*`, `workspace.name`, `workspace.assistant_name`, `workspace.our_accounts`, `workspace.project.side_words`, `storage.backups.*` and `watch.*`, the language word lists (4.6) and the words the assistant never asks about (`language.known_terms`, `language.known_terms_shipped`). The synced folder (`storage.sync.folder`) is taken up when the app starts, so changing it asks for the restart.
 - **Every other key needs a restart:** `server.*`, the rest of `storage.*`, `workspace.language`, `workspace.plugins.*`
-  (including turning an add-on on or off), `dispatch.*`, `checks.*`, `language.*` except the word lists, `stages.*`, `rules.*` and every plugin's
+  (including turning an add-on on or off), `dispatch.*`, `checks.*`, `language.*` except the word lists and the never-asked words, `stages.*`, `rules.*` and every plugin's
   own settings. A change to the program's own code counts too. The app then says a restart is needed and why, holds new AI
   work ("Settings or code changed; restart to use them"), and waits for the person to choose **Restart now** or **Later**. It
   never restarts on its own (6.14). A copy that can't start itself again says to close and start it.

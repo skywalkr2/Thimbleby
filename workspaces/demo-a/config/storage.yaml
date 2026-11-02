@@ -20,6 +20,7 @@ backups:
   retry_minutes: 60
   before_changes: false   # a backup first before a change that is hard to take back (restoring, installing an add-on, releasing all, loading files, removing many records); true by default, off here because this sandbox's backup folder is made up
   bulk_change_records: 20   # a removal touching this many records counts as many
+  key_min_chars: 12   # the fewest characters a backup key typed on a screen may have
   encrypt: ""   # e.g. file:~/keys/backup.key; empty: backups are not encrypted
 files:
   max_file_mb: 50

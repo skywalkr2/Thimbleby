@@ -293,12 +293,20 @@ test("with no connections, the screen says what to add and offers to ask how", a
   expect(onAsk).toHaveBeenCalledWith("How do I connect something for Helper to read?");
 });
 
+test("with no connections and no AI account yet, the screen offers choosing one, not a question that can't be answered", async () => {
+  const { onAsk } = open([], { "GET ai/accounts": () => [] });
+  expect(await screen.findByText(/Choose an AI account first/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Choose an AI account" })).toHaveAttribute("href", expect.stringMatching(/#settings\/ai$/));
+  expect(screen.queryByRole("button", { name: "Ask how to add one" })).toBeNull();
+  expect(onAsk).not.toHaveBeenCalled();
+});
+
 test("Connections holds only accounts and sources: nothing closed or set aside is listed or asked for there", async () => {
   const { calls } = open([source("a")]);
   await screen.findByRole("row", { name: "Source a" });
   expect(screen.queryByText("Set aside by rules")).not.toBeInTheDocument();
   expect(screen.queryByText("Closed without you seeing")).not.toBeInTheDocument();
-  expect(screen.queryByText("Nothing has been set aside.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Nothing has been set aside yet. Newsletters, sales and automated notices are listed here once a mailbox is connected and mail arrives.")).not.toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET auto-closed" || c.route === "GET silent-closes")).toBe(false);
 });
 

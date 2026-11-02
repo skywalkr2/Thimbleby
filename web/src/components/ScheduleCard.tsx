@@ -17,6 +17,7 @@ import { SafeLink } from "./SafeText";
 import { recordView, viewHref } from "../lib/views";
 import { Button, ButtonLink } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
+import { Select } from "../ui/Select";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { SourceProblems, useNow, useSourceNames, useSourceState } from "./RailSources";
@@ -190,8 +191,8 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   return { settled, drawn, card };
 }
 
-/** The button that adds a meeting to the agenda, opening a drawer with one line to fill: what, the day (today to begin with)
- * and the time (none: all day). The server makes the person's own calendar entry, or merges the meeting into one already
+/** The button that adds a meeting to the agenda, opening a drawer with a short form to fill: what, the day (today to begin with),
+ * the time (none: all day), when it ends (with a time) and, for a person with more than one side, which side it belongs to. The server makes the person's own calendar entry, or merges the meeting into one already
  * there and says so; Undo takes an added one back. The drawer closes once it is added; a refusal leaves what was typed. */
 export function AddMeeting(props: { today: string; compact?: boolean }) {
   const { t } = useWords();
@@ -213,12 +214,18 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
   const [what, setWhat] = useState("");
   const [on, setOn] = useState("");
   const [at, setAt] = useState("");
+  const [until, setUntil] = useState("");
+  // The side is asked only when there is a choice: Personal and each business, starting at the one the screen shows.
+  const filter = useSideFilter();
+  const [side, setSide] = useState<string | null>(null);
   const day_ = on || props.today;
+  const sideNow = side ?? (filter.offered ? (filter.options.find((o) => o.id === filter.choice) ?? filter.options[0])?.id : undefined) ?? "";
+  const endBad = until !== "" && at !== "" && until <= at;
   const submit = async () => {
     const title = what.trim();
-    if (!title || !day_) return;
+    if (!title || !day_ || endBad) return;
     const done = await act(
-      () => api.addMeeting({ what: title, day: day_, time: at || null }),
+      () => api.addMeeting({ what: title, day: day_, time: at || null, until: at && until ? until : null, side: sideNow || null }),
       (added) =>
         added.merged
           ? { message: t("meeting.merged", { what: added.merged_with ?? title }) }
@@ -235,7 +242,7 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
       footer={
         <>
           <Button onClick={props.onClose}>{t("action.cancel")}</Button>
-          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_}>
+          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_ || endBad}>
             {t("meeting.add")}
           </Button>
         </>
@@ -258,6 +265,30 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
         <FormField id={`${base}-time`} label={t("meeting.time")}>
           <DateField id={`${base}-time`} kind="time" value={at} onChange={(e) => setAt(e.target.value)} />
         </FormField>
+        <FormField id={`${base}-until`} label={t("meeting.until")}>
+          <DateField id={`${base}-until`} kind="time" value={until} disabled={at === ""} aria-describedby={at === "" ? `${base}-until-why` : undefined} onChange={(e) => setUntil(e.target.value)} />
+        </FormField>
+        {at === "" && (
+          <p className="hint" id={`${base}-until-why`}>
+            {t("meeting.until_needs_start")}
+          </p>
+        )}
+        {endBad && (
+          <p className="problem-note" role="alert">
+            {t("meeting.until_bad")}
+          </p>
+        )}
+        {filter.offered && (
+          <FormField id={`${base}-side`} label={t("meeting.side")}>
+            <Select id={`${base}-side`} value={sideNow} onChange={(e) => setSide(e.target.value)}>
+              {filter.options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        )}
         {/* The drawer's Add button is outside the form; this one lets Enter in a field add the meeting. */}
         <button type="submit" hidden tabIndex={-1} aria-hidden="true" />
       </form>

@@ -1,6 +1,6 @@
-"""A meeting added in one line (design 7.7): `POST /api/calendar/meetings` takes what, the day and the time, and makes
-the person's own calendar entry, or says it merged the meeting into one already there. Undo is the usual changeset
-undo."""
+"""A meeting added in a short form (design 7.7): `POST /api/calendar/meetings` takes what, the day, the time, an end and
+a side, and makes the person's own calendar entry, or says it merged the meeting into one already there. Undo is the
+usual changeset undo."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def build_calendar_router(ws: Workspace, cfg: Config, store: Store, events: Even
     def add(body: MeetingIn) -> MeetingAdded:
         """Add a meeting, or merge it into the one that is already on the calendar. The person's own act, with Undo."""
         try:
-            added = add_meeting.add_meeting(store, cfg, body.what, body.day, body.time)
+            added = add_meeting.add_meeting(store, cfg, body.what, body.day, body.time, body.until, body.side)
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         if not added.merged:

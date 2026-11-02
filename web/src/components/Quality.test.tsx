@@ -278,7 +278,7 @@ test("without the person's consent the sample says nothing is drawn, and with it
   const user = userEvent.setup();
   const calls = show(quality(), { "POST quality/sample": () => SAMPLE });
   await loaded();
-  expect(within(section("quality-sample")).getByText("Allow the independent reading in Settings first. Nothing is drawn until you do.")).toBeInTheDocument();
+  expect(within(section("quality-sample")).getByText("The sample is off. Nothing is drawn until you allow it, and what is drawn stays on this computer.")).toBeInTheDocument();
   expect(within(section("quality-sample")).queryByRole("button", { name: "Draw the sample" })).toBeNull();
   cleanup();
   const again = show(quality({ sample_allowed: true }), { "POST quality/sample": () => SAMPLE });
@@ -287,6 +287,34 @@ test("without the person's consent the sample says nothing is drawn, and with it
   expect(await screen.findByText("Drew 2 messages for you to read.")).toBeInTheDocument();
   expect(again.some((c) => c.route === "POST quality/sample")).toBe(true);
   expect(calls.some((c) => c.route === "POST quality/sample")).toBe(false);
+});
+
+test("the sample's Allow button saves the consent as a setting, with the consent named for what it is, then the quality figures are read again", async () => {
+  const user = userEvent.setup();
+  const calls = show(quality(), {
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+  });
+  await loaded();
+  const pane = section("quality-sample");
+  expect(within(pane).queryByText(/in Settings first/)).toBeNull();
+  await user.click(within(pane).getByRole("button", { name: "Allow the sample" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST settings")?.body).toMatchObject({ changes: { "dispatch.knowledge.sample_consent": true } }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET quality").length).toBeGreaterThan(1));
+});
+
+test("a heading that counts promises says so in words, and the closes and endings point to What changed when some were wrong", async () => {
+  show(
+    quality({
+      closes: { total: 4, silent: 2, days: [{ day: "2026-10-19", total: 4, silent: 2 }] },
+      endings: { made: 3, wrong: 1, declined: 0, undone: 1, reopened: 0, days: [{ day: "2026-10-19", made: 3, wrong: 1 }] },
+    }),
+  );
+  await loaded();
+  expect(screen.getByText("Promises missed, all together")).toBeInTheDocument();
+  expect(screen.queryByText(/Missed out of present/)).toBeNull();
+  expect(within(section("quality-closes")).getByRole("link", { name: "Look them over in What changed" })).toHaveAttribute("href", expect.stringMatching(/#work\/changed$/));
+  expect(within(section("quality-endings")).getByRole("link", { name: "Look at them in What changed" })).toBeInTheDocument();
 });
 
 test("the sample lists each message to read, and saving a message's two numbers posts them with an Undo", async () => {
@@ -385,7 +413,7 @@ test("a screen with nothing to show says so in plain words in every section", as
   expect(within(section("quality-lost")).getByText("No promise was open in this window.")).toBeInTheDocument();
   expect(within(section("quality-sources")).getByText("No source was connected in this window.")).toBeInTheDocument();
   expect(within(section("quality-review")).getByText("You haven't looked its work over in this window.")).toBeInTheDocument();
-  expect(within(section("quality-sample")).getByText("Allow the independent reading in Settings first. Nothing is drawn until you do.")).toBeInTheDocument();
+  expect(within(section("quality-sample")).getByText("The sample is off. Nothing is drawn until you allow it, and what is drawn stays on this computer.")).toBeInTheDocument();
   expect(within(section("quality-total")).getByText("You haven't counted any promises in this window.")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/NaN|undefined|null/);
 });

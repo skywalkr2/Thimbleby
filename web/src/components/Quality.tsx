@@ -1,5 +1,7 @@
 // The Quality screen: outcome measures, weekly totals, grouped missed items, and the person's own count form.
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSettingEdits } from "../lib/use-setting-edits";
+import { viewHref } from "../lib/views";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -21,6 +23,9 @@ type View = S["QualityView"];
 function whole(text: string): number | null {
   return /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
 }
+
+/** The setting that allows the sample of messages to be drawn. */
+const CONSENT = "dispatch.knowledge.sample_consent";
 
 function Section(props: { id: string; title: string; hint?: string; children: React.ReactNode; collapsed?: boolean; empty?: boolean }) {
   const { t } = useWords();
@@ -235,6 +240,15 @@ function Sample(props: { view: View }) {
   const act = useAct();
   const [busy, setBusy] = useState(false);
   const { sample, sample_allowed: allowed } = props.view;
+  const client = useQueryClient();
+  const edit = useSettingEdits();
+  // The consent is the person's own setting; this is the one place it is asked for, saved with Undo like any setting.
+  const allow = async () => {
+    setBusy(true);
+    const saved = await edit.save(CONSENT, { changes: { [CONSENT]: true } }, t("quality.sample.allowed"));
+    setBusy(false);
+    if (saved) void client.invalidateQueries({ queryKey: ["quality"] });
+  };
   const draw = async () => {
     setBusy(true);
     await act(
@@ -254,7 +268,19 @@ function Sample(props: { view: View }) {
         </div>
       </>
     ) : (
-      <Empty text={t("quality.sample.not_allowed")} />
+      <>
+        <Empty text={t("quality.sample.not_allowed")} />
+        <div className={styles.act}>
+          <Button variant="primary" onClick={() => void allow()} disabled={busy}>
+            {t("quality.sample.allow")}
+          </Button>
+        </div>
+        {edit.problems[CONSENT] && (
+          <p className="problem-note" role="alert">
+            {edit.problems[CONSENT]}
+          </p>
+        )}
+      </>
     );
   }
   return (
@@ -401,6 +427,11 @@ export function Quality(props: { onBack: () => void }) {
                 ) : (
                   <>
                     <p className={styles.sum}>{tn("quality.closes.sum", view.closes.total, { silent: view.closes.silent })}</p>
+                    {view.closes.silent > 0 && (
+                      <p>
+                        <a href={viewHref("work/changed")}>{t("quality.closes.next")}</a>
+                      </p>
+                    )}
                     <Days
                       label={t("quality.day_list")}
                       rows={view.closes.days.map((d) => tn("quality.closes.day", d.total, { day: monthDay(d.day), silent: d.silent }))}
@@ -415,6 +446,11 @@ export function Quality(props: { onBack: () => void }) {
                 ) : (
                   <>
                     <p className={styles.sum}>{tn("quality.endings.sum", view.endings.made, { wrong: view.endings.wrong })}</p>
+                    {view.endings.wrong > 0 && (
+                      <p>
+                        <a href={viewHref("work/changed")}>{t("quality.endings.next")}</a>
+                      </p>
+                    )}
                     <p>{t("quality.endings.how", { declined: view.endings.declined, undone: view.endings.undone, reopened: view.endings.reopened })}</p>
                     <Days
                       label={t("quality.day_list")}
@@ -464,7 +500,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")} collapsed empty={!view.sample}>
+            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")} collapsed empty={!view.sample && view.sample_allowed}>
               <Sample view={view} />
             </Section>
 

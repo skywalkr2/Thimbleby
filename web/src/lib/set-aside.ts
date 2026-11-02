@@ -45,14 +45,14 @@ export function useSetAside() {
       const keep = choice === "never";
       const sender = who.address
         ? {
-            label: t("setaside.always_sender"),
+            label: t(keep ? "setaside.keep_sender" : "setaside.always_sender"),
             run: () => always(choice, [who.address], [], t(keep ? "setaside.rule_keep_sender" : "setaside.rule_sender", { sender: who.address, what: words })),
           }
         : undefined;
       const name = who.domain;
       const domain = name
         ? {
-            label: t("setaside.always_domain"),
+            label: t(keep ? "setaside.keep_domain" : "setaside.always_domain"),
             run: () => always(choice, [], [name], t(keep ? "setaside.rule_keep_domain" : "setaside.rule_domain", { domain: name, what: words })),
           }
         : undefined;

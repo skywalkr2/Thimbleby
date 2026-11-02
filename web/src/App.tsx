@@ -140,7 +140,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   };
   const shown = parseView(view);
   // The grid of what each account can do belongs to Settings, so Settings stays marked in the navigation.
-  const navView: View = view === "schedule" ? "today" : view === "settings/ai-compare" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
+  const navView: View = view === "settings/ai-compare" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened

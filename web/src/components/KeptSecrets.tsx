@@ -185,7 +185,9 @@ export function BackupKey() {
       <p className="hint" id={`${base}-warning`}>
         {t("backup_key.warning")}
       </p>
-      {held && local && <p className="hint">{t("backup_key.replace_note")}</p>}
+      {held && local && !made && <p className="hint">{t("backup_key.replace_note")}</p>}
+      {/* Once a key has been made, the typed field and Make stay away until the person has copied it, so there is one thing to do. */}
+      {!made && (
       <KeptSecretRow
         id={`${base}-key`}
         label={t("backup_key.label")}
@@ -205,6 +207,7 @@ export function BackupKey() {
           ) : null
         }
       />
+      )}
       {problem && (
         <p className="problem-note" role="alert">
           {problem}

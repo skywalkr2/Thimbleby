@@ -2,7 +2,7 @@
 // Names come from the fixture's cases and people, never written out here.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { expectQueueShows, pressStart, showSteps, widerThanWindow, FIRST_SCREEN } from "./journey-helpers";
+import { expectQueueShows, pressStart, settingsSections, showSteps, widerThanWindow, FIRST_SCREEN } from "./journey-helpers";
 
 interface Case {
   id: string;
@@ -157,7 +157,7 @@ async function go(page: Page, label: string) {
   // Connections and Add-ons are sections of Settings, reached from its side bar and not from the side menu.
   if (label === "Connections" || label === "Add-ons") {
     await go(page, "Settings");
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: label, exact: true }).click();
+    await (await settingsSections(page)).getByRole("link", { name: label, exact: true }).click();
     await expect(page.getByRole("heading", { level: 2, name: label, exact: true })).toBeVisible({ timeout: 20_000 });
     return;
   }

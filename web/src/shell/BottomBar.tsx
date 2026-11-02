@@ -72,7 +72,7 @@ export function BottomBar(props: {
     afterClose(run);
   };
   const todayCurrent = props.current === "today";
-  const workCurrent = props.current.startsWith("work/");
+  const workCurrent = props.current.startsWith("work/") || props.current === "schedule";
   return (
     <>
       {searching && (
@@ -116,7 +116,7 @@ export function BottomBar(props: {
       </nav>
       {sheet === "work" && (
         <Sheet title={nav.workTitle} onClose={close}>
-          <Links entries={nav.work} current={props.current} onPick={close} />
+          <Links entries={[nav.schedule, ...nav.work]} current={props.current} onPick={close} />
         </Sheet>
       )}
       {sheet === "more" && (

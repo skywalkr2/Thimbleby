@@ -1,5 +1,5 @@
-// Follow-ups by person (design 7.5): the PM first (decisions and their own actions, each a link to the screen where it is
-// acted on), then everyone A to Z, each with one clean message to copy, then mark sent. The To send tab also holds what
+// Follow-ups by person (design 7.5): other people only, A to Z, each with one clean message to copy, then mark sent. The person's
+// own to-dos, decisions and questions are one row at the top that opens them where they are kept. The To send tab also holds what
 // waits for the person's approval to go out (design 7.4), above the messages, in one list | detail. The message can be edited where it is shown; what is marked sent is the box's text.
 // The same follow-ups can be shown as a table (Message | Table) and copied as one: as an HTML table for mail and chat, or as
 // tab-separated cells for a spreadsheet. The table is on screen before anything is copied, and no AI run makes it.
@@ -24,7 +24,6 @@ import { viewHref } from "../lib/views";
 import { useHandedToast, useWaitsForStart } from "../lib/handed-toast";
 import { useWords } from "../lib/wording";
 import { AfterMoveAnswers } from "./AfterMoveAnswers";
-import { AnswerOnToday } from "./AnswerOnToday";
 import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
@@ -68,7 +67,7 @@ import { SectionRow } from "../ui/SectionRow";
 import { DetailTop } from "../ui/DetailTop";
 import { RowBody } from "../ui/RowBody";
 import { ItemList, Item } from "../ui/ItemList";
-import { ExpandableRow } from "../ui/Row";
+import { ExpandableRow, Row } from "../ui/Row";
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
 const FILTERS: Filter[] = ["send", "later", "waiting"];
@@ -91,20 +90,19 @@ const rowsOnSide = (s: S["FollowupSection"], choice: SideChoice): S["FollowupSec
 const hasRows = (s: S["FollowupSection"]) => s.questions.length + (s.later ?? []).length + s.actions.length > 0;
 
 /** The rows of a section that a tab (To send, Later, Waiting on them) holds, for the grouping by project, which lists rows
- * and not people. The person's own section is what waits on them under To send. */
+ * and not people.  */
 function rowsOnTab(s: S["FollowupSection"], filter: Filter): S["FollowupSection"] {
   if (filter === "later") return { ...s, questions: [], actions: [] };
-  if (s.is_pm) return filter === "send" ? { ...s, later: [] } : { ...s, questions: [], actions: [], later: [] };
   if (filter === "send") return { ...s, questions: toSendQuestions(s), actions: toSendActions(s), later: [] };
   return { ...s, questions: waitingQuestions(s), actions: waitingActions(s), later: [] };
 }
 
-/** What shows under a side choice. The person's own section and the by-project list are filtered row by row. Someone
- * else's section is one message to them, so it stays whole while any of its rows shows, and goes when none does. */
+/** What shows under a side choice. The by-project list is filtered row by row. A person's section is one message to them, so
+ * it stays whole while any of its rows shows, and goes when none does. */
 function sectionsOnSide(found: S["FollowupSection"][], choice: SideChoice, byProject: boolean): S["FollowupSection"][] {
   if (choice === "all") return found;
   return found.flatMap((s) => {
-    if (s.is_pm || byProject) {
+    if (byProject) {
       const kept = rowsOnSide(s, choice);
       return hasRows(kept) ? [kept] : [];
     }
@@ -135,9 +133,8 @@ export function FollowUps(props: { compact?: boolean }) {
     return true;
   };
   useReveal("person", seek);
-  const present = (followups.data ?? []).filter(
-    (s) => s.questions.length || (s.later ?? []).length || (s.actions.length && !(compact && s.is_pm)),
-  );
+  // Follow-ups is about other people. The person's own section is one row that opens To-dos and questions.
+  const present = (followups.data ?? []).filter((s) => !s.is_pm && (s.questions.length || (s.later ?? []).length || s.actions.length));
   const side = useSideFilter();
   // With no side beside Personal the follow-ups are by person only: there is no grouping by project to choose.
   const { justMe } = useSides();
@@ -146,12 +143,11 @@ export function FollowUps(props: { compact?: boolean }) {
   // By project the tab picks the rows, since a project holds rows of several people.
   const projectSections = byProject ? sections.map((s) => rowsOnTab(s, filter)).filter(hasRows) : sections;
   const shown = sections.filter((s) =>
-    filter === "send"
-      ? s.is_pm || s.to_send > 0
-      : filter === "later"
-        ? (s.later ?? []).length > 0
-        : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
+    filter === "send" ? s.to_send > 0 : filter === "later" ? (s.later ?? []).length > 0 : waitingQuestions(s).length + waitingActions(s).length > 0,
   );
+  const ownSection = (followups.data ?? []).find((s) => s.is_pm);
+  const own = ownSection ? rowsOnSide(ownSection, side.picked) : null;
+  const ownRow = !compact && own && own.questions.length + own.actions.length > 0 ? own : null;
   // The list | detail choice (design 7.13): beside the list the first row is chosen as the list opens; below 1024px a row opens
   // its detail as a drawer.
   const beside = useMediaQuery("(min-width: 1024px)") && !compact;
@@ -164,9 +160,8 @@ export function FollowUps(props: { compact?: boolean }) {
   // What waits to go out leads the list, so no row is chosen as the first until it has been read: the messages below may be
   // here sooner, and the first row would then be one of them.
   const actsComing = !compact && !byProject && filter === "send" && acts.isPending;
-  // The person's own section stays first in the list, but the pane opens on someone else's message when there is one: the
-  // person's own decisions and to-dos are acted on where they are kept, and the message to send is what this screen is for.
-  const firstOther = actRows.length === 0 ? (shown.find((s) => !s.is_pm)?.person ?? null) : null;
+  // The pane opens on the first person's message when nothing waits to go out.
+  const firstOther = actRows.length === 0 ? (shown[0]?.person ?? null) : null;
   const choice = useListChoice({
     keys: [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)],
     first: firstOther,
@@ -214,7 +209,7 @@ export function FollowUps(props: { compact?: boolean }) {
   // On a phone the messages to send can be gone through one at a time (design 7.1).
   const phone = useIsNarrow() && !compact;
   const [reviewing, setReviewing] = useState(false);
-  const reviewable = filter === "send" && group === "person" ? shown.filter((s) => !s.is_pm).map((s) => ({ id: s.person, section: s })) : [];
+  const reviewable = filter === "send" && group === "person" ? shown.map((s) => ({ id: s.person, section: s })) : [];
   // A person's group opens with what is due soon, whichever tab is open, so a date on another tab is never out of sight.
   const detailOf = (s: S["FollowupSection"]) => (
     <>
@@ -230,8 +225,6 @@ export function FollowUps(props: { compact?: boolean }) {
   const detailBody = (s: S["FollowupSection"]) =>
     filter === "later" ? (
       <LaterSection section={s} pane />
-    ) : s.is_pm ? (
-      <YourSection section={s} compact={compact} pane />
     ) : filter === "send" ? (
       <PersonSection section={s} pane shared={sharedMessage(s.person)} />
     ) : (
@@ -266,6 +259,7 @@ export function FollowUps(props: { compact?: boolean }) {
           </>
         }
       />
+      {ownRow && filter === "send" && <OwnTodosRow section={ownRow} />}
       {followups.isPending ? (
         <Skeleton />
       ) : followups.isError ? (
@@ -291,12 +285,12 @@ export function FollowUps(props: { compact?: boolean }) {
       ) : shown.length === 1 && actRows.length === 0 && !compact ? (
         // One group has nothing to choose between: its items are shown in place, not as a list beside a pane that holds them.
         <div className="in-place" data-in-place="">
-          <h2 id="followups-group-title" tabIndex={-1}>{shown[0].is_pm ? t("followups.you") : shown[0].name}</h2>
+          <h2 id="followups-group-title" tabIndex={-1}>{shown[0].name}</h2>
           <RowList as="ol" detail>{detailOf(shown[0])}</RowList>
         </div>
       ) : (
         <ListDetail
-          title={selectedAct ? actTitle(selectedAct, t) : selected ? (selected.is_pm ? t("followups.you") : selected.name) : ""}
+          title={selectedAct ? actTitle(selectedAct, t) : selected ? selected.name : ""}
           onClose={choice.close}
           fit={FOLLOWUPS_FIT}
           detail={
@@ -327,7 +321,7 @@ export function FollowUps(props: { compact?: boolean }) {
                 <FollowListRow
                   key={s.person}
                   section={s}
-                  kind={filter === "later" ? "later" : s.is_pm ? "you" : filter}
+                  kind={filter}
                   choice={choice}
                   compact={compact}
                   copied={sharedMessage(s.person).state.copied}
@@ -349,10 +343,10 @@ export function FollowUps(props: { compact?: boolean }) {
 }
 
 /** What the person's own section says it holds: decisions, questions and to-dos. */
-function yourCounts(s: S["FollowupSection"], compact: boolean, tn: Tn): string {
+function yourCounts(s: S["FollowupSection"], tn: Tn): string {
   const decisions = s.questions.filter((q) => q.kind === "decision").length;
   const asked = s.questions.length - decisions;
-  const actions = compact ? 0 : s.actions.length;
+  const actions = s.actions.length;
   return [decisions ? tn("followups.decisions", decisions) : "", asked ? tn("followups.questions", asked) : "", actions ? tn("followups.your_actions", actions) : ""]
     .filter(Boolean)
     .join(" · ");
@@ -373,7 +367,7 @@ function focusMessage(tries = 12): void {
  * shown shows it first, and the next Copy is the one that copies. */
 function FollowListRow(props: {
   section: S["FollowupSection"];
-  kind: "you" | "send" | "later" | "waiting";
+  kind: "send" | "later" | "waiting";
   choice: ListChoice;
   compact: boolean;
   copied: boolean;
@@ -392,18 +386,16 @@ function FollowListRow(props: {
   const days = [...questions.map((q) => q.waiting_days), ...actions.map((a) => a.told_days)].filter((d): d is number => d !== null);
   const oldest = days.length ? Math.max(...days) : null;
   const chase = questions.some((q) => q.chase_due) || actions.some((a) => a.chase_due);
-  const name = kind === "you" ? t("followups.you") : s.name;
+  const name = s.name;
   // A batch that has waited says since when ("ready since Tue"), so a stale one shows; one ready today says nothing of it.
   const since = sinceDay(s.ready_since, new Date());
   const sinceText = (what: string) => (since ? t("followups.ready_since", { what, day: since }) : what);
   const sub =
-    kind === "you"
-      ? yourCounts(s, props.compact, tn)
-      : kind === "send"
-        ? sinceText(tn("followups.to_send", s.to_send))
-        : kind === "later"
-          ? tn("followups.later_count", (s.later ?? []).length)
-          : tn("followups.waiting_count", questions.length + actions.length);
+    kind === "send"
+      ? sinceText(tn("followups.to_send", s.to_send))
+      : kind === "later"
+        ? tn("followups.later_count", (s.later ?? []).length)
+        : tn("followups.waiting_count", questions.length + actions.length);
   // The line's keys and button reach the person's message in the detail once it is shown there. Until then they show it, with
   // the cursor in the message, and the next press is the one that acts.
   const showFirst = () => {
@@ -462,66 +454,14 @@ function FollowListRow(props: {
   );
 }
 
-function YourSection(props: { section: S["FollowupSection"]; compact: boolean; pane?: boolean }) {
+/** The person's own to-dos, decisions and questions are not follow-ups: one row at the top says how many there are and opens
+ * them where they are kept (To-dos and questions). */
+function OwnTodosRow(props: { section: S["FollowupSection"] }) {
   const { t, tn } = useWords();
-  const s = props.section;
-  const actions = props.compact ? [] : s.actions;
-  const Heading = props.compact ? "h4" : "h3";
   return (
-<SectionRow pane={props.pane} title={<Heading>{t("followups.you")}</Heading>} meta={yourCounts(s, props.compact, tn)}>
-      {s.questions.length > 0 && (
-        <ItemList pane={props.pane}>
-          {s.questions.map((q) => (
-            <YourQuestionRow key={q.id} question={q} />
-          ))}
-        </ItemList>
-      )}
-      {actions.length > 0 && (
-        // Follow-ups is about other people: the person's own to-dos are one line that opens them where they are kept.
-        <p className="hint" data-own-todos="">
-          {tn("followups.your_actions", actions.length)} ·{" "}
-          <a href={viewHref("work/open")}>{t("followups.open_your_todos")}</a>
-        </p>
-      )}
-    </SectionRow>
-  );
-}
-
-/** A decision or a question to the person, as Follow-ups lists it: what it is and where it came from, and a link to its line on
- * Today, where it is answered. Its menu keeps the other things that can be done with it (reword it, ask someone else, drop it). */
-function YourQuestionRow(props: { question: S["FollowupQuestion"] }) {
-  const { t } = useWords();
-  const q = props.question;
-  const ref = useRef<HTMLLIElement>(null);
-  const who = q.about === "owner" || q.about === "held-op";
-  const back = () => ref.current?.focus();
-  const menu = useQuestionMenu(q, { canMarkSent: false, onClosed: back });
-  const change = useChangeThis({ kind: q.kind === "decision" ? "decision" : "question", id: q.id }, back);
-  const titleId = `your-q-${q.id}`;
-  return (
-    <Item row ref={ref}>
-      <div>
-        <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
-        <div className="title" id={titleId}>
-          {q.title}
-        </div>
-        {q.text && <SafeText text={q.text} />}
-        {q.links.map((l) => (
-          <div key={l.url}>
-            <SafeLink label={l.label} url={l.url} />
-          </div>
-        ))}
-        {q.from_outside && q.links.length > 0 && <OutsideStep word="outside.step.open" />}
-        <OriginLink origin={q.origin} />
-      </div>
-      <Actions>
-        <AnswerOnToday question={q.id} describedBy={titleId} />
-        <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
-      </Actions>
-      {menu.form}
-      {change.form}
-      <LearnedLines records={[q.id]} />
-    </Item>
+    <RowList as="ul" aria-label={t("followups.own_todos")} data-own-todos="">
+      <Row title={<a href={viewHref("work/open")}>{t("followups.own_todos")}</a>} meta={yourCounts(props.section, tn)} aria-label={t("followups.own_todos")} />
+    </RowList>
   );
 }
 

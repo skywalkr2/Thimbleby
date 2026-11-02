@@ -206,6 +206,27 @@ def test_removing_an_add_on_the_app_installed_holds_no_work(screen):
     assert c.get(f"{api}/packs").json()["available"][0]["removable"] is False
 
 
+def test_removing_an_add_on_takes_a_backup_first_and_changes_nothing_when_it_cannot(screen, monkeypatch):
+    from engine import backup
+
+    c, api, worker, place = screen
+    c.post(f"{api}/packs/packdemo/install")
+    made: list[str] = []
+    monkeypatch.setattr(backup, "backup_before", lambda ws, cfg, now=None: made.append("backup") or True)
+    assert c.post(f"{api}/packs/packdemo/uninstall").status_code == 200
+    assert made == ["backup"] and not (place / "pack_demo").exists()
+    # With the backup failing, the add-on stays exactly as it was.
+    c.post(f"{api}/packs/packdemo/install")
+
+    def fail(ws, cfg, now=None):
+        raise backup.BackupFirstFailed("Nothing was changed, because the backup made first couldn't be made.")
+
+    monkeypatch.setattr(backup, "backup_before", fail)
+    refused = c.post(f"{api}/packs/packdemo/uninstall")
+    assert refused.status_code == 409 and "backup made first" in refused.json()["detail"]
+    assert (place / "pack_demo" / "__init__.py").is_file()
+
+
 def test_an_add_on_the_app_didnt_install_is_not_removed_from_the_screen(screen):
     c, api, worker, place = screen
     c.post(f"{api}/packs/packdemo/install")

@@ -468,6 +468,14 @@ class BackupSettings(ConfigModel):
         json_schema_extra={"enabled_by": "before_changes"},
     )
 
+    key_min_chars: int = Field(
+        12,
+        ge=8,
+        le=128,
+        description="The fewest characters a backup key typed on a screen may have. A key the app makes is longer than "
+        "this, and a key kept in a file or a variable is the person's own.",
+    )
+
     @field_validator("encrypt")
     @classmethod
     def _key_reference(cls, value: str) -> str:

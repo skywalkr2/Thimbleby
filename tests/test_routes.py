@@ -452,7 +452,13 @@ def test_projects_can_be_added_and_edited(api):
     assert client.post(f"{base}/projects/{prj}", json={"priority": "Whenever"}).status_code >= 400
     assert client.post(f"{base}/projects/{prj}/remove").status_code == 200
     in_use = fixture_records(DEMO_B, "project")[0]["id"]
-    assert client.post(f"{base}/projects/{in_use}/remove").status_code == 409
+    refused = client.post(f"{base}/projects/{in_use}/remove")
+    assert refused.status_code == 409
+    # It says what still uses it in plain words, never "record(s)" or a bare kind name, and what to do about it.
+    assert (
+        "can't be removed while" in refused.text and "still use it" in refused.text and "record(s)" not in refused.text
+    )
+    assert "Move or remove them first" in refused.text
 
 
 def _file_notes(client, base, worker, ops) -> None:

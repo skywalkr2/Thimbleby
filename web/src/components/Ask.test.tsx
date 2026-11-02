@@ -340,6 +340,8 @@ test("Ask offers to set up kinds of items of your own, listing the starting temp
   }).calls;
   const offer = await screen.findByRole("button", { name: "Keep track of something of your own" });
   expect(offer).toHaveAttribute("aria-expanded", "false");
+  // The link carries a sentence of context: what Ask answers from, and what a list of your own is for.
+  expect(screen.getByText(/Ask answers from what is saved here/)).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET templates")).toBe(false);
   expect(screen.queryByText("Client requests")).toBeNull();
   await user.click(offer);

@@ -105,6 +105,30 @@ def test_a_feature_switch_comes_first_and_its_settings_name_it(tmp_path):
     assert all(s.type == "text" for s in found if s.picker)
 
 
+def test_a_synced_folder_that_cannot_be_used_is_refused_when_it_is_chosen_and_one_that_can_is_saved(tmp_path):
+    from engine import settings
+
+    ws, cfg, store = make(tmp_path)
+    here = tmp_path / "shared"
+    here.mkdir()
+
+    def choose(value, fingerprint):
+        return settings.save(
+            ws, cfg, store, changes={"storage.sync.folder": value}, reset=[], read_fingerprint=fingerprint
+        )
+
+    for value, why in (
+        ("not-a-path", "full path"),
+        (str(tmp_path / "nowhere"), "isn't there"),
+        (str(ws.root / "data"), "inside the workspace"),
+        (str(ws.root), "inside the synced folder|inside the workspace"),
+    ):
+        with pytest.raises(settings.SettingsError, match=why):
+            choose(value, settings.fingerprint(ws.config_dir))
+    saved = choose(str(here), settings.fingerprint(ws.config_dir))
+    assert [c["key"] for c in saved.changes] == ["storage.sync.folder"]
+
+
 def test_the_appearance_page_holds_light_or_dark_and_density_and_the_brand_is_in_its_more_settings(tmp_path):
     from engine import settings
 

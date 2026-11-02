@@ -5,7 +5,7 @@ import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
 import { nextMonday } from "../lib/dates";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
-import { FollowUps } from "./FollowUps";
+import { DecisionRow, FollowUps } from "./FollowUps";
 
 // The window is wide, so a person's detail stands beside the list (design 7.13).
 beforeEach(() => {
@@ -48,6 +48,16 @@ const sections: S["FollowupSection"][] = [
     message: "Hi Robin,\n\nIs the index final?\n\nAction items with you:\n- Send the index\n\nThanks!",
     to_send: 2,
   },
+  // A second person with something to send keeps the list beside its pane: one person alone is shown in place.
+  {
+    person: "PER-9",
+    name: "Tess Example",
+    is_pm: false,
+    questions: [],
+    actions: [{ id: "ACT-8", text: "Send the cover", due: null, project_name: "Book", told: null, to_send: true, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
+    message: "Hi Tess,\n\nAction items with you:\n- Send the cover\n\nThanks!",
+    to_send: 1,
+  },
 ];
 
 test("the time this screen is open and in view is counted as time spent looking over the assistant's work, once, when the person leaves it", async () => {
@@ -55,7 +65,7 @@ test("the time this screen is open and in view is counted as time spent looking 
   const clock = vi.spyOn(Date, "now").mockReturnValue(start);
   const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [], "POST quality/review-time": () => ({ seconds: 30 }) });
   renderApp(<FollowUps />);
-  await screen.findByRole("listitem", { name: "You" });
+  await screen.findByRole("listitem", { name: "Your own to-dos" });
   clock.mockReturnValue(start + 30_000);
   cleanup();
   clock.mockRestore();
@@ -74,16 +84,16 @@ test("the compact follow-ups on Today are part of Today and count nothing of the
   expect(calls.filter((c) => c.route === "POST quality/review-time")).toEqual([]);
 });
 
-test("the PM comes first, then each person with Copy", async () => {
+test("the own to-dos row comes first, then each other person with Copy", async () => {
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
-  const you = await screen.findByRole("listitem", { name: "You" });
+  const you = await screen.findByRole("listitem", { name: "Your own to-dos" });
   const robin = screen.getByRole("listitem", { name: "Robin Sample" });
   expect(you.compareDocumentPosition(robin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(within(robin).getByRole("button", { name: "Copy message" })).toBeInTheDocument();
   expect(within(robin).queryByRole("button", { name: /^Copy \d/ })).toBeNull();
   expect(within(robin).getByText("2 to send")).toBeInTheDocument();
-  expect(within(you).queryByRole("button", { name: /^Copy/ })).toBeNull();
+  expect(within(you).queryByRole("button")).toBeNull();
 });
 
 const markSentRoutes = {
@@ -111,7 +121,7 @@ test("Copy puts the edited message on the clipboard and changes nothing on the s
 test("a message that still names the assistant shows why it is held back and cannot be copied", async () => {
   const user = userEvent.setup();
   const reason = "Held back: the message to Robin Sample names Helper. Take the name out before this goes to anyone.";
-  const held = [sections[0], { ...sections[1], message: "", withheld: reason }];
+  const held = [sections[0], { ...sections[1], message: "", withheld: reason }, sections[2]];
   const calls = fakeApi({ ...markSentRoutes, "GET followups": () => held });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
@@ -123,7 +133,7 @@ test("a message that still names the assistant shows why it is held back and can
 test("a to-do the person is outside the limit of is left out of their message, and the detail says so", async () => {
   const user = userEvent.setup();
   const limited = [{ kind: "action" as const, id: "ACT-7", text: "Check the print run", limited_to: "Pat Example, Lee Sample" }];
-  fakeApi({ ...markSentRoutes, "GET followups": () => [sections[0], { ...sections[1], limited_out: limited }] });
+  fakeApi({ ...markSentRoutes, "GET followups": () => [sections[0], { ...sections[1], limited_out: limited }, sections[2]] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   const pane = await findPane();
@@ -183,77 +193,34 @@ test("the menu's Copy as plain text puts only the plain text on the clipboard, a
   expect(screen.getAllByRole("button", { name: "Mark sent" }).length).toBeGreaterThan(0);
 });
 
-const withAsks = (): S["FollowupSection"][] => {
-  const ask = (id: string, title: string, kind: string): S["FollowupQuestion"] => ({
-    id,
-    title,
-    text: "",
-    links: [],
-    kind,
-    status: "open",
-    sent: null,
-    waiting_days: null,
-    chase_due: false,
-    chases: 0,
-    about: null,
-    options: [],
-  });
-  const all = structuredClone(sections);
-  all[0].questions = [ask("Q-7", "Ship the proof now?", "decision"), ask("Q-8", "Which cover do you prefer?", "question")];
-  return all;
-};
-
-test("the You group shows each decision and question as a link, Answer on Today, with no Answer button and no form", async () => {
-  const user = userEvent.setup();
-  fakeApi({ "GET followups": () => withAsks(), "GET people": () => [] });
-  renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: /^You/ }));
-  const decision = (await screen.findByText("Ship the proof now?")).closest("li") as HTMLElement;
-  const question = screen.getByText("Which cover do you prefer?").closest("li") as HTMLElement;
-  for (const row of [decision, question]) {
-    expect(within(row).getByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
-    expect(within(row).queryByRole("button", { name: "Answer" })).toBeNull();
-    expect(within(row).queryByRole("textbox")).toBeNull();
-  }
-  expect(screen.queryByRole("button", { name: "Answer" })).toBeNull();
-});
-
-test("Answer on Today asks Today to open that question's line, and takes the person to Today when no list here holds it", async () => {
-  const user = userEvent.setup();
-  fakeApi({ "GET followups": () => withAsks(), "GET people": () => [] });
-  renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: /^You/ }));
-  window.location.hash = "#work/followups";
-  const asked: Array<{ type: string; id: string }> = [];
-  const listen = (event: Event) => asked.push((event as CustomEvent<{ type: string; id: string }>).detail);
-  window.addEventListener("reveal-row", listen);
-  try {
-    const link = within((await screen.findByText("Ship the proof now?")).closest("li") as HTMLElement).getByRole("link", { name: "Answer on Today" });
-    expect(link).toHaveAttribute("href", expect.stringMatching(/#today$/));
-    await user.click(link);
-    expect(asked).toContainEqual({ type: "question", id: "Q-7" });
-    // Nothing on this screen holds a question's line, so Today opens, and opens that line when it has loaded.
-    expect(window.location.hash).toBe("#today");
-  } finally {
-    window.removeEventListener("reveal-row", listen);
-    window.location.hash = "";
-  }
-});
-
-test("the person's own to-dos are one line that opens To-dos and questions, never a list of them under You", async () => {
-  const user = userEvent.setup();
+test("the person's own to-dos are one row at the top that opens To-dos and questions, with no You group and no list of them", async () => {
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: /^You/ }));
-  const pane = await findPane();
-  const line = pane.querySelector("[data-own-todos]") as HTMLElement;
-  expect(line).toHaveTextContent("1 to-do of yours · Open");
-  expect(within(line).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringMatching(/#work\/open$/));
-  // Follow-ups is about other people: the to-do itself is not listed here, with no button or menu either.
+  const line = await screen.findByRole("listitem", { name: "Your own to-dos" });
+  expect(line).toHaveTextContent("1 to-do of yours");
+  expect(within(line).getByRole("link", { name: "Your own to-dos" })).toHaveAttribute("href", expect.stringMatching(/#work\/open$/));
+  // Follow-ups lists other people only: no You group, the to-do itself is not listed here, with no button or menu either.
+  expect(screen.queryByRole("listitem", { name: "You" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^You/ })).toBeNull();
   expect(screen.queryByText("Approve the proof")).toBeNull();
-  expect(screen.queryByRole("link", { name: "Open in To-dos and questions" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  // The list holds only the other people, and the pane opens on the first of them.
+  expect(screen.getByRole("listitem", { name: "Robin Sample" })).toHaveAttribute("aria-current", "true");
+});
+
+test("the own to-dos row counts decisions and questions put to the person too, and is left out when there is nothing of theirs", async () => {
+  const withAsks = structuredClone(sections);
+  const ask = (id: string, title: string, kind: string): S["FollowupQuestion"] => ({ id, title, text: "", links: [], kind, status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] });
+  withAsks[0].questions = [ask("Q-7", "Ship the proof now?", "decision"), ask("Q-8", "Which cover do you prefer?", "question")];
+  fakeApi({ "GET followups": () => withAsks, "GET people": () => [] });
+  const first = renderApp(<FollowUps />);
+  expect(await screen.findByRole("listitem", { name: "Your own to-dos" })).toHaveTextContent("1 decision · 1 question · 1 to-do of yours");
+  expect(screen.queryByText("Ship the proof now?")).toBeNull();
+  first.unmount();
+  fakeApi({ "GET followups": () => [sections[1], sections[2]], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByRole("listitem", { name: "Robin Sample" });
+  expect(screen.queryByRole("listitem", { name: "Your own to-dos" })).toBeNull();
 });
 
 test("what waits to go out is the first row chosen even when the messages are here before it", async () => {
@@ -268,7 +235,7 @@ test("what waits to go out is the first row chosen even when the messages are he
   });
   renderApp(<FollowUps />);
   expect(await screen.findByRole("complementary", { name: "Message to Ana Example" })).toBeInTheDocument();
-  expect(screen.queryByRole("complementary", { name: "You" })).toBeNull();
+  expect(screen.queryByRole("complementary", { name: "Robin Sample" })).toBeNull();
 });
 
 test("Copy on a closed card opens the message first and copies nothing, with the cursor in the message", async () => {
@@ -280,14 +247,14 @@ test("Copy on a closed card opens the message first and copies nothing, with the
   renderApp(<FollowUps />);
   await user.click(within(await screen.findByRole("listitem", { name: "Sam Other" })).getByRole("button", { name: "Copy message" }));
   const box = await screen.findByRole("textbox", { name: /Message to Sam Other/ });
-  expect(box).toHaveValue(more[2].message);
+  expect(box).toHaveValue(more[3].message);
   await waitFor(() => expect(box).toHaveFocus());
   expect(await navigator.clipboard.readText()).toBe("");
   expect(screen.queryByText("Copied")).toBeNull();
   expect(posts(calls)).toHaveLength(0);
   // Only the message on screen is copied, and then the card offers Mark sent.
   await user.click(underBox());
-  expect(await navigator.clipboard.readText()).toBe(more[2].message);
+  expect(await navigator.clipboard.readText()).toBe(more[3].message);
   expect(await screen.findByText("Copied")).toBeInTheDocument();
 });
 
@@ -299,13 +266,14 @@ test("after copying, the card's primary and the button under the box become Mark
   await user.click(within(await findPane()).getAllByRole("button", { name: "Copy message" })[0]);
   // The line and the button under the box say it now; the detail's top holds only its menu, so there is one for each place.
   expect(await screen.findAllByRole("button", { name: "Mark sent" })).toHaveLength(2);
-  expect(screen.queryByRole("button", { name: "Copy message" })).toBeNull();
+  expect(within(screen.getByRole("listitem", { name: "Robin Sample" })).queryByRole("button", { name: "Copy message" })).toBeNull();
+  expect(within(await findPane()).queryByRole("button", { name: "Copy message" })).toBeNull();
 });
 
-test("the pane opens on the first person to message, not on the person's own section, which stays first in the list", async () => {
+test("the pane opens on the first person to message, and the own to-dos row is no choice in the list", async () => {
   fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
-  const you = await screen.findByRole("listitem", { name: "You" });
+  const you = await screen.findByRole("listitem", { name: "Your own to-dos" });
   const robin = screen.getByRole("listitem", { name: "Robin Sample" });
   await waitFor(() => expect(robin).toHaveAttribute("aria-current", "true"));
   expect(you).not.toHaveAttribute("aria-current");
@@ -389,7 +357,7 @@ test("the workspace can rename the section", async () => {
 
 
 function waitingSections(): S["FollowupSection"][] {
-  const sent = structuredClone(sections.slice(1));
+  const sent = structuredClone(sections.slice(1, 2));
   sent[0].questions[0].status = "sent";
   sent[0].questions[0].sent = "2026-10-08";
   sent[0].questions[0].waiting_days = 2;
@@ -434,20 +402,20 @@ test("with nothing on any tab, By person, By project, To send, Later and Waiting
   empty.unmount();
   fakeApi({ "GET followups": () => sections, "GET people": () => [], "GET acts": () => [] });
   renderApp(<FollowUps />);
-  await screen.findByRole("listitem", { name: "You" });
+  await screen.findByRole("listitem", { name: "Robin Sample" });
   for (const name of ["To send", "Later", "Waiting on them"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
 });
 
-test("Waiting on them has its own empty state, and the PM's decisions stay under To send", async () => {
+test("Waiting on them has its own empty state, and the own to-dos row stays under To send", async () => {
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
-  expect(await screen.findByRole("listitem", { name: "You" })).toBeInTheDocument();
+  expect(await screen.findByRole("listitem", { name: "Your own to-dos" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Waiting on them" }));
   expect(screen.getByText(/You're not waiting for any replies/)).toBeInTheDocument();
-  expect(screen.queryByRole("listitem", { name: "You" })).toBeNull();
+  expect(screen.queryByRole("listitem", { name: "Your own to-dos" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "To send" }));
-  expect(screen.getByRole("listitem", { name: "You" })).toBeInTheDocument();
+  expect(screen.getByRole("listitem", { name: "Your own to-dos" })).toBeInTheDocument();
 });
 
 test("a waiting question takes its reply right on its line", async () => {
@@ -554,34 +522,6 @@ test("a followed-up row shows when, and the menu can chase again", async () => {
   await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
   await user.click(await screen.findByRole("menuitem", { name: "Followed up" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")).toBe(true));
-});
-
-test("a question to the PM shows as a decision or as a question by its stored kind", async () => {
-  const user = userEvent.setup();
-  const withQuestions = structuredClone(sections);
-  const ask = (id: string, title: string, kind: string): S["FollowupQuestion"] => ({
-    id,
-    title,
-    text: "",
-    links: [],
-    kind,
-    status: "open",
-    sent: null,
-    waiting_days: null,
-    chase_due: false, chases: 0,
-    about: null,
-    options: [],
-  });
-  withQuestions[0].questions = [ask("Q-7", "Ship the proof now?", "decision"), ask("Q-8", "Which cover do you prefer?", "question")];
-  fakeApi({ "GET followups": () => withQuestions, "GET people": () => [] });
-  renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: /^You/ }));
-  const decision = (await screen.findByText("Ship the proof now?")).closest("li")!;
-  const question = screen.getByText("Which cover do you prefer?").closest("li")!;
-  expect(within(decision).getByText("Decision")).toBeInTheDocument();
-  expect(within(question).getByText("Question")).toBeInTheDocument();
-  expect(within(question).queryByText("Decision")).toBeNull();
-  expect(screen.getByText(/1 decision · 1 question/)).toBeInTheDocument();
 });
 
 test("a waiting pill says how long, and says follow up in words as well as color once it is time", async () => {
@@ -733,6 +673,7 @@ const tableSections: S["FollowupSection"][] = [
     message: "Hi Robin",
     to_send: 4,
   },
+  sections[2],
 ] as S["FollowupSection"][];
 
 const tableRoutes = { ...markSentRoutes, "GET followups": () => tableSections };
@@ -1129,6 +1070,7 @@ const twoQuestions: S["FollowupSection"][] = [
     questions: [...sections[1].questions, { ...sections[1].questions[0], id: "Q-2", title: "Who signs off the proof?" }],
     to_send: 3,
   },
+  sections[2],
 ];
 
 test("a message with several questions can be held whole: one choice, with the cursor in its field, at once and with Undo", async () => {
@@ -1187,15 +1129,13 @@ test("a switch groups the open items by project, each saying who it is with and 
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => byProject, "GET people": () => [] });
   renderApp(<FollowUps />);
-  await screen.findByRole("listitem", { name: "You" });
-  expect(screen.getByRole("radio", { name: "By person" })).toBeChecked();
+  expect(await screen.findByRole("radio", { name: "By person" })).toBeChecked();
   await user.click(screen.getByRole("radio", { name: "By project" }));
   const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
   // One line per project, how many are open; the first project is chosen, and its items are in the detail beside the list.
   expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Cover"]);
-  expect(within(list).getByRole("listitem", { name: "Book" })).toHaveTextContent("2 open");
+  expect(within(list).getByRole("listitem", { name: "Book" })).toHaveTextContent("1 open");
   const book = await screen.findByRole("complementary", { name: "Book" });
-  expect(within(book).getByText("You · Yours")).toBeInTheDocument();
   expect(within(book).getByText("Robin Sample · To send")).toBeInTheDocument();
   await user.click(within(list).getByRole("listitem", { name: "Cover" }));
   expect(within(await screen.findByRole("complementary", { name: "Cover" })).getByText("Robin Sample · To send")).toBeInTheDocument();
@@ -1227,7 +1167,7 @@ test("by project the To send, Later and Waiting on them switch stays and picks t
 
 test("an item with no project is gathered under Not in a project, after the projects, never under No project", async () => {
   const user = userEvent.setup();
-  const loose = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "" }] }, sections[0]];
+  const loose = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "" }] }, sections[2]];
   fakeApi({ "GET followups": () => loose, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("radio", { name: "By project" }));
@@ -1238,7 +1178,7 @@ test("an item with no project is gathered under Not in a project, after the proj
 
 test("an item filed on a side and in none of its projects is grouped as the side, not in a project, never as a project", async () => {
   const user = userEvent.setup();
-  const onSide = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "", side_name: "Orchard Press" }] }, sections[0]];
+  const onSide = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "", side_name: "Orchard Press" }] }, sections[2]];
   fakeApi({ "GET followups": () => onSide, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("radio", { name: "By project" }));
@@ -1278,17 +1218,18 @@ test("by project the lines are grouped by side first, each side under its name, 
 });
 
 test("with only one group its items show in place, not as a list beside a pane that holds everything", async () => {
-  const decision: S["FollowupSection"] = {
-    ...sections[0],
-    questions: [{ ...sections[1].questions[0], id: "Q-4", title: "Which printer do we use?", kind: "decision", about: null }],
+  const asked: S["FollowupSection"] = {
+    ...sections[1],
+    questions: [{ ...sections[1].questions[0], id: "Q-4", title: "Which printer do we use?", kind: "question", about: null }],
     actions: [],
+    to_send: 1,
   };
-  fakeApi({ "GET followups": () => [decision], "GET people": () => [] });
+  fakeApi({ "GET followups": () => [asked], "GET people": () => [] });
   renderApp(<FollowUps />);
-  expect(await screen.findByRole("heading", { name: "You", level: 2 })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Robin Sample", level: 2 })).toBeInTheDocument();
   expect(await screen.findByText("Which printer do we use?")).toBeInTheDocument();
   // No list of one line, and no pane.
-  expect(screen.queryByRole("listitem", { name: "You" })).toBeNull();
+  expect(screen.queryByRole("listitem", { name: "Robin Sample" })).toBeNull();
   expect(screen.queryByRole("complementary")).toBeNull();
   expect(document.querySelector("[data-in-place]")).not.toBeNull();
 });
@@ -1331,7 +1272,7 @@ test("with no side besides Personal the follow-ups are by person only: there is 
     "GET projects": () => [{ id: "PRJ-personal", name: "Personal", group: null, status: null, phase: null, target: null, owner: null, owner_name: null, summary: null, language: "en-US", language_own: false, role: "run", completed: false, spent_usd: 0, open_actions: 0, open_questions: 0, no_end: true }],
   });
   renderApp(<FollowUps />);
-  await screen.findByRole("listitem", { name: "You" });
+  await screen.findByRole("heading", { name: "Robin Sample", level: 2 });
   await waitFor(() => expect(screen.queryByRole("radiogroup", { name: "Group by" })).toBeNull());
   await waitFor(() => expect(screen.queryByRole("radio", { name: "By project" })).toBeNull());
   await waitFor(() => expect(screen.queryByRole("radio", { name: "By person" })).toBeNull());
@@ -1472,7 +1413,7 @@ test("a person chosen while what waits to go out is still loading stays chosen w
   await userEvent.click(within(robin).getByRole("button", { name: /^Robin Sample/ }));
   expect(await screen.findByRole("complementary", { name: "Robin Sample" })).toBeInTheDocument();
   await act(async () => release({ acts: [] }));
-  await waitFor(() => expect(screen.queryByRole("complementary", { name: "You" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("complementary", { name: "Your own to-dos" })).toBeNull());
   expect(screen.getByRole("complementary", { name: "Robin Sample" })).toBeInTheDocument();
 });
 
@@ -1481,10 +1422,13 @@ test("a person chosen while what waits to go out is still loading stays chosen w
 test("a question's link that came from an email says so beside the link, and one the person wrote does not", async () => {
   const link = [{ label: "The portal", url: `${WEB}example.com/pay` }];
   const question = (id: string, title: string, from_outside: boolean) => ({ id, title, text: "", links: link, kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [], from_outside });
-  const mine = { ...sections[0], questions: [question("Q-8", "Pay the printer?", true), question("Q-9", "Book the room?", false)] } as S["FollowupSection"];
-  fakeApi({ "GET followups": () => [mine, sections[1]] });
-  renderApp(<FollowUps />);
-  await userEvent.click(await screen.findByRole("button", { name: /^You/ }));
+  fakeApi({ "GET people": () => [] });
+  renderApp(
+    <ol>
+      <DecisionRow question={question("Q-8", "Pay the printer?", true) as S["FollowupQuestion"]} reveal={0} />
+      <DecisionRow question={question("Q-9", "Book the room?", false) as S["FollowupQuestion"]} reveal={0} />
+    </ol>,
+  );
   await screen.findByText("Pay the printer?");
   const rows = screen.getAllByRole("listitem").filter((r) => r.hasAttribute("data-item"));
   const asked = rows.filter((r) => r.textContent?.includes("Pay the printer?"));

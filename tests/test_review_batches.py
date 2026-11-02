@@ -274,6 +274,29 @@ def test_not_right_on_one_item_sends_back_that_item_alone_and_it_leaves_the_revi
     assert "action.add 0" in note and "Not a to-do" in note
 
 
+def test_a_to_do_sent_back_leaves_the_to_do_list_at_once(env):
+    from engine.applier import apply_as_person
+    from engine.dispatcher import send_back
+    from engine.names import People
+
+    ws, cfg, store = env
+    me = People(store, cfg).pm
+    op = {
+        "op": "action.add",
+        "text": "Send the spine options",
+        "owners": [me],
+        "evidence": {"quote": "send the spine options"},
+    }
+    cs_id = apply_as_person(store, cfg, [op], "Added a to-do", note="send the spine options")
+    (todo,) = [r.id for r in store.read().list("action") if r.data["text"] == "Send the spine options"]
+    send_back(store, cs_id, "Not a to-do", NOW, ops=[0])
+    # The to-do the assistant made is gone from the records the To-dos screen lists.
+    assert all(
+        r.data["text"] != "Send the spine options" or r.data["status"] != "open" for r in store.read().list("action")
+    )
+    assert store.read().get("changeset", cs_id).data["ops"][0]["status"] == "undone", todo
+
+
 def test_a_to_do_in_a_review_carries_its_owner_and_project_beside_its_source(env):
     from engine.names import People
 

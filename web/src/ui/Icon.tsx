@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 const SHAPES = {
   home: <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
   inbox: <path d="M3 13l3-8h12l3 8v6H3z M3 13h5l1 3h6l1-3h5" />,
+  calendar: <path d="M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4" />,
   send: <path d="M22 2L11 13 M22 2l-7 20-4-9-9-4z" />,
   upload: <path d="M12 3v12 M7 8l5-5 5 5 M4 15v5h16v-5" />,
   layers: <path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5" />,

@@ -422,6 +422,19 @@ def test_a_backup_key_typed_on_the_screen_is_kept_privately_and_only_the_referen
     assert TYPED not in c.get(f"{api}/settings").text and TYPED not in c.get(f"{api}/backup-key").text
 
 
+def test_a_backup_key_that_is_too_short_to_protect_anything_is_refused_in_plain_words_and_nothing_is_kept(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    least = cfg.storage.backups.key_min_chars
+    short = c.post(f"{api}/backup-key", json={"value": "abc", "fingerprint": fingerprint_of(c, api)})
+    assert short.status_code == 400 and f"at least {least} characters" in short.json()["detail"]
+    assert "abc" not in short.text
+    assert encrypt_setting(ws) == "" and not (ws.private_dir / "keys").exists()
+    # A key of the least length is taken, and the minimum is a setting, not a number in the code.
+    ok = c.post(f"{api}/backup-key", json={"value": "k" * least, "fingerprint": fingerprint_of(c, api)})
+    assert ok.status_code == 200, ok.text
+
+
 def test_replacing_the_backup_key_keeps_the_old_one_so_older_backups_can_still_be_read(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)

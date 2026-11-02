@@ -42,6 +42,13 @@ type Row = S["HandledRow"];
 type Item = S["HandledRow"]["item"];
 const TABS: Tab[] = ["set_aside", "read"];
 const GROUPS: Group[] = ["kind", "reason", "sender"];
+
+/** A sender as a person reads it: the name when there is one, else the address. "Name <address>" is shown as the name. */
+function senderName(sender: string | null | undefined): string {
+  const text = (sender ?? "").trim();
+  const name = text.replace(/\s*<[^>]*>\s*$/, "").replace(/^"(.*)"$/, "$1").trim();
+  return name || text.replace(/^<|>$/g, "");
+}
 /** How long typing waits before the list is asked for again. */
 const TYPING_MS = 250;
 
@@ -116,10 +123,13 @@ export function Handled() {
       />
       <p className="hint">{t(`handled.explain.${tab}`)}</p>
       {list.data && <p className="hint">{tn("handled.kept", list.data.kept_days)}</p>}
-      <div className={styles.bar}>
-        <SearchField id={`${ids}-search`} label={t("handled.search")} className={styles.search} value={typed} onChange={setTyped} />
-        <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />
-      </div>
+      {/* With nothing in the list (and nothing typed to narrow it) there is nothing to search or group, so the controls wait. */}
+      {!(list.isSuccess && list.data.groups.length === 0 && !query && !typed && !item) && (
+        <div className={styles.bar}>
+          <SearchField id={`${ids}-search`} label={t("handled.search")} className={styles.search} value={typed} onChange={setTyped} />
+          <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />
+        </div>
+      )}
       {kinds.length > 1 || item ? (
         <TabStrip
           label={t("handled.filter")}
@@ -270,7 +280,7 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
   }
   menu.push(...versions.entries);
   if (open) menu.push({ id: "open", label: t(closed ? "handled.open_item" : "setaside.open"), run: open.run });
-  const facts = [item.sender, item.received ? when(item.received) : "", item.source, item.change ? t(`sources.closed.change.${item.change}`) : ""].filter(Boolean);
+  const facts = [senderName(item.sender), item.received ? when(item.received) : "", item.source, item.change ? t(`sources.closed.change.${item.change}`) : ""].filter(Boolean);
   const why = closed
     ? t("handled.closed_why", { rule: item.rule ?? "", reason: item.reason ?? "" })
     : item.reason

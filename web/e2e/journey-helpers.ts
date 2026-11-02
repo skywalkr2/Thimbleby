@@ -185,13 +185,22 @@ export async function dismissToasts(page: Page) {
   }).toPass({ intervals: [100, 250, 500], timeout: 30_000 });
 }
 
+/** The Settings section list, opened when it is shut: on a phone the sections are behind one "Section: …" line. */
+export async function settingsSections(page: Page) {
+  const nav = page.getByRole("navigation", { name: "Settings sections" });
+  await nav.waitFor({ timeout: 20_000 });
+  const fold = page.locator("details.settings-picker");
+  if ((await fold.count()) > 0 && !(await fold.evaluate((d) => (d as HTMLDetailsElement).open))) await fold.locator("summary").click();
+  return page.getByRole("navigation", { name: "Settings sections" });
+}
+
 /** Opens a view from the sidebar, or on a phone from the bottom bar's sheets. */
 export async function openView(page: Page, label: string) {
   await dismissToasts(page);
   // Connections and Add-ons are sections of Settings, reached from its side bar and not from the side menu.
   if (label === "Connections" || label === "Add-ons") {
     await openView(page, "Settings");
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: label, exact: true }).click();
+    await (await settingsSections(page)).getByRole("link", { name: label, exact: true }).click();
     // Every Settings page sits in one frame titled Settings, with the page's own name as its section heading.
     await expect(page.getByRole("heading", { level: 2, name: label, exact: true })).toBeVisible();
     return;

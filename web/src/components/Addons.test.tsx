@@ -387,10 +387,16 @@ test("'Signs in to' names each sign-in by the label its add-on gives it, never a
 });
 
 test("a catalog that couldn't be read is not described as having no packs, and says why", async () => {
-  open(view({ feeds: [feed({ error: "couldn't read it (outage): the host is down", read_at: null })] }));
+  open(view({ feeds: [feed({ error: "couldn't read it: the site isn't answering", read_at: null })] }));
   expect(await screen.findByText("The catalog couldn't be read: no add-ons are listed. Check the reason below, then refresh.")).toBeInTheDocument();
   expect(screen.queryByText("No add-ons are listed yet.")).toBeNull();
-  expect(screen.getByText("This catalog couldn't be read: couldn't read it (outage): the host is down")).toBeInTheDocument();
+  expect(screen.getByText("This catalog couldn't be read: couldn't read it: the site isn't answering")).toBeInTheDocument();
+});
+
+test("a catalog served from this computer is named for that, never by its number", async () => {
+  open(view({ feeds: [feed({ domain: "127.0.0.1", address: "http://127.0.0.1:8000/packs.yaml", removable: true })] }));
+  expect(await screen.findByText(/^A catalog on this computer · read /)).toBeInTheDocument();
+  expect(document.body.textContent ?? "").not.toMatch(/127\.0\.0\.1|\.yaml/);
 });
 
 test("with one catalog read and another failing, the list is still just empty", async () => {

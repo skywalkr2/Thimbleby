@@ -4,6 +4,40 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The open P1 findings, finished (X19 to X69; section 300)
+
+**Decided:** (1) **Follow-ups lists other people only** (owner, 2026-11-02; X31, VS09): the "You" group is gone. The person's own
+to-dos, decisions and questions are one row at the top, "Your own to-dos", that says how many and opens To-dos and questions.
+A person alone with something to send is shown in place. (2) **Schedule is in the menu** beside Today (a link of its own,
+marked as the open view). (3) **The Add form for a schedule entry** takes an end time and, with a side beside Personal, which
+side it belongs to; the place and the repeat wait for an op that carries them (`event.add` has no place field, and an own entry
+has no repeat), which the engine helper's files own. (4) **Removing an add-on the app installed takes a backup first**, as an
+install does; a shipped one stays not removable. (5) Small changes take effect without a restart where everything that reads
+them reads the shared config at the moment of use: the words the assistant never asks about (`language.known_terms`,
+`language.known_terms_shipped`) and the words that file a note under a side (`workspace.project.side_words`); the synced folder
+stays a restart, because the lease is taken at start. (6) A toast with no Undo or button goes when the person moves to another
+screen. (7) A backup key typed on a screen has at least `storage.backups.key_min_chars` (12) characters; a synced folder is
+refused when chosen unless it is a full path to a folder that is there and usable. (8) Wording: sales mail's group names the
+social updates it holds, a sender is shown by name, the toast after Bring it in says "Always bring in mail from this sender",
+an empty list says what fills it and draws no search, locked settings and an unreadable catalog say it in words, a record
+that is still in use says what uses it, and the sample on the Quality screen is allowed with a button that saves the real
+setting. (9) A module's element selector reached every table in the app (a table's first column was 30% everywhere, so the
+Connections rows were squeezed on a phone); a guard test now refuses an unscoped selector in a CSS module, and records tables
+size their other columns by content.
+
+**Not decided here (back to the owner):** the rule for folding the log (the reviewer wants all of a person's own edits in a day
+to fold into one row; change log 265 folds only identical ones); social mail as a group of its own (a new set-aside section);
+a second email or phone for a person (the record keeps one value for each kind of contact detail); how an own calendar entry
+repeats; whether the feedback preview keeps its exact technical lines (owner, 2026-10-21) or reads in plain words; one grouping
+idea for a project's Inside and Group, and projects opening the same way everywhere.
+
+**Who:** the owner for Follow-ups, the menu and the remove backup ("All open P1s first", 2026-11-02); the main session for the rest.
+
+**Why:** the reviewer's re-sweep follows once every P1 is built or said to be waiting for a decision.
+
+**Impact:** design 4.22 (live keys), 7.1, 7.5, 7.7, 7.9, 7.20, 3.11 and 6.x edited; `engine/worker.py`, `engine/add_meeting.py`,
+`engine/settings.py`, `engine/packs.py`, `api/` and the screens listed in change log 300. Change log: section 300.
+
 ## 2026-11-02: A job's question is asked once; an answer that changed nothing goes back once, then to the person (P114, lessons 8 to 10)
 
 **Decided:** (1) A question an add-on's job or event handler files is recorded with the add-on and a key of its title and

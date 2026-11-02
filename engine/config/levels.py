@@ -329,6 +329,7 @@ INTERNAL = (
     "storage.backups.retry_minutes",
     "storage.backups.before_changes",
     "storage.backups.bulk_change_records",
+    "storage.backups.key_min_chars",
     "storage.files",
     "storage.sync.lease_stale_after_minutes",
     "ai.evaluation",

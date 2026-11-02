@@ -79,7 +79,10 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
     ...(include ? ["", t("feedback.body_version", { version: props.version }), t("feedback.body_screen", { screen })] : []),
     ...(hasMissed && withMissed ? ["", ...missedLines] : []),
     ...(addProblems ? ["", ...problemLines(found, t)] : []),
-  ].join("\n");
+  ]
+    .join("\n")
+    // With nothing written yet the facts come first, never after blank lines.
+    .replace(/^\n+/, "");
   const ready = message.trim() !== "";
   const link = ready ? mailtoLink(props.to, subject, body) : null;
   const tooLong = ready && tooLongForLink(props.to, subject, body);

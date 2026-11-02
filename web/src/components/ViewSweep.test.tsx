@@ -328,6 +328,7 @@ const followSections: S["FollowupSection"][] = [
     message: "",
     to_send: 0,
   },
+  { person: "PER-4", name: "Tess Example", is_pm: false, questions: [], actions: [owed("ACT-5", "Send the cover", { project_name: "Spring book" })], message: "Hi Tess,\n\nThanks!", to_send: 1 },
 ];
 
 test("Follow-ups, by person on each tab and by project, with a person's message in the detail, says names, dates and words", async () => {

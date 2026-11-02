@@ -28,6 +28,8 @@ export interface ToastInput {
 
 interface Toast extends ToastInput {
   id: number;
+  /** When it was pushed, in milliseconds. */
+  at: number;
   /** How many times this message was pushed while it showed. */
   count: number;
   /** The undo of each of those pushes that had one, the newest last. */
@@ -55,6 +57,8 @@ export function useToastCount(): number {
 }
 
 const MAX_SHOWN = 1;
+/** A toast pushed within this many milliseconds of a move to another screen is about that move, and stays. */
+const NEW_TOAST_MS = 400;
 
 export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const { t } = useWords();
@@ -71,6 +75,21 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
 
   const dismissAll = useCallback(() => {
     setToasts([]);
+  }, []);
+
+  // A note about what was done on one screen does not follow the person to another: when the view changes, a toast that offers
+  // nothing to do is cleared. One that carries Undo or an action stays, so it can still be used. A toast shown in the moment
+  // of the move is the one about the move itself, and stays.
+  useEffect(() => {
+    const onNavigate = () => {
+      const now = Date.now();
+      setToasts((all) => {
+        const kept = all.filter((x) => x.undoTokens.length > 0 || !!x.action || (x.more ?? []).length > 0 || now - x.at < NEW_TOAST_MS);
+        return kept.length === all.length ? all : kept;
+      });
+    };
+    window.addEventListener("hashchange", onNavigate);
+    return () => window.removeEventListener("hashchange", onNavigate);
   }, []);
 
   // How many toasts show is told to the page, so a full-window screen can keep its own buttons clear of them.
@@ -100,7 +119,7 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
         const merged: Toast = { ...last, many: toast.many ?? last.many, count: last.count + 1, undoTokens: token ? [...last.undoTokens, token] : last.undoTokens };
         return [...all.slice(0, -1), merged];
       }
-      return [...all, { ...toast, id: next.current++, count: 1, undoTokens: token ? [token] : [] }].slice(-MAX_SHOWN);
+      return [...all, { ...toast, id: next.current++, at: Date.now(), count: 1, undoTokens: token ? [token] : [] }].slice(-MAX_SHOWN);
     });
   }, []);
 

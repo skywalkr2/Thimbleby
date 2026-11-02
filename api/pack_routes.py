@@ -290,6 +290,11 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         gone = pack_install.removed_entries(ws.private_dir)
         # Counted before anything is deleted: the other installed add-ons that use this file.
         using = [n for n in together if n != pack_id and n not in gone]
+        # Taking an add-on away changes what the app runs, so a backup comes first; without one nothing changes.
+        try:
+            backup.backup_before(ws, backup.live(ws, cfg))
+        except backup.BackupFirstFailed as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
         if using:
             pack_install.set_removed(ws.private_dir, [pack_id], True)
             return PackInstalled(name=name, version=version, needs_restart=False, file_kept=True, still_used_by=using)

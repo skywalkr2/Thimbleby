@@ -422,7 +422,7 @@ Turn on or off and its own Remove. One Install covers the file. The core names n
 entry's own, and the grouping is by the checksum alone, so the catalog format does not change now (an optional `includes:`
 field waits for the plugin API release; readers ignore fields they don't know, so an older app doesn't hide the entry).
 **Remove counts first**: it counts the installed entries that use the same file before deleting anything
-(`pack_install.entries_in`, `POST /api/packs/{id}/uninstall`). While another installed entry uses the file, removing one
+(`pack_install.entries_in`, `POST /api/packs/{id}/uninstall`) and takes a backup first, as an install does (nothing changes when it can't be made). While another installed entry uses the file, removing one
 leaves that entry off and reading as not installed (kept in the private folder, `pack-removed.json`) and keeps the file; the
 screen says so ("The file stays because it is still in use by <names>") and asks for no restart. The file goes with the last
 entry that uses it, and installing an entry again brings back the ones removed beside it. `GET /api/packs` gives each entry

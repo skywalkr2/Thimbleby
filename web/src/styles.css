@@ -218,6 +218,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .settings-side { display: grid; gap: var(--space-3); min-width: 0; }
 .settings-side [data-field] { margin-bottom: 0; }
 .settings-nav-group { display: grid; gap: var(--space-1); min-width: 0; }
+.settings-picker > summary { min-height: var(--target-min); display: flex; align-items: center; font-weight: var(--weight-semibold); }
+.settings-picker[open] > .settings-nav-group { margin-top: var(--space-2); }
 .settings-nav-group > h3 { margin: 0; padding-inline: var(--space-3); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
 .settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .settings-nav-sublist { list-style: none; margin: 0 0 0 var(--space-3); padding: 0; border-inline-start: 1px solid var(--border); }
@@ -433,6 +435,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .meeting-line [data-field] { flex: 1 1 8rem; min-width: 0; margin-bottom: 0; }
 .meeting-line [data-field]:first-child { flex-basis: 12rem; }
 .meeting-line [data-variant] { flex: none; }
+.meeting-line > .hint { flex: 1 1 100%; margin: 0; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 /* The unread mark: a dot before the title, and no slot at all once the message is read. */
 .tb-unread-dot { display: inline-block; width: 8px; height: 8px; margin-inline-end: var(--space-2); border-radius: var(--radius-full); background: var(--accent); flex: none; }

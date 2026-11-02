@@ -211,6 +211,21 @@ def _read_cache(path: Any) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+#: What a catalog that couldn't be read says went wrong, in words, by the kind of failure (never the address or the
+#: service's own text, which only the person who runs the catalog needs).
+_UNREAD_WORDS = {
+    "auth": "it asked for a sign-in",
+    "no_access": "the address didn't let the app in",
+    "not_found": "nothing is at that address",
+    "outage": "the site isn't answering",
+    "offline": "there is no internet connection",
+}
+
+
+def _why_unread(kind: str) -> str:
+    return _UNREAD_WORDS.get(kind, "the site didn't answer in a way the app could use")
+
+
 def read_feeds(
     urls: list[str],
     cache_dir: Any,
@@ -246,10 +261,12 @@ def read_feeds(
                 if copy:
                     feed = parse(url, copy["text"])
                     feed.read_at = copy.get("read_at")
-                    feed.notes.insert(0, f"couldn't read it just now ({err.kind}); showing the copy kept earlier")
+                    feed.notes.insert(
+                        0, f"couldn't read it just now ({_why_unread(err.kind)}); showing the copy kept earlier"
+                    )
                     feeds.append(feed)
                 else:
-                    feeds.append(Feed(url, error=f"couldn't read it ({err.kind}): {err.detail}"))
+                    feeds.append(Feed(url, error=f"couldn't read it: {_why_unread(err.kind)}"))
                 continue
             finally:
                 if web_for is None:

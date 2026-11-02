@@ -782,9 +782,12 @@ function Catalog(props: { feeds: Feed[] }) {
   );
 }
 
+/** The addresses of this computer itself, which a person reads as "on this computer", never as a number. */
+const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+
 function FeedLine(props: { feed: Feed; busy: boolean; onRemove: () => void }) {
   const { t, tn } = useWords();
-  const { feed } = props;
+  const feed = { ...props.feed, domain: LOOPBACK.has(props.feed.domain) ? t("addons.feed.here") : props.feed.domain };
   const read = feed.read_at ? when(feed.read_at) : "";
   // The app's own catalog is named for the app and never by its address; one the person added keeps its domain.
   const app = t("app.name");

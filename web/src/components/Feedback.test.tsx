@@ -46,6 +46,11 @@ test("the preview shows the subject and the body, ending with the version and th
   expect(preview().value).toBe("The list is empty\n\nApp version: 9.8.7\nScreen: Files");
 });
 
+test("before anything is written the preview starts with the facts, never with blank lines", () => {
+  open();
+  expect(preview().value).toBe("App version: 9.8.7\nScreen: Files");
+});
+
 test("without the version lines the body is only what was written", async () => {
   const { user } = open();
   await user.type(message(), "Just this");

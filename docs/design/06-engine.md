@@ -4537,7 +4537,8 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   default), `POST /api/quality/sample` draws `dispatch.knowledge.sample_size` (50) mail messages of the quality window by a
   seeded hash, once for the window, as the core record `gate_sample`; the person reads each in their own mail and saves
   how many promises it holds and how many the app didn't have (`PUT /api/quality/sample/{id}/items/{source}`, Undo); and
-  "Missed out of present, all together" adds those to the daily counts. The procedure is
+  "Promises missed, all together" adds those to the daily counts. With the consent off, the screen says so and offers **Allow
+  the sample**, which saves that setting as the person's own change with Undo (change log 300). The procedure is
   `docs/project/gate-sample-procedure.md`. Tests: `tests/test_gate_instruments.py`,
   `web/src/components/BatchDetail.test.tsx`, `web/src/components/Quality.test.tsx`.
 - **Sending (S1b) is accepted only on named tests:** exact content and recipients; an approval goes stale when the draft,

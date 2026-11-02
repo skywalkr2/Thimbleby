@@ -153,6 +153,9 @@ export function Sources(props: {
   const { t } = useWords();
   const addTitleId = useId();
   // A source that has never been read is checked on again soon: it is read within a minute of being added.
+  // Whether there is no AI account yet, once that has been read (an unread answer never says there is none).
+  const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
+  const noAi = accounts.isSuccess && accounts.data.length === 0;
   const sources = useQuery({
     queryKey: ["watch"],
     queryFn: api.watchSources,
@@ -278,7 +281,12 @@ export function Sources(props: {
       ) : sources.isError ? (
         <EmptyState icon="alert" text={t("sources.load_failed")} action={{ label: t("action.try_again"), onClick: () => void sources.refetch() }} />
       ) : sources.data.length === 0 ? (
-        <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
+        // Asking how to add one needs an AI account; with none, the way on is choosing one, not a question that can't be answered.
+        noAi ? (
+          <EmptyState icon="rss" text={t("sources.empty_no_ai")} action={{ label: t("sources.empty_choose_ai"), href: viewHref("settings/ai") }} />
+        ) : (
+          <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
+        )
       ) : (
         <table className="source-table" aria-label={t("sources.title")}>
           <thead>

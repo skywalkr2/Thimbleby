@@ -59,7 +59,7 @@ test("Work opens a sheet with its views, as links", async () => {
   show();
   await user.click(screen.getByRole("button", { name: "Work" }));
   const sheet = await screen.findByRole("dialog", { name: "Work" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "To-dos and questions", "Stages"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Schedule", "What changed", "Handled for you", "Follow-ups", "To-dos and questions", "Stages"]);
   expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -96,6 +96,6 @@ test("with no side besides Personal the phone's bar says Keeping track, not Work
   const bar = screen.getByRole("navigation", { name: "Views" });
   await user.click(await within(bar).findByRole("button", { name: "Keeping track" }));
   const sheet = await screen.findByRole("dialog", { name: "Keeping track" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "To-dos and questions"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Schedule", "What changed", "Handled for you", "Follow-ups", "To-dos and questions"]);
   expect(within(bar).queryByRole("button", { name: "Work" })).toBeNull();
 });

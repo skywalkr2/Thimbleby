@@ -110,6 +110,9 @@ describe("the backup key", () => {
     const shown = await within(group).findByRole("group", { name: "Your new backup key" });
     expect(within(shown).getByDisplayValue(MADE)).toHaveAttribute("readonly");
     expect(within(shown).getByText(/shown only now/)).toBeInTheDocument();
+    // Until it has been copied there is one thing to do: no typed field, Make or Save beside it.
+    expect(within(group).queryByRole("button", { name: "Make one for me" })).toBeNull();
+    expect(within(group).queryByRole("button", { name: "Save backup key" })).toBeNull();
     await user.click(within(shown).getByRole("button", { name: "Copy key" }));
     expect(copied).toHaveBeenCalledWith(MADE);
     await user.click(within(shown).getByRole("button", { name: "I have copied it" }));

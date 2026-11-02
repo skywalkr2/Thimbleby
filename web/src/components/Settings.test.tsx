@@ -123,6 +123,25 @@ test("a page shows the settings the app places on it, and the ones behind Advanc
   expect(screen.queryByLabelText("A rarely needed thing.")).toBeNull();
   expect(screen.queryByRole("button", { name: "More settings" })).toBeNull();
 });
+test("on a phone the sections are behind one line that names the open section, and choosing one closes it", async () => {
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    const user = userEvent.setup();
+    api([...ITEMS, item("ui.theme", { group: "ui" })], BUSINESS);
+    open();
+    const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+    const summary = await within(nav).findByText("Section: You");
+    const fold = summary.closest("details") as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+    await user.click(summary);
+    expect(fold.open).toBe(true);
+    await user.click(within(nav).getByRole("link", { name: "Appearance" }));
+    await waitFor(() => expect(fold.open).toBe(false));
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
+});
+
 test("the section list sits down the side: the pages, Your business (where a job or business is added), and no Quality; the open one is marked", async () => {
   api(
     [
@@ -354,9 +373,9 @@ test("locked settings are disabled and say where they come from; others the scre
   open();
   const env = await screen.findByLabelText("What demo.fixed does");
   expect(env).toBeDisabled();
-  expect(screen.getByText("Set outside the app by an environment variable")).toBeInTheDocument();
+  expect(screen.getByText("Set outside the app by whoever runs it, so it can't be changed here")).toBeInTheDocument();
   expect(screen.getByLabelText("What demo.flagged does")).toBeDisabled();
-  expect(screen.getByText("Set by an option used to start the app")).toBeInTheDocument();
+  expect(screen.getByText("Set when the app was started, so it can't be changed here")).toBeInTheDocument();
   const table = screen.getByText("What demo.table does").closest(".setting") as HTMLElement;
   expect(within(table).getByText("Change this setting outside this screen.")).toBeInTheDocument();
   expect(within(table).queryByRole("textbox")).toBeNull();

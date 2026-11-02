@@ -86,9 +86,19 @@ def _duplicate(
     return None
 
 
-def add_meeting(store: Any, cfg: Any, what: str, day: str, time: str | None = None) -> Added:
+def add_meeting(
+    store: Any,
+    cfg: Any,
+    what: str,
+    day: str,
+    time: str | None = None,
+    until: str | None = None,
+    side: str | None = None,
+) -> Added:
     """Add a meeting on a day, at a time of day in the person's time zone or with none (all day), unless it is already
-    there. Raises StoreError, in plain words, for what can't be read."""
+    there. `until` is the time of day it ends, on the same day; it needs a start time and comes after it. `side` is the
+    id of a side (its top project), which the entry then belongs to. Raises StoreError, in plain words, for what can't
+    be read."""
     from engine.applier import apply_as_person
 
     title = " ".join((what or "").split())
@@ -101,14 +111,33 @@ def add_meeting(store: Any, cfg: Any, what: str, day: str, time: str | None = No
     at = (time or "").strip() or None
     if at is not None and not _TIME.match(at):
         raise StoreError("The time isn't one I can read; give it as hours and minutes, such as 15:00.")
+    stop = (until or "").strip() or None
+    if stop is not None:
+        if not _TIME.match(stop):
+            raise StoreError("The end time isn't one I can read; give it as hours and minutes, such as 16:00.")
+        if at is None:
+            raise StoreError("Give a start time as well as an end time, or leave both out for an all-day entry.")
+        if stop <= at:
+            raise StoreError("It has to end after it starts.")
+    project = (side or "").strip() or None
+    if project is not None:
+        from engine.sides import side_ids
+
+        if project not in side_ids(store.read(), cfg):
+            raise StoreError("That isn't one of your sides.")
     here = zone(cfg)
     start = f"{on.isoformat()}T{at}:00" if at else on.isoformat()
+    end = f"{on.isoformat()}T{stop}:00" if stop else None
     found = _duplicate(store, cfg, title, _as_moment(start, here) or on, here)
     if found is not None:
         where, was, entry = found
         return Added(entry=entry, changeset=None, merged=True, merged_with=was, where=where)
-    line = f"{title}, {on.isoformat()}" + (f" {at}" if at else "")
-    op = {"op": "event.add", "title": title, "start": start, "evidence": {"quote": line}}
+    line = f"{title}, {on.isoformat()}" + (f" {at}" if at else "") + (f" to {stop}" if stop else "")
+    op: dict[str, Any] = {"op": "event.add", "title": title, "start": start, "evidence": {"quote": line}}
+    if end:
+        op["end"] = end
+    if project:
+        op["project"] = project
     changeset = apply_as_person(store, cfg, [op], "Added a meeting", note=line)
     made = next(
         (

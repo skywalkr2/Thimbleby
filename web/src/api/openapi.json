@@ -15805,6 +15805,18 @@
             "title": "Day",
             "type": "string"
           },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side it belongs to (a side's top project, as GET /api/setup/business lists them); none when it is on no side in particular.",
+            "title": "Side"
+          },
           "time": {
             "anyOf": [
               {
@@ -15816,6 +15828,18 @@
             ],
             "description": "The time of day, as 15:00, in the person's time zone; none for all day.",
             "title": "Time"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The time of day it ends, as 16:00, on the same day; needs a start time. None for no end.",
+            "title": "Until"
           },
           "what": {
             "description": "What the meeting is, in a few words.",

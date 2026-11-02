@@ -125,6 +125,55 @@ def test_a_title_a_day_or_a_time_that_cannot_be_read_is_refused_in_plain_words(e
     assert entries(store) == []
 
 
+def test_an_end_time_makes_a_range_on_the_same_day_and_needs_a_start_that_it_follows(env):
+    _, cfg, store = env
+    add_meeting.add_meeting(store, cfg, "Print sync", "2026-10-16", "15:00", "16:30")
+    (entry,) = entries(store)
+    assert (entry.data["start"], entry.data["end"]) == ("2026-10-16T15:00:00", "2026-10-16T16:30:00")
+    assert "16:30" in entry.data["evidence"]["quote"]
+    for at, until, why in (
+        ("15:00", "14:00", "after it starts"),
+        (None, "16:00", "start time"),
+        ("15:00", "4pm", "end time"),
+    ):
+        with pytest.raises(StoreError, match=why):
+            add_meeting.add_meeting(store, cfg, "Other", "2026-10-17", at, until)
+    assert len(entries(store)) == 1
+
+
+def test_a_side_puts_the_entry_in_that_sides_project_and_one_that_is_not_a_side_is_refused(env):
+    from engine.sides import side_ids
+
+    _, cfg, store = env
+    side = side_ids(store.read(), cfg)[0]
+    add_meeting.add_meeting(store, cfg, "Print sync", "2026-10-16", "15:00", None, side)
+    (entry,) = entries(store)
+    assert entry.data["project"] == side
+    with pytest.raises(StoreError, match="sides"):
+        add_meeting.add_meeting(store, cfg, "Other", "2026-10-17", None, None, "PRJ-nothing")
+    assert len(entries(store)) == 1
+
+
+def test_the_route_takes_the_end_and_the_side(env):
+    from engine.sides import side_ids
+
+    ws, cfg, store = env
+    side = side_ids(store.read(), cfg)[0]
+    store.close()
+    client = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    client.headers["Authorization"] = "Bearer t"
+    base = cfg.server.base_path.rstrip("/") + "/api"
+    made = client.post(
+        f"{base}/calendar/meetings",
+        json={"what": "Print sync", "day": "2026-10-16", "time": "15:00", "until": "16:00", "side": side},
+    )
+    assert made.status_code == 200 and made.json()["merged"] is False
+    bad = client.post(
+        f"{base}/calendar/meetings", json={"what": "Print sync", "day": "2026-10-17", "time": "15:00", "until": "14:00"}
+    )
+    assert bad.status_code == 409 and "after it starts" in bad.json()["detail"]
+
+
 def test_the_route_adds_merges_and_refuses(env, tmp_path):
     ws, cfg, store = env
     store.close()

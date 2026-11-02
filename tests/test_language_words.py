@@ -112,7 +112,12 @@ def test_every_list_applies_at_once_and_the_settings_that_are_not_lists_keep_the
     for key in OLD_DEFAULTS:
         assert is_live(f"language.{key}"), key
     assert is_live("language.due_phrase_words.noon") and is_live("language.reported_speech.chat_line_patterns")
-    assert not is_live("language.title_min_words") and not is_live("language.known_terms")
+    assert not is_live("language.title_min_words")
+    # The never-asked words and the words that file a note under a side are read where they are used.
+    assert is_live("language.known_terms") and is_live("language.known_terms_shipped")
+    assert is_live("workspace.project.side_words.personal") and is_live("workspace.project.side_words.business")
+    # The synced folder is taken up when the app starts, so changing it asks for the restart the person chooses.
+    assert not is_live("storage.sync.folder")
 
 
 def test_the_shipped_patterns_are_regular_expressions_and_the_values_are_what_the_readers_expect():

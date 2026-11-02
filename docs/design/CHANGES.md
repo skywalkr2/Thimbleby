@@ -1048,6 +1048,28 @@ yet follow, that it is *designed*, with its phase.
 | Plugin API (3.3) | | Two core ops (`action.tie`, `event.guests`) and one record field (`CalendarEntry.proposed_guests`): `docs/plugin-guide.md` regenerated |
 | Not built | | The assistant tying a proposal in a run that reads only the calendar change (a plain entry needs no run; any run whose packet shows it may tie); Show on Today again as a Settings row; dismissals as input to the brief's run |
 
+## 300. The open P1 findings, finished: Follow-ups for other people only, Schedule in the menu, toasts, backups, wording (2026-11-02; X19 X27 X29 X30 X31 X40 X43 X44 X45 X47 X52 X57 X58 X59 X60 X61 X64 X65 X69)
+
+| Where | Before | Now |
+|---|---|---|
+| Follow-ups (7.5; X31, VS09) | A "You" group first, holding the person's decisions, questions and to-dos | Other people only; one row at the top, "Your own to-dos", opens To-dos and questions. **Built** (`FollowUps.test.tsx`, `Origin.test.tsx`, `ChangeThis.test.tsx`, `ViewSweep.test.tsx`) |
+| Menu (7.1; X45) | Schedule had no entry and Today stayed marked while it was open | **Schedule** beside Today, marked as the open view; in the phone's Work sheet. **Built** (`Sidebar.test.tsx`, `BottomBar.test.tsx`) |
+| Add a meeting (7.7; X45) | What, Day, Time | Also "Ends at" and, with a side beside Personal, "Belongs to". `POST /api/calendar/meetings` takes `until` and `side`. **Built** (`tests/test_add_meeting.py`, `TodayRail.test.tsx`). Place and repeat are not built: they need `where` and a repeat on the op |
+| Add-ons (7.1, 3.11; X52) | Remove without a backup; locked settings said "environment variable"; a catalog's failure showed a code and its address | Remove takes a backup first and changes nothing when it can't; plain words for locked settings, a catalog that can't be read and one on this computer. **Built** (`tests/test_pack_install.py`, `tests/test_packs.py`, `Addons.test.tsx`, `Settings.test.tsx`) |
+| Settings keys (4.22; X47) | A never-asked word or a side's words waited for a restart | `language.known_terms`, `language.known_terms_shipped` and `workspace.project.side_words` apply at once; `storage.sync.folder` still asks. **Built** (`tests/test_language_words.py`) |
+| Toasts (7.6; X64) | They followed the person to other screens | One with no Undo or button goes on a move to another screen. **Built** (`toasts.test.tsx`) |
+| Backups (X58) | Any typed key, and any folder, was taken | `storage.backups.key_min_chars` (12); a synced folder must be a full path to a usable folder; after "Make one for me" nothing else sits beside the key. **Built** (`tests/test_typed_secrets.py`, `tests/test_setup.py`, `KeptSecrets.test.tsx`) |
+| Handled for you (7.20; X30) | "Sales and promotions" held social mail; senders as `Name <address>`; "Apply to this sender"; an empty list with a search | Plain words and an empty line that says what fills it. **Built** (`Handled.test.tsx`, `SetAsideCorrections.test.tsx`) |
+| How the assistant is doing (X59) | "Allow the independent reading in Settings first" (no such setting); a garbled heading | An **Allow the sample** button saves the real setting; "Promises missed, all together"; closes and endings point to What changed. **Built** (`Quality.test.tsx`) |
+| Connections (X60) | "Ask how to add one" with no AI account | "Choose an AI account". **Built** (`Sources.test.tsx`) |
+| Send feedback (X61) | The preview began with blank lines | It begins with the facts. **Built** (`Feedback.test.tsx`) |
+| Settings on a phone (X57) | Every section listed above the content; Connections rows squeezed into a third of the width | One "Section: <name>" line; a table's first-column width scoped to its own module, and a guard. **Built** (`Settings.test.tsx`, `modules-scope.test.ts`) |
+| Records tables (7.13; X43) | Columns cut ("Last up…") while the window had room | Sized by content, never cut while there is room. Checked on screen at 1440, 1024 and 800 |
+| Removing a record in use (X43) | "Still used by 3 record(s) (project)" | "It can't be removed while 3 projects still use it. Move or remove them first." **Built** (`tests/test_routes.py`) |
+| Review and learning (X19, X29) | | A to-do sent back leaves the to-do list at once, and one correction is one learning request. **Built** (`tests/test_review_batches.py`, `tests/test_learn_correction.py`) |
+| Personal-only wording (X44) | | A note says "Filed a note in Personal", with no "not in a project" chip. **Built** (`WhatChanged.test.tsx`) |
+| Not built | | The "redoing" line (redo of one item, after the installers); folding all of a person's own edits; social mail as its own group; a second email or phone; place and repeat on an entry; name chips in Message style; the folder chooser's path and New folder; one grouping idea for projects |
+
 ## 299. The Schedule's Timeline: one lane per project, shapes by kind, days off hatched; an empty week says so (2026-11-02; P111, P112 item 1, X45)
 
 | Where | Before | Now |

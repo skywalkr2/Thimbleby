@@ -165,6 +165,19 @@ def test_a_send_back_with_a_note_queues_one_learning_request_at_once_and_its_pro
     assert learned_run.data["tier"] == task_settings(cfg, task_kind(learn.TASK)).tier == "deep"
 
 
+def test_one_correction_is_one_piece_of_learning_however_often_the_signal_is_noticed(env):
+    """The row the person sees ("Learning from a correction") is one for each correction: noticing the same signal
+    again queues nothing more."""
+    ws, cfg, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Interior files go to the editor first.", now=NOW)
+    (made,) = store.read().list("signal")
+    assert len(learning(store)) == 1
+    with store.transaction() as tx:
+        assert learn.on_signal(tx, cfg, made.id, NOW) is None
+    assert len(learning(store)) == 1
+
+
 def test_picking_an_owner_queues_learning_at_once_and_a_routing_proposal_can_quote_the_input(env):
     ws, cfg, store = env
     words = "Launch: someone should book a photographer."

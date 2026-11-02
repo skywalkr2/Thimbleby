@@ -54,6 +54,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     .map((a) => ({ label: a.querySelector('[class*="label"]')?.textContent, href: a.getAttribute("href") }));
   expect(links.map((l) => l.label)).toEqual([
     "Today",
+    "Schedule",
     "What changed",
     "Handled for you",
     "Follow-ups",
@@ -179,6 +180,7 @@ test("with no side besides Personal the first group has no Work heading, and Sta
   await screen.findByRole("link", { name: "Personal" });
   expect(labels()).toEqual([
     "Today",
+    "Schedule",
     "What changed",
     "Handled for you",
     "Follow-ups",
@@ -202,6 +204,7 @@ test("with sides the menu has Personal and each side by its own name, each a lin
   await screen.findByRole("link", { name: FIRST.name });
   expect(labels()).toEqual([
     "Today",
+    "Schedule",
     "What changed",
     "Handled for you",
     "Follow-ups",
@@ -250,4 +253,12 @@ test("a workspace with projects of its own and no side keeps the Projects and St
   await screen.findByText("Work");
   expect(labels()).toEqual(expect.arrayContaining(["Stages", "Projects"]));
   expect(labels()).not.toContain("Personal");
+});
+
+test("the Schedule is the open view when it is shown, and Today is not", async () => {
+  show({ current: "schedule" });
+  const schedule = await screen.findByRole("link", { name: "Schedule" });
+  expect(schedule).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("link", { name: /^Today/ })).not.toHaveAttribute("aria-current");
+  expect(schedule).toHaveAttribute("href", expect.stringMatching(/#schedule$/));
 });

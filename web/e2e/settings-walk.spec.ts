@@ -1,6 +1,7 @@
 // Every page reached from Settings keeps the Settings side bar, so the person can go from any page to any other without
 // choosing Settings again; and none of them is wider than the window.
 import { expect, test, type Page } from "@playwright/test";
+import { settingsSections } from "./journey-helpers";
 
 const LOADED = { timeout: 20_000 };
 const WIDTHS = [
@@ -23,10 +24,10 @@ async function notWider(page: Page, where: string) {
 test("every Settings page keeps the side bar, and the person can go back to any other", async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto("?token=e2e-token#settings/you");
-  await expect(bar(page).getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
+  await expect((await settingsSections(page)).getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
   // The Lists page is listed once the lists have loaded, so the names are read after it shows.
-  await expect(bar(page).getByRole("link", { name: "Lists", exact: true })).toBeVisible(LOADED);
-  const names = (await bar(page).getByRole("link").allTextContents()).map((n) => n.trim());
+  await expect((await settingsSections(page)).getByRole("link", { name: "Lists", exact: true })).toBeVisible(LOADED);
+  const names = (await (await settingsSections(page)).getByRole("link").allTextContents()).map((n) => n.trim());
   expect(names.length).toBeGreaterThan(4);
   expect(names).toContain("Connections");
   expect(names).toContain("Add-ons");
@@ -42,12 +43,12 @@ test("every Settings page keeps the side bar, and the person can go back to any 
     await page.setViewportSize(size);
     // Out through each link of the side bar and back to the first section: the bar is there each time.
     for (const name of names) {
-      await bar(page).getByRole("link", { name, exact: true }).click();
+      await (await settingsSections(page)).getByRole("link", { name, exact: true }).click();
       await expect(bar(page), `${name} at ${size.width}`).toBeVisible(LOADED);
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
       await notWider(page, `${name} at ${size.width}`);
-      await bar(page).getByRole("link", { name: names[0], exact: true }).click();
-      await expect(bar(page).getByRole("link", { name: names[0], exact: true })).toHaveAttribute("aria-current", "page", LOADED);
+      await (await settingsSections(page)).getByRole("link", { name: names[0], exact: true }).click();
+      await expect((await settingsSections(page)).getByRole("link", { name: names[0], exact: true })).toHaveAttribute("aria-current", "page", LOADED);
     }
   }
 });
@@ -82,11 +83,11 @@ test("Connections, Add-ons and what each account can do open inside Settings", a
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("?token=e2e-token#settings/you");
   await expect(bar(page)).toBeVisible(LOADED);
-  await bar(page).getByRole("link", { name: "Connections", exact: true }).click();
+  await (await settingsSections(page)).getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Connections", exact: true })).toBeVisible(LOADED);
   await expect(bar(page)).toBeVisible();
-  await bar(page).getByRole("link", { name: "Appearance", exact: true }).click();
-  await expect(bar(page).getByRole("link", { name: "Appearance", exact: true })).toHaveAttribute("aria-current", "page", LOADED);
+  await (await settingsSections(page)).getByRole("link", { name: "Appearance", exact: true }).click();
+  await expect((await settingsSections(page)).getByRole("link", { name: "Appearance", exact: true })).toHaveAttribute("aria-current", "page", LOADED);
 
   await page.goto("?token=e2e-token#settings/ai-compare");
   await expect(bar(page)).toBeVisible(LOADED);
@@ -125,8 +126,8 @@ test("the settings walk counts 17 shown and 27 more rows, each labelled in plain
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/you");
-  await expect(bar(page).getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
-  const names = (await bar(page).getByRole("link").allTextContents()).map((n) => n.trim());
+  await expect((await settingsSections(page)).getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
+  const names = (await (await settingsSections(page)).getByRole("link").allTextContents()).map((n) => n.trim());
   const labels: string[] = [];
   const headings: string[] = [];
   const hints: string[] = [];
@@ -134,7 +135,7 @@ test("the settings walk counts 17 shown and 27 more rows, each labelled in plain
   let more = 0;
   for (const name of ["You", "AI and spending", "Notices", "Backups", "Appearance", "Your business"]) {
     if (!names.includes(name)) continue;
-    await bar(page).getByRole("link", { name, exact: true }).click();
+    await (await settingsSections(page)).getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible(LOADED);
     basic += await page.locator(SHOWN).count();
     labels.push(...(await page.locator(`${SHOWN} .setting-label`).allTextContents()));
@@ -178,7 +179,7 @@ test("the settings walk counts 17 shown and 27 more rows, each labelled in plain
   expect(basic).toBe(BASIC_ROWS);
   expect(basic).toBeLessThanOrEqual(26);
 
-  await bar(page).getByRole("link", { name: "Advanced", exact: true }).click();
+  await (await settingsSections(page)).getByRole("link", { name: "Advanced", exact: true }).click();
   const toggles = page.locator(".settings-topic .topic-toggle");
   await expect(toggles.first()).toBeVisible(LOADED);
   // Advanced keeps only the topics that have no page of their own; the others are in their page's fold.
@@ -218,7 +219,7 @@ test("every page of Settings is built in one frame: the same title, search and s
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/you");
   await expect(bar(page)).toBeVisible(LOADED);
-  const names = (await bar(page).getByRole("link").allTextContents()).map((n) => n.trim());
+  const names = (await (await settingsSections(page)).getByRole("link").allTextContents()).map((n) => n.trim());
   expect(names).toContain("Connections");
   expect(names).toContain("Add-ons");
   const frames: Array<{ name: string; title: number[]; search: number[]; side: number[]; content: number[] }> = [];
@@ -227,7 +228,7 @@ test("every page of Settings is built in one frame: the same title, search and s
     return found ? [Math.round(found.x), Math.round(found.y), Math.round(found.width)] : [];
   };
   for (const name of names) {
-    await bar(page).getByRole("link", { name, exact: true }).click();
+    await (await settingsSections(page)).getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Settings", exact: true })).toBeVisible(LOADED);
     // Each page has exactly one title, one search box and one side bar, and its own section heading under the title.
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
@@ -289,4 +290,26 @@ test("How the assistant is doing is in the person's menu, and opens the page hea
   await expect(page.getByRole("heading", { level: 1, name: /^How .+ is doing$/ })).toBeVisible(LOADED);
   expect(new URL(page.url()).hash).toBe("#quality");
   await expect(bar(page)).toHaveCount(0);
+});
+
+// A table rule in one CSS module once reached every table's first cell (a third of the width), so a connection's name and
+// facts were squeezed into a narrow column on a phone. Measured: the name cell takes the row's width.
+test("on a phone a connection's name takes the row's width, and a records table is not cut while the window has room", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("?token=e2e-token#settings/connections");
+  const first = page.locator(".source-table tbody > tr.source-row > th").first();
+  await expect(first).toBeVisible(LOADED);
+  const cell = (await first.boundingBox())!;
+  const row = (await page.locator(".source-table tbody > tr.source-row").first().boundingBox())!;
+  expect(cell.width).toBeGreaterThan(row.width * 0.8);
+  await notWider(page, "Connections on a phone");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("?token=e2e-token#records/people");
+  const heads = page.locator("table thead th");
+  await expect(heads.first()).toBeVisible(LOADED);
+  // No header is cut to an ellipsis: each is as wide as its own text.
+  for (const head of await heads.all()) {
+    const fits = await head.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
+    expect(fits, `${await head.textContent()} is cut`).toBe(true);
+  }
 });

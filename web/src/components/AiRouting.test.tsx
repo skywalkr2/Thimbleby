@@ -404,7 +404,7 @@ test("a rule set outside the app can be read but not changed", async () => {
   const rule = within(await screen.findByRole("group", { name: "Rule 1" }));
   expect(rule.getByLabelText("Kind of work")).toBeDisabled();
   expect(screen.getByRole("button", { name: "Add a rule" })).toBeDisabled();
-  expect(screen.getAllByText("Set outside the app by an environment variable").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Set outside the app by whoever runs it, so it can't be changed here").length).toBeGreaterThan(0);
 });
 
 test("a kind of work that uses an add-on's own tier shows it as the model it uses, named by the add-on", async () => {

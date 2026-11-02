@@ -55,6 +55,7 @@ import { useSides } from "../lib/sides";
 import { applyAppearanceChanges, useAppearance } from "../lib/theme";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
+import { useIsNarrow } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
 import { AiChoices } from "./AiRouting";
@@ -103,6 +104,10 @@ export function SettingsNav(props: {
 }) {
   const { t } = useWords();
   const addonName = useAddonName();
+  // On a phone the sections are behind one line that names the open one, so the page's own content is not pushed down the
+  // screen by a list of every section.
+  const narrow = useIsNarrow();
+  const [picking, setPicking] = useState(false);
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
       ? addonName(s.slice("addon/".length))
@@ -112,6 +117,7 @@ export function SettingsNav(props: {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
       return;
     e.preventDefault();
+    setPicking(false);
     run();
   };
   const link = (id: SettingsSection) => (
@@ -124,8 +130,8 @@ export function SettingsNav(props: {
     </a>
   );
   const addonSections = props.listed.filter((id) => id.startsWith("addon/"));
-  return (
-    <nav aria-label={t("settings.sections")}>
+  const groups = (
+    <>
       {NAV_GROUPS.map((group) => {
         const sections = group.sections.filter((id) => props.listed.includes(id));
         if (sections.length === 0) return null;
@@ -150,6 +156,18 @@ export function SettingsNav(props: {
           </section>
         );
       })}
+    </>
+  );
+  return (
+    <nav aria-label={t("settings.sections")}>
+      {narrow ? (
+        <details className="more-options settings-picker" open={picking} onToggle={(e) => setPicking(e.currentTarget.open)}>
+          <summary>{props.current ? t("settings.picker", { section: label(props.current) }) : t("settings.picker_none")}</summary>
+          {groups}
+        </details>
+      ) : (
+        groups
+      )}
     </nav>
   );
 }

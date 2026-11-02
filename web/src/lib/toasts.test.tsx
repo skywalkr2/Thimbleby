@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import { ToastProvider, useToasts } from "./toasts";
 
 function Pusher(props: { undo?: () => void }) {
@@ -387,4 +388,36 @@ test("a notice of the app's own that arrives while an Undo runs doesn't stand in
   await user.click(screen.getByRole("button", { name: "save" }));
   await user.click(within(region()).getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(region()).toHaveTextContent("Undone."));
+});
+
+test("moving to another screen clears a note that offers nothing to do, and keeps one that carries Undo, and one shown as the person arrives", async () => {
+  const user = userEvent.setup();
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  render(
+    <ToastProvider seconds={0}>
+      <Pusher undo={() => undefined} />
+    </ToastProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "plain" }));
+  expect(within(region()).getByText("Plain")).toBeInTheDocument();
+  clock.mockReturnValue(start + 400);
+  await act(async () => {
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  expect(within(region()).queryByText("Plain")).toBeNull();
+  // One with Undo is still there after the move.
+  await user.click(screen.getByRole("button", { name: "push" }));
+  clock.mockReturnValue(start + 5000);
+  await act(async () => {
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  expect(within(region()).getByText(/^Message /)).toBeInTheDocument();
+  // A note pushed in the moment of the move is about that move, so it stays.
+  await user.click(screen.getByRole("button", { name: "plain" }));
+  await act(async () => {
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  expect(within(region()).getByText("Plain")).toBeInTheDocument();
+  clock.mockRestore();
 });

@@ -248,6 +248,22 @@ test("an action filed on a side shows the side as not in a project in its meta l
   expect(await screen.findByText("Robin Sample · Orchard Press: not in a project")).toBeInTheDocument();
 });
 
+const PERSONAL_ONLY = {
+  "GET setup/business": () => ({ business: false, name: null, personal: "PRJ-personal", sides: [], chosen: "me" }),
+  "GET projects": () => [{ id: "PRJ-personal", name: "Personal", group: null, status: null, phase: null, target: null, owner: null, owner_name: null, summary: null, language: "en-US", language_own: false, role: "run", completed: false, spent_usd: 0, open_actions: 0, open_questions: 0, no_end: true }],
+};
+
+test("with nothing beside Personal a filed note says it went in Personal, never that it is not in a project, and a row has no such chip", async () => {
+  const base = change("REQ-9");
+  const todo = { ...base.changeset!.ops[0], index: 1, group: "op1", op: "action.add", title: "Send the proof", evidence: null, meta: { owners: ["Robin Sample"], project: null, side_name: "Personal", action_status: "open" } };
+  const withBoth = { ...noteChange(null, "Personal"), changeset: { ...noteChange(null, "Personal").changeset!, ops: [noteChange(null, "Personal").changeset!.ops[0], todo] } };
+  fakeApi({ "GET changes": () => [withBoth], ...PERSONAL_ONLY });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Filed a note in Personal")).toBeInTheDocument();
+  expect(screen.queryByText(/not in a project/)).toBeNull();
+  expect(screen.getByText("Robin Sample")).toBeInTheDocument();
+});
+
 test("a filed note with no project says so", async () => {
   fakeApi({ "GET changes": () => [noteChange(null)] });
   renderApp(<WhatChanged />);

@@ -2790,15 +2790,29 @@ def _edit_on_screen(store: Store, cfg: Config, kind: str, record_id: str, change
     apply_as_person(store, cfg, [op], "Changed on screen")
 
 
+def _counted(using: list[tuple[str, str]], store: Store) -> str:
+    """The records that still refer to one, counted by kind in words ("3 projects and 1 note")."""
+    from collections import Counter
+
+    from engine.records import kind_label
+
+    parts = []
+    for kind, n in sorted(Counter(k for k, _ in using).items()):
+        label = kind_label(store.plugins.records.get(kind), kind)
+        if n != 1:
+            label = label[:-1] + "ies" if label.endswith("y") and label[-2:-1] not in "aeiou" else label + "s"
+        parts.append(f"{n} {label}")
+    return " and ".join(parts) if len(parts) < 3 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
 def _remove(store: Store, kind: str, record_id: str) -> None:
     """Remove a record nothing refers to; otherwise say what still does."""
     with store.transaction() as tx:
         cur = _existing(tx, kind, record_id)
         using = referrers(tx, kind, record_id)
         if using:
-            what = ", ".join(sorted({k for k, _ in using}))
-            hint = " Mark them as left instead." if kind == "person" else ""
-            raise ValueError(f"Still used by {len(using)} record(s) ({what}), so it can't be removed.{hint}")
+            hint = " Mark them as left instead." if kind == "person" else " Move or remove them first."
+            raise ValueError(f"It can't be removed while {_counted(using, store)} still use it.{hint}")
         tx.delete(kind, record_id, _setup(f"{kind}.remove"), read_version=cur.version)
 
 

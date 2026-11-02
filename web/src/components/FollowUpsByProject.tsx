@@ -23,10 +23,9 @@ type Section = S["FollowupSection"];
 interface Item {
   id: string;
   title: string;
-  /** Who it is with: the person's id and name, and whether that is the person themselves. */
+  /** Who it is with: the person's id and name. */
   person: string;
   name: string;
-  mine: boolean;
   /** Where it stands, from the sheet. */
   state: string;
   kind: "question" | "action";
@@ -51,7 +50,7 @@ function waiting(days: number | null, chase: boolean, w: Words): string {
 }
 
 function itemsOf(section: Section, names: Map<Side, string>, w: Words): Array<[Place, Item]> {
-  const base = { person: section.person, name: section.name, mine: section.is_pm };
+  const base = { person: section.person, name: section.name };
   const out: Array<[Place, Item]> = [];
   const place = (project: string | null | undefined, side: string | null | undefined, sideName: string | null | undefined): Place => ({
     side: side ?? null,
@@ -59,14 +58,14 @@ function itemsOf(section: Section, names: Map<Side, string>, w: Words): Array<[P
     project: project ?? "",
   });
   for (const q of section.questions) {
-    const state = section.is_pm ? w.t("followups.by_project.yours") : q.status === "sent" ? waiting(q.waiting_days ?? 0, q.chase_due, w) : waiting(null, false, w);
+    const state = q.status === "sent" ? waiting(q.waiting_days ?? 0, q.chase_due, w) : waiting(null, false, w);
     out.push([place(q.project_name, q.side, q.side_name), { ...base, id: q.id, title: q.title, state, kind: "question", origin: q.origin }]);
   }
   for (const q of section.later ?? []) {
     out.push([place(q.project_name, q.side, q.side_name), { ...base, id: q.id, title: q.title, state: w.t("followups.by_project.later"), kind: "question", origin: q.origin }]);
   }
   for (const a of section.actions) {
-    const state = section.is_pm ? w.t("followups.by_project.yours") : waiting(a.told_days, a.chase_due, w);
+    const state = waiting(a.told_days, a.chase_due, w);
     const when = a.due_soon ? dueState(a.due, a.due_check, todayOn(new Date()), w.t) : undefined;
     out.push([place(a.project_name, a.side, a.side_name), { ...base, id: a.id, title: a.text, state, kind: "action", when, origin: a.origin }]);
   }
@@ -89,12 +88,13 @@ export interface SideGroup {
 }
 
 /** The sides in the person's order (Personal, then each other side), what is on no side last; within a side the projects by
- * name and what is in none of them last, and within a project the person's own first, then by person. */
-export function groupBySide(sections: Section[], sideOrder: Array<{ id: Side; name: string }>, w: Words, compact = false): SideGroup[] {
+ * name and what is in none of them last, and within a project by person. */
+export function groupBySide(sections: Section[], sideOrder: Array<{ id: Side; name: string }>, w: Words): SideGroup[] {
   const names = new Map(sideOrder.map((s) => [s.id, s.name] as const));
   const sides = new Map<string, { place: Place; projects: Map<string, Item[]> }>();
   for (const s of sections) {
-    if (compact && s.is_pm) continue;
+    // Follow-ups lists other people only: the person's own to-dos are one row that opens them (design 7.5).
+    if (s.is_pm) continue;
     for (const [place, item] of itemsOf(s, names, w)) {
       const at = sides.get(place.side ?? "") ?? { place, projects: new Map<string, Item[]>() };
       at.projects.set(place.project, [...(at.projects.get(place.project) ?? []), item]);
@@ -113,7 +113,7 @@ export function groupBySide(sections: Section[], sideOrder: Array<{ id: Side; na
         .map(([project, items]) => ({
           key: `${id}|${project}`,
           title: project || (place.sideName ? w.t("side.not_in_project", { side: place.sideName }) : w.t("followups.by_project.unplaced")),
-          items: [...items].sort((a, b) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name) || a.title.localeCompare(b.title)),
+          items: [...items].sort((a, b) => a.name.localeCompare(b.name) || a.title.localeCompare(b.title)),
         })),
     }));
 }
@@ -125,11 +125,11 @@ export function FollowUpsByProject(props: { sections: Section[]; everything?: Se
   const words = useWords();
   const { t } = words;
   const filter = useSideFilter();
-  const bySide = groupBySide(props.sections, filter.options, words, props.compact);
+  const bySide = groupBySide(props.sections, filter.options, words);
   const groups = bySide.flatMap((s) => s.groups);
   // What is due soon on any tab, by the same project lines: each project's detail opens with it.
   const soonOnly = (props.everything ?? props.sections).map((s) => ({ ...s, questions: [], later: [], actions: s.actions.filter((a) => a.due_soon) }));
-  const soon = new Map(groupBySide(soonOnly, filter.options, words, props.compact).flatMap((s) => s.groups).map((g) => [g.key, g.items] as const));
+  const soon = new Map(groupBySide(soonOnly, filter.options, words).flatMap((s) => s.groups).map((g) => [g.key, g.items] as const));
   const soonOf = (g: Group) => (soon.get(g.key) ?? []).filter((item) => !g.items.some((i) => i.id === item.id));
   const choice = useListChoice({ keys: groups.map((g) => g.key), beside: !!props.beside });
   const selected = groups.find((g) => g.key === choice.chosen) ?? null;
@@ -191,11 +191,11 @@ function ProjectItems(props: { group: Group; soon: Item[]; onOpenPerson: (person
       <div>
         <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
         <div className="title">{plainTitle(item.title)}</div>
-        <div className="meta">{[item.mine ? t("followups.you") : item.name, soon ? item.when : "", item.state].filter(Boolean).join(" · ")}</div>
+        <div className="meta">{[item.name, soon ? item.when : "", item.state].filter(Boolean).join(" · ")}</div>
         <OriginLink origin={item.origin} />
       </div>
       <Actions>
-        <Button aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
+        <Button aria-label={t("followups.by_project.open_named", { name: item.name })} onClick={() => props.onOpenPerson(item.person)}>
           {t("followups.by_project.open")}
         </Button>
       </Actions>
