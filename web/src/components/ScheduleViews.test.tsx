@@ -127,7 +127,7 @@ describe("the views", () => {
 });
 
 describe("the keys and the arrows", () => {
-  test("1 to 4 pick Day, Work week, Week and Month, but never while the cursor is in a field", async () => {
+  test("1 to 5 pick Day, Work week, Week, Month and the Timeline, but never while the cursor is in a field", async () => {
     fakeApi(scheduleRoutes());
     renderApp(
       <>
@@ -374,7 +374,7 @@ describe("an entry's details", () => {
     await open(WEEK, {}, { "GET watch": () => [{ id: "cal-work", label: "Work calendar", color: "teal" }, { id: "cal-home", label: "Home calendar" }] });
     expect(screen.getByRole("button", { name: /Standup/ })).toHaveAccessibleName(/From Work calendar/);
     expect(screen.getByRole("button", { name: /Design review/ })).toHaveAccessibleName(/From Home calendar/);
-    expect(screen.getByRole("button", { name: /Dentist/ })).toHaveAccessibleName(/From your notes/);
+    expect(screen.getByRole("button", { name: /Dentist/ })).toHaveAccessibleName(/Added by you/);
     const mark = screen.getByRole("button", { name: /Standup/ }).querySelector("[data-color]");
     expect(mark).toHaveAttribute("data-color", "teal");
     expect(mark).toHaveAttribute("aria-hidden", "true");
@@ -458,7 +458,7 @@ describe("a narrow space", () => {
   test("with room for seven columns every view is offered", async () => {
     room({ width: 900 });
     await open();
-    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["Day", "Work week", "Week", "Month"]);
+    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["Day", "Work week", "Week", "Month", "Timeline"]);
   });
 });
 
@@ -474,4 +474,36 @@ test("a schedule that can't be loaded says so and tries again", async () => {
     await user.click(screen.getByRole("button", { name: "Try again" }));
   });
   await screen.findByRole("heading", { level: 3, name: /^Today · / });
+});
+
+describe("an empty calendar and the details pane", () => {
+  test("a week or month with nothing on it says so and points to Add to schedule", async () => {
+    const user = userEvent.setup();
+    await open(() => ({}));
+    expect(screen.getByText(/Nothing on the calendar in these days/)).toBeInTheDocument();
+    await user.click(radio("Month"));
+    expect(await screen.findByText(/Use Add to schedule above/)).toBeInTheDocument();
+    await user.click(radio("Day"));
+    expect(await screen.findByText("Nothing on this day.")).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing on the calendar in these days/)).toBeNull();
+  });
+
+  test("the details cover the edge of the calendar instead of squeezing the week when it would be left too narrow", async () => {
+    const user = userEvent.setup();
+    const split = (width: number) => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute("data-split") ? width : 0;
+      });
+      vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute("data-detail-pane") ? 420 : 0;
+      });
+    };
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: /min-width:\s*1024px/.test(query), addEventListener: () => undefined, removeEventListener: () => undefined }));
+    split(900);
+    await open();
+    await user.click(screen.getByRole("button", { name: /Standup/ }));
+    await screen.findByRole("complementary", { name: "Standup" });
+    expect(document.querySelector("[data-split]")).toHaveAttribute("data-pane", "overlay");
+    vi.restoreAllMocks();
+  });
 });

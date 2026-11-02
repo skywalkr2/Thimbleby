@@ -16,7 +16,9 @@ import styles from "./OpenItems.module.css";
 /** A day typed or picked in full: four digits for the year, so a year half typed is never saved. */
 const FULL_DAY = /^(19|2\d)\d\d-\d\d-\d\d$/;
 
-export function NeedsADate(props: { rows: OpenAction[]; first?: boolean }) {
+/** `hint` names the wording of the note under the group (its `.one` and `.other` forms), for a screen where the dated to-do goes
+ * somewhere other than the list below. */
+export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: string }) {
   const { t, tn } = useWords();
   const act = useAct();
   if (props.rows.length === 0) return null;
@@ -54,7 +56,7 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean }) {
           </Row>
         ))}
       </RowList>
-      <p className="hint">{tn("open.needs_date.hint", props.rows.length)}</p>
+      <p className="hint">{tn(props.hint ?? "open.needs_date.hint", props.rows.length)}</p>
     </section>
   );
 }

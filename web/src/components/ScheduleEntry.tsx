@@ -41,7 +41,7 @@ export function entryTitle(entry: Entry, t: T): string {
 /** Where the entry comes from, in words. */
 export function fromWords(entry: Entry, calendars: Calendars, t: T): string {
   if (entry.kind === "due") return t("schedule.from_due");
-  if (entry.own) return t("today.agenda.own");
+  if (entry.own) return t("schedule.from_own");
   const name = calendars.name(entry.source);
   return name ? t("schedule.from_source", { source: name }) : t("schedule.from_source_unknown");
 }

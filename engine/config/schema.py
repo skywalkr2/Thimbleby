@@ -2380,6 +2380,11 @@ class ScheduleSettings(ConfigModel):
         description="How many entries a day in the calendar page's Month view lists before it says how many more there "
         "are.",
     )
+    timeline_range: Literal["two_weeks", "ten_weeks", "quarter"] = Field(
+        "ten_weeks",
+        description="How far the calendar page's Timeline view looks when the person has not picked a range: two "
+        "weeks, ten weeks or a quarter (thirteen weeks).",
+    )
 
     @model_validator(mode="after")
     def _grid_runs_forward(self) -> ScheduleSettings:

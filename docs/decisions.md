@@ -4,6 +4,34 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The Schedule's Timeline, core (P111, P112 item 1)
+
+**Decided:** (1) The calendar page gets a fifth view, **Timeline**, in the core, over what every person has: calendar
+entries, to-dos and promises with a day, projects' target days and dated facts, and the days people don't work. One lane per
+project that has something in the range, grouped under its side, sub-projects indented; shapes tell the kinds apart (circle,
+square, diamond, bar) and an overdue item says so in a word and an icon, never by color alone. Ranges are 2 weeks, 10 weeks and
+a quarter (`ui.schedule.timeline_range`, 10 weeks, the person's own pick remembered on their browser); every item is a button
+whose details show on focus or hover; a window too narrow for the weeks shows the same items as a list by week, so nothing
+scrolls sideways. (2) The days people don't work are hatched: the workspace's holidays and rest days on every lane, a team's
+own days off only on the lanes of projects whose owner is on that team, a person's away on the lanes they own. (3) The plan
+record, phases, sprints and milestones, windows and proposed steps are the project pack's (phase C): a plugin will add bands
+and markers through a new generic extension point in the next plugin API release; the core timeline reads none of them.
+(4) With it, three small Schedule items from the UI/UX sweep (X45): the app's own entries say "Added by you" instead of
+"From your notes", an empty week or month says so and points to Add to schedule, and the details pane overlays the calendar's
+edge instead of squeezing it (it already did; now it has a test). Still open on X45: a full Add form (end, place, side,
+repeat) and Schedule in the menu, which change the meeting route and the shell.
+
+**Who:** the owner, 2026-11-02 (a screenshot of their original's schedule: "It takes everything and visualizes it. Not sure if
+this would be in the core or the project pack, but it's something important"), with the functional designer's lesson 1 (a
+calendar answers "what's on Tuesday"; a plan needs "where does each piece stand over the next weeks").
+
+**Why:** the owner's planning view was the part of their old tool they missed most, and everything it needs for a first
+version is already core data. Putting the plan's own shapes in a pack keeps the core a daily assistant for anyone.
+
+**Impact:** `engine/timeline.py`, `GET /api/schedule/timeline`, `engine/days_off.py` (`holidays_off`, public `kinds`),
+`ui.schedule.timeline_range` (demo values in both workspaces), the Schedule's Timeline component and its wording; design 4.0
+and 7.7. Not built: the extension point for a pack's bands and markers (phase C), dragging, zoom. Change log: section 299.
+
 ## 2026-11-02: The follow-up line says what is due and when; a "due soon" band on each person's Follow-ups group (P112 items 5 and 6)
 
 **Decided:** (1) Today's one follow-up line per person names the person's to-dos that are overdue or due within

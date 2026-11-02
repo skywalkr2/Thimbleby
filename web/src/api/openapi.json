@@ -31005,6 +31005,334 @@
         "title": "TieProposal",
         "type": "object"
       },
+      "TimelineItemView": {
+        "description": "One thing on a timeline lane: a circle (a calendar entry), a square (a to-do or promise), a diamond (a project's\ntarget day or a dated fact); a bar when it runs over several days.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a dated fact: what kind of day it is (deadline, renewal, expiry, warranty, bill).",
+            "title": "Detail"
+          },
+          "end": {
+            "description": "The last day; the same as `start` for a thing on one day.",
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduleEntryView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a calendar entry: the schedule's own entry, to open its details."
+          },
+          "id": {
+            "description": "The id of the record it is: the entry's (or connected event's), the to-do's, the project's for its target day, the fact's.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "entry",
+              "todo",
+              "promise",
+              "target",
+              "fact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "overdue",
+              "done"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "start",
+          "end",
+          "state",
+          "owners"
+        ],
+        "title": "TimelineItemView",
+        "type": "object"
+      },
+      "TimelineLaneView": {
+        "description": "One project's lane, with its side and views so the side filter narrows it as it narrows every schedule view.",
+        "properties": {
+          "days_off": {
+            "description": "The days off beyond the workspace's: its owner's team's and the owner's own away periods.",
+            "items": {
+              "$ref": "#/components/schemas/TimelineOffView"
+            },
+            "title": "Days Off",
+            "type": "array"
+          },
+          "depth": {
+            "description": "How far in it is shown: its parent lane's depth plus one.",
+            "title": "Depth",
+            "type": "integer"
+          },
+          "in_project": {
+            "description": "True for a project; false for a lane that is a side itself or none.",
+            "title": "In Project",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineItemView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "description": "The project's name; empty for the lane of entries filed under no project.",
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person id of the project's owner (its parent's when it has none).",
+            "title": "Owner"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent"
+          },
+          "parent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of its parent project when that has no lane of its own.",
+            "title": "Parent Name"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project's id; none for the lane of entries filed under no project.",
+            "title": "Project"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the side it is on; none when it is on none.",
+            "title": "Side"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the owner's team.",
+            "title": "Team"
+          },
+          "views": {
+            "description": "The ids of the views its project is in.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "in_project",
+          "views",
+          "depth",
+          "days_off",
+          "items"
+        ],
+        "title": "TimelineLaneView",
+        "type": "object"
+      },
+      "TimelineOffView": {
+        "description": "A day people don't work, on the timeline.",
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "kind": {
+            "description": "weekend: a weekly rest day of the workspace; holiday: a named holiday of its calendar; team: a day off of the team the lane's owner is in; away: a period the lane's owner is away.",
+            "enum": [
+              "weekend",
+              "holiday",
+              "team",
+              "away"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "description": "Why, in words for a reader (a holiday's name, a closure's label); empty for a weekend.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "kind"
+        ],
+        "title": "TimelineOffView",
+        "type": "object"
+      },
+      "TimelineView": {
+        "description": "The schedule's timeline (GET /api/schedule/timeline): lanes of what falls between `first` and `last`.",
+        "properties": {
+          "days": {
+            "description": "How many days it is.",
+            "title": "Days",
+            "type": "integer"
+          },
+          "default_range": {
+            "description": "The range to show when the person has picked none (`ui.schedule.timeline_range`).",
+            "enum": [
+              "two_weeks",
+              "ten_weeks",
+              "quarter"
+            ],
+            "title": "Default Range",
+            "type": "string"
+          },
+          "first": {
+            "format": "date",
+            "title": "First",
+            "type": "string"
+          },
+          "lanes": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineLaneView"
+            },
+            "title": "Lanes",
+            "type": "array"
+          },
+          "last": {
+            "format": "date",
+            "title": "Last",
+            "type": "string"
+          },
+          "off_days": {
+            "description": "The days off of the whole workspace (weekly rest days and holidays), the same for every lane.",
+            "items": {
+              "$ref": "#/components/schemas/TimelineOffView"
+            },
+            "title": "Off Days",
+            "type": "array"
+          },
+          "range": {
+            "description": "The range shown, by name.",
+            "enum": [
+              "two_weeks",
+              "ten_weeks",
+              "quarter"
+            ],
+            "title": "Range",
+            "type": "string"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "week_starts_on": {
+            "title": "Week Starts On",
+            "type": "integer"
+          },
+          "work_days": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Work Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "today",
+          "first",
+          "last",
+          "range",
+          "days",
+          "lanes",
+          "off_days",
+          "work_days",
+          "week_starts_on",
+          "default_range"
+        ],
+        "title": "TimelineView",
+        "type": "object"
+      },
       "TodayLineView": {
         "description": "A line a plugin adds to Today.",
         "properties": {
@@ -45448,6 +45776,74 @@
           }
         },
         "summary": "Schedule Event"
+      }
+    },
+    "/api/schedule/timeline": {
+      "get": {
+        "description": "One lane for each project that has something between the first day and the last: its calendar entries,\nto-dos and promises with a day, its target day and its dated facts, and the days people don't work. Read\nonly.",
+        "operationId": "schedule_timeline_api_schedule_timeline_get",
+        "parameters": [
+          {
+            "description": "The first day; the first day of this week when none.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The first day; the first day of this week when none.",
+              "title": "From"
+            }
+          },
+          {
+            "description": "two_weeks, ten_weeks or quarter; `ui.schedule.timeline_range` when none.",
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "two_weeks, ten_weeks or quarter; `ui.schedule.timeline_range` when none.",
+              "title": "Range"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schedule Timeline"
       }
     },
     "/api/search": {

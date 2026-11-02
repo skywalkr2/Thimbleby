@@ -21,17 +21,23 @@ from api.schemas import (
     ScheduleEntryView,
     ScheduleView,
     ThisWeekView,
+    TimelineItemView,
+    TimelineLaneView,
+    TimelineOffView,
+    TimelineView,
     TopPrioritiesView,
     WeekDueView,
     WeekWaitingView,
 )
 from engine import schedule as schedule_module
 from engine import sides
+from engine import timeline as timeline_module
 from engine.config import Config
 from engine.config.schema import WEEKDAYS
 from engine.names import People, render_owner
 from engine.storage import Store
 from engine.this_week import this_week
+from engine.today import zone
 from engine.top_priorities import top_priorities
 from engine.views import views_of_agenda_item
 from engine.worker import Events, Worker
@@ -184,8 +190,6 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     ) -> ScheduleView:
         """A run of days from `from`, each with its all-day entries apart and its timed entries in time order, from the
         connected calendars and the app's own entries, in the person's time zone."""
-        from engine.today import zone
-
         now = worker.now()
         try:
             found = schedule_module.schedule(store, cfg, now, start, days)
@@ -208,6 +212,78 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             grid_starts=cfg.ui.schedule.day_starts,
             grid_ends=cfg.ui.schedule.day_ends,
             month_entries=cfg.ui.schedule.month_entries,
+        )
+
+    @r.get("/schedule/timeline")
+    def schedule_timeline(
+        start: Annotated[
+            date | None, Query(alias="from", description="The first day; the first day of this week when none.")
+        ] = None,
+        range_name: Annotated[
+            str | None,
+            Query(
+                alias="range", description="two_weeks, ten_weeks or quarter; `ui.schedule.timeline_range` when none."
+            ),
+        ] = None,
+    ) -> TimelineView:
+        """One lane for each project that has something between the first day and the last: its calendar entries,
+        to-dos and promises with a day, its target day and its dated facts, and the days people don't work. Read
+        only."""
+        if range_name is not None and range_name not in timeline_module.RANGES:
+            raise HTTPException(status_code=422, detail="that isn't a range")
+        now = worker.now()
+        try:
+            found = timeline_module.timeline(store, cfg, now, start, range_name)
+        except (OverflowError, ValueError):
+            raise HTTPException(status_code=422, detail="that day is out of range") from None
+        people = People(store, cfg)
+
+        def owners(raw: list[dict[str, Any]]) -> list[OwnerNameView]:
+            return [
+                OwnerNameView(
+                    person=o["person"],
+                    name=render_owner(
+                        people.owner_format, people.name(o["person"]), people.team_names.get(o.get("team") or "")
+                    ),
+                    team=o.get("team"),
+                )
+                for o in raw
+            ]
+
+        def off(days: list[timeline_module.OffDay]) -> list[TimelineOffView]:
+            return [TimelineOffView(day=o.day, kind=o.kind, reason=o.reason) for o in days]
+
+        return TimelineView(
+            today=now.astimezone(zone(cfg)).date(),
+            first=found.first,
+            last=found.last,
+            range=found.range,  # type: ignore[arg-type]
+            days=(found.last - found.first).days + 1,
+            lanes=[
+                TimelineLaneView(
+                    **{k: v for k, v in vars(lane).items() if k not in ("days_off", "items")},
+                    days_off=off(lane.days_off),
+                    items=[
+                        TimelineItemView(
+                            kind=i.kind,
+                            id=i.id,
+                            title=i.title,
+                            start=i.start,
+                            end=i.end,
+                            state=i.state,
+                            owners=owners(i.owners),
+                            detail=i.detail,
+                            entry=_entry_view(i.entry) if i.entry is not None else None,
+                        )
+                        for i in lane.items
+                    ],
+                )
+                for lane in found.lanes
+            ],
+            off_days=off(found.off_days),
+            work_days=schedule_module.work_days(cfg),
+            week_starts_on=WEEKDAYS.index(cfg.ui.schedule.week_starts_on),
+            default_range=cfg.ui.schedule.timeline_range,
         )
 
     @r.get("/schedule/events/{snapshot}")

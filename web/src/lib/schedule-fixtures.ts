@@ -79,3 +79,50 @@ export function scheduleRoutes(content: Content = WEEK, over: Partial<Page> = {}
     ...extra,
   };
 }
+
+type TimelineData = S["TimelineView"];
+type Lane = S["TimelineLaneView"];
+type Item = S["TimelineItemView"];
+
+/** A thing on a timeline lane, on one day unless it says otherwise. */
+export function item(over: Partial<Item> & Pick<Item, "title">, start = TODAY): Item {
+  return { kind: "todo", id: `ACT-${over.title}`, start, end: start, state: "open", owners: [], ...over };
+}
+
+/** A project's lane with what is on it. */
+export function lane(project: string | null, name: string, items: Item[], over: Partial<Lane> = {}): Lane {
+  return { project, name, side: null, in_project: project !== null, views: [], depth: 0, days_off: [], items, ...over };
+}
+
+/** The timeline answer, ten weeks from the Monday of the fixtures' week unless the range says otherwise. */
+export function timelinePage(lanes: Lane[], over: Partial<TimelineData> = {}): TimelineData {
+  const range = over.range ?? "ten_weeks";
+  const days = { two_weeks: 14, ten_weeks: 70, quarter: 91 }[range];
+  return {
+    today: TODAY,
+    first: TODAY,
+    last: addDays(TODAY, days - 1),
+    range,
+    days,
+    lanes,
+    off_days: [],
+    work_days: [0, 1, 2, 3, 4],
+    week_starts_on: 0,
+    default_range: "ten_weeks",
+    ...over,
+  };
+}
+
+/** Routes that answer the timeline: the range asked for, from the day asked for. */
+export function timelineRoutes(lanes: Lane[], over: Partial<TimelineData> = {}, extra: Routes = {}): Routes {
+  return {
+    "GET schedule/timeline": (_body, query) => {
+      const range = (query?.get("range") as TimelineData["range"] | null) ?? over.range ?? "ten_weeks";
+      const first = query?.get("from") ?? TODAY;
+      const days = { two_weeks: 14, ten_weeks: 70, quarter: 91 }[range];
+      return timelinePage(lanes, { ...over, range, first, last: addDays(first, days - 1) });
+    },
+    "GET watch": () => [{ id: "cal-work", label: "Work calendar" }],
+    ...extra,
+  };
+}

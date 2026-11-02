@@ -687,9 +687,10 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   `top_priorities_ahead_days` (14; 0 leaves it out): the days ahead whose dated to-dos follow its lines (7.7).
 - `schedule`: what the calendar page shows (7.7): `week_starts_on` (monday): the first day of a week in the Week and Month
   views; `day_starts` (07:00) and `day_ends` (19:00), both picked from a list of times: the hours of the time grid, which
-  grows to hold an entry outside them; and `month_entries` (3; 1 to 10): the entries a day lists in Month before "N more".
-  The working days of the Work week view are `steward.reminders.working_first_day` and `working_last_day` (Monday to
-  Friday). `day_starts` and `day_ends` are in Settings under Appearance, in More settings; the other two are kept in files
+  grows to hold an entry outside them; and `month_entries` (3; 1 to 10): the entries a day lists in Month before "N more";
+  and `timeline_range` (ten_weeks; two_weeks, ten_weeks or quarter): how far the Timeline view looks until the person picks
+  a range, which is then remembered on their browser. The working days of the Work week view are `steward.reminders.working_first_day` and `working_last_day` (Monday to
+  Friday). `day_starts` and `day_ends` are in Settings under Appearance, in More settings; the others are kept in files
   (the Settings cut allows 30 rows there); demo values in both fictional workspaces.
 - `followups`: when something sent to a person is due a follow-up, one rule that Today, Follow-ups and Top priorities all read (6.9).
   `question_after_days` (4): a question with no reply after this many days; `action_due_within_days` (7): a told action

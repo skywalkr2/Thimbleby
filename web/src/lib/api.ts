@@ -500,6 +500,11 @@ export const api = {
     const query = [from ? `from=${id(from)}` : "", days ? `days=${days}` : ""].filter(Boolean).join("&");
     return call<S["ScheduleView"]>("GET", query ? `schedule?${query}` : "schedule");
   },
+  /** One lane for each project that has something between a first day (the start of this week when none) and the end of a named range (the workspace's setting when none). */
+  scheduleTimeline: (from: string | null, range: string | null) => {
+    const query = [from ? `from=${id(from)}` : "", range ? `range=${id(range)}` : ""].filter(Boolean).join("&");
+    return call<S["TimelineView"]>("GET", query ? `schedule/timeline?${query}` : "schedule/timeline");
+  },
   /** What a connected calendar says about one event the app keeps no entry for; `start` picks the date of a repeating one. */
   scheduleEvent: (snapshot: string, start?: string) => call<S["ConnectedEventView"]>("GET", `schedule/events/${id(snapshot)}${start ? `?start=${id(start)}` : ""}`),
   agendaSpan: () => call<S["AgendaSpanView"]>("GET", "today/agenda-span"),

@@ -2832,6 +2832,83 @@ class ScheduleView(BaseModel):
     )
 
 
+class TimelineOffView(BaseModel):
+    """A day people don't work, on the timeline."""
+
+    day: date
+    kind: Literal["weekend", "holiday", "team", "away"] = Field(
+        description="weekend: a weekly rest day of the workspace; holiday: a named holiday of its calendar; team: a "
+        "day off of the team the lane's owner is in; away: a period the lane's owner is away."
+    )
+    reason: str = Field(
+        "", description="Why, in words for a reader (a holiday's name, a closure's label); empty for a weekend."
+    )
+
+
+class TimelineItemView(BaseModel):
+    """One thing on a timeline lane: a circle (a calendar entry), a square (a to-do or promise), a diamond (a project's
+    target day or a dated fact); a bar when it runs over several days."""
+
+    kind: Literal["entry", "todo", "promise", "target", "fact"]
+    id: str = Field(
+        description="The id of the record it is: the entry's (or connected event's), the to-do's, the project's for "
+        "its target day, the fact's."
+    )
+    title: str
+    start: date
+    end: date = Field(description="The last day; the same as `start` for a thing on one day.")
+    state: Literal["open", "overdue", "done"]
+    owners: list[OwnerNameView]
+    detail: str | None = Field(
+        None, description="For a dated fact: what kind of day it is (deadline, renewal, expiry, warranty, bill)."
+    )
+    entry: ScheduleEntryView | None = Field(
+        None, description="For a calendar entry: the schedule's own entry, to open its details."
+    )
+
+
+class TimelineLaneView(BaseModel):
+    """One project's lane, with its side and views so the side filter narrows it as it narrows every schedule view."""
+
+    project: str | None = Field(
+        None, description="The project's id; none for the lane of entries filed under no project."
+    )
+    name: str = Field(description="The project's name; empty for the lane of entries filed under no project.")
+    side: str | None = Field(None, description="The id of the side it is on; none when it is on none.")
+    in_project: bool = Field(description="True for a project; false for a lane that is a side itself or none.")
+    views: list[str] = Field(description="The ids of the views its project is in.")
+    parent: str | None = None
+    parent_name: str | None = Field(
+        None, description="The name of its parent project when that has no lane of its own."
+    )
+    depth: int = Field(description="How far in it is shown: its parent lane's depth plus one.")
+    owner: str | None = Field(None, description="The person id of the project's owner (its parent's when it has none).")
+    team: str | None = Field(None, description="The id of the owner's team.")
+    days_off: list[TimelineOffView] = Field(
+        description="The days off beyond the workspace's: its owner's team's and the owner's own away periods.",
+    )
+    items: list[TimelineItemView]
+
+
+class TimelineView(BaseModel):
+    """The schedule's timeline (GET /api/schedule/timeline): lanes of what falls between `first` and `last`."""
+
+    today: date
+    first: date
+    last: date
+    range: Literal["two_weeks", "ten_weeks", "quarter"] = Field(description="The range shown, by name.")
+    days: int = Field(description="How many days it is.")
+    lanes: list[TimelineLaneView]
+    off_days: list[TimelineOffView] = Field(
+        description="The days off of the whole workspace (weekly rest days and holidays), the same for every lane."
+    )
+    work_days: list[int]
+    week_starts_on: int
+    default_range: Literal["two_weeks", "ten_weeks", "quarter"] = Field(
+        description="The range to show when the person has picked none (`ui.schedule.timeline_range`)."
+    )
+
+
 class ArrivedView(BaseModel):
     """A message from a watched mailbox, received within the configured hours."""
 

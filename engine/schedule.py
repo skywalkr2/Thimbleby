@@ -87,6 +87,11 @@ def _entry(item: AgendaItem, day: date, here: ZoneInfo) -> Entry:
     return Entry(item, "timed", begins.isoformat() if begins else None, ends.isoformat() if ends else None)
 
 
+def entry_on(cfg: Any, item: AgendaItem, day: date) -> Entry:
+    """One agenda item as it falls on a day (the same part the schedule gives), for a screen that lists an item once."""
+    return _entry(item, day, zone(cfg))
+
+
 def _at(entry: Entry, day: date, here: ZoneInfo) -> datetime:
     """Where a timed entry sorts: its start, or the start of the day for one that came in from the day before."""
     return datetime.fromisoformat(entry.begins) if entry.begins else datetime.combine(day, time.min, here)

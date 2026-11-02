@@ -3,8 +3,8 @@
 // Days are yyyy-mm-dd text on the person's own calendar; weekdays count from Monday as 0.
 import { addDays } from "./dates";
 
-export type CalendarView = "day" | "work_week" | "week" | "month";
-export const VIEWS: readonly CalendarView[] = ["day", "work_week", "week", "month"];
+export type CalendarView = "day" | "work_week" | "week" | "month" | "timeline";
+export const VIEWS: readonly CalendarView[] = ["day", "work_week", "week", "month", "timeline"];
 
 const KEY = "cockpit:schedule-view";
 /** What a person who has never chosen sees: the working days of the week, as a desktop calendar starts. */
@@ -71,7 +71,8 @@ export interface Range {
 
 /** The days a view shows around the day the person is looking at. */
 export function rangeOf(view: CalendarView, date: string, startsOn: number, workDays: readonly number[]): Range {
-  if (view === "day") return { first: date, days: 1, shown: [date] };
+  // The timeline has its own answer, which says its days.
+  if (view === "day" || view === "timeline") return { first: date, days: 1, shown: [date] };
   if (view === "month") {
     const first = startOfWeek(startOfMonth(date), startsOn);
     return { first, days: 42, shown: Array.from({ length: 42 }, (_, n) => addDays(first, n)) };

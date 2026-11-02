@@ -50,6 +50,23 @@ def _calendar_of(cfg: Any, team: Any) -> str:
     return str(tag or cfg.workspace.language or "")
 
 
+def holidays_off(cfg: Any, team: Any | None, start: date, end: date) -> list[tuple[date, str]]:
+    """The holidays from `start` to `end` (both included) that a team takes off, in day order, each with its name for a
+    reader; the workspace's own holidays when `team` is None."""
+    found: list[tuple[date, str]] = []
+    for year in range(start.year, end.year + 1):
+        for holiday in load_holidays(_calendar_of(cfg, team)):
+            if not holiday.off:
+                continue
+            try:
+                day = holiday_date(holiday, year)
+            except ValueError:
+                continue
+            if start <= day <= end:
+                found.append((day, holiday_label(holiday.names)))
+    return sorted(found)
+
+
 def team_non_working(view: Any, cfg: Any, team_id: str, start: date, end: date) -> list[tuple[date, str]]:
     """The days from `start` to `end` (both included) a team doesn't work, each with why. Empty for a team that isn't
     there."""
@@ -62,14 +79,8 @@ def team_non_working(view: Any, cfg: Any, team_id: str, start: date, end: date) 
         if start <= day <= end and reason not in found.setdefault(day, []):
             found[day].append(reason)
 
-    for year in range(start.year, end.year + 1):
-        for holiday in load_holidays(_calendar_of(cfg, team)):
-            if not holiday.off:
-                continue
-            try:
-                add(holiday_date(holiday, year), holiday_label(holiday.names))
-            except ValueError:
-                continue
+    for day, reason in holidays_off(cfg, team, start, end):
+        add(day, reason)
     own = team.data.get("working_days")
     if own:
         worked = {WEEKDAYS.index(d) for d in own}
@@ -95,7 +106,7 @@ def teams_of(view: Any, person_id: str) -> list[str]:
     return [t for t in found if view.get("team", t) is not None]
 
 
-def _kinds(view: Any, cfg: Any, person_id: str, start: date, end: date) -> list[tuple[date, str, str]]:
+def kinds(view: Any, cfg: Any, person_id: str, start: date, end: date) -> list[tuple[date, str, str]]:
     """(day, whose, reason) for each reason a person is off from `start` to `end`: `whose` is "team" for a team's day
     off and "own" for the person's own away period."""
     person = view.get("person", person_id)
@@ -116,7 +127,7 @@ def non_working(view: Any, cfg: Any, person_id: str, start: date, end: date) -> 
     """The days from `start` to `end` (both included) a person doesn't work: their teams' days off and their own away
     periods, each day once with its reasons. Empty for someone who isn't there."""
     found: dict[date, list[str]] = {}
-    for day, _, reason in _kinds(view, cfg, person_id, start, end):
+    for day, _, reason in kinds(view, cfg, person_id, start, end):
         if reason not in found.setdefault(day, []):
             found[day].append(reason)
     return [(day, ", ".join(found[day])) for day in sorted(found)]
@@ -125,7 +136,7 @@ def non_working(view: Any, cfg: Any, person_id: str, start: date, end: date) -> 
 def off_on(view: Any, cfg: Any, person_id: str, day: date, name: str) -> str | None:
     """Words saying why a person is off on a day ("Sam's team is off on Thu 11/26 (Thanksgiving)", "Sam is away on Thu
     11/26 (vacation)"), or None when they work that day. `name` is how the person is named in the words."""
-    found = _kinds(view, cfg, person_id, day, day)
+    found = kinds(view, cfg, person_id, day, day)
     if not found:
         return None
     when = f"{day.strftime('%a')} {day.month}/{day.day}"

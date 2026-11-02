@@ -42,6 +42,6 @@ test("the page no longer carries a sentence about keys", async () => {
 test("the shortcuts list holds the Schedule's keys", () => {
   render(<ShortcutHelp open onClose={() => undefined} keys={{}} />);
   const dialog = screen.getByRole("dialog");
-  expect(within(dialog).getByText(/Pick Day, Work week, Week or Month/)).toBeInTheDocument();
-  expect(within(dialog).getByText(/Move to the previous or next day, week or month/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Pick Day, Work week, Week, Month or Timeline/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Move to the previous or next day, week, month or range/)).toBeInTheDocument();
 });

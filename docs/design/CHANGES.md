@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 299. The Schedule's Timeline: one lane per project, shapes by kind, days off hatched; an empty week says so (2026-11-02; P111, P112 item 1, X45)
+
+| Where | Before | Now |
+|---|---|---|
+| Schedule views (7.7) | Day, Work week, Week and Month: what is on a day | A fifth, **Timeline**: one lane per project with something in the range, circles (calendar entries), squares (to-dos and promises with a day, overdue with the warning icon and the word), diamonds (target days and dated facts), bars (several days), a today line, 2 weeks / 10 weeks / a quarter. **Built** (`tests/test_timeline.py`, `web/src/components/ScheduleTimeline.test.tsx`, `web/e2e/timeline.spec.ts` written, runs in the full run) |
+| Days off (5.1, 7.7) | Read for due dates and the assistant's packets only | A team's days off hatched only on the lanes of projects whose owner is on that team, a person's away on the lanes they own, the workspace's holidays and rest days on every lane. **Built** (`tests/test_timeline.py::test_the_workspace_s_rest_days_and_holidays_are_shared_and_a_team_s_and_a_person_s_days_only_on_their_lanes`) |
+| Narrow windows (7.7) | | Below ten pixels a day the Timeline is a list by week; nothing scrolls sideways. **Built** (`ScheduleTimeline.test.tsx::in a window too narrow for the weeks the same items are a list by week…`) |
+| Settings (4.0) | | `ui.schedule.timeline_range` (ten_weeks), demo values in both workspaces; the person's own pick is remembered on their browser |
+| API | | `GET /api/schedule/timeline?from=&range=` (`engine/timeline.py`); `engine/days_off.py` gains `holidays_off` and a public `kinds` |
+| Schedule wording (7.7, X45) | The app's own entries said "From your notes"; an empty week had no hint | "Added by you"; "Nothing on the calendar in these days" with a pointer to Add to schedule. **Built** (`ScheduleViews.test.tsx`) |
+| Not built | | The plugin extension point for bands and markers (phases, sprints, milestones), which the project pack adds in phase C; dragging; zoom |
+
 ## 298. The follow-up line says what is due and when; a "due soon" band on Follow-ups (2026-11-02; P112 items 5 and 6)
 
 | Where | Before | Now |
