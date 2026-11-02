@@ -55,6 +55,26 @@ Known selectors that work (from earlier walks; the UI may have changed slightly)
   appearance|links|business|lists|connections|addons|files|advanced> #settings/addon/<name> #settings/ai-compare #handover
   #quality #setup; record pages are #records/<kind>/<id> (open them by clicking, don't guess ids).
 
+## The product's facts (judge every screen against them)
+- **The product is Thimbleby.** The assistant's default name is Reginald, and the person can rename it. **Any "Cockpit" or "PM Cockpit"** on a screen, in the window title, in a created folder, an email subject or a file name is a finding (`lib.mjs` flags it automatically).
+- **The website's three promises:**
+  1. Your data stays on your computer.
+  2. It goes only where you send it.
+  3. Nothing goes to us.
+
+  Wording that speaks as a company ("we copy", "we found in your mail", "us") breaks promise 3 and is a finding. The app or the assistant is the one acting.
+- **Before judging, read the newest entries in `docs/decisions.md`** (the top 15). A screen that contradicts a recorded decision is a finding.
+- **Judge with worst-case content, not tidy test data.** The fake's one-answer script (`POST FAKE/__e2e/script` with `{"when": "<words in the request>", "answer": <the JSON the AI returns>}`) makes the next matching AI request return what you choose. Use it to produce:
+  - a promise or to-do title of two or more lines, with a case number and a full postal address
+  - a quote cut off mid-sentence
+  - non-English text
+  - emoji
+  - 40 or more items
+
+  Then judge every screen that shows them. Copy a real answer's shape from `FAKE/__e2e/ai-requests` first.
+- **Owner-path parity:** a real install has cloud drives, several accounts, messy mail, and folders left from earlier versions. Where your area touches one of these, make it present (see your area's notes) or list it as a gap.
+- **Counts must match what's shown** ("Step 6 of 7" beside eight entries, "3 mistakes" over two rows).
+
 ## How to judge (the owner's standards)
 - A beginner who reads every word literally. Would they know what this screen is for, what to do next, and how to get back?
   Does anything dead-end, appear twice, have two names, or need hunting for?

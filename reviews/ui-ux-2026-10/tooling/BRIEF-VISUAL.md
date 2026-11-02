@@ -32,6 +32,19 @@ Score 1–5 (5 = as good as the best modern apps) on:
 6. Colour & contrast (restrained, purposeful accent, readable in day AND night)
 7. Empty & edge states (designed, helpful, not headings over nothing)
 8. Phone (390 wide: works and looks intentional, not squeezed)
+9. Brand (scored separately; not in the 8-point average): does it look like the product on its website?
+   - the mark, the palette, and the serif for titles
+   - whether a state colour could be mistaken for the brand
+   - whether the old name shows anywhere
+
+   Reference: `reviews/ui-ux-2026-10/sweep-04ffc21e/visual/PATH-TO-4.6.md` section 4b and `.../visual/brand-reference/`.
+
+For each screen, also give **the stage it reaches:**
+- A: 3.5 or more, no point under 3
+- B: 4.0 or more, no point under 3.5, brand 4.0 or more
+- C: 4.6 or more, no point under 4.3, brand 4.5 or more
+
+Also give **the VP items (PATH-TO-4.6 section 4) that stand between it and the next stage.**
 Then list the concrete visual problems on that screen (what, where, which screenshot file), and the fix (what it should
 look like, and which shared component or token it belongs to).
 
