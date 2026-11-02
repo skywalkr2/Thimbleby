@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from engine.language_words import language_words
-from engine.mail_kinds import kind_of_input
+from engine.mail_kinds import is_tracked, kind_of_input
 from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
 from engine.records import FiledBy, referrers
 from engine.storage import StoreError, WriteContext
@@ -615,12 +615,14 @@ def file_by_people(
     raw_input: str | None = None,
     settled: str | None = None,
     source: str | None = None,
+    mail_kind: str | None = None,
 ) -> list[Any]:
     """The ops with every new action, question, fact or note that names no project filed under a project, each keeping
     why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to two
     or more sides decides nothing and the next is read:
     00. the project the person settled for the hand-in (the request's own project), when it has one;
-    0. mail the rules know as a bill, an order or a delivery (`engine/mail_kinds.py`): the personal project, whoever
+    0. mail the assistant's sorting named a bill, an order or a delivery (`mail_kind`, from `engine/mail_sorting.py`;
+       with no sorting run for it, the word lists of `engine/mail_kinds.py` stand in): the personal project, whoever
        sent it, unless the person has another side and the sender's relation is to it (`_sender_relation`: a known
        person on that side, or an organization whose people are all on it), which files it under that side;
     1. the people the op names and the input's sender, when known: the side every deciding person is on (those on
@@ -647,7 +649,11 @@ def file_by_people(
     by_domain = domain_side(view, people, cfg, domain) if domain else None
     served, served_name = source_sides(view, cfg, source) if others else ([], "")
     only_personal = not others and personal is not None and _only_top(view, personal)
-    kind = kind_of_input(cfg.watch.mail_kinds, raw_input)
+    # The kind the assistant's sorting gave the mail decides ("none" included). Only when no sorting gave one (sorting
+    # is off, or its run could not be made) do the word lists stand in for it.
+    kind = (
+        (mail_kind if is_tracked(mail_kind) else None) if mail_kind else kind_of_input(cfg.watch.mail_kinds, raw_input)
+    )
     out: list[Any] = []
     for op in ops:
         if not isinstance(op, (ActionAddOp, QuestionAddOp, FactOp, NoteOp)) or op.project:

@@ -483,7 +483,9 @@ def _compare(
         if handed and closed is None and not kept and before is None and item.message is not None:
             unplaced[item.key] = facts
         entries.append(_Entry(item, digest, before, details, change, old, closed, handed, replaces, personal))
-    marks, personal_keys, result.note, unsorted_keys = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+    marks, personal_keys, result.note, unsorted_keys, kinds = _assistant_sorted(
+        ws, store, cfg, source, router, unplaced
+    )
     home = _personal_home(store, cfg)
     for entry in entries:
         item, before, closed = entry.item, entry.before, entry.closed or marks.get(entry.item.key)
@@ -511,6 +513,8 @@ def _compare(
             filed = {"project": home} if home and (entry.personal or item.key in personal_keys) else None
             if item.key in unsorted_keys and not closed:
                 filed = {**(filed or {}), "sort_pending": True}
+            if item.key in kinds:
+                filed = {**(filed or {}), "mail_kind": kinds[item.key]}
             request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed, extra=filed)
         (result.new if entry.change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
@@ -535,23 +539,23 @@ def _compare(
 
 def _assistant_sorted(
     ws: Any, store: Any, cfg: Any, source: Any, router: Any, unplaced: dict[str, dict[str, Any]], go: bool = False
-) -> tuple[dict[str, dict[str, str]], set[str], str | None, set[str]]:
+) -> tuple[dict[str, dict[str, str]], set[str], str | None, set[str], dict[str, str]]:
     """The assistant's sorting (design 6.5, step 3) of the mail the rules couldn't place, as {item key: facts}: one
     run per batch of headers, never the text. Returns, by item key, the set-aside match of each message it set aside,
     the keys it answered personal (handed in and filed under the Personal project, never set aside), a note when
-    some mail wasn't sorted by it, and the keys of the mail the run couldn't be made for (handed in, waiting for the
-    sorting before any other run)."""
+    some mail wasn't sorted by it, the keys of the mail the run couldn't be made for (handed in, waiting for the
+    sorting before any other run), and the kind the run gave each message it answered (kept on its request)."""
     from engine import mail_sorting
     from engine.set_aside import SECTION_WORDS
 
     if cfg.watch.sorting != "ai" or not unplaced:
-        return {}, set(), None, set()
+        return {}, set(), None, set(), {}
     sorted_ = mail_sorting.sort(
         ws,
         store,
         cfg,
         router,
-        [mail_sorting.header_of(key, facts) for key, facts in unplaced.items()],
+        [mail_sorting.header_of(key, facts, cfg.watch.mail_kinds) for key, facts in unplaced.items()],
         data_level_of(cfg, source),
         go,
     )
@@ -564,7 +568,7 @@ def _assistant_sorted(
         }
         for key, section in sorted_.sections.items()
     }
-    return marks, sorted_.personal, sorted_.note, sorted_.unsorted
+    return marks, sorted_.personal, sorted_.note, sorted_.unsorted, sorted_.kinds
 
 
 def _personal_home(store: Any, cfg: Any) -> str | None:
@@ -647,7 +651,7 @@ def first_go_sorting(
     sources = {s.id: s for s in cfg.watch.sources}
     runs, total, unpriced = 0, 0.0, 0
     for source_id, items in found.items():
-        headers = [mail_sorting.header_of(item.key, facts) for _, _, item, facts in items]
+        headers = [mail_sorting.header_of(item.key, facts, cfg.watch.mail_kinds) for _, _, item, facts in items]
         priced, missing = mail_sorting.estimate(ws, cfg, router, headers, data_level_of(cfg, sources[source_id]))
         batches = -(-len(headers) // cfg.watch.sorting_batch)
         runs += batches
@@ -680,7 +684,7 @@ def sort_before_first_go(
     set_aside = 0
     still_waiting: set[str] = set()
     for source_id, found in waiting.items():
-        marks, personal_keys, _note, unsorted = _assistant_sorted(
+        marks, personal_keys, _note, unsorted, kinds = _assistant_sorted(
             ws, store, cfg, sources[source_id], router, {item.key: facts for _, _, item, facts in found}, go=go
         )
         home = _personal_home(store, cfg)
@@ -691,8 +695,8 @@ def sort_before_first_go(
             mark = marks.get(item.key)
             if mark is None:
                 personal = home if home and item.key in personal_keys else None
-                if personal or req.data.get("sort_pending"):
-                    _file_under(store, req.id, personal)
+                if personal or req.data.get("sort_pending") or item.key in kinds:
+                    _file_under(store, req.id, personal, kinds.get(item.key))
                 continue
             try:
                 with store.transaction() as tx:
@@ -727,10 +731,10 @@ def sort_before_first_go(
     return set_aside
 
 
-def _file_under(store: Any, request_id: str, project: str | None) -> None:
+def _file_under(store: Any, request_id: str, project: str | None, kind: str | None = None) -> None:
     """The sorting answered for a request it isn't setting aside: file it under this project when it names none, as
-    the sorting's personal answer does for mail handed in before the first go, and clear its `sort_pending` mark.
-    A request that changed meanwhile is left as it is."""
+    the sorting's personal answer does for mail handed in before the first go, keep the kind the sorting gave it
+    (`mail_kind`), and clear its `sort_pending` mark. A request that changed meanwhile is left as it is."""
     try:
         with store.transaction() as tx:
             current = tx.get("request", request_id)
@@ -741,6 +745,8 @@ def _file_under(store: Any, request_id: str, project: str | None) -> None:
                 changes["project"] = project
             if current.data.get("sort_pending"):
                 changes["sort_pending"] = False
+            if kind is not None and current.data.get("mail_kind") != kind:
+                changes["mail_kind"] = kind
             if changes:
                 tx.update("request", current.id, changes, _SORTER, read_version=current.version)
     except StoreError:
@@ -1267,8 +1273,8 @@ def _hand_in_window(
         if closed is None and not kept and item.message is not None:
             unplaced[item.key] = facts
         pending.append((snap, item, closed, personal))
-    marks, personal_keys, _note, unsorted_keys = (
-        _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, set(), None, set())
+    marks, personal_keys, _note, unsorted_keys, kinds = (
+        _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, set(), None, set(), {})
     )
     home = _personal_home(store, cfg)
     made = []
@@ -1277,6 +1283,8 @@ def _hand_in_window(
         filed = {"project": home} if home and (by_rule or item.key in personal_keys) else None
         if item.key in unsorted_keys and closed is None and not sorted_aside:
             filed = {**(filed or {}), "sort_pending": True}
+        if item.key in kinds and closed is None and not sorted_aside:
+            filed = {**(filed or {}), "mail_kind": kinds[item.key]}
         with store.transaction() as tx:
             if sorted_aside:
                 tx.update(

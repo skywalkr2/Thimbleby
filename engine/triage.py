@@ -253,7 +253,10 @@ def classify_placed(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[
         if reason:
             return {"rule": "Automated notices", "reason": reason, "section": "notices"}, kept, False
     if kind_of_change(cfg.watch.mail_kinds, change):
-        return None, True, False  # a bill, an order or a delivery is never set aside, and no sorting may set it aside
+        # The words only hint that this is a bill, an order or a delivery. With the assistant's sorting on, the mail
+        # goes to that run unplaced (no later rule sets it aside) and the run's kind decides; mail the run says is of a
+        # kind is never set aside. With no sorting to ask, the words stand in and keep the mail with the assistant.
+        return None, cfg.watch.sorting != "ai", False
     if not cfg.watch.set_aside_defaults:
         return None, kept, False
     if cfg.watch.set_aside_defaults and auto.set_aside:

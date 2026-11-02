@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 290. The assistant's sorting says what kind of mail it is; the word lists only hint (2026-11-02; P110 J13)
+
+| Where | Before | Now |
+|---|---|---|
+| Sorting (6.5, `engine/mail_sorting.py`, `engine/triage.py`) | The word lists of `watch.mail_kinds` decided a message was a bill, an order or a delivery: it was never set aside and never sent to the assistant's sorting | **Built** (`tests/test_mail_sorting.py`, `tests/test_mail_kinds.py`): the sorting run answers a `kind` (bill, order, delivery or none) for each header, kept on the request as `mail_kind`; the words are a hint beside the header ("words suggest: bill"). Mail the run gives a kind is never set aside; a word-list match goes to the run unplaced. With sorting off or the run not made, the words stand in as before |
+| Filing (6.32, `engine/sides.py`) | Filed under Personal by the word list's kind | **Built** (`tests/test_mail_kinds.py`): by the run's kind when it gave one (none included); the word list only when no sorting gave one |
+| Facts from notices (6.7, `engine/applier.py`) | A fact from an input whose words looked like an automated notice was refused; the dated-fact scan skipped it | **Built** (`tests/test_personal_page.py`, `tests/test_dated_scan.py`): the judgment lint `fact-from-notice` (default `return`, put once, the answer stands) asks the assistant; the scan skips only mail the sorting or the person said is a notice |
+| Settings (4.17) | | One lint severity, `fact-from-notice`, in `checks.lints` and both demo workspaces' `checks.yaml`; the descriptions of `watch.mail_kinds.enabled` and `watch.sorting` say the words only hint |
+
 ## 289. A calendar entry that overlaps a promise's words is proposed to it, never linked by a rule (2026-11-02; P110 J8)
 
 | Where | Before | Now |
@@ -1034,6 +1043,7 @@ yet follow, that it is *designed*, with its phase.
 | Plain calendar entries (6.2, 6.32, `engine/entry_rules.py`) | A plain entry whose title and an open promise's words contained one another on the promise's day set the promise's `due_event`, so its date moved with the entry and it was told the entry was called off, with no confirmation | **Built** (`tests/test_plain_calendar_entries.py`): the overlap writes `Action.proposed_event` only; nothing follows a proposal. People named in a title are still linked (`people`, a guest hint) |
 | Today and the to-do's page (7.7, `engine/entry_ties.py`, `api/tie_routes.py`) | | **Built** (`tests/test_plain_calendar_entries.py`, `web/src/components/TodayTie.test.tsx`): the line `tie`, "Tie <to-do> to <entry> on <day>?", and the same line on the to-do's page (`RecordPageView.tie`). Tie it (`POST /api/actions/{id}/tie`) is the person's own edit with Undo; Not this (`POST /api/actions/{id}/not-this`) is a `suggestion_dismissed` signal that keeps the pair from being proposed again, and its undo is the not-now undo |
 | Following an entry (6.32, `follow_event`) | Followed every `due_event`, made by a rule or not | Follows only a tie: the person's, or the assistant's own `action.add` at an entry (`tests/test_promises.py`, `tests/test_plain_calendar_entries.py`) |
+
 
 ## 288. An ending's words and a "no need to reply" phrase are put to the assistant, never acted on by a rule (2026-11-02; P110 J5, J7)
 

@@ -7,6 +7,12 @@ personal, sales or notice for each id; an answer that is missing or isn't one of
 nothing is hidden on a guess. Only sales and notice answers set mail aside: personal mail is handed in like work and
 filed under the Personal project.
 
+It also answers a kind for each message: bill, order, delivery or none. The kind is the run's to decide; the word lists
+of `watch.mail_kinds` only put a hint beside a header ("words suggest: bill"). Mail of a kind is tracked for the person
+and never set aside, whatever else the run answered. The kind is returned with the answers, so the caller can keep it
+on the request (`mail_kind`) for the steps after the sorting (filing under Personal, the check on a fact from an
+automated notice).
+
 The run goes through the same estimate, configured amount, budgets and escalation rule as any other. When it can't
 run (no account for its tier, a budget used up, the person's go not given, an account paused or failing), or its answer
 fails the checks even on the stronger tier, the mail is handed in and the reason is returned for the person.
@@ -20,9 +26,10 @@ import json
 import os
 import re
 from dataclasses import dataclass, field, replace
-from typing import Any
+from typing import Any, NamedTuple
 
 from engine.ai.task import AiError, AiTask
+from engine.mail_kinds import HINT_NAME, TRACKED
 from engine.money import usd
 from engine.playbook import practice
 from engine.prompts import render
@@ -30,6 +37,8 @@ from engine.tasks import settings, task_kind
 
 KIND = "sort-mail"
 ANSWERS = ("work", "personal", "sales", "notice")
+#: The kinds of mail a run may name, besides none.
+KINDS = (*TRACKED, "none")
 #: The section each answer that sets mail aside puts it in. A personal answer sets nothing aside.
 SECTION_OF = {"sales": "sales", "notice": "notices"}
 #: The rule name shown for mail the assistant sorted.
@@ -39,7 +48,7 @@ HEADER_CHARS = 200
 CATEGORY_CHARS = 40
 MAX_CATEGORIES = 8
 #: A line of the answer about one message takes about this many tokens.
-OUTPUT_TOKENS_PER_MESSAGE = 14
+OUTPUT_TOKENS_PER_MESSAGE = 20
 #: What a failing answer is sent back with.
 FIX = "Your previous answer had problems: {problems}. Answer again with only the JSON object."
 SCHEMA: dict[str, Any] = {
@@ -49,7 +58,11 @@ SCHEMA: dict[str, Any] = {
             "type": "array",
             "items": {
                 "type": "object",
-                "properties": {"id": {"type": "string"}, "answer": {"type": "string", "enum": list(ANSWERS)}},
+                "properties": {
+                    "id": {"type": "string"},
+                    "answer": {"type": "string", "enum": list(ANSWERS)},
+                    "kind": {"type": "string", "enum": list(KINDS)},
+                },
                 "required": ["id", "answer"],
             },
         }
@@ -66,6 +79,14 @@ class Header:
     sender: str
     subject: str
     categories: tuple[str, ...] = ()
+    hint: str | None = None  # what the word lists suggest the kind is (bill, order or delivery); the run decides
+
+
+class Answer(NamedTuple):
+    """A run's answer for one message: work, personal, sales or notice, and the kind (bill, order, delivery or none)."""
+
+    answer: str
+    kind: str = "none"
 
 
 @dataclass
@@ -73,17 +94,19 @@ class Sorted:
     """What sorting a read's unplaced mail came to: the messages the assistant set aside by key (to sales or
     notices), the keys it answered personal (handed in, filed under the Personal project), and, when some mail wasn't
     sorted by the assistant, why, in plain words. `unsorted` holds the keys of the mail the run could not be made for
-    (so it still needs sorting), as against mail whose answer failed its checks, which is handed in as work."""
+    (so it still needs sorting), as against mail whose answer failed its checks, which is handed in as work. `kinds` is
+    the kind the run gave each message it answered (bill, order, delivery or none)."""
 
     sections: dict[str, str] = field(default_factory=dict)
     personal: set[str] = field(default_factory=set)
+    kinds: dict[str, str] = field(default_factory=dict)
     note: str | None = None
     unsorted: set[str] = field(default_factory=set)
 
 
 @dataclass
 class _Try:
-    answers: dict[str, str] | None = None  # id to answer, when the answer passed its checks
+    answers: dict[str, Answer] | None = None  # id to answer, when the answer passed its checks
     why: str | None = None
     stop: bool = False  # the reason holds for every batch of this read, so none is tried
     # The run couldn't be made because of the AI accounts (paused, out of credit, none for the tier, a budget used
@@ -96,11 +119,17 @@ def _clip(text: Any, limit: int = HEADER_CHARS) -> str:
     return " ".join(str(text or "").split())[:limit]
 
 
-def header_of(key: str, change: dict[str, Any]) -> Header:
-    """The headers of a watched mail change, as its triage facts hold them."""
+def header_of(key: str, change: dict[str, Any], kinds: Any = None) -> Header:
+    """The headers of a watched mail change, as its triage facts hold them. `kinds` is `watch.mail_kinds`: with it, the
+    header carries what its words suggest the kind is."""
+    from engine.mail_kinds import hint_of_change
+
     message = change.get("message") or {}
     categories = tuple(_clip(c, CATEGORY_CHARS) for c in (message.get("categories") or [])[:MAX_CATEGORIES])
-    return Header(key, _clip(message.get("sender") or change.get("author")), _clip(change.get("title")), categories)
+    hint = hint_of_change(kinds, change) if kinds is not None else None
+    return Header(
+        key, _clip(message.get("sender") or change.get("author")), _clip(change.get("title")), categories, hint
+    )
 
 
 def build_task(ws: Any, cfg: Any, headers: list[Header]) -> tuple[AiTask, dict[str, str]]:
@@ -111,7 +140,13 @@ def build_task(ws: Any, cfg: Any, headers: list[Header]) -> tuple[AiTask, dict[s
     ids = {f"m{n}": header.key for n, header in enumerate(headers, 1)}
     lines = [
         json.dumps(
-            {"id": name, "from": header.sender, "subject": header.subject, "categories": list(header.categories)},
+            {
+                "id": name,
+                "from": header.sender,
+                "subject": header.subject,
+                "categories": list(header.categories),
+                **({"hint": f"words suggest: {header.hint}"} if header.hint else {}),
+            },
             ensure_ascii=False,
         )
         .replace("<", "\\u003c")
@@ -131,10 +166,11 @@ def build_task(ws: Any, cfg: Any, headers: list[Header]) -> tuple[AiTask, dict[s
     return task, ids
 
 
-def read_answers(text: str, ids: set[str], truncated: bool = False) -> tuple[dict[str, str], list[str]]:
+def read_answers(text: str, ids: set[str], truncated: bool = False) -> tuple[dict[str, Answer], list[str]]:
     """The answer per message id from a run's text, and what is wrong with it. The check refuses an answer that can't
     be read, one that was cut off, an id that isn't in the batch and an id answered twice. A message left out, or
-    answered with another word than work, personal, sales or notice, is not a problem: it counts as work."""
+    answered with another word than work, personal, sales or notice, is not a problem: it counts as work. A kind that
+    is missing or isn't bill, order or delivery counts as none."""
     body = text.strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", body, re.S)
     if fence:
@@ -149,7 +185,7 @@ def read_answers(text: str, ids: set[str], truncated: bool = False) -> tuple[dic
     rows = data.get("answers") if isinstance(data, dict) else None
     if not isinstance(rows, list):
         return {}, ['the answer is not a JSON object with an "answers" list']
-    found: dict[str, str] = {}
+    found: dict[str, Answer] = {}
     problems: list[str] = []
     for row in rows:
         name = row.get("id") if isinstance(row, dict) else None
@@ -161,7 +197,9 @@ def read_answers(text: str, ids: set[str], truncated: bool = False) -> tuple[dic
             problems.append(f"{name} is answered twice")
         else:
             word = str(row.get("answer", "")).strip().lower()
-            found[name] = word if word in ANSWERS else "work"
+            kind = str(row.get("kind", "")).strip().lower()
+            kind = HINT_NAME.get(kind, kind)  # the word lists' own name for a delivery is accepted too
+            found[name] = Answer(word if word in ANSWERS else "work", kind if kind in TRACKED else "none")
     return found, problems[:5]
 
 
@@ -195,12 +233,14 @@ def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], leve
             if tried.stop and tried.on_accounts:
                 out.unsorted.update(h.key for h in batch)
             continue
-        for name, answer in tried.answers.items():
+        for name, said in tried.answers.items():
             key = batch[int(name[1:]) - 1].key
-            if answer == "personal":
+            out.kinds[key] = said.kind
+            if said.answer == "personal":
                 out.personal.add(key)
-            elif answer != "work":
-                out.sections[key] = SECTION_OF[answer]
+            elif said.answer != "work" and said.kind not in TRACKED:
+                # A bill, an order or a delivery is tracked for the person and never set aside, whatever else was said.
+                out.sections[key] = SECTION_OF[said.answer]
     if unsorted:
         out.note = _note(unsorted, why)
     return out

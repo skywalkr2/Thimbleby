@@ -4,6 +4,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The assistant's sorting says what kind of mail it is; the word lists only hint (P110, J13)
+
+**Decided:** The low-cost sorting run (headers only) also answers a `kind` for each message: bill, order, delivery or none,
+kept on the request as `mail_kind`. The word lists (`watch.mail_kinds`, `automated_mail.words`) no longer decide: they put
+"words suggest: bill" beside the header, and a message they recognize goes to the run unplaced instead of being kept from it.
+Mail the run gives a kind is never set aside; filing under Personal follows the run's kind; the dated-fact scan is skipped
+only for mail the sorting or the person said is a notice. A fact from an input that looks like an automated notice is no
+longer refused: the judgment lint `fact-from-notice` (default `return`, in `JUDGMENT_LINTS`) puts "This came from an
+automated notice ('<sender>'): keep the fact only if it is something the person needs to know." once, and the answer stands.
+J12 is kept: bulk and list headers and the service's promotions and social tabs still set mail aside before any run, except
+that mail the words hint is a bill, an order or a delivery goes to the run first. With `watch.sorting: rules`, or when the run
+could not be made, the words stand in as before.
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's); the audit's row J13.
+
+**Why:** A word list decided that a message was a bill (or a notice) before the assistant, which sees the sender and subject
+together with what it has learned, could say; a promotion that said "order" kept itself out of sorting, and a real notice with
+a useful date had its facts refused.
+
+**Impact:** design 4.6, 6.5, 6.7, 6.32 and 7; `engine/mail_sorting.py`, `engine/prompts/sort-mail.md`, `engine/triage.py`,
+`engine/watch.py`, `engine/sides.py`, `engine/applier.py`, `engine/handled.py`, the request record's `mail_kind` (optional,
+none for earlier requests, which fall back to the words), the lint's default and both demo workspaces' `checks.yaml`, and the
+descriptions of two settings. The sorting's output estimate grows from 14 to 20 tokens a message. No new setting beyond the
+lint severity; no change to scope. Change log: section 290.
+
 ## 2026-11-02: A calendar entry whose words overlap a promise's is only proposed to it; the person ties it (P110, J8)
 
 **Decided:** A plain calendar entry that names an open promise's words (or the reverse) on the promise's day no longer
@@ -29,6 +54,7 @@ thing. A function may narrow what the person looks at, never decide for them.
 plugin guide. No new setting; no change to scope. Not built: the assistant tying a proposal in the run that reads the
 calendar change (it can still tie by its own `action.add` with `due_at_event`); the proposals are not yet in a run's
 packet. Change log: section 289.
+
 
 ## 2026-11-02: An ending's words and a "no need to reply" phrase are put to the assistant, never acted on by a rule (P110, J5, J7)
 

@@ -270,6 +270,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
     if ctx.actor != "pm" and not ctx.confirmed_by_pm:
         req = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
         settled = req.data.get("project") if req is not None else None
+        sorted_kind = req.data.get("mail_kind") if req is not None else None
         ops = sides.file_by_people(
             ops,
             view,
@@ -279,6 +280,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
             ctx.inputs.raw_input,
             settled=settled,
             source=ctx.inputs.source,
+            mail_kind=sorted_kind,
         )
     else:
         # Only the filing above says why an item was filed; a reason arriving any other way is not kept.
@@ -444,6 +446,15 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             problems.append(Problem("stage-confirm", "hold", i, "; ".join(messages)))
         if isinstance(op, FactOp) and (why := _fact_problem(op, ctx)) is not None:
             refuse(i, "targets", why)
+        if isinstance(op, FactOp) and (sender := _notice_sender(ctx)) is not None:
+            # The words of a code or security notice only hint that nothing here is worth keeping: the assistant is
+            # asked once and its answer stands (design 6.33).
+            lint(
+                i,
+                "fact-from-notice",
+                f"This came from an automated notice ('{sender}'): keep the fact only if it is something the person "
+                "needs to know.",
+            )
         if isinstance(op, FactOp) and op.about and (why := _about_problem(op.about, ctx, view)) is not None:
             refuse(i, "targets", why)
         # evidence
@@ -1053,13 +1064,6 @@ DATE_OR_OWNER_FIELDS = frozenset({"due", "target", "owner", "owners"})
 
 def _fact_problem(op: FactOp, ctx: Context) -> str | None:
     """Why a fact's `basis`, `said_by` and `reaches_children` don't fit with the rest, or None."""
-    if ctx.actor != "pm" and not ctx.confirmed_by_pm:
-        from engine.mail_kinds import automated_notice_input
-
-        if automated_notice_input(ctx.cfg, ctx.inputs.raw_input):
-            return (
-                "the input is an automated notice (a code, a sign-in or a security alert), which never becomes a fact"
-            )
     if op.reaches_children and not op.project:
         return "a fact that reaches the projects inside one needs the project it is about"
     if (op.on is None) != (op.on_kind is None):
@@ -1076,6 +1080,28 @@ def _fact_problem(op: FactOp, ctx: Context) -> str | None:
     if ctx.people.resolve(op.said_by).status != "ok":
         return f"{op.said_by} isn't one known person, so the fact can't be said by them"
     return None
+
+
+def _request_data(ctx: Context) -> dict[str, Any]:
+    """The data of the request this changeset answers, or an empty dict (a note, an upload, a person's own words)."""
+    found = ctx.store.read().get("request", ctx.inputs.request) if ctx.inputs.request else None
+    return found.data if found is not None else {}
+
+
+def _notice_sender(ctx: Context) -> str | None:
+    """The sender of the input when its words look like an automated notice and the assistant's own sorting didn't call
+    it a bill, an order or a delivery, or None. A hint only: it is put to the assistant as a lint, never a refusal."""
+    if ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return None
+    from engine.mail_kinds import automated_notice_sender
+
+    return automated_notice_sender(ctx.cfg, ctx.inputs.raw_input, _request_data(ctx).get("mail_kind"))
+
+
+def _said_notice(ctx: Context) -> bool:
+    """Whether the assistant's sorting or the person said this input's mail is an automated notice: it sits in the
+    Automated notices section. The words of a code or a sign-in alone say nothing here."""
+    return ((_request_data(ctx).get("set_aside") or {}).get("section")) == "notices"
 
 
 def _states_without_year(ctx: Context, fact: FactOp) -> bool:
@@ -2288,7 +2314,9 @@ WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
 #: Lints that ask the assistant to decide something only it can (is this the same promise, which reading is right). They
 #: are put once: whatever the assistant answers on the return round stands, and never costs another round or a stronger
 #: tier.
-JUDGMENT_LINTS = frozenset({"near-duplicate-promise", "due-reading-differs", "ending-reading", "reply-not-needed"})
+JUDGMENT_LINTS = frozenset(
+    {"near-duplicate-promise", "due-reading-differs", "ending-reading", "reply-not-needed", "fact-from-notice"}
+)
 #: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
 OWNER_WORDING_LINTS = frozenset({"action-stands-alone", "reasoning-in-title"})
 #: Lints that hold a to-do after the return round when someone else owns it; on one the person owns they only warn.
@@ -4101,14 +4129,14 @@ def _asker(ctx: Context, name: str | None, to: str) -> str | None:
 
 def _found_dates(ctx: Context, view: Any, ops: list[OpModel]) -> list[OpModel]:
     """The dated facts the rules find in an input the assistant read, for the dates its answer lacks
-    (`engine/dated_scan.py`): only for the extraction of an input that isn't the person's own words, never for an
-    automated notice. Each carries the group that holds it for the person's yes."""
+    (`engine/dated_scan.py`): only for the extraction of an input that isn't the person's own words, never for mail the
+    assistant's sorting or the person said is an automated notice. Each carries the group that holds it for the
+    person's yes."""
     if origin_of(ctx).get("task") != "notes" or _persons_own(view, ctx) or not ctx.inputs.raw_input.strip():
         return []
-    from engine.mail_kinds import automated_notice_input
     from engine.reply_split import split_message
 
-    if automated_notice_input(ctx.cfg, ctx.inputs.raw_input):
+    if _said_notice(ctx):
         return []
     head = reply_lines.leading_headers(ctx.inputs.raw_input)
     text = split_message(head[1] if head else ctx.inputs.raw_input).new

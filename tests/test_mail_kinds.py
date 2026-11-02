@@ -144,6 +144,32 @@ def test_the_same_words_in_a_note_or_in_other_mail_file_nothing_by_kind(env):
     assert filed(env, raw("colleague@work.example.com", "Lunch is moved")).filed_by is None
 
 
+def filed_with_kind(env, text, mail_kind):
+    _, cfg, store = env
+    got = sides.file_by_people(
+        [new_op(text="Pay it")], store.read(), cfg, People(store, cfg), None, text, mail_kind=mail_kind
+    )
+    return got[0]
+
+
+@pytest.mark.parametrize("kind", ["bill", "order", "delivery"])
+def test_filing_follows_the_kind_the_sorting_run_gave_even_when_no_word_says_so(env, kind):
+    _, cfg, _ = env
+    got = filed_with_kind(env, raw("someone@club.example.com", "Hello there"), kind)
+    assert got.project == cfg.workspace.project.personal and got.filed_by.by == "word"
+
+
+def test_a_kind_of_none_from_the_sorting_run_beats_the_words_of_the_subject(env):
+    got = filed_with_kind(env, raw(POWER, "Your statement is ready"), "none")
+    assert got.filed_by is None, "the run looked and found no kind: the word list doesn't stand in"
+
+
+def test_with_no_sorting_kind_the_word_list_stands_in(env):
+    _, cfg, _ = env
+    got = filed_with_kind(env, raw(POWER, "Your statement is ready"), None)
+    assert got.project == cfg.workspace.project.personal and got.filed_by.by == "word"
+
+
 # ---- the set-aside row -------------------------------------------------------------------------------------------
 
 

@@ -274,14 +274,19 @@ sales, when it comes from an automated sender (the same `senders`, which include
 service files it under its updates category (a build failure or an account notice sent with list headers); mail the service
 files under promotions, social or forums stays sales, and mail that is not bulk is not touched by this (section 248; P78).
 
-**Bills, orders and deliveries are never set aside** (section 205; P46): right after the automated notices, rules with no AI
-run (`engine/mail_kinds.py`, words in `watch.mail_kinds`, on from the first sign-in with no setup) recognize a bill or
-statement, an order confirmation and a shipping or delivery notice, from the sender's address and the subject or text. Such
-mail is kept with the assistant against the built-in sorting and the assistant's sorting (as a `never` rule would), is filed
-under the Personal project whoever sent it, unless the person has a work side and the sender's relation is work, which
-files it there (`engine/sides.py`, rank 0, `filed_by` word = the kind; section 218), and the assistant's
-sorting prompt answers *work* for what the rules miss. Rules and the person's own sender rules still come first: a rule that
-sets mail aside from a sender wins. What each becomes is in 6.32. `tests/test_mail_kinds.py`.
+**Bills, orders and deliveries are never set aside** (section 205; P46; the kind is the assistant's to say since section 290,
+P110 J13): whether a message is a bill or statement, an order confirmation or a shipping or delivery notice is answered by the
+assistant's sorting run (step 3 below), which names a `kind` (bill, order, delivery or none) for each header and keeps it on the
+request (`mail_kind`). The words of `watch.mail_kinds` (`engine/mail_kinds.py`, on from the first sign-in with no setup) are
+only a hint: with the sorting on, a message whose subject or sender they recognize goes to that run unplaced, with "words
+suggest: bill" beside its header, and is not set aside by the built-in sorting first (J12's header rules still set aside every
+other bulk or promotions message before any run). With the sorting off (`watch.sorting: rules`) or when the run could not be
+made, the words stand in as before and keep the mail with the assistant. Mail of a kind is never set aside, whatever else
+the run answered, and is filed under the Personal project whoever sent it, unless the person has a work side and the
+sender's relation is work, which files it there (`engine/sides.py`, rank 0, `filed_by` word = the kind; section 218); a kind
+of *none* from the run means the words do not stand in. Rules and the person's own sender rules still come first: a rule that
+sets mail aside from a sender wins. What each becomes is in 6.32. `tests/test_mail_kinds.py`,
+`tests/test_mail_sorting.py`.
 
 **Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**, `tests/test_set_aside.py`; the sorting run and the
 proof that learning never reads it are phase L0, **built**, `tests/test_mail_sorting.py`). Mail that isn't work goes into a **Set aside** folder in the app, in three
@@ -313,7 +318,8 @@ It is sorted in this order, first match wins:
    the message's sender, else its author, else the text's From line) or its domain, and a domain matches its subdomains, in any
    case.
 2. **What the mail says about itself, built in:** after the list, and with no setting to edit, the core sets aside, in this order:
-   an automated one-time-code or security mail (notices); a bill, an order or a delivery is kept with the assistant; bulk
+   an automated one-time-code or security mail (notices); mail whose words hint at a bill, an order or a delivery goes to the
+   assistant's sorting, which names its kind (with no sorting, the words keep it with the assistant); bulk
    mail from an automated sender or in the service's updates category (notices, unless the service files it under promotions,
    social or forums); then as sales mail mail that is `bulk` (the `bulk-mail` matcher) and mail whose `categories` include
    promotions, social or forums (the `service-category` matcher). One setting, `watch.set_aside_defaults` (on), turns this off. It applies to every workspace,
@@ -327,8 +333,12 @@ It is sorted in this order, first match wins:
    - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body, the thread
      or an attachment. Each message is an opaque id (`m1`, `m2`, ...) with those three things, marked as outside content,
      in a batch that comes last in the packet after the instructions and the playbook's practice (6.6);
-   - it answers work, personal, sales or notice for each id. **Unsure means work**: a message the answer leaves out, or answers with
-     another word, counts as work, so nothing is hidden on a guess;
+   - it answers work, personal, sales or notice for each id, and a **kind** for it: bill, order, delivery or none (P110 J13).
+     **Unsure means work**: a message the answer leaves out, or answers with
+     another word, counts as work, so nothing is hidden on a guess; a kind that is left out or is another word counts as none.
+     The word lists of `watch.mail_kinds` only put "words suggest: bill" beside a header; the run decides. A message the run
+     gives a kind is never set aside, whatever its answer, and its kind is kept on the request (`mail_kind`) for filing it
+     under Personal and for the check on a fact from an automated notice;
    - one run covers a batch of headers, not one per message: the mail of a read that no rule placed goes in groups of
      `watch.sorting_batch` (25), one run each, after the rules and before anything is handed in. Only new mail is sorted
      (a message that changes keeps what the assistant decided; one the person's "never" rule keeps is never sent);
@@ -3937,7 +3947,7 @@ people and details, and never acts in their name without their yes on the exact 
     a fact's reminder delivered through the person's own calendar or mail; speech-to-text, which the native adapter's service
     and a command-line agent don't offer and so refuse (`tests/test_capture.py` decides it for each adapter).
   - **Built (S4, dates by rules alone; change log 250):** when the assistant's reading of an input missed one, a pass over
-    its new text (never quoted history, a signature, an automated notice or the person's own words) finds a sentence with
+    its new text (never quoted history, a signature, mail the assistant's sorting or the person said is an automated notice, or the person's own words) finds a sentence with
     exactly one full future date and the words of one kind of day from the language lists (`dated_deadline_words`,
     `dated_renewal_words`, `dated_expiry_words`), and none of `dated_doubt_words`, and adds a dated `fact` op to the answer for
     that day unless the answer already has one for it (at most `steward.dates.find_most`, off with
@@ -4003,7 +4013,9 @@ Personal mail and calendar entries the person wants kept track of (an appointmen
 project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) means not tracked at all. So:
 - **The Personal project and an area have no end** (2026-10-26): neither takes a target day (the applier and the screen
   refuse one; a project with an end inside them keeps its own), nothing asks them for a status, phase, owner or
-  description, and a fact is never made from an input that is an automated notice. The facts list shows a short label
+  description, and a fact from an input that looks like an automated notice goes back to the assistant once (the judgment
+  lint `fact-from-notice`, P110 J13: "This came from an automated notice ('<sender>'): keep the fact only if it is something
+  the person needs to know."; its answer stands). The facts list shows a short label
   (the kind of input and its subject or day), never a full local address.
 - **One Personal project, made at setup, for everyone** (owner, 2026-10-21: the default project for every person, used
   or not): an ordinary project the person can rename or remove, made with no question; a setting names which project is

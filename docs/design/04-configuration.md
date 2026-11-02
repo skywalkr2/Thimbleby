@@ -261,8 +261,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
 - `set_aside_defaults` (true): after the `triage` list, mail that is bulk, or that the mail service files under promotions,
   social or forums, is set aside as sales mail with no AI run. It needs no rule in the file, so every workspace has it.
 - `sorting` (`ai`) and `sorting_batch` (25): how mail that no rule places is sorted (6.5). `ai`: one small low-cost run per
-  batch reads only the senders, subjects and service categories (never the text) and says work, personal or sales; unsure
-  counts as work. `rules`: no run. A batch is at most 100 messages. The kind of work is `sort-mail`: its tier, limits and
+  batch reads only the senders, subjects and service categories (never the text) and says work, personal, sales or notice,
+  and whether the message is a bill, an order or a delivery; unsure counts as work. The word lists of `watch.mail_kinds`
+  only put a hint beside a header. `rules`: no run. A batch is at most 100 messages. The kind of work is `sort-mail`: its tier, limits and
   budget are set under `ai.tasks` and `ai.budgets.per_task` like any kind's. Both keys are live.
 - `default_data_level` (internal) and `connector_data_levels` (a map from a connector's name to a level; empty): the data
   level a watched source's items carry when the source sets none. It is kept on each source record (5.1).
@@ -889,6 +890,7 @@ lints:                           # severities: refuse, return, warn, off
   near-duplicate-promise: return
   ending-reading: return
   reply-not-needed: return
+  fact-from-notice: return
   evidence-fit: return
 projects:                        # severities for one project's work only, over the ones above
   PRJ-3: {run-on-list: off}
@@ -913,7 +915,9 @@ that similarity, and a message says which kind it matched. `near-duplicate-promi
 similarity to flag a new promise that looks like an open one of the same owner and people, and names that promise so the
 assistant answers with a move or news on it, or keeps the add (6.33); it never rewrites the answer. `ending-reading` and
 `reply-not-needed` (default `return`) are judgment lints of the same kind (6.33, 6.35): the words an ending quotes, or a "no need to
-reply" in the message, are put to the assistant once and its answer stands. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
+reply" in the message, are put to the assistant once and its answer stands. So is `fact-from-notice` (default `return`; P110 J13):
+a fact from an input whose words look like an automated notice (a code, a sign-in or a security alert), when the assistant's
+sorting didn't call the mail a bill, an order or a delivery, goes back once with the sender named. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
 values, and not below), `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too` and `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one` (the range and the default). `near-duplicate-question` (designed, phase L) gets its
 entry beside it, with `similarity` and `days` (default 14).
 

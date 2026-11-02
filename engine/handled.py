@@ -43,7 +43,7 @@ TABS: tuple[Literal["set_aside", "read"], ...] = ("set_aside", "read")
 #: The kind a set-aside section is listed under, and the kind of mail the rules track. Personal stays for rows an
 #: earlier version stored; nothing sets mail aside as personal now.
 SECTION_KIND = {"personal": "personal", "sales": "sales", "notices": "notices"}
-TRACKED_KIND = {"bill": "bills", "order": "orders", "shipping": "deliveries"}
+TRACKED_KIND = {"bill": "bills", "order": "orders", "shipping": "deliveries", "delivery": "deliveries"}
 OTHER = "other"
 _PM = WriteContext(actor="pm", trust="trusted", op="handled.treat")
 _UNDO = WriteContext(actor="pm", trust="trusted", op="handled.undo")
@@ -233,7 +233,10 @@ def rows(ws: Any, store: Any, cfg: Any, tab: Tab, now: datetime | None = None) -
             if made is None or _expired(made.data.get("created_at"), cutoff):
                 continue
             text = _read_text(ws, data.get("content_hash"))
-            tracked = kind_of(cfg.watch.mail_kinds, set_aside.address_of(snap, ws), data["title"], text)
+            # The kind the assistant's sorting gave the mail groups it; the words only stand in when none was given.
+            tracked = made.data.get("mail_kind") or kind_of(
+                cfg.watch.mail_kinds, set_aside.address_of(snap, ws), data["title"], text
+            )
             out.append(
                 _row(
                     ws,

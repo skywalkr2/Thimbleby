@@ -1510,6 +1510,13 @@ class Request(Record):
         description="For a watched mail message the assistant's sorting couldn't be run for when it was handed in: "
         "it waits for that sorting before any other run, and the sorting clears this when it answers.",
     )
+    mail_kind: str | None = Field(
+        None,
+        description="For a watched mail message the assistant's sorting answered for: the kind it gave (bill, order, "
+        "delivery or none). Empty when no sorting ran for it. A kind is tracked, never set aside, and files the mail "
+        "under the Personal project; none means the sorting looked and found no kind, so the word lists don't stand "
+        "in.",
+    )
     folded_into: str | None = Field(
         None, description="The newer request this one's change was folded into, so they are read in order, once."
     )

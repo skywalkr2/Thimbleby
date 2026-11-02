@@ -121,8 +121,9 @@ def test_the_proposals_are_held_facts_with_the_sentence_as_evidence_and_skip_wha
     assert dated_scan.proposals(cfg, view, text, "SRC-1", [], TODAY) == []
 
 
-def hand_in(ws, cfg, store, text, ops=(), actor="assistant", task="notes", confirmed=False):
-    """An answer to an input as the assistant gives it; returns the changeset's id."""
+def hand_in(ws, cfg, store, text, ops=(), actor="assistant", task="notes", confirmed=False, request_extra=None):
+    """An answer to an input as the assistant gives it; returns the changeset's id. `request_extra`: more fields of
+    the request (the sorting's or the person's word that it is a notice, say)."""
     with store.transaction() as tx:
         source = tx.create(
             "source",
@@ -137,7 +138,14 @@ def hand_in(ws, cfg, store, text, ops=(), actor="assistant", task="notes", confi
         ).id
         request = tx.create(
             "request",
-            {"task": task, "origin": "input", "state": "done", "created_at": NOW.isoformat(), "source": source},
+            {
+                "task": task,
+                "origin": "input",
+                "state": "done",
+                "created_at": NOW.isoformat(),
+                "source": source,
+                **(request_extra or {}),
+            },
             _TEST,
         ).id
     cs = CHANGESET.validate_python({"summary": "Read it", "ops": list(ops)}, context={"op_models": store.plugins.ops})
@@ -206,16 +214,30 @@ def test_only_the_reading_of_an_input_gets_the_pass(env, task):
     assert not [o for o in store.read().get("changeset", cs_id).data["ops"] if o["op"]["op"] == "fact"]
 
 
-def test_the_persons_own_words_and_an_automated_notice_get_no_proposal(env):
+NOTICE = (
+    "From: no-reply@example.com\nTo: me@example.com\nSubject: Your sign-in code\n\n"
+    "Your code is 123456. It expires on 2026-11-30."
+)
+
+
+def found_facts(store, cs_id):
+    return [o for o in store.read().get("changeset", cs_id).data["ops"] if o["op"]["op"] == "fact"]
+
+
+def test_the_persons_own_words_get_no_proposal(env):
     ws, cfg, store = env
     cs_id, _ = hand_in(ws, cfg, store, "Your studio membership renews on 2026-11-30.", actor="pm")
-    assert not [o for o in store.read().get("changeset", cs_id).data["ops"] if o["op"]["op"] == "fact"]
-    notice = (
-        "From: no-reply@example.com\nTo: me@example.com\nSubject: Your sign-in code\n\n"
-        "Your code is 123456. It expires on 2026-11-30."
-    )
-    cs_id, _ = hand_in(ws, cfg, store, notice)
-    assert not [o for o in store.read().get("changeset", cs_id).data["ops"] if o["op"]["op"] == "fact"]
+    assert not found_facts(store, cs_id)
+
+
+def test_mail_the_sorting_or_the_person_said_is_a_notice_gets_no_proposal_but_its_words_alone_do_not_decide(env):
+    ws, cfg, store = env
+    said = {"set_aside": {"section": "notices", "rule": "The assistant's sorting", "reason": "a notice"}}
+    cs_id, _ = hand_in(ws, cfg, store, NOTICE, request_extra=said)
+    assert not found_facts(store, cs_id)
+    # The words look like a sign-in code, but nobody said it is a notice: the date is found and held like any other.
+    cs_id, _ = hand_in(ws, cfg, store, NOTICE)
+    assert [o["op"]["on"] for o in found_facts(store, cs_id)] == ["2026-11-30"]
 
 
 def test_quoted_history_and_a_signature_are_not_read(env):

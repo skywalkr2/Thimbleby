@@ -20,10 +20,12 @@ REASON = {"sales": "the assistant sorted it as sales mail"}
 
 class Account:
     """A scripted AI account: it answers a header run from a table of subject to answer, and keeps what it was sent.
-    A subject in `omit` is left out of the answer; `raw` replaces the answer's text entirely."""
+    A subject in `omit` is left out of the answer; `raw` replaces the answer's text entirely; `kinds` gives the kind
+    (bill, order, delivery or none) of a subject, left out of the row when the subject is not in it."""
 
-    def __init__(self, answers=None, omit=(), raw=None):
+    def __init__(self, answers=None, omit=(), raw=None, kinds=None):
         self.tasks = []
+        self.kinds = kinds or {}
         self.answers = answers or {}
         self.omit = set(omit)
         self.raw = raw
@@ -33,7 +35,11 @@ class Account:
         if self.raw is not None:
             return self.raw(task, len(self.tasks))
         rows = [
-            {"id": row["id"], "answer": self.answers.get(row["subject"], "work")}
+            {
+                "id": row["id"],
+                "answer": self.answers.get(row["subject"], "work"),
+                **({"kind": self.kinds[row["subject"]]} if row["subject"] in self.kinds else {}),
+            }
             for row in rows_of(task)
             if row["subject"] not in self.omit
         ]
@@ -189,7 +195,7 @@ def test_the_check_reads_answers_by_id_and_refuses_unknown_and_repeated_ids():
     ids = {"m1", "m2", "m3"}
     ok = '```json\n{"answers": [{"id": "m1", "answer": "Sales"}, {"id": "m2", "answer": "maybe"}]}\n```'
     answers, problems = read_answers(ok, ids)
-    assert answers == {"m1": "sales", "m2": "work"} and problems == [], "bad and missing answers are work"
+    assert answers == {"m1": ("sales", "none"), "m2": ("work", "none")} and problems == [], "bad answers are work"
     assert "m3" not in answers
     bad = {
         "answers": [{"id": "m9", "answer": "sales"}, {"id": "m1", "answer": "sales"}, {"id": "m1", "answer": "work"}]
@@ -200,6 +206,25 @@ def test_the_check_reads_answers_by_id_and_refuses_unknown_and_repeated_ids():
         assert read_answers(text, ids)[1], text
     assert read_answers('{"answers": []}', ids, truncated=True)[1], "an answer cut off at the limit is refused"
     assert set(ANSWERS) == {"work", "personal", "sales", "notice"}
+
+
+def test_the_check_reads_the_kind_and_counts_a_missing_or_unknown_kind_as_none():
+    rows = [
+        {"id": "m1", "answer": "work", "kind": "Bill"},
+        {"id": "m2", "answer": "sales", "kind": "delivery"},
+        {"id": "m3", "answer": "work", "kind": "invoice-ish"},
+        {"id": "m4", "answer": "work"},
+        {"id": "m5", "answer": "work", "kind": "shipping"},  # the word lists' own name for a delivery
+    ]
+    answers, problems = read_answers(json.dumps({"answers": rows}), {f"m{n}" for n in range(1, 6)})
+    assert problems == []
+    assert {k: v.kind for k, v in answers.items()} == {
+        "m1": "bill",
+        "m2": "delivery",
+        "m3": "none",
+        "m4": "none",
+        "m5": "delivery",
+    }
 
 
 def test_an_answer_that_fails_the_check_goes_back_once_and_the_fixed_answer_is_used(tmp_path, account):
@@ -686,3 +711,129 @@ def test_the_sources_list_says_on_the_row_when_its_mail_could_not_be_sorted_and_
     row = next(s for s in client.get(f"{base}/watch").json() if s["id"] == "m")
     assert row["last"]["unsorted"] == result.note
     assert "handed in as work" in row["last"]["unsorted"]
+
+
+# ---- the kind: the run decides, the word lists only hint ------------------------------------------------------------
+
+
+def statement(n, subject="Your statement is ready", **kw):
+    """A message the shipped word lists call a bill, from an address no rule places."""
+    return mail(f"bill-{n}", f"billing{n}@{CLUB}", subject=subject, **kw)
+
+
+def test_the_kind_the_run_names_is_kept_on_the_request_and_a_bill_is_never_set_aside_whatever_else_it_answers(
+    tmp_path, account
+):
+    account.answers = {"Your statement is ready": "sales", "Subject 1": "sales"}
+    account.kinds = {"Your statement is ready": "bill", "Subject 1": "none"}
+    ws, cfg, store = make(tmp_path, [statement(0), unplaced(1), unplaced(2)])
+    try:
+        read(ws, store)
+        snaps = snapshots(store)
+        assert snaps["bill-0"]["set_aside"] is None, "a bill the run names is never set aside"
+        assert snaps["thread-1"]["set_aside"]["section"] == "sales"
+        kinds = {
+            store.read().get("source", r.data["source"]).data["title"]: r.data.get("mail_kind")
+            for r in requests_in(store, "queued")
+        }
+        assert kinds == {"Your statement is ready": "bill", "Subject 2": "none"}
+    finally:
+        store.close()
+
+
+def test_a_subject_the_word_list_calls_a_bill_but_the_run_calls_none_is_sorted_like_any_other_mail(tmp_path, account):
+    account.answers = {"Your statement is ready": "sales"}
+    account.kinds = {"Your statement is ready": "none"}
+    ws, cfg, store = make(tmp_path, [statement(0), statement(1, subject="Order your free sample")])
+    try:
+        read(ws, store)
+        sent = {row["subject"]: row.get("hint") for row in account.headers}
+        assert sent == {"Your statement is ready": "words suggest: bill", "Order your free sample": None}
+        assert snapshots(store)["bill-0"]["set_aside"] == {
+            "section": "sales",
+            "rule": RULE,
+            "reason": REASON["sales"],
+            "by": "assistant",
+        }
+        (request,) = requests_in(store, "queued")
+        assert request.data["mail_kind"] == "none"
+    finally:
+        store.close()
+
+
+def test_a_bulk_bill_goes_to_the_run_which_decides_and_keeps_a_real_one(tmp_path, account):
+    account.kinds = {"Your statement is ready": "bill"}
+    ws, cfg, store = make(tmp_path, [statement(0, bulk=True)])
+    try:
+        read(ws, store)
+        assert [row["subject"] for row in account.headers] == ["Your statement is ready"]
+        assert snapshots(store)["bill-0"]["set_aside"] is None
+        (request,) = requests_in(store, "queued")
+        assert request.data["mail_kind"] == "bill"
+    finally:
+        store.close()
+
+
+def test_with_sorting_off_the_word_list_still_keeps_a_bill_and_files_it_under_personal(tmp_path, account):
+    from engine import sides
+    from engine.ai.router import Router
+    from engine.dispatcher import process
+    from tests.test_pipeline import answers
+
+    ws, cfg, store = make(tmp_path, [statement(0, bulk=True)], sorting="rules")
+    try:
+        read(ws, store)
+        assert account.tasks == [] and snapshots(store)["bill-0"]["set_aside"] is None
+        (request,) = requests_in(store, "queued")
+        assert request.data.get("mail_kind") is None, "no sorting ran, so no kind was given"
+        owner = store.read().get("person", cfg.workspace.user.person).data["full_name"]
+        set_responder(None)
+        answers(
+            {
+                "summary": "A bill.",
+                "ops": [
+                    {
+                        "op": "action.add",
+                        "text": "Pay the statement",
+                        "owners": [owner],
+                        "evidence": {"quote": "Plain words."},
+                    }
+                ],
+            }
+        )
+        process(ws, store, cfg, Router(cfg, store, env={}), request.id, now=NOW)
+        (made,) = [a for a in store.read().list("action") if a.data["text"] == "Pay the statement"]
+        assert made.data["project"] == sides.personal_project(store.read(), cfg)
+        assert made.data["filed_by"]["by"] == "word"
+    finally:
+        set_responder(None)
+        store.close()
+
+
+def test_the_sorting_that_comes_later_keeps_the_kind_on_a_request_it_does_not_set_aside(tmp_path, account):
+    from engine.ai.task import AiError
+    from engine.watch import sort_before_first_go
+    from engine.worker import release_paused
+
+    broken = {"on": True}
+
+    def raw(task, call):
+        if broken["on"]:
+            raise AiError("quota", "HTTP 402: no credit left")
+        row = {"id": "m1", "answer": "sales", "kind": "bill"}
+        return json.dumps({"answers": [row]})
+
+    account.raw = raw
+    ws, cfg, store = make(tmp_path, [statement(0)])
+    try:
+        read(ws, store)
+        (request,) = requests_in(store, "queued")
+        assert request.data.get("sort_pending") and request.data.get("mail_kind") is None
+        broken["on"] = False
+        release_paused(store)  # an account that works again: its pause is lifted
+        assert sort_before_first_go(ws, store, cfg, now=NOW, pending_only=True) == 0
+        (request,) = requests_in(store, "queued")
+        assert request.data["mail_kind"] == "bill" and not request.data.get("sort_pending")
+        assert snapshots(store)["bill-0"]["set_aside"] is None, "a bill is never set aside, whatever else was said"
+    finally:
+        store.close()

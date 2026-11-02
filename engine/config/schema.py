@@ -1540,6 +1540,7 @@ def _default_lints() -> dict[str, Severity]:
         "near-duplicate-promise": "return",
         "ending-reading": "return",
         "reply-not-needed": "return",
+        "fact-from-notice": "return",
         "evidence-fit": "return",
         "already-known": "return",
         "near-duplicate-question": "warn",
@@ -3252,10 +3253,11 @@ def _kind(what: str, senders: list[str], subject_words: list[str], words: list[s
 class MailKinds(FileModel):
     enabled: bool = Field(
         True,
-        description="Recognize bills and statements, orders, and shipping and delivery notices by rules, with no AI "
-        "run, from the first sign-in. Such mail is never set aside, is not sorted by the assistant's sorting and is "
-        "handed to the assistant as something to do for your own life. It applies after your own rules, so a rule "
-        "that sets mail aside from a sender wins.",
+        description="Use the words below to spot bills and statements, orders, and shipping and delivery notices. The "
+        "words are only a hint: with the assistant's sorting on, each message's hint goes beside its header and the "
+        "assistant says what kind it is; with rules only sorting, or when that run can't be made, the words decide. "
+        "Such mail is never set aside and is handed to the assistant as something to do for your own life. It applies "
+        "after your own rules, so a rule that sets mail aside from a sender wins.",
     )
     bill: MailKind = _kind(
         "a bill or statement",
@@ -3399,10 +3401,11 @@ class WatchFile(FileModel):
         "ai",
         description="How mail that none of the rules above place is sorted. With the assistant, one small, low-cost "
         "run reads only each message's sender, subject line and the mail service's category (never the text) and says "
-        "whether it is for your job or business, personal, sales or a notice. Sales and notices are set aside and "
-        "personal mail is handed in and filed as personal. When it is unsure, the message is treated as for your job "
-        "or business, so nothing is hidden on a guess. With rules only, there is no run and only the rules set mail "
-        "aside.",
+        "whether it is for your job or business, personal, sales or a notice, and whether it is a bill, an order or a "
+        "delivery. Sales and notices are set aside, except a bill, an order or a delivery, which is never set aside, "
+        "and personal mail is handed in and filed as personal. When it is unsure, the message is treated as for your "
+        "job or business, so nothing is hidden on a guess. With rules only, there is no run and only the rules set "
+        "mail aside.",
     )
     acting: list[str] = Field(
         default_factory=list,
