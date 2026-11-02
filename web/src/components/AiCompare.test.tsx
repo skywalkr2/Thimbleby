@@ -65,7 +65,7 @@ const SKILLS: S["AiSkillsView"] = {
   ],
 };
 
-const estimate = (usd: number | null, needs_go = false): S["AiMeasureEstimate"] => ({ models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd, confirm_above_usd: 0.1, needs_go });
+const estimate = (usd: number | null, needs_go = false): S["AiMeasureEstimate"] => ({ models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd, confirm_above_usd: 0.1, per_day_usd: 2, needs_go });
 
 function api(extra: Record<string, (body: unknown) => unknown> = {}, skills: S["AiSkillsView"] = SKILLS) {
   return fakeApi({
@@ -94,7 +94,7 @@ test("kinds of work down the side, one column for each account and model with th
   const rows = screen.getAllByRole("rowheader").map((r) => r.textContent);
   expect(rows).toEqual(["Pull actions from meeting notes", "Route a question to who decides", "Use a known term", "Write an update in your voice"]);
   expect(screen.getByRole("heading", { level: 2, name: "Compare what accounts can do" })).toBeInTheDocument();
-  expect(screen.getByText("Correct answers · cost per correct answer · pass mark 80%")).toBeInTheDocument();
+  expect(screen.getByText("How often each account gets it right · what a right answer costs · 80% or more counts as a pass")).toBeInTheDocument();
   // The model's own id is never shown.
   expect(document.body).not.toHaveTextContent("m-1");
 });
@@ -104,7 +104,7 @@ test("each cell has the pass rate first, then cost per right answer, runs and ag
   renderApp(<AiCompare onBack={() => undefined} />);
   const c = await cellOf("Pull actions from meeting notes", "Main account · everyday");
   expect(c).toHaveTextContent("94%");
-  expect(c).toHaveTextContent("$0.03 · 18 tasks · 2 days ago");
+  expect(c).toHaveTextContent("17 of 18 right · $0.03 per right answer · 2 days ago");
   // Pass rate comes before the cost in reading order.
   expect(c.textContent?.indexOf("94%")).toBeLessThan(c.textContent?.indexOf("$0.03") ?? 0);
 });
@@ -139,7 +139,7 @@ test("an old measurement says so and counts as unknown; one never measured offer
   expect(old).not.toHaveTextContent("Cheapest");
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
   expect(none).toHaveTextContent("Not measured yet");
-  expect(await within(none).findByRole("button", { name: "Measure Main account · everyday" })).toHaveTextContent("Measure (about $0.12)");
+  await waitFor(() => expect(within(none).getByRole("button", { name: "Measure Main account · everyday" })).toHaveTextContent("Measure (about $0.12)"));
 });
 
 test("Measure starts the measuring of that model with the person's go only when it was asked for, and the grid says it is measuring", async () => {
@@ -231,12 +231,12 @@ test("with nothing measured and no accounts it says there is nothing to compare"
   expect(await screen.findByText("There is nothing to compare yet. Add an account first.")).toBeInTheDocument();
 });
 
-test("a cell that was never measured says so and never counts zero tasks", async () => {
+test("a cell that was never measured says so and never counts zero tries", async () => {
   api();
   renderApp(<AiCompare onBack={() => undefined} />);
   const c = await cellOf("Write an update in your voice", "Main account · everyday");
   expect(c).toHaveTextContent("Not measured yet");
-  expect(c).not.toHaveTextContent(/\b0 tasks?\b/);
+  expect(c).not.toHaveTextContent(/\b0 of 0\b/);
 });
 
 const UNMEASURED: S["AiSkillsView"] = {
@@ -269,4 +269,60 @@ test("with no account at all the page asks for one first", async () => {
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByText("There is nothing to compare yet. Add an account first.")).toBeInTheDocument();
   expect(screen.queryByText(/Nothing measured yet/)).toBeNull();
+});
+
+test("the price is on the button before any click, with the amount that is asked about first and the daily limit it is not counted in", async () => {
+  api({}, UNMEASURED);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  const measure = await screen.findByRole("button", { name: "Measure (about $0.48)" });
+  const note = "You are asked first above $0.10. A test is paid for on your own account, and it isn't counted in your daily limit of $2.00.";
+  expect(await screen.findByText(note)).toBeInTheDocument();
+  expect(measure).toHaveAccessibleDescription(note);
+});
+
+test("the button says the price is being worked out and waits, and says when no price can be told", async () => {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  api({ "POST ai/skills/main/estimate": () => held.then(() => estimate(null)), "POST ai/skills/second/estimate": () => estimate(0.08) }, UNMEASURED);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  expect(await screen.findByRole("button", { name: "Working out the price…" })).toBeDisabled();
+  release();
+  expect(await screen.findByRole("button", { name: "Measure (price unknown)" })).toBeEnabled();
+});
+
+test("while a test runs and nothing is measured yet the page says what is being tested instead of nothing measured", async () => {
+  const running: S["AiSkillsView"] = {
+    ...UNMEASURED,
+    accounts: UNMEASURED.accounts.map((a) => (a.name === "main" ? { ...a, models: a.models.map((m) => ({ ...m, measure: "measuring" as const })) } : { ...a, models: a.models.map((m) => ({ ...m, measure: "waiting" as const })) })),
+  };
+  api({}, running);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  const progress = await screen.findByRole("status", { name: "" });
+  expect(progress).toHaveTextContent("Testing now: Main account · everyday. This page fills in as each test finishes, which can take a few minutes.");
+  expect(progress).toHaveTextContent("Waiting its turn: Second account · everyday.");
+  expect(screen.queryByText(/Nothing measured yet\./)).toBeNull();
+});
+
+test("a test that didn't finish says so and why even while nothing is measured yet", async () => {
+  const failed: S["AiSkillsView"] = {
+    ...UNMEASURED,
+    accounts: UNMEASURED.accounts.map((a) => (a.name === "main" ? { ...a, models: a.models.map((m) => ({ ...m, measure: "failed" as const, measure_why: "The key was refused." })) } : a)),
+  };
+  api({}, failed);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  expect(await screen.findByText("Main account · everyday didn't finish: The key was refused.")).toBeInTheDocument();
+  expect(screen.getByText(/Nothing measured yet\./)).toBeInTheDocument();
+});
+
+test("each kind of work says what it means, in the words its list gives", async () => {
+  const explained: S["AiSkillsView"] = {
+    ...SKILLS,
+    accounts: SKILLS.accounts.map((a) => ({
+      ...a,
+      models: a.models.map((m) => ({ ...m, skills: m.skills.map((k) => (k.id === "term" ? { ...k, description: "Reads a word the way your glossary says." } : k)) })),
+    })),
+  };
+  api({}, explained);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  expect(await screen.findByRole("rowheader", { name: "Use a known term Reads a word the way your glossary says." })).toBeInTheDocument();
 });

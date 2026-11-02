@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
 
 from api.pack_routes import entry_in
@@ -64,6 +64,7 @@ from api.schemas import (
     FolderRenamed,
     FolderRenameIn,
     LocalServerView,
+    LogoUploaded,
     MailFoldersView,
     MailServiceView,
     MeIn,
@@ -116,6 +117,7 @@ from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource, WorkspaceFile
 from engine.connectors import declared_reads, reads
 from engine.drop_notes import dropped_actions, note_the_drops
+from engine.language_words import language_words
 from engine.money import usd
 from engine.names import People
 from engine.organizations import own_organization
@@ -314,7 +316,25 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 SettingItem(**{**vars(s), "by_setup": s.key in set_up and set_up[s.key] == s.value})
                 for s in config_screens.describe(current(), store.plugins, ws.config_dir, _live_lists())
             ],
+            search_words=language_words(current().language, "settings_search_words"),
         )
+
+    @r.post("/brand/logo")
+    async def brand_logo_upload(request: Request) -> LogoUploaded:
+        """Keep a picture as the workspace's logo: the body is the picture's bytes. It is stored in the configuration
+        folder under a name made from its content, and the name is returned to be saved as `ui.brand.logo`, which this
+        does not change. A picture that can't be shown, or is too large, is refused with the reason."""
+        from engine.brand import LogoRefused, save_logo
+
+        limit = current().ui.brand.logo_max_kb * 1024
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > limit * 2:
+            raise HTTPException(status_code=413, detail="That picture is too large for a logo.")
+        data = await request.body()
+        try:
+            return LogoUploaded(name=save_logo(ws.config_dir, data, current().ui.brand.logo_max_kb))
+        except LogoRefused as err:
+            raise HTTPException(status_code=400, detail=str(err), headers={FIELD: "ui.brand.logo"}) from None
 
     @r.post("/restart")
     def restart() -> RestartAsked:
@@ -1886,6 +1906,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             runs=plan.runs,
             usd=plan.usd,
             confirm_above_usd=now.ai.budgets.confirm_above_usd,
+            per_day_usd=now.ai.budgets.per_day_usd,
             needs_go=measure.needs_go(now, plan),
         )
 

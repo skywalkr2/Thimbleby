@@ -333,7 +333,9 @@ one of these keys in its files keeps working unchanged, since a value there alwa
 `language_words(settings, name)` in `engine/language_words.py`, is the only reader: the workspace's own value when it is
 set, else the shipped list, read at the moment of use, so **every list applies at once** (`LIVE_KEYS` names them, from the
 shipped file). The settings that are not lists (`messages`, `title_min_words`, `bare_confirmation_words`,
-`holiday_calendar`, `known_terms_shipped`, and the person's own additions `known_terms` and `never_shown`) are as before.
+`holiday_calendar`, `known_terms_shipped`, and the person's own additions `known_terms` and `never_shown`) are as before. One list was added to the
+shipped file after the move, `settings_search_words` (a mapping from a word a person may type in Settings' search to the
+words that find the same things; replaced as a whole, like the other mappings; change log 304, 7.9).
 **Built (A5):** `tests/test_language_words.py` (every list reads exactly as its old default, from a fixture of the old
 defaults; the override rule; live).
 
@@ -706,8 +708,11 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   setting's row (change log 196).
 - `walkthrough`: `first_promises` (5): how many promises found in the person's own mail the new-start walkthrough's first-result
   screen shows, soonest day first (7.8).
-- `brand`: `color` (`#rrggbb`; the app works out shades from it and Settings warns when its contrast would fail; empty uses the
-  app's indigo) and `logo` (a PNG, JPEG, WebP or SVG file name in the config folder; empty shows the workspace's initials).
+- `brand`: `color` (`#rrggbb`, picked in Settings; the app works out shades from it and Settings warns in plain words when it
+  would be hard to see; empty uses the app's indigo), `logo` (the name of a PNG, JPEG, WebP or SVG file in the config folder,
+  which Settings uploads there and names for the person; empty shows the workspace's initials; a name with no such picture
+  is refused when saved) and `logo_max_kb` (512, 16 to 4096; files only: the largest picture the upload takes in); demo values in
+  both fictional workspaces (change log 304).
 - `theme` (`system`, `light` or `dark`) and `density` (`comfortable` or `compact`): the workspace's defaults. Each person can
   change both for their own device from the menu under their initials; that choice stays in their browser (7.12).
 

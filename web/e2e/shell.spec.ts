@@ -848,7 +848,7 @@ const SKILLS = {
     },
   ],
 };
-const ESTIMATE = { models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd: 0.12, confirm_above_usd: 0.1, needs_go: false };
+const ESTIMATE = { models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd: 0.12, confirm_above_usd: 0.1, per_day_usd: 2, needs_go: false };
 
 async function mockAccounts(page: Page) {
   await page.route("**/api/ai/accounts", (route) => (route.request().method() === "GET" ? route.fulfill({ json: ACCOUNTS }) : route.continue()));

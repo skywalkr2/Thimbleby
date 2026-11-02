@@ -93,6 +93,7 @@ class Setting:
     by_setup: bool = False  # the value now in the files was written by setup, so it reads as set up, not as changed
     money: bool = False  # an amount of US dollars: shown as currency with two decimals, typed with or without the sign
     max_length: int | None = None  # the most characters a text setting takes, so its box stops there
+    widget: str | None = None  # "color" or "image": the screen offers a color picker or a picture upload, not a box
 
 
 @dataclass
@@ -298,6 +299,7 @@ def _walk(
                 max_length=next((m.max_length for m in info.metadata if hasattr(m, "max_length")), None)
                 if kind == "text"
                 else None,
+                widget=extra.get("widget") if isinstance(extra.get("widget"), str) else None,
             )
         )
 
@@ -597,6 +599,12 @@ def save(
     chosen = str(changes.get("storage.sync.folder") or "").strip()
     if chosen and (problem := _synced_folder_problem(ws, checked)):
         raise SettingsError(problem)
+    chosen_logo = changes.get("ui.brand.logo")
+    if isinstance(chosen_logo, str) and chosen_logo.strip():
+        from engine.brand import logo_problem
+
+        if problem := logo_problem(config_dir, chosen_logo, checked.ui.brand.logo_max_kb):
+            raise SettingsRefused(f"The logo was refused: {problem}", problem)
     if "ai" in core:
         from engine.ai.checked import chain_problems
 

@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 304. Compare shows its price and progress; Settings search finds beginners' words; the logo is uploaded and the color picked (2026-11-02; X51, X55, X56)
+
+| Where | Before | Now |
+|---|---|---|
+| Compare, Measure (7.16; X51) | The price showed only after a click, as an error; the page kept saying "Nothing measured yet" while a test ran; results were named "Using a term 33%" | The price is on the button with a line about what is asked first and that a test isn't counted in the daily limit (`AiMeasureEstimate.per_day_usd`); a progress line and failures show while nothing is measured yet; kinds of work have plain names and a meaning under them (`engine/defaults/skills.yaml`), and a cell says "17 of 18 right · $0.03 per right answer". **Built** (`web/src/components/AiCompare.test.tsx`, `tests/test_measure_account.py`) |
+| Settings search (7.9; X55) | Looked at setting rows only, by the setting's own words | Also sections (with a line about each), AI accounts, the backup key and an add-on's keys, and the words beginners use through `language.settings_search_words` (shipped data, replaced whole by the workspace's own list, live). `GET /api/settings` carries it as `search_words`. **Built** (`web/src/lib/settings-find.test.ts`, `Settings.test.tsx`, `tests/test_settings_search_words.py`, `tests/test_language_words.py`) |
+| Logo (4.11, 7.12; X56) | A file name in the config folder, typed; a missing file was accepted | Uploaded in Settings: `POST /api/brand/logo` keeps the picture (PNG, JPEG, WebP or SVG with nothing that runs) under a content-made name and the name is saved as `ui.brand.logo`; a missing or non-picture name is refused when chosen with a plain reason; `ui.brand.logo_max_kb` (512) limits the size. **Built** (`tests/test_brand.py`, `Settings.test.tsx`) |
+| Accent color (7.12; X56) | `#rrggbb` typed, with a "WCAG AA" ratio | The browser's color picker, saved when the person is done; a note in plain words when the color is hard to see on white or text on a button is hard to read. `SettingItem.widget` ("color", "image") says which control a setting has. **Built** (`Settings.test.tsx`) |
+| Not built | | Counting a measuring in the daily limit; a cache-proof address for a replaced logo in the header; removing older uploaded logo files |
+
 ## 303. A file can be renamed, described and removed, with Undo; Add a file speaks of documents, pictures and sounds (2026-11-02; sweep X46)
 
 | Where | Before | Now |

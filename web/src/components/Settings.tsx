@@ -50,6 +50,8 @@ import {
   useAfterSave,
 } from "../lib/settings-save";
 import { handOffSearch, takeSearch } from "../lib/settings-search";
+import { placesFound, type Place } from "../lib/settings-find";
+import { accountName } from "../lib/ai-accounts";
 import { useAddonName } from "../lib/addon-names";
 import { useSides } from "../lib/sides";
 import { applyAppearanceChanges, useAppearance } from "../lib/theme";
@@ -63,7 +65,6 @@ import { MergedRow } from "./MergedRow";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
-import { BrandContrast } from "./BrandContrast";
 import { BusinessSides } from "./BusinessSides";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
 import { BackupsPanel } from "./BackupsPanel";
@@ -272,6 +273,7 @@ export function Settings(props: {
     queryKey: ["ai-accounts"],
     queryFn: api.aiAccounts,
   });
+  const endpoints = useQuery({ queryKey: ["ai-endpoints"], queryFn: api.endpoints });
   // The person's own name, on the You page: its row is there once this has answered, so the cursor waits for it.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   // The form that adds an AI account opens here, as a drawer, so the person never leaves Settings for it.
@@ -300,11 +302,6 @@ export function Settings(props: {
   editsNow.current = edits;
   const content = useRef<HTMLDivElement>(null);
 
-  // The accent color as it stands on screen: what is typed, else what is saved.
-  const brand = everything.find((i) => i.key === "ui.brand.color");
-  const brandColor = brand
-    ? String(brand.key in edits ? edits[brand.key] : (brand.value ?? ""))
-    : "";
   const canList = useFolderListing(everything.some((i) => i.picker));
   const wanted = props.section ?? chosen;
   const loaded =
@@ -594,7 +591,7 @@ export function Settings(props: {
   const moreSettings = (id: SettingsSection) => {
     const items = sectionItems(everything, id).filter((i) => i.advanced);
     const extra =
-      id === "appearance" ? <BrandContrast color={brandColor} /> : id === "today" ? <Notifications part="webhook" /> : null;
+      id === "today" ? <Notifications part="webhook" /> : null;
     if (items.length === 0 && !extra) return null;
     return (
       <details key={id} className="more-options more-settings" data-more={id}>
@@ -659,30 +656,87 @@ export function Settings(props: {
     </h2>
   );
 
+  // The words a person may search by besides the settings' own: the shipped list, which the workspace may replace.
+  const searchWords = settings.data?.search_words ?? {};
   const found = query.trim()
     ? everything.filter(
-        (item) => isListed(item) && matches(item, query, t, has),
+        (item) => isListed(item) && matches(item, query, t, has, searchWords),
       )
     : [];
+  // What a search also finds that is not a row of a setting: each section, the AI accounts, the backup key and the keys an
+  // add-on needs. Each opens its section.
+  const places: Place[] = [
+    ...listed.map((id) => ({
+      id: `section:${id}`,
+      section: id,
+      label: label(id),
+      about: t(id.startsWith("addon/") ? "settings.about.addon" : `settings.about.${id}`),
+    })),
+    ...(listed.includes("backups")
+      ? [{ id: "backup-key", section: "backups" as SettingsSection, label: t("settings.place.backup_key"), about: t("settings.place.backup_key_about") }]
+      : []),
+    ...(accounts.data ?? [])
+      .filter((a) => a.adapter !== "stub")
+      .map((a) => ({
+        id: `account:${a.name}`,
+        section: "ai" as SettingsSection,
+        label: accountName(a, endpoints.data?.find((e) => e.id === a.kind), t),
+        about: t("settings.place.ai_account"),
+      })),
+    ...(keyed.data ?? [])
+      .filter((a) => a.secrets.length > 0 && listed.includes(`addon/${a.plugin}`))
+      .map((a) => ({
+        id: `keys:${a.plugin}`,
+        section: `addon/${a.plugin}` as SettingsSection,
+        label: t("settings.place.addon_keys", { name: addonName(a.plugin) }),
+        about: t("settings.place.addon_keys_about"),
+      })),
+  ];
+  const placesHit = query.trim() ? placesFound(places, query, searchWords) : [];
+  const goTo = (e: MouseEvent, id: SettingsSection) => {
+    // A plain click moves within the app; a modified one (a new tab) keeps its link.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    choose(id);
+  };
   const results = () => {
-    if (!found.length)
+    if (!found.length && !placesHit.length)
       return <EmptyState text={t("settings.none_match")} />;
-    return listed
-      .map((id) => ({
-        id,
-        items: found.filter((i) => sectionOfItem(i) === id),
-      }))
-      .filter((s) => s.items.length > 0)
-      .map((s) => (
-        <section
-          key={s.id}
-          className="settings-results"
-          aria-label={label(s.id)}
-        >
-          <h3>{label(s.id)}</h3>
-          {rows(s.items)}
-        </section>
-      ));
+    return (
+      <>
+        {placesHit.length > 0 && (
+          <section className="settings-results" aria-label={t("settings.places")} data-places="">
+            <h3>{t("settings.places")}</h3>
+            <ul className="settings-places">
+              {placesHit.map((place) => (
+                <li key={place.id}>
+                  <a href={viewHref(settingsView(place.section))} onClick={(e) => goTo(e, place.section)}>
+                    {place.label}
+                  </a>
+                  <span className="hint"> {place.about}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {listed
+          .map((id) => ({
+            id,
+            items: found.filter((i) => sectionOfItem(i) === id),
+          }))
+          .filter((s) => s.items.length > 0)
+          .map((s) => (
+            <section
+              key={s.id}
+              className="settings-results"
+              aria-label={label(s.id)}
+            >
+              <h3>{label(s.id)}</h3>
+              {rows(s.items)}
+            </section>
+          ))}
+      </>
+    );
   };
 
   const body = () => {
@@ -772,7 +826,9 @@ export function Settings(props: {
       >
         {query.trim() && (
           <p className="hint" role="status">
-            {found.length ? tn("settings.shown", found.length) : ""}
+            {[placesHit.length ? tn("settings.places_shown", placesHit.length) : "", found.length ? tn("settings.shown", found.length) : ""]
+              .filter(Boolean)
+              .join(" ")}
           </p>
         )}
         {settings.isPending ? (

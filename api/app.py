@@ -64,6 +64,7 @@ from api.waiting_routes import build_waiting_router
 from api.watch_routes import build_watch_router
 from engine import __version__, problems
 from engine.ai.router import Router
+from engine.brand import LOGO_TYPES, logo_path
 from engine.config import Config
 from engine.local_guards import allowed_hosts, allowed_origins
 from engine.shipped import product, shipped
@@ -338,7 +339,7 @@ def create_app(
             instance=instance,
             feedback_to=cfg.ui.feedback_to or product().get("feedback_to") or None,
             brand_color=cfg.ui.brand.color,
-            logo=_logo(ws, cfg) is not None,
+            logo=logo_path(ws.config_dir, cfg.ui.brand.logo) is not None,
             theme=cfg.ui.theme,
             density=cfg.ui.density,
             language=cfg.workspace.language,
@@ -348,12 +349,13 @@ def create_app(
     @inner.get("/api/brand/logo", include_in_schema=False)
     def brand_logo() -> Any:
         """The workspace's logo image from its config folder, when one is set and present."""
-        found = _logo(ws, cfg)
+        found = logo_path(ws.config_dir, cfg.ui.brand.logo)
         if found is None:
             return _error("not found", 404)
-        response = FileResponse(found, media_type=_LOGO_TYPES[found.suffix.lower()])
+        response = FileResponse(found, media_type=LOGO_TYPES[found.suffix.lower()])
         response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
         response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Content-Type-Options"] = "nosniff"
         return response
 
     inner.include_router(build_router(ws, cfg, store, events, worker))
@@ -417,27 +419,6 @@ def create_app(
     outer.state.store = store
     outer.state.events = events
     return outer
-
-
-_LOGO_TYPES = {
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".webp": "image/webp",
-    ".svg": "image/svg+xml",
-}
-
-
-def _logo(ws: Workspace, cfg: Config) -> Path | None:
-    """The logo file `ui.brand.logo` names in the workspace's config folder, when it is there."""
-    name = cfg.ui.brand.logo
-    if not name:
-        return None
-    folder = ws.config_dir.resolve()
-    path = (folder / name).resolve()
-    if path.parent != folder or not path.is_file() or path.suffix.lower() not in _LOGO_TYPES:
-        return None
-    return path
 
 
 def _with_base(html: str, base_path: str) -> str:

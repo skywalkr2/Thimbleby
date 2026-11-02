@@ -18,3 +18,6 @@
 .mark { margin: 0; color: var(--ok); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
 .confirm { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.progress { display: grid; gap: var(--space-1); margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-sunk); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.progress p { margin: 0; }
+.meaning { display: block; margin-top: var(--space-1); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }

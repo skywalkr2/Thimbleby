@@ -477,6 +477,10 @@ export const api = {
     return send<S["FileView"]>("POST", `files?${query.toString()}`, { headers: { "content-type": type }, body: file });
   },
 
+  /** Keeps a picture as the workspace's logo and says its file name, which is then saved as the setting. */
+  uploadLogo: (file: Blob) =>
+    send<S["LogoUploaded"]>("POST", "brand/logo", { headers: { "content-type": file.type || "application/octet-stream" }, body: file }),
+
   pluginActions: (kind?: string, record?: string) =>
     call<S["PersonActionView"][]>(
       "GET",

@@ -99,6 +99,13 @@ test("a search looks at a setting's key, label, description and add-on, ignoring
   expect(matches(plain, "short label", () => "Short label", (k) => k === "settings.key.x.hidden")).toBe(true);
 });
 
+test("a search also looks for the words the list gives for what was typed", () => {
+  const spending = item({ key: "ai.budgets.per_day_usd", description: "The most to spend in a day" });
+  expect(matches(spending, "money", t, none)).toBe(false);
+  expect(matches(spending, "money", t, none, { money: ["spend"] })).toBe(true);
+  expect(matches(spending, "price", t, none, { money: ["spend"] })).toBe(false);
+});
+
 test("undo puts back the old values, and returns what was default to default", () => {
   const body = undoBody(
     [

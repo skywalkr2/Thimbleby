@@ -233,6 +233,9 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .settings-group { display: grid; gap: var(--space-3); min-width: 0; }
 .settings-group h3 { font-size: var(--text-section); line-height: var(--lh-section); margin: 0; }
 .settings-results { display: grid; gap: var(--space-3); }
+.logo-control { display: grid; gap: var(--space-2); justify-items: start; }
+.logo-preview { max-width: 160px; max-height: 48px; object-fit: contain; padding: var(--space-1); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.settings-places { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .settings-topics { display: grid; gap: 0; }
 .settings-topic { border-top: 1px solid var(--border); }
 .settings-topic > [role="group"] { display: grid; gap: var(--space-3); padding-bottom: var(--space-4); }

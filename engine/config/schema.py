@@ -2125,6 +2125,11 @@ class LanguageFile(FileModel):
         "The names a country has on the last line of an address (written as is, capitals matter). Used where an "
         "address pattern says `{country}`."
     )
+    settings_search_words: dict[str, list[str]] | None = word_list(
+        'Words a person may search Settings by that no setting uses ("password", "money", "sign out"), each with '
+        "the words that find the same things: a search for the first finds what holds any of the others, besides what "
+        "holds the typed words. Case is ignored."
+    )
     known_terms_shipped: bool = Field(
         True,
         description="Never ask what an unmistakable name means: the core's list of country names, time zone names, "
@@ -2630,13 +2635,21 @@ class BrandSettings(ConfigModel):
     color: str | None = Field(
         None,
         pattern=r"^#[0-9a-fA-F]{6}$",
-        description="The accent color for buttons, links and the selected view, as #rrggbb. Lighter and darker shades "
-        "are worked out from it; Settings warns when its contrast would fail. Empty uses the app's indigo.",
+        description="The accent color for buttons, links and the selected view. Lighter and darker shades are worked "
+        "out from it; Settings warns when it would be hard to see. Empty uses the app's indigo.",
+        json_schema_extra={"widget": "color"},
     )
     logo: str | None = Field(
         None,
-        description="An image shown in place of the monogram at the top left. It is a PNG, JPEG, WebP or SVG file in "
-        "the app's configuration folder, by name. Leave it empty to show the initials.",
+        description="A picture shown in place of your initials at the top left. It is a PNG, JPEG, WebP or SVG picture "
+        "that Settings uploads and keeps with your settings for you. Leave it empty to show the initials.",
+        json_schema_extra={"widget": "image"},
+    )
+    logo_max_kb: int = Field(
+        512,
+        ge=16,
+        le=4096,
+        description="The largest logo picture Settings takes in, in kilobytes.",
     )
 
     @field_validator("logo")

@@ -23,7 +23,7 @@ import { EmptyState } from "../ui/EmptyState";
 const percent = (share: number) => Math.round(share * 100);
 
 export function AiCompare(props: { onBack: () => void }) {
-  const { t, tn } = useWords();
+  const { t } = useWords();
   const money = useMoney();
   const client = useQueryClient();
   const { push } = useToasts();
@@ -75,8 +75,15 @@ export function AiCompare(props: { onBack: () => void }) {
     })),
   });
   const costOf = (c: Column) => columnCost[grid.columns.indexOf(c)]?.data;
+  const pricingColumn = (c: Column) => columnCost[grid.columns.indexOf(c)]?.isLoading === true;
   const total = accountCost.every((q) => q.data) && accountCost.length > 0 ? accountCost.reduce((sum, q) => (sum === null || q.data?.usd == null ? null : sum + q.data.usd), 0 as number | null) : null;
   const limit = accountCost.find((q) => q.data)?.data?.confirm_above_usd ?? 0;
+  // The price is on the button before anything is clicked: until it is worked out the button says so, and waits.
+  const pricing = accountCost.some((q) => q.isPending);
+  const known = accountCost.find((q) => q.data)?.data;
+  const running = grid.columns.filter((c) => c.measure === "measuring");
+  const waiting = grid.columns.filter((c) => c.measure === "waiting");
+  const failed = grid.columns.filter((c) => c.measure === "failed");
   const allNeedGo = accountCost.some((q) => q.data?.needs_go) || (total != null && total > limit);
 
   const run = async (account: string, body: S["AiMeasureIn"]) => {
@@ -118,8 +125,8 @@ export function AiCompare(props: { onBack: () => void }) {
     const measuring = c.measure === "waiting" || c.measure === "measuring";
     const detail = skill
       ? [
+          skill.runs > 0 ? t("ai_compare.right_of", { passes: skill.passes, runs: skill.runs }) : "",
           skill.cost_per_pass_usd != null && skill.cost_per_pass_usd > 0 ? t("ai_compare.cost", { amount: money(skill.cost_per_pass_usd) }) : "",
-          skill.runs > 0 ? tn("ai_compare.runs", skill.runs) : "",
           when(skill.age_days ?? 0) + (state === "old" ? ` ${t("ai_compare.old")}` : ""),
         ]
           .filter(Boolean)
@@ -144,8 +151,13 @@ export function AiCompare(props: { onBack: () => void }) {
         </>
       ) : (
         <div className={styles.actions}>
-          <Button size="sm" aria-label={t("ai_compare.measure_named", { name: nameOf(c.account), model: modelWords(c.model) })} onClick={() => void measureColumn(c, false)}>
-            {estimate?.usd == null ? t("ai_compare.measure") : t("ai_compare.measure_cost", { amount: money(estimate.usd) })}
+          <Button
+            size="sm"
+            aria-label={t("ai_compare.measure_named", { name: nameOf(c.account), model: modelWords(c.model) })}
+            disabled={pricingColumn(c)}
+            onClick={() => void measureColumn(c, false)}
+          >
+            {pricingColumn(c) ? t("ai_compare.working_out") : estimate?.usd == null ? t("ai_compare.measure_unpriced") : t("ai_compare.measure_cost", { amount: money(estimate.usd) })}
           </Button>
         </div>
       );
@@ -190,14 +202,21 @@ export function AiCompare(props: { onBack: () => void }) {
         </h2>
         {accountNames.length > 0 && (
           <div className={styles.actions}>
-            <Button variant={anyResult ? "secondary" : "primary"} onClick={() => void measureAll(false)}>
-              {anyResult
-                ? total == null
-                  ? t("ai_compare.measure_all")
-                  : t("ai_compare.measure_all_cost", { amount: money(total) })
-                : total == null
-                  ? t("ai_compare.measure")
-                  : t("ai_compare.measure_cost", { amount: money(total) })}
+            <Button
+              variant={anyResult ? "secondary" : "primary"}
+              disabled={pricing}
+              aria-describedby={known ? "ai-compare-cost-note" : undefined}
+              onClick={() => void measureAll(false)}
+            >
+              {pricing
+                ? t("ai_compare.working_out")
+                : anyResult
+                  ? total == null
+                    ? t("ai_compare.measure_all_unpriced")
+                    : t("ai_compare.measure_all_cost", { amount: money(total) })
+                  : total == null
+                    ? t("ai_compare.measure_unpriced")
+                    : t("ai_compare.measure_cost", { amount: money(total) })}
             </Button>
           </div>
         )}
@@ -208,6 +227,23 @@ export function AiCompare(props: { onBack: () => void }) {
         </Button>
       </p>
       {skills.data && <p className={styles.sub}>{t("ai_compare.sub", { percent: percent(skills.data.min_score) })}</p>}
+      {known && (
+        <p className={styles.sub} id="ai-compare-cost-note">
+          {t("ai_compare.cost_note", { ask: money(known.confirm_above_usd), day: money(known.per_day_usd) })}
+        </p>
+      )}
+      {(running.length > 0 || waiting.length > 0) && (
+        <div className={styles.progress} role="status" data-measuring="">
+          {running.length > 0 && <p>{t("ai_compare.progress", { names: running.map(headOf).join(", ") })}</p>}
+          {waiting.length > 0 && <p>{t("ai_compare.progress_waiting", { names: waiting.map(headOf).join(", ") })}</p>}
+        </div>
+      )}
+      {!anyResult &&
+        failed.map((c) => (
+          <p key={columnKey(c)} className="problem-note" role="status">
+            {t("ai_compare.failed_named", { name: headOf(c), why: c.measure_why ?? "" })}
+          </p>
+        ))}
       {asking === "*" && (
         <div role="alert">
           <p className={styles.confirm}>{t("ai_compare.confirm", { amount: money(total ?? 0), limit: money(limit) })}</p>
@@ -239,7 +275,9 @@ export function AiCompare(props: { onBack: () => void }) {
       ) : accountNames.length === 0 ? (
         <EmptyState icon="gear" text={t("ai_compare.empty")} />
       ) : !anyResult ? (
-        <EmptyState icon="grid" data-nothing-measured="" text={t("ai_compare.nothing_measured")} />
+        running.length > 0 || waiting.length > 0 ? null : (
+          <EmptyState icon="grid" data-nothing-measured="" text={t("ai_compare.nothing_measured")} />
+        )
       ) : (
         <div className={styles.scroll} role="region" aria-label={t("ai_compare.title")} tabIndex={0}>
           <table className={styles.grid}>
@@ -259,7 +297,15 @@ export function AiCompare(props: { onBack: () => void }) {
                 const best = bestOf(cells);
                 return (
                   <tr key={row.id}>
-                    <th scope="row">{row.label}</th>
+                    <th scope="row">
+                      {row.label}
+                      {row.description && (
+                        <>
+                          {" "}
+                          <span className={styles.meaning}>{row.description}</span>
+                        </>
+                      )}
+                    </th>
                     {grid.columns.map((c, i) => cell(c, cells[i], best?.index === i, !!best?.only))}
                   </tr>
                 );

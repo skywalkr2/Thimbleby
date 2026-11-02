@@ -15,7 +15,7 @@ schedule: {week_starts_on: monday, day_starts: "07:00", day_ends: "19:00", month
 followups: {action_due_within_days: 7, undated_after_days: 14, question_after_days: 4, second_nudge_items: 2, escalate_after_chases: 2, soon_days: 3}   # when a sent item is due a follow-up, and how soon counts as due soon
 walkthrough: {first_promises: 5, suggested_people: 5, not_people_addresses: [info, support, sales, billing], not_people_names: [team, support, bank, store]}   # how many promises the first-result screen shows; how many people the people step suggests, and the address and name words that are never a person
 series: {usually_with_share: 0.5, usually_with_min_meetings: 2, usually_with_max: 6}   # who a series is "usually with" on its page
-brand: {color: "#2f6f5e", logo: null}   # the accent color; a logo is an image file in this config folder
+brand: {color: "#2f6f5e", logo: null, logo_max_kb: 512}   # the accent color; a logo is a picture uploaded in Settings and kept in this config folder, at most this many KB
 notifications: {enabled: false, browser: true, webhook: null, webhook_format: json, webhook_app: null, apps_extra: [], quiet_hours: {start: "22:00", end: "06:30"}, retry_minutes: 15, message_one: "1 decision waiting for you", message_many: "{count} decisions waiting for you", test_message: "This is a test. You will get a note like this when something needs you."}   # notices that something needs you: off until turned on, to you only, a count and never what an item is about
 theme: system   # system, light or dark; each person can change it on their own device
 density: compact   # comfortable or compact

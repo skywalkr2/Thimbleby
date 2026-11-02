@@ -4,6 +4,38 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Compare shows its price and progress, Settings search finds beginners' words, the logo is uploaded and the color picked (X51, X55, X56; section 304)
+
+**Decided:** (1) **Compare, Measure (X51):** the price is on the button before anything is clicked ("Measure (about $x)", or
+"Working out the price…" while it is worked out, or "price unknown"), with one line saying what is asked first above and that
+a test is paid on the person's own account and **is not counted in the daily limit** (measuring runs on a scratch copy of the
+workspace, so the daily budget never sees it; the line says so rather than claiming otherwise). While a test runs the page
+says what is being tested and who waits, in place of "Nothing measured yet"; a test that didn't finish says why even before
+any result. Each kind of work is named in plain words with its meaning under it (the skills file's own words, which add-ons
+extend), and a cell reads "17 of 18 right · $0.03 per right answer". (2) **Settings search (X55):** it also finds sections
+(with a line about each), the AI accounts by name, the backup key and an add-on's keys, each linking to its section, and it
+reads a list of words beginners use ("password", "email", "money", "delete", "sign out") as `language.settings_search_words`:
+shipped data in the language file, replaced whole by the workspace's own list like every other shipped list, applied at once.
+(3) **Logo and accent (X56):** the logo is a picture uploaded in Settings (`POST /api/brand/logo`), kept in the config folder
+under a name made from its content and saved as `ui.brand.logo`, with the usual note and Undo; a missing or non-picture file
+is refused when chosen, with a plain reason; the largest size is `ui.brand.logo_max_kb` (512, files only). The accent color is
+the browser's color picker, saved when the person is done, with a note in plain words when the color is hard to see on white
+or text on a button in it is hard to read; no standard's name or ratio is shown.
+
+**Needs the owner:** whether a measuring should count toward the daily limit (today it does not; counting it means running the
+cases through the person's own budget, an engine change); the header's logo keeps its address when one picture replaces
+another, so a browser that cached the first may show it until a reload.
+
+**Who:** the owner ("every open P1 built before the reviewer's re-sweep", 2026-11-02); the main session for the rest.
+
+**Why:** the reviewer found the price behind an error message, a measuring that looked like nothing happened, a search that
+missed the words people use, and a logo and color that took file names and hex codes.
+
+**Impact:** design 4.6, 4.11 (brand), 7.9, 7.12 and 7.16 edited; `engine/brand.py`, `engine/settings.py`,
+`engine/config/schema.py`, `engine/defaults/language/en-US.yaml`, `engine/defaults/skills.yaml`, `api/`, and the Compare,
+Settings and setting-row screens. New key `ui.brand.logo_max_kb` and new list `language.settings_search_words` (demo values
+in both workspaces). Change log: section 304.
+
 ## 2026-11-02: A file can be renamed, described and removed, with Undo; Add a file speaks of documents, pictures and sounds (X46)
 
 **Decided:** (1) Add a file says what it takes in words, never in media types: "Any document, picture or sound file. Up to

@@ -3987,6 +3987,11 @@
             "title": "Needs Go",
             "type": "boolean"
           },
+          "per_day_usd": {
+            "description": "The most the assistant's everyday work may spend in a day (`ai.budgets.per_day_usd`). Measuring runs on a scratch copy and isn't counted in it; the screen says so beside the price.",
+            "title": "Per Day Usd",
+            "type": "number"
+          },
           "runs": {
             "description": "How many times each runs.",
             "title": "Runs",
@@ -4016,6 +4021,7 @@
           "skipped",
           "runs",
           "confirm_above_usd",
+          "per_day_usd",
           "needs_go"
         ],
         "title": "AiMeasureEstimate",
@@ -15329,6 +15335,21 @@
           "models"
         ],
         "title": "LocalServerView",
+        "type": "object"
+      },
+      "LogoUploaded": {
+        "description": "A picture kept as the workspace's logo file; the setting `ui.brand.logo` is not changed until it is saved.",
+        "properties": {
+          "name": {
+            "description": "The file's name in the configuration folder, to save as `ui.brand.logo`.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "LogoUploaded",
         "type": "object"
       },
       "LookBackIn": {
@@ -28103,6 +28124,22 @@
           },
           "value": {
             "title": "Value"
+          },
+          "widget": {
+            "anyOf": [
+              {
+                "enum": [
+                  "color",
+                  "image"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The control this setting has instead of a box to type in: a color picker, or the upload of a picture (the picture is kept by `POST /api/brand/logo`, and the setting holds its file name).",
+            "title": "Widget"
           }
         },
         "required": [
@@ -28278,6 +28315,17 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "search_words": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "Words a person may search Settings by that the settings themselves don't use, each with the words that find the same things (`language.settings_search_words`, shipped data a workspace can replace).",
+            "title": "Search Words",
+            "type": "object"
           }
         },
         "required": [
@@ -37109,6 +37157,25 @@
           }
         },
         "summary": "Backups"
+      }
+    },
+    "/api/brand/logo": {
+      "post": {
+        "description": "Keep a picture as the workspace's logo: the body is the picture's bytes. It is stored in the configuration\nfolder under a name made from its content, and the name is returned to be saved as `ui.brand.logo`, which this\ndoes not change. A picture that can't be shown, or is too large, is refused with the reason.",
+        "operationId": "brand_logo_upload_api_brand_logo_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoUploaded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Brand Logo Upload"
       }
     },
     "/api/brief": {

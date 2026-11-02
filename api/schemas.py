@@ -4237,6 +4237,11 @@ class SettingItem(BaseModel):
         default_factory=list,
         description="With a file chooser: the endings of the files it offers (such as .ics), so it lists only those.",
     )
+    widget: Literal["color", "image"] | None = Field(
+        None,
+        description="The control this setting has instead of a box to type in: a color picker, or the upload of a "
+        "picture (the picture is kept by `POST /api/brand/logo`, and the setting holds its file name).",
+    )
     renamed_from: str | None = Field(
         None,
         description="The old name of this setting that is still in use (in a file, an environment variable or a "
@@ -4294,6 +4299,17 @@ class SettingsView(BaseModel):
         "when, so the person can see what changed underneath them.",
     )
     items: list[SettingItem]
+    search_words: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Words a person may search Settings by that the settings themselves don't use, each with the "
+        "words that find the same things (`language.settings_search_words`, shipped data a workspace can replace).",
+    )
+
+
+class LogoUploaded(BaseModel):
+    """A picture kept as the workspace's logo file; the setting `ui.brand.logo` is not changed until it is saved."""
+
+    name: str = Field(description="The file's name in the configuration folder, to save as `ui.brand.logo`.")
 
 
 class SettingsSave(BaseModel):
@@ -4831,6 +4847,10 @@ class AiMeasureEstimate(BaseModel):
     runs: int = Field(description="How many times each runs.")
     usd: float | None = Field(None, description="About what all of it costs; none when a model has no known price.")
     confirm_above_usd: float = Field(description="The amount above which the person is asked first.")
+    per_day_usd: float = Field(
+        description="The most the assistant's everyday work may spend in a day (`ai.budgets.per_day_usd`). Measuring "
+        "runs on a scratch copy and isn't counted in it; the screen says so beside the price.",
+    )
     needs_go: bool = Field(description="Starting it needs `confirmed`: the estimate is above that amount.")
 
 

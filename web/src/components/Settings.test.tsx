@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { useState } from "react";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import type { SettingsSection } from "../lib/views";
@@ -272,22 +272,80 @@ test("choosing a section shows that section's settings and no others; the choice
   expect(chosen).toHaveBeenCalledWith("appearance");
 });
 
-test("in Appearance's More settings, the measured contrast of the text on the accent color is shown, and warns when it fails AA", async () => {
+const colorItem = (value: string) =>
+  item("ui.brand.color", { group: "ui.brand", value, default: "", description: "The accent color.", basic: false, topic: "appearance", widget: "color" });
+const logoItem = (value: string) =>
+  item("ui.brand.logo", { group: "ui.brand", value, default: "", description: "A picture shown in place of your initials.", basic: false, topic: "appearance", widget: "image" });
+
+test("the accent color is picked, not typed, and a color that is hard to see says so in plain words, with no standard's name", async () => {
   const user = userEvent.setup();
-  const color = (value: string) => item("ui.brand.color", { group: "ui.brand", value, default: "", description: "The accent color.", basic: false, topic: "appearance" });
-  api([...ITEMS, color("#4f46e5")]);
+  const calls = api([...ITEMS, colorItem("#4f46e5")]);
   open("appearance");
   await user.click(await screen.findByText("More settings"));
-  const line = await screen.findByRole("status", { name: "Contrast of the accent color" });
-  expect(line).toHaveTextContent(/Text on your accent color has a contrast of \d+\.\d to 1, which meets the 4\.5 to 1 that WCAG AA asks for\./);
-  expect(line).not.toHaveTextContent("under");
-  // Typing a color that fails shows the warning at once, before it is saved, in words as well as color.
-  const box = screen.getByLabelText("Accent color");
-  await user.clear(box);
-  await user.type(box, "#7a7a7a");
-  const warning = await screen.findByRole("status", { name: "Contrast of the accent color" });
-  expect(warning).toHaveTextContent(/Warning: text on your accent color has a contrast of \d+\.\d to 1, under the 4\.5 to 1 that WCAG AA asks for\. Choose a lighter or a darker color\./);
+  const picker = await screen.findByLabelText("Accent color");
+  expect(picker).toHaveAttribute("type", "color");
+  expect(picker).toHaveValue("#4f46e5");
+  expect(await screen.findByRole("status", { name: "Is this color easy to see?" })).toHaveTextContent("This color is easy to see, and text on buttons in it is easy to read.");
+  // A pale color is hard to see on white, and says so before it is saved.
+  fireEvent.change(picker, { target: { value: "#ffe28a" } });
+  const faint = await screen.findByRole("status", { name: "Is this color easy to see?" });
+  expect(faint).toHaveTextContent("This color is hard to see on white, so outlines and icons in it may fade into the page.");
+  // A middle grey is not easy to read text on, either way.
+  fireEvent.change(picker, { target: { value: "#7a7a7a" } });
+  expect(await screen.findByRole("status", { name: "Is this color easy to see?" })).toHaveTextContent("Text on buttons in this color may be hard to read.");
+  expect(document.body).not.toHaveTextContent(/WCAG|contrast|AA\b/);
+  // Nothing is saved until the person is done choosing.
+  expect(posted(calls)).toHaveLength(0);
+  fireEvent.blur(picker);
+  await waitFor(() => expect(posted(calls)).toEqual([{ changes: { "ui.brand.color": "#7a7a7a" }, reset: [], fingerprint: "fp-1" }]));
 });
+
+test("passing the color control without choosing a color saves nothing, and the app's own color can be asked for again", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS, colorItem("")]);
+  open("appearance");
+  await user.click(await screen.findByText("More settings"));
+  const picker = await screen.findByLabelText("Accent color");
+  fireEvent.blur(picker);
+  expect(posted(calls)).toHaveLength(0);
+  expect(screen.queryByRole("button", { name: /Use the app's color/ })).toBeNull();
+});
+
+test("the logo is uploaded from the computer, kept by the app, and its name saved with the usual note and Undo", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS, logoItem("")], { "POST brand/logo": () => ({ name: "logo-0123456789ab.png" }) });
+  open("appearance");
+  await user.click(await screen.findByText("More settings"));
+  expect(await screen.findByText("No logo. Your initials are shown instead.")).toBeInTheDocument();
+  expect(screen.queryByRole("textbox", { name: "Logo" })).toBeNull();
+  const file = new File([new Uint8Array([137, 80, 78, 71])], "mark.png", { type: "image/png" });
+  await user.upload(screen.getByLabelText("Logo"), file);
+  await waitFor(() => expect(calls.some((c) => c.route === "POST brand/logo")).toBe(true));
+  await waitFor(() => expect(posted(calls)).toEqual([{ changes: { "ui.brand.logo": "logo-0123456789ab.png" }, reset: [], fingerprint: "fp-1" }]));
+  expect(await screen.findByRole("img", { name: "Your logo" })).toHaveAttribute("src", expect.stringContaining("brand/logo"));
+});
+
+test("a picture the app refuses says why beside the logo, and nothing is saved", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS, logoItem("")], { "POST brand/logo": () => new Refuse(400, "That isn't a picture the app can show. Choose a PNG, JPEG, WebP or SVG file.") });
+  open("appearance");
+  await user.click(await screen.findByText("More settings"));
+  await user.upload(await screen.findByLabelText("Logo"), new File(["not a picture"], "notes.png", { type: "image/png" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("That isn't a picture the app can show. Choose a PNG, JPEG, WebP or SVG file.");
+  expect(posted(calls)).toHaveLength(0);
+});
+
+test("a logo whose picture is gone says so, and its initials can be asked for again", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ITEMS, logoItem("old.png")]);
+  open("appearance");
+  await user.click(await screen.findByText("More settings"));
+  fireEvent.error(await screen.findByRole("img", { name: "Your logo" }));
+  expect(await screen.findByText("The logo picture can't be found. Choose it again, or go back to your initials.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /Use my initials instead/ }));
+  await waitFor(() => expect(posted(calls)).toEqual([{ changes: {}, reset: ["ui.brand.logo"], fingerprint: "fp-1" }]));
+});
+
 test("Quick links is a section of its own with the list of the person's links as a part of its own, not as a read-only row", async () => {
   const links = item("ui.links", { group: "ui", type: "other", value: [{ name: "Planning board", address: `${WEB}boards.example.org/plan` }], default: [], description: "Links to your own pages.", page: null });
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." }), links]);
@@ -323,7 +381,8 @@ test("the search looks at every setting in every section by its key and descript
   await user.type(search, "rarely");
   expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
-  expect(screen.getByText("1 setting shown.")).toBeInTheDocument();
+  // The Advanced page is a place that says "rarely changed" too, so a place is found beside the setting.
+  expect(screen.getByText("1 place found. 1 setting shown.")).toBeInTheDocument();
   await user.clear(search);
   await user.type(search, "demo.advanced");
   expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
@@ -1735,4 +1794,75 @@ test("an address naming a page Settings doesn't have here says so and shows the 
   const note = await screen.findByText(/Add-on files isn't in Settings here, so this is You instead\./);
   expect(note).toHaveAttribute("data-not-available");
   expect(screen.getByLabelText("The display name.")).toBeInTheDocument();
+});
+
+// The words a beginner types are matched against what the shipped list says they mean, and the search finds places as well as rows.
+const SEARCH_WORDS = { money: ["spend", "spending"], password: ["key", "keys", "sign in", "account"], "sign out": ["sign in", "connection"], delete: ["remove"] };
+const SEARCHED = [
+  ...ITEMS,
+  item("ai.budgets.per_day_usd", { group: "ai.budgets", description: "The most the assistant may spend in a day.", type: "number", value: 2, default: 2 }),
+  item("storage.backups.every_hours", { group: "storage.backups", description: "How often a backup is made.", type: "number", value: 24, default: 24 }),
+];
+const account = (name: string, label: string) => ({ name, label, kind: null, adapter: "adapter-one", base_url: null, models: {}, used_for: [], backup_for: [], has_key: true, key_state: "saved" });
+const searching = (words: Record<string, string[]> = SEARCH_WORDS) =>
+  api(SEARCHED, {
+    "GET settings": () => ({ fingerprint: "fp-1", items: SEARCHED, search_words: words }),
+    "GET ai/accounts": () => [account("studio", "Studio account")],
+    "GET ai/endpoints": () => [],
+    "GET addon-secrets": () => [{ plugin: "sample-pack", secrets: [{ secret: "token", where: "none", name: null }] }],
+  });
+
+test("a word the settings don't use finds them through the shipped list, and with no list it finds nothing", async () => {
+  const user = userEvent.setup();
+  searching({});
+  const first = open();
+  await screen.findByLabelText("The display name.");
+  await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "money");
+  expect(screen.getByText("No settings match.")).toBeInTheDocument();
+  first.unmount();
+  searching();
+  open();
+  await screen.findByLabelText("The display name.");
+  await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "money");
+  expect(await screen.findByLabelText("Most to spend in a day")).toBeInTheDocument();
+  expect(screen.queryByText("No settings match.")).toBeNull();
+});
+
+test("a search also finds sections, an AI account, the backup key and an add-on's keys, each opening its section", async () => {
+  const user = userEvent.setup();
+  searching();
+  const onSection = vi.fn();
+  renderApp(<Settings section="you" onSection={onSection} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  await screen.findByLabelText("The display name.");
+  const search = screen.getByRole("searchbox", { name: "Search settings" });
+  await user.type(search, "money");
+  const places = await screen.findByRole("region", { name: "Go to" });
+  expect(within(places).getByRole("link", { name: "AI and spending" })).toBeInTheDocument();
+  await user.clear(search);
+  await user.type(search, "password");
+  const found = within(await screen.findByRole("region", { name: "Go to" }));
+  expect(found.getByRole("link", { name: "Backup key" })).toBeInTheDocument();
+  expect(found.getByRole("link", { name: /keys and passwords/ })).toBeInTheDocument();
+  expect(found.getByRole("link", { name: "Connections" })).toBeInTheDocument();
+  await user.clear(search);
+  await user.type(search, "studio");
+  expect(within(await screen.findByRole("region", { name: "Go to" })).getByRole("link", { name: "Studio account" })).toHaveAttribute("href", expect.stringMatching(/#settings\/ai$/));
+  await user.clear(search);
+  await user.type(search, "sign out");
+  await user.click(within(await screen.findByRole("region", { name: "Go to" })).getByRole("link", { name: "Connections" }));
+  await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search settings" })).toHaveValue(""));
+  expect(onSection).toHaveBeenCalledWith("connections");
+});
+
+test("a search that is the start of a listed word counts, and a word with no match in the list or the settings says so", async () => {
+  const user = userEvent.setup();
+  searching();
+  open();
+  await screen.findByLabelText("The display name.");
+  const search = screen.getByRole("searchbox", { name: "Search settings" });
+  await user.type(search, "pass");
+  expect(within(await screen.findByRole("region", { name: "Go to" })).getByRole("link", { name: "Backup key" })).toBeInTheDocument();
+  await user.clear(search);
+  await user.type(search, "qqqq");
+  expect(screen.getByText("No settings match.")).toBeInTheDocument();
 });

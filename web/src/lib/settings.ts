@@ -2,6 +2,7 @@
 import type { S } from "./api";
 import { parseAmount } from "./money";
 import { readable } from "./records";
+import { holdsAny, searchTerms, type SearchWords } from "./settings-find";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Has = (key: string) => boolean;
@@ -154,12 +155,10 @@ export function restartWhat(keys: string[], items: Item[], t: T, has: Has): stri
 }
 
 /** Whether a setting matches a search: by its key, its label, its description or the name of the add-on it belongs to,
- * ignoring capitals. An empty search matches nothing. */
-export function matches(item: Item, query: string, t: T, has: Has): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return false;
+ * ignoring capitals, and by the words the list of search words gives for what was typed. An empty search matches nothing. */
+export function matches(item: Item, query: string, t: T, has: Has, words: SearchWords = {}): boolean {
   const addon = item.plugin ? [addonLabel(item.plugin, t, has)] : [];
-  return [item.key, labelOf(item, t, has), item.description, ...addon].some((x) => x.toLowerCase().includes(q));
+  return holdsAny([item.key, labelOf(item, t, has), item.description, ...addon], searchTerms(query, words));
 }
 
 /** The setting that switches this one on or off, if there is one. */

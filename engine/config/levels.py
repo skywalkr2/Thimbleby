@@ -342,6 +342,7 @@ INTERNAL = (
     "checks",
     "language",
     "ui.narrow_below_px",
+    "ui.brand.logo_max_kb",
     "ui.feedback_problem_days",
     "ui.feedback_problem_max",
     "ui.notifications.retry_minutes",

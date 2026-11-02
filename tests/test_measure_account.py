@@ -90,6 +90,8 @@ def test_the_estimate_names_the_models_the_level_the_account_may_see_and_what_as
     assert got["models"] == ["default", "harder"] and got["level"] == "internal"
     assert got["usd"] == pytest.approx(1.0) and got["cases"] == 40 and got["runs"] == cfg.ai.evaluation.runs
     assert got["confirm_above_usd"] == cfg.ai.budgets.confirm_above_usd and got["needs_go"] is True
+    # The screen says beside the price what the daily limit is, since a test is not counted in it.
+    assert got["per_day_usd"] == cfg.ai.budgets.per_day_usd
     assert priced == [(f"{OTHER}/default", "internal"), (f"{OTHER}/harder", "internal")]
     one = client.post(f"{api(ws)}/ai/skills/{OTHER}/estimate", json={"model": "harder"}).json()
     assert one["models"] == ["harder"] and one["usd"] == pytest.approx(0.5)
@@ -276,3 +278,12 @@ def test_the_work_of_measuring_stays_in_this_computers_private_folder(env):
     ws, _app, _client, _priced = env
     measure.begin(ws, [f"{OTHER}/default"])
     assert Path(measure.path_of(ws)).parent == ws.private_dir
+
+
+def test_what_an_account_can_do_is_named_in_plain_words_and_each_says_what_it_means():
+    from engine.skills import core_skills
+
+    for skill in core_skills():
+        assert skill.description.strip(), skill.id
+        internal = ("term", "lesson", "routing", "scope", "injection")
+        assert not any(word in skill.label.lower() for word in internal), skill.id

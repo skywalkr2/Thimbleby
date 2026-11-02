@@ -23,6 +23,8 @@ from engine.worker import is_live
 OLD_DEFAULTS = json.loads((Path(__file__).parent / "fixtures" / "language" / "old_defaults.json").read_text("utf-8"))
 #: Lists whose default always was empty: the person's own additions, with nothing shipped.
 OWN_ONLY = {"known_terms", "never_shown"}
+#: Lists shipped since the move, which have no old default to compare with.
+ADDED = {"settings_search_words"}
 
 
 def settings_for(key: str) -> tuple[object, str]:
@@ -53,10 +55,10 @@ def list_settings() -> set[str]:
 
 
 def test_every_list_setting_has_a_shipped_list_and_the_shipped_file_has_nothing_else():
-    assert list_settings() - OWN_ONLY == set(OLD_DEFAULTS), (
+    assert list_settings() - OWN_ONLY == set(OLD_DEFAULTS) | ADDED, (
         "a list setting with no shipped list, or the other way round"
     )
-    assert set(lw.names()) == set(OLD_DEFAULTS)
+    assert set(lw.names()) == set(OLD_DEFAULTS) | ADDED
     for own in OWN_ONLY:
         assert getattr(LanguageFile(), own) == []
 
@@ -109,7 +111,7 @@ def test_a_reader_gets_a_changed_setting_at_the_next_use():
 
 
 def test_every_list_applies_at_once_and_the_settings_that_are_not_lists_keep_their_own_rule():
-    for key in OLD_DEFAULTS:
+    for key in [*OLD_DEFAULTS, *ADDED]:
         assert is_live(f"language.{key}"), key
     assert is_live("language.due_phrase_words.noon") and is_live("language.reported_speech.chat_line_patterns")
     assert not is_live("language.title_min_words")

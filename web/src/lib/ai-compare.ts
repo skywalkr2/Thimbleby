@@ -38,7 +38,7 @@ export interface Column {
 }
 
 /** One column for each model of each account, in the order the accounts are given; the skills across them in the order they are first met. */
-export function gridOf(order: string[], accounts: S["AiAccountSkills"][]): { columns: Column[]; rows: { id: string; label: string }[] } {
+export function gridOf(order: string[], accounts: S["AiAccountSkills"][]): { columns: Column[]; rows: { id: string; label: string; description: string }[] } {
   const columns: Column[] = [];
   for (const name of order) {
     const found = accounts.find((a) => a.name === name);
@@ -46,10 +46,10 @@ export function gridOf(order: string[], accounts: S["AiAccountSkills"][]): { col
       columns.push({ account: name, model: model.model, measure: model.measure, measure_why: model.measure_why, skills: model.skills });
     }
   }
-  const rows: { id: string; label: string }[] = [];
+  const rows: { id: string; label: string; description: string }[] = [];
   for (const column of columns) {
     for (const skill of column.skills) {
-      if (!rows.some((r) => r.id === skill.id)) rows.push({ id: skill.id, label: skill.label });
+      if (!rows.some((r) => r.id === skill.id)) rows.push({ id: skill.id, label: skill.label, description: skill.description });
     }
   }
   return { columns, rows };

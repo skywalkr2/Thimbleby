@@ -9,6 +9,7 @@ import { settingChoices, settingValue, type SettingWordsContext } from "../lib/s
 import { useWriteAmount } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { ClampedHint } from "../ui/ClampedHint";
+import { BrandContrast, ColorControl, LogoControl } from "./BrandControls";
 import { ChipList } from "./ChipList";
 import { MoneyField } from "./MoneyField";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
@@ -121,6 +122,36 @@ export function SettingRow(props: {
       <p className="setting-value" id={id}>
         {valueWords(item.value)}
       </p>
+    );
+  } else if (item.widget === "color") {
+    control = (
+      <>
+        <ColorControl
+          id={id}
+          label={label}
+          value={String(draft)}
+          disabled={off}
+          describedBy={describedBy}
+          onChange={props.onChange}
+          commit={props.commit}
+          onReset={props.onReset}
+        />
+        <BrandContrast color={String(draft)} />
+      </>
+    );
+  } else if (item.widget === "image") {
+    control = (
+      <LogoControl
+        id={id}
+        labelId={`${id}-label`}
+        label={label}
+        value={String(draft)}
+        disabled={off}
+        describedBy={describedBy}
+        onChange={props.onChange}
+        commit={props.commit}
+        onReset={props.onReset}
+      />
     );
   } else if (item.type === "yes_no") {
     control = (
@@ -278,7 +309,7 @@ export function SettingRow(props: {
     </label>
   ) : readOnly ? (
     <span className="setting-label">{label}</span>
-  ) : typedSecret || ticked ? (
+  ) : typedSecret || ticked || item.widget === "image" ? (
     <span className="setting-label" id={`${id}-label`}>
       {label}
     </span>
