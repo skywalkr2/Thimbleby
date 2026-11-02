@@ -1291,7 +1291,7 @@ L5. **Reading what arrives, and protecting what is learned.**
   extractor extension point for plugins, and a connector item that carries files, so mail add-ons hand attachments to the
   core instead of reading only their names. Built: `tests/test_extractors.py::test_a_mail_attachments_text_is_in_the_packet_as_outside_content`,
   `tests/test_extractors.py::test_a_plugin_reader_is_used_before_the_cores_and_declining_falls_back_to_it`,
-  `tests/test_extractors.py::test_a_type_nothing_reads_is_flagged_to_the_person_once`.
+  `tests/test_extractors.py::test_a_type_nothing_reads_is_named_in_its_item_and_never_asked_about`.
 - [x] **Each extractor tests itself at startup** on a small fixture file, and a failing one is a Today line (lessons of
   2026-10-14, lesson 8). A watched file with no text is an issue about the extractor, never a question asking the person
   for the text. Prefer readers that need nothing installed. Built: `tests/test_extractors.py::test_the_worker_checks_the_readers_when_it_starts`,

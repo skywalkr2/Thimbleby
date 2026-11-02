@@ -343,7 +343,8 @@ def questions(store):
     ]
 
 
-def test_a_type_nothing_reads_is_flagged_to_the_person_once(tmp_path):
+def test_a_type_nothing_reads_is_named_in_its_item_and_never_asked_about(tmp_path):
+    """The person's path: "Files like … can't be read yet" sat among the questions with nothing to answer."""
     from engine.watch import refresh
 
     first = [attached("a.zip", "application/zip", b"PK"), attached("b.zip", "application/zip", b"PK")]
@@ -354,8 +355,7 @@ def test_a_type_nothing_reads_is_flagged_to_the_person_once(tmp_path):
         assert "Attached file: a.zip (not read: files of this kind can't be read yet)" in handed_text(
             ws, store, result.new[0]
         )
-        assert len(questions(store)) == 1 and questions(store)[0].data["to"] == cfg.workspace.user.person
-        assert "a.zip" in questions(store)[0].data["title"]
+        assert questions(store) == []
         store.close()
         more = {
             "key": "m2",
@@ -369,7 +369,7 @@ def test_a_type_nothing_reads_is_flagged_to_the_person_once(tmp_path):
         cfg = load_config(ws.config_dir, env={})
         store = Store(ws.db_path, cfg=cfg)
         refresh(ws, store, cfg, "mail", NOW.replace(hour=10))
-        assert len(questions(store)) == 1
+        assert questions(store) == []
         assert health.problems(ws) == []  # an unsupported type isn't a reader that stopped working
     finally:
         store.close()

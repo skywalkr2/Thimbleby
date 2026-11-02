@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 279. A file nothing reads is never a question (2026-11-02; P108 d)
+
+| Where | Before | Now |
+|---|---|---|
+| An attached file of a type no reader takes (6.2, `engine/extract/attached.py`) | Named in its item, and one question per type: "Files like … can't be read yet", with nothing to answer | Named in its item only; no question, no Today line |
+
 ## 278. Account checks in plain words (2026-11-02; P108 b and c)
 
 | Where | Before | Now |

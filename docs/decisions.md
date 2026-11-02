@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: A file nothing reads is never a question (P108 d)
+
+**Decided:** an attached file of a type no reader takes is named in the item it came with, and nothing is asked. The
+question "Files like … can't be read yet" is no longer made.
+
+**Decided by:** the owner, from the To-dos and questions screen; the rule is the main session's.
+
+**Why:** the question asked nothing the person could answer, and it sat among real questions.
+
+**Impact:** design 6.2 only. No setting. No change to scope. Change log: section 279.
+
 ## 2026-11-02: Account checks say what is wrong in plain words (P108 b and c)
 
 **Decided:**

@@ -158,8 +158,10 @@ read from their zipped XML with the standard library and PDFs with `pypdf`; a fi
 never empty text; the text is cut at `storage.files.read_max_chars` with a mark, and a file over `read_max_mb` is named as
 not read. A connector's item carries files (`ItemFile`) and the core appends each one's text to the item, inside its
 outside-content block. Each core reader checks itself at startup on a generated file; a failing reader, or a real file
-it couldn't read, is a Today line that clears when a later file of that kind reads. An unsupported type is one question
-to the person, which they can drop, filed once per media type (not a Today line: the person has nothing to do).
+it couldn't read, is a Today line that clears when a later file of that kind reads. An unsupported type is named in the
+item it came with ("not read: files of this kind can't be read yet") and is neither a question nor a Today line, since the
+person has nothing to do (owner, 2026-11-02, P108 d; change log 279;
+`tests/test_extractors.py::test_a_type_nothing_reads_is_named_in_its_item_and_never_asked_about`).
 
 ## 6.3 Channels (outputs)
 

@@ -7,7 +7,8 @@ A connector hands files as bytes and never parses them; the core reads each with
 the type first), cuts the text at the configured size with a mark, and appends it after the item's text, one block per
 file. The item's text is what the assistant reads as outside content, so the files' words are marked like the rest.
 A file that can't be read is named in its block with the reason, and is an issue about its reader on Today; a type no
-reader takes is named the same way and flagged to the person once, as a question they can drop.
+reader takes is named the same way, in the item it came with, and is never a question: nothing is asked of the person
+about a file they can't do anything with.
 """
 
 from __future__ import annotations
@@ -48,8 +49,7 @@ def with_files_read(ws: Any, store: Any, cfg: Any, item: SourceItem, where: str)
             )
         except Unsupported as err:
             blocks.append(f"Attached file: {name} (not read: {err.reason})")
-            if health.flag_unsupported(ws, err.media_type):
-                _tell_once(store, cfg, name, where)
+            health.flag_unsupported(ws, err.media_type)
         except ExtractError as err:
             blocks.append(f"Attached file: {name} (not read: {err.reason})")
             if err.kind is not None:
@@ -59,25 +59,3 @@ def with_files_read(ws: Any, store: Any, cfg: Any, item: SourceItem, where: str)
             blocks.append(f"Attached file: {name}\n{read.text}\nEnd of attached file: {name}")
     text = "\n\n".join(part for part in (item.text.strip(), *blocks) if part)
     return replace(item, text=text, files=())
-
-
-def _tell_once(store: Any, cfg: Any, name: str, where: str) -> None:
-    """One question to the person that files like this one can't be read yet. It says nothing is needed from them."""
-    person = cfg.workspace.user.person
-    if not person or store.read().get("person", person) is None:
-        return
-    with store.transaction() as tx:
-        tx.create(
-            "question",
-            {
-                "to": person,
-                "title": f"Files like {name} can't be read yet",
-                "text": (
-                    f"A file named {name} came in with {where}, and this app can't read that kind of file yet. "
-                    "The rest of what came in was read. You won't be asked again about this kind of file."
-                ),
-                "kind": "question",
-                "resolves": {"kind": "unread_file_kind"},
-            },
-            _FLAGGER,
-        )
