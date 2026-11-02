@@ -2504,9 +2504,16 @@ class WalkthroughSettings(ConfigModel):
             "payments",
             "subscriptions",
             "welcome",
+            "unsubscribe",
+            "unsub",
+            "bounce",
+            "bounces",
+            "mailer",
         ],
         description="Words a mail address starts with (before the @ sign, up to the first dot, dash or number) when it "
-        "is a role or a service rather than a person. The people step never suggests such an address.",
+        "is a role or a service rather than a person, including unsubscribe and bounce addresses. The people step "
+        "never suggests such an address, nor one whose local part holds a long code (a run of eight or more letters "
+        "and digits that is hexadecimal or at least half digits).",
     )
     not_people_names: list[str] = Field(
         default_factory=lambda: [

@@ -52,8 +52,8 @@ test.describe.serial("journeys", () => {
     // The assistant is introduced by name, with Rename; the name isn't a box until I ask to change it.
     await expect(main.getByText("Your assistant is called Reginald.")).toBeVisible();
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
-    // The step says where it is on the path above its title ("Step 1 of 7"); the rail lists the steps beside it.
-    await expect(main.getByText("Step 1 of 7", { exact: true })).toBeVisible();
+    // The step says where it is on the path above its title ("Step 1 of 8"); the rail lists the steps beside it.
+    await expect(main.getByText("Step 1 of 8", { exact: true })).toBeVisible();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     // Continue on the first screen saves it and goes on to the next one (the same primary button on every screen).

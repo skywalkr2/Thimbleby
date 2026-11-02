@@ -1,9 +1,12 @@
-/* The people step: suggestion rows with a tick box per side, and the one add row that sits on a line where it fits. */
+/* The people step: suggestion rows with one tick box each and the one place choice under them, and the one add row that sits on a line where it fits. */
 .suggested { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-2); }
-.suggested li { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; min-width: 0; }
-.who { display: grid; min-width: 0; overflow-wrap: anywhere; }
-.places { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); border: 0; margin: 0; padding: 0; min-width: 0; }
-.places label { display: inline-flex; align-items: center; gap: var(--space-1); }
+.suggested li { min-width: 0; }
+.pick { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+.pick input { flex: 0 0 auto; margin-top: var(--space-1); }
+.who { display: grid; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+/* Where the ticked people go, and Add these: one place and one order for every row above, so a long name moves nothing. */
+.suggestFoot { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; justify-content: flex-end; margin-bottom: var(--space-3); }
+.suggestFoot [data-field] { margin: 0; min-width: 0; flex: 1 1 12rem; max-width: 24rem; }
 .addRow { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; }
 .addRow [data-field] { margin: 0; min-width: 0; flex: 1 1 12rem; }
 .addButton { flex: 0 0 auto; }

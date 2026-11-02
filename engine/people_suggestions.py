@@ -1,7 +1,8 @@
 """People the person writes to, suggested in the walkthrough's people step (design 7.8): taken from the mail the
 sources already read, never asked of a service. When the person's own sent mail is read, the people it was sent to
 count; otherwise the people the mail came from, and only senders who look like people. Anyone already on file, the
-person themselves, automated, role and company senders, bulk mail, set-aside senders and the mail kinds the app tracks
+person themselves, automated, role and company senders, addresses whose local part is a code (unsubscribe and
+bounce addresses), bulk mail, set-aside senders and the mail kinds the app tracks
 are left out. Reads only: adding someone is the People route's own add.
 """
 
@@ -99,6 +100,26 @@ def _blocked(store: Any, cfg: Any, sources: list[Any]) -> tuple[set[str], set[st
     return addresses, domains
 
 
+#: The marks that split an address's local part into words.
+_LOCAL_MARKS = re.compile(r"[._+=-]+")
+#: Letters a hexadecimal code is written in.
+_HEX = re.compile(r"[0-9a-f]+")
+#: The shortest run of letters and digits that can be a code rather than a word or a name.
+_CODE_LENGTH = 8
+
+
+def local_is_code(local: str) -> bool:
+    """Whether an address's local part (before the @ sign) holds a code, which no person's address does: a run of at
+    least `_CODE_LENGTH` letters and digits, with a digit, that is hexadecimal or at least half digits (the identifier
+    in a mailing list's unsubscribe or bounce address). A name that has digits in it (`sam.kin1985`) is not a code. A
+    `+tag` after the name is ignored, since a person's own address may carry one."""
+    for word in _LOCAL_MARKS.split(local.lower().partition("+")[0]):
+        digits = sum(c.isdigit() for c in word)
+        if len(word) >= _CODE_LENGTH and digits and (_HEX.fullmatch(word) or digits * 2 >= len(word)):
+            return True
+    return False
+
+
 def _first_word(local: str) -> str:
     found = _WORD.match(local.lower())
     return found.group(0) if found else ""
@@ -150,6 +171,7 @@ def suggest(store: Any, cfg: Any, limit: int) -> list[Suggestion]:
                 or domain in blocked_domains
                 or local.startswith(automated)
                 or _first_word(local) in roles
+                or local_is_code(local)
                 or (display and _names_a_company(display, companies))
             ):
                 continue

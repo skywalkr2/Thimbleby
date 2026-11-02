@@ -356,7 +356,7 @@ test.describe("screen use and the shell", () => {
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { level: 2, name: "You", exact: true })).toBeVisible();
     if ((await steps.getAttribute("aria-expanded")) === "true") await steps.click();
-    await expect(page.getByText("You · 1 of 7")).toBeVisible();
+    await expect(page.getByText("You · 1 of 8")).toBeVisible();
     await expect(steps).toHaveAttribute("aria-expanded", "false");
     await expect(page.locator("#walkthrough-steps")).toBeHidden();
     const field = (await main.getByLabel("Your full name").boundingBox())!;

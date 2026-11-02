@@ -273,7 +273,7 @@ describe("opening", () => {
     expect(items[2]).toHaveTextContent("backups");
     // Welcome is no step: no list of steps, no place, no Back, one Start; the cursor is on the heading, as there is no field.
     expect(screen.queryByRole("navigation", { name: "Setup steps" })).toBeNull();
-    expect(screen.queryByText(/ of 7/)).toBeNull();
+    expect(screen.queryByText(/ of 8/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
     expect(screen.queryByRole("button", { name: "I'll do this later" })).toBeNull();
     await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Welcome" })).toHaveFocus());
@@ -283,7 +283,7 @@ describe("opening", () => {
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/walkthrough" && (c.body as S["WalkthroughIn"]).step === "you")).toBe(true));
     // The cursor starts where the person types.
     await waitFor(() => expect(screen.getByLabelText("Your full name")).toHaveFocus());
-    expect(screen.getByText("You · 1 of 7")).toBeInTheDocument();
+    expect(screen.getByText("You · 1 of 8")).toBeInTheDocument();
   });
 
   test("the first screen of a resumed walkthrough is You, not Welcome", async () => {
@@ -1550,7 +1550,7 @@ describe("each screen", () => {
       // Nothing is ticked, so nothing can be added yet.
       expect(within(list).getByRole("button", { name: "Add these" })).toBeDisabled();
       expect(within(list).getAllByRole("checkbox")).toHaveLength(2);
-      await user.click(within(within(list).getByRole("group", { name: "Add Casey Kin to" })).getByRole("checkbox", { name: "Personal" }));
+      await user.click(within(list).getByRole("checkbox", { name: "Casey Kin" }));
       await user.click(within(list).getByRole("button", { name: "Add these" }));
       await waitFor(() => expect(calls.some((c) => c.route === "POST setup/people-add")).toBe(true));
       // The address the mail showed goes with the name, to be kept as the way to reach them; only the ticked row is added.
@@ -1560,7 +1560,7 @@ describe("each screen", () => {
       expect(screen.getByText("Lee Kin")).toBeInTheDocument();
     });
 
-    test("with a business each row has a tick box for Personal and for the business, and one person can be on both", async () => {
+    test("with a business the place is chosen once for everyone ticked, Personal first, and both people are added there", async () => {
       const user = userEvent.setup();
       const calls = fakeApi(
         routes(
@@ -1575,19 +1575,65 @@ describe("each screen", () => {
       );
       open();
       const list = await screen.findByRole("region", { name: "People you write to" });
-      const first = within(list).getAllByRole("listitem")[0];
-      expect(within(first).getAllByRole("checkbox").map((c) => (c as HTMLInputElement).labels?.[0].textContent)).toEqual(["Personal", SHOP]);
-      expect(within(list).getAllByRole("button")).toHaveLength(1);
-      await user.click(within(first).getByRole("checkbox", { name: SHOP }));
-      const second = within(list).getAllByRole("listitem")[1];
-      await user.click(within(second).getByRole("checkbox", { name: "Personal" }));
-      await user.click(within(second).getByRole("checkbox", { name: SHOP }));
+      // One tick box per person, and one place choice for the step, not one per row.
+      expect(within(list).getAllByRole("checkbox")).toHaveLength(2);
+      const place = within(list).getByRole("combobox", { name: "Add the ticked people to" });
+      expect(within(list).getAllByRole("combobox")).toHaveLength(1);
+      expect(place).toHaveValue("personal");
+      expect(within(place).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", SHOP]);
+      await user.click(within(list).getByRole("checkbox", { name: "Casey Kin" }));
+      await user.click(within(list).getByRole("checkbox", { name: "Lee Kin" }));
+      await user.selectOptions(place, "PRJ-3");
       await user.click(within(list).getByRole("button", { name: "Add these" }));
       await waitFor(() => expect(calls.filter((c) => c.route === "POST setup/people-add")).toHaveLength(2));
       expect(calls.filter((c) => c.route === "POST setup/people-add").map((c) => c.body)).toEqual([
         { full_name: "Casey Kin", aliases: [], address: "casey@example.com", sides: ["PRJ-3"] },
-        { full_name: "Lee Kin", aliases: [], address: "lee@example.com", sides: [PERSONAL, "PRJ-3"] },
+        { full_name: "Lee Kin", aliases: [], address: "lee@example.com", sides: ["PRJ-3"] },
       ]);
+    });
+
+    test("left on its default, the place is Personal for everyone ticked", async () => {
+      const user = userEvent.setup();
+      const calls = fakeApi(
+        routes(
+          {
+            "GET setup/business": () => stateWith([side("PRJ-3", "business", SHOP)]),
+            "GET setup/people-suggestions": () => SUGGESTED,
+            "POST setup/people-add": () => ({ id: "PER-9" }),
+          },
+          CORE.map((id) => step(id)),
+          { step: "people" },
+        ),
+      );
+      open();
+      const list = await screen.findByRole("region", { name: "People you write to" });
+      for (const box of within(list).getAllByRole("checkbox")) await user.click(box);
+      await user.click(within(list).getByRole("button", { name: "Add these" }));
+      await waitFor(() => expect(calls.filter((c) => c.route === "POST setup/people-add")).toHaveLength(2));
+      expect(calls.filter((c) => c.route === "POST setup/people-add").map((c) => (c.body as { sides: string[] }).sides)).toEqual([[PERSONAL], [PERSONAL]]);
+    });
+
+    test("a long name and a short one are laid out the same way: a tick box and the words in one label, the place choice outside the rows", async () => {
+      const long = { name: "Wilhelmina Featherstonehaugh-Cholmondeley-Throckmorton", address: "wilhelmina.featherstonehaugh@example.com", count: 12, from_sent: true };
+      const short = { name: "Jo Li", address: "jo@example.com", count: 1, from_sent: true };
+      fakeApi(
+        routes(
+          { "GET setup/business": () => stateWith([side("PRJ-3", "business", SHOP)]), "GET setup/people-suggestions": () => ({ people: [long, short] }) },
+          CORE.map((id) => step(id)),
+          { step: "people" },
+        ),
+      );
+      open();
+      const list = await screen.findByRole("region", { name: "People you write to" });
+      const shape = (li: HTMLElement) => ({
+        children: Array.from(li.children).map((c) => c.tagName + "." + c.className),
+        inLabel: li.querySelector("label input[type=checkbox]") !== null,
+        controls: li.querySelectorAll("select, button").length,
+      });
+      const [a, b] = within(list).getAllByRole("listitem");
+      expect(shape(a)).toEqual(shape(b));
+      expect(shape(a).controls).toBe(0);
+      expect(list.querySelector("[data-suggest-foot]")).toContainElement(within(list).getByRole("combobox"));
     });
 
     test("with no mail to suggest from, there is no heading over nothing; once everyone found is added, it says they were all added", async () => {
@@ -1608,17 +1654,18 @@ describe("each screen", () => {
       });
       open();
       const list = await screen.findByRole("region", { name: "People you write to" });
-      for (const group of within(list).getAllByRole("group")) await user.click(within(group).getByRole("checkbox", { name: "Personal" }));
+      for (const box of within(list).getAllByRole("checkbox")) await user.click(box);
       await user.click(within(list).getByRole("button", { name: "Add these" }));
       expect(await screen.findByText("You've added everyone we found in your mail. Add anyone else below.")).toBeInTheDocument();
       expect(screen.queryByText(/No one to suggest yet/)).toBeNull();
     });
 
-    test("each suggestion says what its tick box does, in words you can see", async () => {
+    test("each suggestion is one tick box named by the person, with their address and count read after it", async () => {
       personalOnly({ "GET setup/people-suggestions": () => SUGGESTED });
       open();
       const list = await screen.findByRole("region", { name: "People you write to" });
-      expect(within(list).getByText("Add Casey Kin to")).toBeVisible();
+      const box = within(list).getByRole("checkbox", { name: "Casey Kin" });
+      expect(box).toHaveAccessibleDescription("casey@example.com · 4 messages");
     });
 
     test("Paste a list is a link under the add row that opens a box with the cursor in it; what will be added is shown first, then each is added, and what was on file is said", async () => {
@@ -3015,13 +3062,17 @@ describe("one list of seven steps", () => {
     ["people", "People"],
   ];
 
-  test("progress reads 1 of 7 through 7 of 7, in the one order", async () => {
-    for (const [at, label] of SEVEN) {
+  test("progress counts every row the rail lists: 1 of 8 through 7 of 8, then the ending as 8 of 8, in the one order", async () => {
+    const ending: [S["WalkthroughView"]["step"], string][] = [...SEVEN, ["done", "Where things stand"]];
+    for (const [at, label] of ending) {
       fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: at }), "GET watch": () => [] });
       const { unmount } = open();
       expect(await screenTitle()).toHaveTextContent(label);
-      const n = SEVEN.findIndex(([id]) => id === at) + 1;
-      expect(await screen.findByText(`${label} · ${n} of 7`)).toBeInTheDocument();
+      const n = ending.findIndex(([id]) => id === at) + 1;
+      expect(await screen.findByText(`${label} · ${n} of 8`)).toBeInTheDocument();
+      // The step line above the title and the rail agree: the number is the row's place, the total is the rows listed.
+      expect(screen.getByText(`Step ${n} of 8`)).toBeInTheDocument();
+      expect(document.querySelectorAll("#walkthrough-steps [data-screen]")).toHaveLength(8);
       unmount();
     }
   });
@@ -3058,7 +3109,7 @@ describe("one list of seven steps", () => {
     try {
       fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: "you" }), "GET watch": () => [] });
       open();
-      expect(await screen.findByText("You · 1 of 7")).toBeInTheDocument();
+      expect(await screen.findByText("You · 1 of 8")).toBeInTheDocument();
       const steps = screen.getByRole("button", { name: "Steps" });
       const list = document.getElementById("walkthrough-steps")!;
       expect(steps).toHaveAttribute("aria-expanded", "false");
@@ -3069,7 +3120,7 @@ describe("one list of seven steps", () => {
       await user.click(within(list).getByRole("button", { name: /^Backups/ }));
       expect(await screenTitle()).toHaveTextContent("Backups");
       expect(screen.getByRole("button", { name: "Steps" })).toHaveAttribute("aria-expanded", "false");
-      expect(screen.getByText("Backups · 6 of 7")).toBeInTheDocument();
+      expect(screen.getByText("Backups · 6 of 8")).toBeInTheDocument();
     } finally {
       document.documentElement.removeAttribute("data-narrow");
     }

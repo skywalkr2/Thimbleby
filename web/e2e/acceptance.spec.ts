@@ -2,7 +2,7 @@
 // Names come from the fixture's cases and people, never written out here.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { expectQueueShows, pressStart } from "./journey-helpers";
+import { expectQueueShows, pressStart, showSteps, widerThanWindow } from "./journey-helpers";
 
 interface Case {
   id: string;
@@ -287,6 +287,42 @@ test.describe.serial("acceptance scenario", () => {
     await expect(status).toContainText("No successful backup yet");
     await page.keyboard.press("Escape");
     await checkAccessibility(page);
+  });
+
+  // The People step's suggestions: every row has the same shape whatever the length of a name, the tick box is in the same
+  // place in every row, and nothing is wider than the window. The suggestions are answered here, since the shared workspace
+  // reads no sent mail.
+  test("the People step lists suggestions in one layout whatever the length of a name, with no sideways scroll", async ({ page }) => {
+    const people = [
+      { name: "Jo Li", address: "jo@example.com", count: 1, from_sent: true },
+      { name: "Wilhelmina Featherstonehaugh-Cholmondeley-Throckmorton", address: "wilhelmina.featherstonehaugh.cholmondeley@example.com", count: 12, from_sent: true },
+      { name: "Sam Ng", address: "sam.ng.with.a.very.long.address.that.keeps.going@subdomain.example.com", count: 3, from_sent: true },
+    ];
+    await page.route("**/setup/people-suggestions", (route) => route.fulfill({ json: { people } }));
+    await signIn(page);
+    await page.evaluate(() => {
+      window.location.hash = "setup";
+    });
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await pressStart(page);
+    await showSteps(page);
+    await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^People/ }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "People", exact: true })).toBeVisible();
+    const list = page.getByRole("region", { name: "People you write to" });
+    await expect(list.getByRole("checkbox")).toHaveCount(3);
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(async () => {
+        const boxes = await list.getByRole("checkbox").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
+        expect(new Set(boxes).size, `tick boxes at ${width}: ${boxes.join(", ")}`).toBe(1);
+        const rows = await list.getByRole("listitem").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width)));
+        expect(new Set(rows).size, `row widths at ${width}: ${rows.join(", ")}`).toBe(1);
+      }).toPass({ timeout: 5000 });
+    }
+    expect(await widerThanWindow(page, "People step")).toEqual([]);
+    await page.getByRole("button", { name: "Finish later" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 720 });
   });
 
   test("a new workspace shows the setup line, and what the assistant needs is in the status popover", async ({ page }) => {

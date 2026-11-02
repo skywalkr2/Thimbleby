@@ -1,7 +1,7 @@
 // The new-start walkthrough (design 7.8): the setup as one guided path, full window, one screen at a time in the order a
 // person needs them: Welcome (which is no step), then seven counted steps, You, Work, Your AI account, Mail and calendar,
 // Your promises (the first result: the look back and what it found), Backups, People, and Done. The server decides each
-// step's standing and its place ("You · 1 of 7"); this only draws them. Every screen says why it matters and
+// step's standing and its place ("You · 1 of 8", counting every row of the rail); this only draws them. Every screen says why it matters and
 // can be skipped now and done later. The server keeps the screen the person is on, so it resumes where they left it,
 // also after a restart; "Finish later" closes it for good, and it opens again only when the person asks. The core's own
 // step forms are the ones the setup list uses.
@@ -197,7 +197,6 @@ export function Walkthrough(
     void keep({ step: screen });
   };
   const here = standing(steps, current);
-  const placed = stepOf(steps, current);
   // With nothing connected the mail step has one way on, "I'll do this later"; a Continue beside it would do the same thing.
   // Continue comes once something is connected (the step is done), or once the step was left for later.
   const next = after(current);
@@ -278,6 +277,9 @@ export function Walkthrough(
       hereWords: t("walkthrough.here"),
     };
   });
+  // The count is the rail's own: every row it lists, the last (where things stand) included, so "Step 7 of 8" sits beside eight rows.
+  const railAt = railSteps.findIndex((step) => step.id === current);
+  const position = railAt >= 0 ? { n: railAt + 1, total: railSteps.length } : null;
   return (
     <ContinueSlotProvider value={register}>
       <WizardShell
@@ -294,7 +296,7 @@ export function Walkthrough(
           current !== "welcome" ? (
             <WizardRail
               label={t("walkthrough.screens")}
-              place={placed ? t("walkthrough.place", { label: screenName(current), n: placed.place ?? 0, total: data.total }) : screenName(current)}
+              place={position ? t("walkthrough.place", { label: screenName(current), ...position }) : screenName(current)}
               stepsLabel={t("walkthrough.steps")}
               open={listOpen}
               onToggle={() => setListOpen((open) => !open)}
@@ -311,7 +313,7 @@ export function Walkthrough(
         }
       >
         <WizardStep
-          eyebrow={placed ? t("walkthrough.step_of", { n: placed.place ?? 0, total: data.total }) : undefined}
+          eyebrow={position ? t("walkthrough.step_of", position) : undefined}
           title={screenName(current)}
           titleId="walkthrough-screen-title"
           titleRef={heading}

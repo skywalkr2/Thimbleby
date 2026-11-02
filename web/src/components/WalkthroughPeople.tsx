@@ -1,6 +1,6 @@
 // The people step of the walkthrough (design 7.8): the real people the person writes to are suggested from their mail,
-// one row each with a tick box for every side (Personal and each business or job) and one "Add these" for the ticked
-// rows. One add row serves the whole step: a name, who they are (how they relate to the person, or their part at a
+// one row each with a tick box, then once, under the list, where the ticked people belong (Personal unless another side
+// is picked) and one "Add these". One add row serves the whole step: a name, who they are (how they relate to the person, or their part at a
 // business or job), the side when there is one, and Add; "Paste a list" is a link under it. The people already added
 // are listed under their side with the relation still to set. It adds people through the same records the People screen
 // shows; no organizations, teams or ids are asked.
@@ -19,7 +19,6 @@ import { EmptyState } from "../ui/EmptyState";
 import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
 import { FormBlock } from "../ui/FormBlock";
-import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 const RELATIONS = [
   "partner",
@@ -114,39 +113,38 @@ function placementFor(places: Place[], sided: boolean) {
   return sided && ids.length > 0 ? { sides: ids } : { side: places.some((p) => p.whose.kind !== "personal") ? ("business" as const) : ("personal" as const) };
 }
 
-/** The real people the person writes to, one row each: their name and address and a tick box for each place they could go.
- * One "Add these" adds every ticked row, with no relation, which the lists below then offer to set. With no one to
- * suggest the section says so in one line. */
+/** The real people the person writes to, one row each: a tick box with their name, address and message count. Under the
+ * list, once, where those ticked belong (Personal unless the person picks a side of work; the choice is left out when
+ * there is nowhere else to pick) and one "Add these". The row looks the same whatever the length of a name, and the
+ * ticked people are added with no relation, which the lists below then offer to set. With no one to suggest the section
+ * says so in one line. */
 function Suggestions(props: { places: Place[]; sided: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
   const found = useQuery({ queryKey: ["people-suggestions"], queryFn: api.peopleSuggestions });
-  const [ticked, setTicked] = useState<Record<string, string[]>>({});
+  const [ticked, setTicked] = useState<string[]>([]);
+  const [target, setTarget] = useState(PERSONAL_KEY);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   // Everyone found was added in this visit, so an empty list says they were all added instead of there being no one.
   const [allAdded, setAllAdded] = useState(false);
   if (!found.data) return null;
   const list = found.data.people;
-  const chosen = list.filter((p) => (ticked[p.address] ?? []).length > 0);
-  const toggle = (address: string, key: string) =>
-    setTicked((was) => {
-      const held = was[address] ?? [];
-      return { ...was, [address]: held.includes(key) ? held.filter((k) => k !== key) : [...held, key] };
-    });
+  const chosen = list.filter((p) => ticked.includes(p.address));
+  const place = props.places.find((p) => p.key === target) ?? props.places[0];
+  const toggle = (address: string) => setTicked((was) => (was.includes(address) ? was.filter((a) => a !== address) : [...was, address]));
   const addThese = async () => {
     setBusy(true);
     setProblem("");
     const failed: string[] = [];
     for (const p of chosen) {
-      const where = props.places.filter((place) => (ticked[p.address] ?? []).includes(place.key));
       try {
-        await api.addSetupPerson({ full_name: p.name, aliases: [], address: p.address, ...placementFor(where, props.sided) });
+        await api.addSetupPerson({ full_name: p.name, aliases: [], address: p.address, ...placementFor([place], props.sided) });
       } catch (err) {
         failed.push(`${p.name}: ${err instanceof ApiError && err.detail ? err.detail : problemText(err, t)}`);
       }
     }
-    setTicked({});
+    setTicked([]);
     setProblem(failed.join(" "));
     if (failed.length === 0 && chosen.length > 0) setAllAdded(true);
     await client.invalidateQueries({ queryKey: ["people"] });
@@ -165,30 +163,45 @@ function Suggestions(props: { places: Place[]; sided: boolean }) {
         <>
           <p className="hint">{t(list[0].from_sent ? "walkthrough.people.suggest.hint_sent" : "walkthrough.people.suggest.hint_received")}</p>
           <ul className={styles.suggested}>
-            {list.map((p) => (
+            {list.map((p, n) => (
               <li key={p.address}>
-                <span className={styles.who}>
-                  <span className="title">{p.name}</span>
-                  <span className="meta">
-                    {p.address} · {tn("walkthrough.people.suggest.mails", p.count)}
+                <label className={styles.pick}>
+                  <input
+                    type="checkbox"
+                    checked={ticked.includes(p.address)}
+                    disabled={busy}
+                    aria-labelledby={`walkthrough-people-pick-${n}-name`}
+                    aria-describedby={`walkthrough-people-pick-${n}-meta`}
+                    onChange={() => toggle(p.address)}
+                  />
+                  <span className={styles.who}>
+                    <span className="title" id={`walkthrough-people-pick-${n}-name`}>
+                      {p.name}
+                    </span>
+                    <span className="meta" id={`walkthrough-people-pick-${n}-meta`}>
+                      {p.address} · {tn("walkthrough.people.suggest.mails", p.count)}
+                    </span>
                   </span>
-                </span>
-                <CheckboxGroup legend={t("walkthrough.people.suggest.add_to_legend", { name: p.name })} className={styles.places}>
-                  {props.places.map((place) => (
-                    <label key={place.key}>
-                      <input type="checkbox" checked={(ticked[p.address] ?? []).includes(place.key)} disabled={busy} onChange={() => toggle(p.address, place.key)} />
-                      {place.name}
-                    </label>
-                  ))}
-                </CheckboxGroup>
+                </label>
               </li>
             ))}
           </ul>
-          <Actions align="end">
+          <div className={styles.suggestFoot} data-suggest-foot="">
+            {props.sided && (
+              <FormField id="walkthrough-people-suggest-place" label={t("walkthrough.people.suggest.add_to")}>
+                <Select id="walkthrough-people-suggest-place" value={place.key} disabled={busy} onChange={(e) => setTarget(e.target.value)}>
+                  {props.places.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
             <Button variant="primary" loading={busy} disabled={chosen.length === 0} reason={t("walkthrough.people.suggest.tick_first")} onClick={() => void addThese()}>
               {t("walkthrough.people.suggest.add_these")}
             </Button>
-          </Actions>
+          </div>
         </>
       )}
       {problem && (

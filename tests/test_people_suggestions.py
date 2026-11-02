@@ -175,6 +175,33 @@ def test_sent_mail_suggests_only_real_people_not_no_reply_role_company_set_aside
     assert names(found) == ["Correspondent A", "Plain Person"]
 
 
+def test_a_local_part_that_is_a_code_is_not_a_person_but_names_with_digits_and_plus_tags_are():
+    for code in ("unsub-7f3a9c2e4b1d", "bounce-1234567890", "r-4f9a8b7c6d5e", "a1b2c3d4e5f6"):
+        assert people_suggestions.local_is_code(code), code
+    for name in ("sam.kin1985", "jo", "alex.o-neil", "taylor.quinn+7f3a9c2e4b1d", "casey_morgan_2", "abcdefghijkl"):
+        assert not people_suggestions.local_is_code(name), name
+
+
+def test_an_unsubscribe_address_a_no_reply_address_and_a_code_name_are_never_suggested_but_a_long_name_is(tmp_path):
+    long_name = "Wilhelmina Featherstonehaugh-Cholmondeley"
+    items = [
+        message(
+            "sent1",
+            "me@example.com",
+            [
+                "unsub-7f3a9c2e4b1d@lists.example.com",
+                "<c9d8e7f6a5b4@lists.example.com>",
+                "No Reply <no-reply@example.com>",
+                f"{long_name} <wilhelmina.f@example.com>",
+            ],
+        )
+    ]
+    _ws, cfg, store = setup(tmp_path, items, sent=True)
+    found = people_suggestions.suggest(store, cfg, 20)
+    store.close()
+    assert names(found) == [long_name]
+
+
 def test_with_nobody_to_suggest_the_list_is_empty(tmp_path):
     items = [message("m1", "No Reply <no-reply@example.com>"), message("m2", "info@example.com")]
     _ws, cfg, store = setup(tmp_path, items, sent=False)
