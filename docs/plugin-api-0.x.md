@@ -10,6 +10,24 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.93 changes
+
+Manifests stay `'>=0.3,<0.4'`. Two things a plugin that reads people or calendar entries may notice; the generated guide has
+the exact fields.
+
+- **A person holds several ways to reach them of each kind:** `Person.how_to_reach` is now `dict[str, list[str]]`, each
+  kind (email, phone, ...) mapped to every address or number the person has of it, the first being the one used when a
+  single one is needed. **This changes the type a plugin reads.** A record written with one text for a kind is read as a
+  list of one, and a plugin that writes the old shape (through `record.set` or `record.edit`) is understood the same way,
+  so the old single value stays readable as the first item (`reach[kind][0]`). Mail from any of a person's addresses is
+  matched to them everywhere a sender is looked up. `person.contact` adds the detail to those of its kind instead of
+  replacing the one there.
+- **A calendar entry has a place and can repeat:** `Event.where` is now also set for the person's own entries, `Event.repeat`
+  (`every`: day, week, two_weeks or month, and `until`, the last day) and `Event.exceptions` (a date moved or called off,
+  by when the rule had it) are new, and `event.add` takes `where` and `repeat`. Only the person makes an entry repeat: an
+  `event.add` with `repeat` from an input or a plugin is refused. The dates of a repeating entry are worked out when
+  shown, so the entry is one record; an agenda item names its date in `occurrence` and how often in `repeats`.
+
 ## What 0.3.92 adds
 
 Manifests stay `'>=0.3,<0.4'`. Additive only: nothing a 0.3.91 plugin relies on changes. A channel that files messages can

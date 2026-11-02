@@ -392,12 +392,13 @@ def test_how_a_person_likes_to_be_reached_is_what_is_kept_and_the_channel_they_l
     mail(store, f"Ana Guest <{email_of('Ana Guest')}>", received=at(days=-1))
     found = people_memory.memory(store, cfg, ana, NOW)
     assert (
-        found.reach.kept == {"email": email_of("Ana Guest"), "phone": "555-0100"} and found.reach.replies_on == "email"
+        found.reach.kept == {"email": [email_of("Ana Guest")], "phone": ["555-0100"]}
+        and found.reach.replies_on == "email"
     )
     assert found.reach.replies_record == found.last_in_touch.record and found.last_in_touch.kind == "from"
     unknown = person(store, "Ben Guest", how_to_reach={"phone": "555-0101"})
     assert people_memory.memory(store, cfg, unknown, NOW).reach == people_memory.Reach(
-        {"phone": "555-0101"}, None, None
+        {"phone": ["555-0101"]}, None, None
     )
     assert people_memory.memory(store, cfg, "PER-9999", NOW) is None
 
@@ -751,7 +752,7 @@ def test_the_memory_route_gives_each_part_of_a_persons_page(client):
     fact(store, "Ana Guest's birthday is March 3")
     fact(store, "Ana Guest prefers short notes")
     body = http.get(f"/api/people/{ana}/memory").json()
-    assert body["name"] == "Ana Guest" and body["reach"]["kept"] == {"email": email_of("Ana Guest")}
+    assert body["name"] == "Ana Guest" and body["reach"]["kept"] == {"email": [email_of("Ana Guest")]}
     assert [i["quote"] for i in body["promised_by"]] == ["I will return the contract"]
     assert [d["yearly"] for d in body["dates"]] == [True] and [k["text"] for k in body["matters"]] == [
         "Ana Guest prefers short notes"

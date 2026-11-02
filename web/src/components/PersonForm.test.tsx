@@ -59,8 +59,26 @@ test("a person is added with their sides ticked from the list, an email and a ph
     full_name: "Fay Person",
     relation: "my cousin",
     sides: ["PRJ-personal", "PRJ-shop"],
-    how_to_reach: { email: "fay@example.com", phone: "555 0100" },
+    how_to_reach: { email: ["fay@example.com"], phone: ["555 0100"] },
   });
+});
+
+test("a second email or phone is added from the form with Add another, and a second one can be removed before saving", async () => {
+  const user = userEvent.setup();
+  const calls = api([], { ...sided, "POST people": () => ({ id: "P-9" }) });
+  renderApp(<People />);
+  const dialog = await openAdd(user);
+  await user.type(within(dialog).getByLabelText("Full name"), "Gil Person");
+  await user.type(within(dialog).getByLabelText("Email"), "gil@example.com");
+  await user.click(within(dialog).getByRole("button", { name: "Add another email" }));
+  await user.type(within(dialog).getByLabelText("Email 2"), "gil.home@example.net");
+  await user.click(within(dialog).getByRole("button", { name: "Add another email" }));
+  expect(within(dialog).getByLabelText("Email 3")).toBeInTheDocument();
+  await user.click(within(dialog).getByRole("button", { name: "Remove email 3" }));
+  expect(within(dialog).queryByLabelText("Email 3")).toBeNull();
+  await user.click(within(dialog).getByRole("button", { name: "Add a person" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
+  expect(calls.find((c) => c.route === "POST people")!.body).toMatchObject({ how_to_reach: { email: ["gil@example.com", "gil.home@example.net"] } });
 });
 
 test("with sides to tell apart, a person can't be added on none of them", async () => {
@@ -77,7 +95,7 @@ test("with sides to tell apart, a person can't be added on none of them", async 
 
 test("a person's email, phone and sides are changed from their own form later", async () => {
   const user = userEvent.setup();
-  const calls = api([person("P-1", "Ana Person", { sides: ["PRJ-personal"], side: "personal", relation: "my sister", how_to_reach: { email: "ana@example.com" } })], {
+  const calls = api([person("P-1", "Ana Person", { sides: ["PRJ-personal"], side: "personal", relation: "my sister", how_to_reach: { email: ["ana@example.com"] } })], {
     ...sided,
     "POST people/P-1": () => ({ ok: "P-1" }),
   });
@@ -96,7 +114,7 @@ test("a person's email, phone and sides are changed from their own form later", 
   await waitFor(() => expect(calls.some((c) => c.route === "POST people/P-1")).toBe(true));
   expect(calls.find((c) => c.route === "POST people/P-1")!.body).toMatchObject({
     sides: ["PRJ-personal", "PRJ-shop"],
-    how_to_reach: { email: "ana.new@example.com", phone: "555 0111" },
+    how_to_reach: { email: ["ana.new@example.com"], phone: ["555 0111"] },
   });
 });
 

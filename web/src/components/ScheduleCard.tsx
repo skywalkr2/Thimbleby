@@ -215,17 +215,31 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
   const [on, setOn] = useState("");
   const [at, setAt] = useState("");
   const [until, setUntil] = useState("");
+  const [where, setWhere] = useState("");
+  const [repeat, setRepeat] = useState<"" | "day" | "week" | "two_weeks" | "month">("");
+  const [stops, setStops] = useState("");
   // The side is asked only when there is a choice: Personal and each business, starting at the one the screen shows.
   const filter = useSideFilter();
   const [side, setSide] = useState<string | null>(null);
   const day_ = on || props.today;
   const sideNow = side ?? (filter.offered ? (filter.options.find((o) => o.id === filter.choice) ?? filter.options[0])?.id : undefined) ?? "";
   const endBad = until !== "" && at !== "" && until <= at;
+  const stopsBad = repeat !== "" && stops !== "" && stops < day_;
   const submit = async () => {
     const title = what.trim();
-    if (!title || !day_ || endBad) return;
+    if (!title || !day_ || endBad || stopsBad) return;
     const done = await act(
-      () => api.addMeeting({ what: title, day: day_, time: at || null, until: at && until ? until : null, side: sideNow || null }),
+      () =>
+        api.addMeeting({
+          what: title,
+          day: day_,
+          time: at || null,
+          until: at && until ? until : null,
+          side: sideNow || null,
+          where: where.trim() || null,
+          repeat: repeat || null,
+          repeat_until: repeat && stops ? stops : null,
+        }),
       (added) =>
         added.merged
           ? { message: t("meeting.merged", { what: added.merged_with ?? title }) }
@@ -238,11 +252,11 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
       open
       title={t("meeting.title")}
       onClose={props.onClose}
-      dirty={what.trim() !== ""}
+      dirty={what.trim() !== "" || where.trim() !== ""}
       footer={
         <>
           <Button onClick={props.onClose}>{t("action.cancel")}</Button>
-          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_ || endBad}>
+          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_ || endBad || stopsBad}>
             {t("meeting.add")}
           </Button>
         </>
@@ -276,6 +290,29 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
         {endBad && (
           <p className="problem-note" role="alert">
             {t("meeting.until_bad")}
+          </p>
+        )}
+        <FormField id={`${base}-where`} label={t("meeting.where")}>
+          <input id={`${base}-where`} type="text" value={where} autoComplete="off" onChange={(e) => setWhere(e.target.value)} />
+        </FormField>
+        <FormField id={`${base}-repeat`} label={t("meeting.repeat")}>
+          <Select id={`${base}-repeat`} value={repeat} onChange={(e) => setRepeat(e.target.value as typeof repeat)}>
+            <option value="">{t("meeting.repeat.none")}</option>
+            {(["day", "week", "two_weeks", "month"] as const).map((every) => (
+              <option key={every} value={every}>
+                {t(`meeting.repeat.${every}`)}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        {repeat !== "" && (
+          <FormField id={`${base}-stops`} label={t("meeting.repeat_until")}>
+            <DateField id={`${base}-stops`} value={stops} onChange={(e) => setStops(e.target.value)} />
+          </FormField>
+        )}
+        {stopsBad && (
+          <p className="problem-note" role="alert">
+            {t("meeting.repeat_until_bad")}
           </p>
         )}
         {filter.offered && (

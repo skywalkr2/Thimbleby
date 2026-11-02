@@ -160,6 +160,9 @@ def create_app(
     from engine.rules import seed_rules
 
     move_names(store)
+    from engine.contacts import restate_stored
+
+    restate_stored(store)  # a person's contact details from before a kind could hold several become lists, once
     link_sides(store, cfg)  # a side from before the link gets its organization, once
     ensure_lists(store)
     seed_rules(store)

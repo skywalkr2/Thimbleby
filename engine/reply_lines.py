@@ -18,6 +18,7 @@ from typing import Any
 
 from engine.automatic_mail import classify_automatic
 from engine.blocked import standing_hold
+from engine.contacts import all_values
 from engine.mail_threads import ThreadCandidate, normalize_subject, thread_key
 from engine.names import People
 from engine.own_accounts import own_names
@@ -142,7 +143,7 @@ def my_addresses(view: Any, cfg: Any) -> list[Address]:
     are addresses."""
     found: dict[str, Address] = {}
     person = view.get("person", cfg.workspace.user.person) if cfg.workspace.user.person else None
-    values = list((person.data.get("how_to_reach") or {}).values()) if person is not None else []
+    values = all_values(person.data.get("how_to_reach")) if person is not None else []
     for value in [*values, *own_names(cfg)]:
         parsed = _address(str(value))
         if parsed is not None:
@@ -300,7 +301,7 @@ def sent_candidates(ws: Any, store: Any, cfg: Any, owed: Owed, ask: Any, sent_so
     if owed.asker is None:
         return []
     person = store.read().get("person", owed.asker)
-    asker_addresses = {a.email.casefold() for a in map(_address, (person.data.get("how_to_reach") or {}).values()) if a}
+    asker_addresses = {a.email.casefold() for a in map(_address, all_values(person.data.get("how_to_reach"))) if a}
     asked = read_message(_read_source(ws, ask), _stamp(ask.data["received_at"]))
     if asked is None or not asker_addresses:
         return []

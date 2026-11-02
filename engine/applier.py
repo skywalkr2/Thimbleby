@@ -46,6 +46,7 @@ from engine.check_text import numbered_questions, quoted_passages, without_links
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
+from engine.contacts import reach_lists, with_value
 from engine.dates import MonthDay, is_month_day, resolve_range, with_year
 from engine.intake import is_reported, source_text
 from engine.language_words import language_words
@@ -542,6 +543,11 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             refuse(i, "targets", f"calendar entry {op.title!r}: {why}")
         if isinstance(op, EventAddOp) and op.series is not None and view.get("series", op.series) is None:
             refuse(i, "targets", f"there is no series {op.series}")
+        if isinstance(op, EventAddOp) and op.repeat is not None:
+            if ctx.actor != "pm":
+                refuse(i, "targets", "only you make a calendar entry repeat")
+            elif op.start is None or (op.repeat.until is not None and op.repeat.until < op.start[:10]):
+                refuse(i, "targets", f"calendar entry {op.title!r}: it can't stop repeating before it starts")
         if isinstance(op, EventSetOp):
             entry = view.get("event", op.id)
             if entry is None:
@@ -4049,6 +4055,8 @@ def _apply_op(
             "end": op.end,
             "project": op.project or _input_project(tx, ctx.inputs.request, source),
             "series": op.series,
+            "where": op.where,
+            "repeat": op.repeat.model_dump() if op.repeat is not None else None,
             "source": source,
             "evidence": ev,
             "trust": trust,
@@ -4370,9 +4378,10 @@ def _apply_op(
         kind = contact_kind(ctx.cfg, op.kind)
         if found is None or kind is None:
             raise StoreError(contact_problem(tx, ctx.cfg, op) or "that contact detail can't be set")
-        reach = {**found.data.get("how_to_reach", {}), kind: op.value}
-        tx.update("person", op.person, {"how_to_reach": reach}, w, read_version=found.version)
-        made("person", op.person)
+        reach = with_value(found.data.get("how_to_reach"), kind, op.value)
+        if reach != reach_lists(found.data.get("how_to_reach")):
+            tx.update("person", op.person, {"how_to_reach": reach}, w, read_version=found.version)
+            made("person", op.person)
     return touched, None
 
 

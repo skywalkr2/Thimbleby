@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from engine.contacts import all_values
 from engine.language_words import language_words
 from engine.mail_kinds import is_tracked, kind_of_input
 from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
@@ -570,7 +571,7 @@ def domain_side(view: Any, people: Any, cfg: Any, domain: str) -> Side | None:
     orgs = {
         data.get("org")
         for data in people.records.values()
-        if any(_domain_of(v) == domain for v in data.get("how_to_reach", {}).values())
+        if any(_domain_of(v) == domain for v in all_values(data.get("how_to_reach")))
     }
     if len(orgs) != 1 or None in orgs:
         return None

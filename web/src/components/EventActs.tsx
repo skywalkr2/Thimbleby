@@ -41,13 +41,20 @@ export function isoInput(local: string): string {
 
 /** The acts on the calendar entry `entry`, whose own start and end are `current` (the entry's own record says when they are left out).
  * `link` is the event's address on its calendar, when it has one. `enabled` false asks the server nothing. */
-export function useEventActs(entry: string, current: { start?: string | null; end?: string | null }, enabled: boolean, link?: string | null): EventActs {
+export function useEventActs(
+  entry: string,
+  current: { start?: string | null; end?: string | null },
+  enabled: boolean,
+  link?: string | null,
+  /** For one date of an entry that repeats: when the rule had it (`occurrence` of the schedule's entry), and when that date starts and ends. */
+  date?: { was: string; start: string; end?: string | null },
+): EventActs {
   const { t } = useWords();
   const found = useActOptions(entry, enabled);
   const draft = useDraftAct();
   const act = useAct();
   const record = useQuery({ queryKey: ["record", "event", entry], queryFn: () => api.record("event", entry), enabled: enabled && !!entry });
-  const [moving, setMoving] = useState(false);
+  const [moving, setMoving] = useState<false | "one" | "all">(false);
   const options = found.data?.kind === "event" ? found.data : null;
   const offered = options?.event_actions ?? [];
   if (!enabled || !options) return { menu: [], form: null, note: null };
@@ -59,28 +66,37 @@ export function useEventActs(entry: string, current: { start?: string | null; en
     const version = record.data?.version;
     const said = (done: { changeset?: string | null; refused?: "changed" | "referred_to" | null }, message: string) =>
       done.refused || !done.changeset ? { message: t(`calendar.own.refused.${done.refused ?? "changed"}`) } : { message, undo: () => api.undo(done.changeset ?? "") };
+    // An entry that repeats is changed one date at a time or all of its dates together; the date is the one the person opened.
+    const one = date?.was;
+    const cancelAll = { id: "event-cancel", label: t(one ? "acts.event.cancel_all" : "acts.event.cancel"), run: () => void act(() => api.cancelEvent(entry, { read_version: version ?? 0 }), (done) => said(done, t("calendar.own.cancelled"))) };
     return {
       menu: version
         ? [
-            { id: "event-move", label: t("acts.event.move"), run: () => setMoving(true) },
-            {
-              id: "event-cancel",
-              label: t("acts.event.cancel"),
-              run: () => void act(() => api.cancelEvent(entry, { read_version: version }), (done) => said(done, t("calendar.own.cancelled"))),
-            },
+            ...(one
+              ? [
+                  { id: "event-move-one", label: t("acts.event.move_one"), run: () => setMoving("one") },
+                  {
+                    id: "event-cancel-one",
+                    label: t("acts.event.cancel_one"),
+                    run: () => void act(() => api.cancelEvent(entry, { read_version: version, occurrence: one }), (done) => said(done, t("calendar.own.cancelled_one"))),
+                  },
+                ]
+              : []),
+            { id: "event-move", label: t(one ? "acts.event.move_all" : "acts.event.move"), run: () => setMoving("all") },
+            cancelAll,
           ]
         : [],
       note: null,
       form: moving && version ? (
         <MoveForm
-          start={localInput(start)}
-          end={localInput(end)}
+          start={localInput(moving === "one" && date ? date.start : start)}
+          end={localInput(moving === "one" && date ? date.end : end)}
           go={t("calendar.own.move.go")}
           onCancel={() => setMoving(false)}
           onSubmit={async (from, to) => {
             const done = await act(
-              () => api.moveEvent(entry, { start: from, end: to || null, read_version: version }),
-              (result) => said(result, t("calendar.own.moved")),
+              () => api.moveEvent(entry, { start: from, end: to || null, read_version: version, ...(moving === "one" && one ? { occurrence: one } : {}) }),
+              (result) => said(result, t(moving === "one" ? "calendar.own.moved_one" : "calendar.own.moved")),
             );
             if (done) setMoving(false);
           }}
@@ -111,7 +127,7 @@ export function useEventActs(entry: string, current: { start?: string | null; en
     };
   }
   const menu: MenuAction[] = [
-    ...(offered.includes("move") ? [{ id: "event-move", label: t("acts.event.move"), run: () => setMoving(true) }] : []),
+    ...(offered.includes("move") ? [{ id: "event-move", label: t("acts.event.move"), run: () => setMoving("all") }] : []),
     ...(offered.includes("cancel") ? [{ id: "event-cancel", label: t("acts.event.cancel"), run: () => void draft({ kind: "calendar", action: "cancel", about: [entry] }) }] : []),
   ];
   return {

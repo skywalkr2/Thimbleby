@@ -613,7 +613,7 @@ test("a meeting is added from the drawer: what, the day (today until chosen) and
   fireEvent.change(within(drawer).getByLabelText("Day"), { target: { value: "2026-10-16" } });
   fireEvent.change(within(drawer).getByLabelText("Starts at (optional)"), { target: { value: "15:00" } });
   await user.click(within(drawer).getByRole("button", { name: "Add" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00", until: null, side: null }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00", until: null, side: null, where: null, repeat: null, repeat_until: null }));
   expect(await screen.findByText("Print sync added to your calendar.")).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add a meeting" })).toBeNull());
   await user.click(screen.getByRole("button", { name: "Undo" }));
@@ -633,7 +633,27 @@ test("the drawer asks when it ends, only once there is a start, and refuses an e
   expect(within(drawer).getByRole("button", { name: "Add" })).toBeDisabled();
   fireEvent.change(within(drawer).getByLabelText("Ends at (optional)"), { target: { value: "16:30" } });
   await user.click(within(drawer).getByRole("button", { name: "Add" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: TODAY, time: "15:00", until: "16:30", side: null }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: TODAY, time: "15:00", until: "16:30", side: null, where: null, repeat: null, repeat_until: null }));
+});
+
+test("the drawer takes a place and how often it repeats, with a last day only when it does, and sends them", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const { calls } = open(meetingRoutes());
+  const drawer = await addLine(user);
+  await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Print sync");
+  await user.type(within(drawer).getByRole("textbox", { name: "Place (optional)" }), "Room 2");
+  // A list to pick from, never a box to type in; the last day is asked only once it repeats.
+  const repeat = within(drawer).getByRole("combobox", { name: "Repeats" });
+  expect(within(repeat).getAllByRole("option").map((o) => o.textContent)).toEqual(["Does not repeat", "Every day", "Every week", "Every two weeks", "Every month"]);
+  expect(within(drawer).queryByLabelText("Last day (optional)")).toBeNull();
+  await user.selectOptions(repeat, "two_weeks");
+  fireEvent.change(within(drawer).getByLabelText("Day"), { target: { value: "2026-10-16" } });
+  fireEvent.change(within(drawer).getByLabelText("Last day (optional)"), { target: { value: "2026-10-01" } });
+  expect(await within(drawer).findByText("It can't stop repeating before it starts.")).toBeInTheDocument();
+  expect(within(drawer).getByRole("button", { name: "Add" })).toBeDisabled();
+  fireEvent.change(within(drawer).getByLabelText("Last day (optional)"), { target: { value: "2026-12-18" } });
+  await user.click(within(drawer).getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: null, until: null, side: null, where: "Room 2", repeat: "two_weeks", repeat_until: "2026-12-18" }));
 });
 
 test("with a side beside Personal the drawer asks which one the meeting belongs to, and sends it", async () => {
@@ -647,7 +667,7 @@ test("with a side beside Personal the drawer asks which one the meeting belongs 
   expect(within(side).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", "Orchard Press"]);
   await user.selectOptions(side, "PRJ-orchard");
   await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Stock take{Enter}");
-  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Stock take", day: TODAY, time: null, until: null, side: "PRJ-orchard" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Stock take", day: TODAY, time: null, until: null, side: "PRJ-orchard", where: null, repeat: null, repeat_until: null }));
 });
 
 test("a meeting with no time is sent without one, and Enter in the drawer adds it", async () => {
@@ -655,7 +675,7 @@ test("a meeting with no time is sent without one, and Enter in the drawer adds i
   const { calls } = open(meetingRoutes());
   const drawer = await addLine(user);
   await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Offsite{Enter}");
-  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Offsite", day: TODAY, time: null, until: null, side: null }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Offsite", day: TODAY, time: null, until: null, side: null, where: null, repeat: null, repeat_until: null }));
 });
 
 test("a meeting that is already there is merged into it and said so, with nothing to undo", async () => {

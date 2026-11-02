@@ -376,8 +376,11 @@ class Person(Record):
     org: Annotated[str | None, RefTo("organization")] = Field(
         None, description="The id of the organization they work for; its name lives on that record."
     )
-    how_to_reach: dict[str, str] = Field(
-        default_factory=dict, description="How to reach them: a channel name mapped to the address or handle for it."
+    how_to_reach: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="How to reach them: a kind of contact detail (email, phone) mapped to every address, number or "
+        "handle they have of it, the first being the one used when a single one is needed. A record written with one "
+        "text for a kind is read as a list of one.",
     )
     why_they_matter: str | None = Field(None, description="Why this person matters to the work, in plain words.")
     name_verified: bool = Field(
@@ -399,6 +402,15 @@ class Person(Record):
         "work alongside each other), report_to (the person reports to them) or watch (the person only watches). "
         "Empty means the workspace's default stance; someone marked track_only counts as watch.",
     )
+
+    @field_validator("how_to_reach", mode="before")
+    @classmethod
+    def _a_kind_holds_a_list(cls, value: Any) -> Any:
+        """One text for a kind (the shape before a kind could hold several) is a list of one."""
+        from engine.contacts import reach_lists
+
+        return reach_lists(value) if isinstance(value, dict) else value
+
     sides: list[Annotated[str, RefTo("project", blocks_delete=False)]] = Field(
         default_factory=list,
         description="The sides of the person's life this person belongs to, as the ids of the top-level projects that "
@@ -1874,6 +1886,44 @@ class Rule(Record):
     )
 
 
+class EntryRepeat(BaseModel):
+    """How the person's own calendar entry repeats: every day, week, two weeks or month from its start, with the day it
+    stops (that day included) when it has one. The dates are worked out when they are shown, by the same expansion a
+    connected calendar's repeating events get; nothing is stored for each date."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    every: Literal["day", "week", "two_weeks", "month"] = Field(
+        description="How often: day, week, two_weeks (every other week) or month (the same day of the month)."
+    )
+    until: str | None = Field(
+        None,
+        description="The last day it can happen, written 2026-12-31; empty for no end. Never before the day it starts.",
+    )
+
+    @field_validator("until")
+    @classmethod
+    def _a_day(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        try:
+            return date.fromisoformat(value.strip()).isoformat()
+        except ValueError:
+            raise ValueError("give the last day as a date, such as 2026-12-31") from None
+
+
+class EntryException(BaseModel):
+    """One date of a repeating entry that is not as the rule gives it: moved to another time (`start`, and `end` when
+    it has one) or called off (`cancelled`). `was` is when the rule had it, in the form the entry's start is written."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    was: str = Field(description="When the repeat rule had this date, as ISO 8601 text.")
+    start: str | None = Field(None, description="Where it moved to; empty when it is only called off.")
+    end: str | None = Field(None, description="Where its end moved to, in the same form, when it has one.")
+    cancelled: bool = Field(False, description="True when this date is skipped.")
+
+
 class EntryPerson(BaseModel):
     """Someone on a calendar entry: who invited, or who is asked. Resolved to a person the workspace knows by the
     address they can be reached at."""
@@ -1969,7 +2019,16 @@ class CalendarEntry(Record):
         description="For an entry kept from a calendar source: which date of which event it is, as the source names "
         "it, so a read of the source updates this entry and no other.",
     )
-    where: str | None = Field(None, description="Where it happens, as the calendar says.")
+    where: str | None = Field(None, description="Where it happens, as the calendar says (or as the person wrote it).")
+    repeat: EntryRepeat | None = Field(
+        None,
+        description="For the person's own entry that happens again: how often, and the day it stops. Only the person "
+        "sets it. Each date shows on the schedule; one can be moved or called off by an entry in `exceptions`.",
+    )
+    exceptions: list[EntryException] = Field(
+        default_factory=list,
+        description="With `repeat`: the dates that are moved or called off, each by the time the rule had it.",
+    )
     cancelled: bool = Field(False, description="The calendar says it was called off, or the series skips this date.")
     invitation: bool = Field(False, description="It came as an invitation: someone else asked the person to it.")
     organizer: EntryPerson | None = Field(None, description="Who invited, or who organizes it.")

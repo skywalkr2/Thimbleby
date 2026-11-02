@@ -51,11 +51,11 @@ def test_a_person_is_added_with_an_email_and_a_phone_and_they_can_be_changed_lat
         how_to_reach={"Email": " hattie@example.com ", "phone": "555 0100"},
     )
     # The kind is the workspace's own spelling and the value is kept as typed, without stray spaces.
-    assert _view(client, who)["how_to_reach"] == {"email": "hattie@example.com", "phone": "555 0100"}
+    assert _view(client, who)["how_to_reach"] == {"email": ["hattie@example.com"], "phone": ["555 0100"]}
     changed = client.post(f"/api/people/{who}", json={"how_to_reach": {"email": "hf@example.com"}})
     assert changed.status_code == 200, changed.text
     # A change replaces the whole set: the phone the form no longer holds is gone.
-    assert _view(client, who)["how_to_reach"] == {"email": "hf@example.com"}
+    assert _view(client, who)["how_to_reach"] == {"email": ["hf@example.com"]}
 
 
 def test_a_contact_kind_the_workspace_does_not_offer_is_refused_in_plain_words(sided):
@@ -73,13 +73,13 @@ def test_an_address_someone_else_holds_is_refused_with_their_name(sided):
     refused = client.post(f"/api/people/{second}", json={"how_to_reach": {"email": "JUNE@example.com"}})
     assert refused.status_code == 409
     assert "June Alder" in refused.json()["detail"]
-    assert _view(client, first)["how_to_reach"] == {"email": "june@example.com"}
+    assert _view(client, first)["how_to_reach"] == {"email": ["june@example.com"]}
 
 
 def test_a_blank_contact_is_left_out(sided):
     client, *_ = sided
     who = _person(client, "Lena Cole", how_to_reach={"email": "lena@example.com", "phone": "  "})
-    assert _view(client, who)["how_to_reach"] == {"email": "lena@example.com"}
+    assert _view(client, who)["how_to_reach"] == {"email": ["lena@example.com"]}
 
 
 def test_a_persons_sides_are_changed_after_they_are_added(sided):

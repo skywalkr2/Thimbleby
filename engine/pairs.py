@@ -82,6 +82,7 @@ from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.applier import apply_as_person, decline_held, pick_owner, release
 from engine.config import Config
+from engine.contacts import all_values
 from engine.corrections import answered_assistant
 from engine.dispatcher import process_through_outage, send_back, signal, undo_changeset
 from engine.evaluate import (
@@ -564,7 +565,7 @@ class _Play:
         if found is None or not found.data.get("reply") or not found.data.get("asker"):
             raise _Stop(f"{action_id} has no drafted reply to a known person to compare with")
         asker = self.store.read().get("person", found.data["asker"])
-        address = next(iter((asker.data.get("how_to_reach") or {}).values()), None) if asker is not None else None
+        address = next(iter(all_values(asker.data.get("how_to_reach"))), None) if asker is not None else None
         if address is None:
             raise _Stop(f"{found.data['asker']} has no address to send to")
         sent_version.record_copy(

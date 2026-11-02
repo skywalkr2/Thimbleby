@@ -94,11 +94,15 @@ def add_meeting(
     time: str | None = None,
     until: str | None = None,
     side: str | None = None,
+    where: str | None = None,
+    repeat: str | None = None,
+    repeat_until: str | None = None,
 ) -> Added:
     """Add a meeting on a day, at a time of day in the person's time zone or with none (all day), unless it is already
     there. `until` is the time of day it ends, on the same day; it needs a start time and comes after it. `side` is the
-    id of a side (its top project), which the entry then belongs to. Raises StoreError, in plain words, for what can't
-    be read."""
+    id of a side (its top project), which the entry then belongs to. `where` is a place in the person's words. `repeat`
+    is how often it happens again (day, week, two_weeks or month), until the day `repeat_until` (that day included) or
+    with no end. Raises StoreError, in plain words, for what can't be read."""
     from engine.applier import apply_as_person
 
     title = " ".join((what or "").split())
@@ -125,11 +129,25 @@ def add_meeting(
 
         if project not in side_ids(store.read(), cfg):
             raise StoreError("That isn't one of your sides.")
+    place = " ".join((where or "").split())[:200] or None
+    again = (repeat or "").strip() or None
+    stops = (repeat_until or "").strip() or None
+    if again is not None and again not in ("day", "week", "two_weeks", "month"):
+        raise StoreError("Choose how often it repeats from the list.")
+    if stops is not None:
+        if again is None:
+            raise StoreError("Say how often it repeats, or leave the last day out.")
+        try:
+            last = date.fromisoformat(stops)
+        except ValueError:
+            raise StoreError("The last day isn't one I can read; choose it from the calendar.") from None
+        if last < on:
+            raise StoreError("It can't stop repeating before it starts.")
     here = zone(cfg)
     start = f"{on.isoformat()}T{at}:00" if at else on.isoformat()
     end = f"{on.isoformat()}T{stop}:00" if stop else None
     found = _duplicate(store, cfg, title, _as_moment(start, here) or on, here)
-    if found is not None:
+    if found is not None and again is None:
         where, was, entry = found
         return Added(entry=entry, changeset=None, merged=True, merged_with=was, where=where)
     line = f"{title}, {on.isoformat()}" + (f" {at}" if at else "") + (f" to {stop}" if stop else "")
@@ -138,6 +156,13 @@ def add_meeting(
         op["end"] = end
     if project:
         op["project"] = project
+    if place:
+        op["where"] = place
+        line += f", at {place}"
+    if again:
+        op["repeat"] = {"every": again, "until": stops}
+        line += f", repeating every {again.replace('_', ' ')}" + (f" until {stops}" if stops else "")
+    op["evidence"] = {"quote": line}
     changeset = apply_as_person(store, cfg, [op], "Added a meeting", note=line)
     made = next(
         (

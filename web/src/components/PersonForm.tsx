@@ -1,7 +1,8 @@
 // A person's form, in a drawer from the right so the list or screen it was opened from stays in view (design 7.14). It adds a
 // person or edits one, after setup as well as in it: their name, other names, the sides of the person's life they belong to
 // (ticked from the list of sides), who they are to the person (on Personal) or their part and organization (on a side of work),
-// and how to reach them (one box for each kind of contact detail the workspace offers). Both act at once with Undo. A name that is
+// and how to reach them (a box for each kind of contact detail the workspace offers, and "Add another" for a second email or
+// phone). Both act at once with Undo. A name that is
 // already on file is said beside the field while it is typed, and any refusal is shown in the form, where the person is looking.
 // `onSaved` hears the new or edited person's id, so a picker can select who was just added without leaving the screen.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,6 +66,17 @@ export function useContactKinds(): string[] {
   return Array.isArray(kinds) && kinds.length > 0 ? kinds.map(String) : ["email", "phone"];
 }
 
+/** What a person holds of each kind of contact detail, as a list for each, without blanks; one text (an older record) is a
+ *  list of one, and a kind left with none is left out. */
+export function heldReach(held: unknown): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [kind, value] of Object.entries((held ?? {}) as Record<string, unknown>)) {
+    const values = (Array.isArray(value) ? value : [value]).map((v) => String(v ?? "").trim()).filter(Boolean);
+    if (values.length > 0) out[kind] = values;
+  }
+  return out;
+}
+
 /** A contact kind as a label: the first letter a capital ("email" is "Email"). */
 export const kindLabel = (kind: string) => readable(kind);
 
@@ -95,7 +107,7 @@ export function PersonDrawer(props: {
   const [org, setOrg] = useState(p?.org ?? "");
   const [relation, setRelation] = useState(p?.relation ?? "");
   const [aliases, setAliases] = useState(p?.aliases.join(", ") ?? "");
-  const [reach, setReach] = useState<Record<string, string>>(p?.how_to_reach ?? {});
+  const [reach, setReach] = useState<Record<string, string[]>>(() => heldReach(p?.how_to_reach));
   // The places a person can belong to: Personal and each side of work. A new person starts on the side the screen is
   // showing, else Personal; an old one on the sides their record names, none being "not known".
   const places = [...(personal ? [{ id: personal, name: t("sides.filter.personal"), work: false }] : []), ...sides.map((s) => ({ id: s.project, name: s.name, work: true }))];
@@ -114,7 +126,7 @@ export function PersonDrawer(props: {
   const onWork = sided && sides.some((s) => ticked.includes(s.project));
   const twin = sameName(people.data ?? [], name, p?.id);
   const sameSides = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
-  const reachNow = Object.fromEntries(Object.entries(reach).filter(([, v]) => v.trim()));
+  const reachNow = heldReach(reach); // as it is sent: no blanks, and a kind left with none is left out
   const dirty =
     name !== (p?.name ?? "") ||
     firstName !== (p?.first_name ?? "") ||
@@ -122,7 +134,7 @@ export function PersonDrawer(props: {
     org !== (p?.org ?? "") ||
     relation !== (p?.relation ?? "") ||
     aliases !== (p?.aliases.join(", ") ?? "") ||
-    JSON.stringify(reachNow) !== JSON.stringify(p?.how_to_reach ?? {}) ||
+    JSON.stringify(reachNow) !== JSON.stringify(heldReach(p?.how_to_reach)) ||
     (sided && picked !== null && !sameSides(ticked, p ? held : []));
   const formId = `person-form-${key}`;
   const needSide = sided && ticked.length === 0;
@@ -228,16 +240,33 @@ export function PersonDrawer(props: {
             <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
           </>
         )}
-        {kinds.map((kind) => (
-          <Field
-            key={kind}
-            id={`pk-${kind}-${key}`}
-            label={kindLabel(kind)}
-            type={kind.toLocaleLowerCase() === "email" ? "email" : "text"}
-            value={reach[kind] ?? ""}
-            onChange={(v) => setReach((now) => ({ ...now, [kind]: v }))}
-          />
-        ))}
+        {kinds.map((kind) => {
+          const values = reach[kind]?.length ? reach[kind] : [""];
+          const set = (next: string[]) => setReach((now) => ({ ...now, [kind]: next }));
+          return (
+            <div key={kind} className={styles.reach}>
+              {values.map((value, i) => (
+                <div key={i} className={styles.reachRow}>
+                  <Field
+                    id={`pk-${kind}-${key}${i ? `-${i}` : ""}`}
+                    label={i === 0 ? kindLabel(kind) : t("person.kind_n", { kind: kindLabel(kind), n: i + 1 })}
+                    type={kind.toLocaleLowerCase() === "email" ? "email" : "text"}
+                    value={value}
+                    onChange={(v) => set(values.map((x, j) => (j === i ? v : x)))}
+                  />
+                  {i > 0 && (
+                    <Button variant="quiet" size="sm" onClick={() => set(values.filter((_, j) => j !== i))}>
+                      {t("person.remove_kind_n", { kind: kindLabel(kind).toLocaleLowerCase(), n: i + 1 })}
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button variant="quiet" size="sm" className={styles.addAnother} onClick={() => set([...values, ""])}>
+                {t("person.add_another", { kind: kind.toLocaleLowerCase() })}
+              </Button>
+            </div>
+          );
+        })}
         {problem && (
           <div className="problem-note" role="alert">
             <p>{problem}</p>

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from engine import act_accounts, reminder_template
+from engine.contacts import first_value
 from engine.today import zone
 
 #: What the act's calendar says for the account's own calendar, which the account's channel resolves.
@@ -50,8 +51,7 @@ def plain_needed(cfg: Any, level: str) -> bool:
 def own_address(view: Any, person: str | None) -> str:
     """The person's own address as it stands now, lowercased; empty when the record holds none."""
     found = view.get("person", person) if person else None
-    reach = (found.data.get("how_to_reach") or {}) if found is not None else {}
-    return str(reach.get(ADDRESS_KIND, "")).strip().lower()
+    return first_value(found.data.get("how_to_reach") if found is not None else None, ADDRESS_KIND).lower()
 
 
 def channel_for(plugins: Any, account: str, form: str) -> str | None:

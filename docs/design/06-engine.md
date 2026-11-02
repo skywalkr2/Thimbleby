@@ -838,8 +838,12 @@ the packet show it, and `event.guests` records who is on an entry; both need the
 plain-entry paragraph, and `tests/test_action_tie.py`, `tests/test_proposed_guests.py`).
 
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
-day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
-evidence, which is required. **Calendar entries are for real events only** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)): meetings, launches, delivery
+day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, an
+optional place (`where`), and evidence, which is required. It also carries `repeat` (every day, week, two weeks or month,
+with an optional last day), which only the person may set: from an input or a plugin it is refused. A repeating entry is one
+record; its dates are expanded when shown (`engine/own_repeats.py`, on `engine/recurrence.py`), and Move or Cancel on one
+date is a `record.edit` of its `exceptions` with Undo, while Move or Cancel without a date acts on the entry and so on every
+date (change log 304). **Calendar entries are for real events only** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)): meetings, launches, delivery
 windows, appointments. An action's due date lives on the action and never gets an entry of its own, and a new date for an
 open action is one op, `record.set` on its due, with no fact and no history entry (a date-only move). The cases' check is
 turned round with it: it fails an entry made for an action's own date. *As built until L7:* the notes prompt asks for an
@@ -1543,7 +1547,7 @@ wherever they are shown.
 - **The input's context** (**built**, phase L0): the PM; the sender and the others on the message (a watched message's saved
   `participants`, and the From, To and Cc lines at the head of the input's own text, which also covers a pasted message); and
   the people of the project the input is about (the project the person chose at hand-in or the watched source's project: its
-  owner and the owners of its actions). A person is matched by an address in their record's `how_to_reach`, else by a full name
+  owner and the owners of its actions). A person is matched by any address in their record's `how_to_reach` (each kind holds a list, so any of a person's emails counts, change log 304), else by a full name
   or an alias that is theirs alone. Outside content can therefore say who is in a thread, which only decides between people the
   workspace already knows. The same context is rebuilt when a held op is released, so a name is read the same way both times.
   Tests: `tests/test_names.py` (the resolving rules with and without context, the context of a hand-in and of a watched

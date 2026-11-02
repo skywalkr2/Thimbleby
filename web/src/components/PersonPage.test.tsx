@@ -23,7 +23,7 @@ const memory = (over: Partial<S["PersonMemoryView"]> = {}): S["PersonMemoryView"
   asked_by: [],
   promised_to: [item({ kind: "promised_to", id: "ACT-1", text: "Send the cover" })],
   promised_by: [item({ kind: "promised_by", id: "ACT-2", text: "Return the contract" })],
-  reach: { kept: { email: "ana@example.com" }, replies_on: "email", replies_record: "SRC-1" },
+  reach: { kept: { email: ["ana@example.com"] }, replies_on: "email", replies_record: "SRC-1" },
   dates: [{ fact: "FACT-1", text: "Birthday is March 3", on: "2027-03-03", yearly: true }],
   matters: [{ fact: "FACT-3", text: "Prefers short notes", as_of: "2026-10-01" }],
   ...over,
@@ -53,10 +53,10 @@ const sideState = {
 
 function serve(who: Partial<S["PersonView"]>, extra: Routes = {}, shown: S["RecordPageView"] = pageOf()) {
   return fakeApi({
-    "GET record?kind=person&id=PER-2": () => ({ kind: "person", id: "PER-2", version: 3, fields: { id: "PER-2", full_name: ANA, how_to_reach: { email: "ana@example.com" }, aliases: [], name_verified: true, stance: null, ...(who.relation ? { relation: who.relation } : {}) }, long_text: [] }),
+    "GET record?kind=person&id=PER-2": () => ({ kind: "person", id: "PER-2", version: 3, fields: { id: "PER-2", full_name: ANA, how_to_reach: { email: ["ana@example.com"] }, aliases: [], name_verified: true, stance: null, ...(who.relation ? { relation: who.relation } : {}) }, long_text: [] }),
     "GET kinds/person": () => ({ kind: "person", fields: [{ name: "full_name", description: "", type: "text", required: true, editable: true }] }),
     "GET record-pages/PER-2?kind=person": () => shown,
-    "GET people": () => [person("PER-1", "Robin Sample", { is_pm: true }), person("PER-2", ANA, { how_to_reach: { email: "ana@example.com" }, ...who })],
+    "GET people": () => [person("PER-1", "Robin Sample", { is_pm: true }), person("PER-2", ANA, { how_to_reach: { email: ["ana@example.com"] }, ...who })],
     "GET people/PER-2/memory": () => memory(),
     "GET me": () => ({ full_name: "Robin Sample", person: "PER-1" }),
     "GET settings": () => ({ fingerprint: "fp", items: [{ key: "workspace.contact_kinds", value: ["email", "phone"] }] }),
@@ -96,7 +96,7 @@ test("the details panel says each fact once: how to reach them, who they are, th
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
   expect(terms).toEqual(["Email", "Phone", "Who they are", "Sides", "Last contact", "Dates", "What matters to them"]);
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
-  expect(value("Email")).toBe("ana@example.com");
+  expect(value("Email")).toContain("ana@example.com");
   expect(value("Phone")).toBe("Add phone");
   expect(value("Sides")).toBe("PersonalShop");
   expect(value("Last contact")).toContain(day("2026-10-19"));
@@ -107,13 +107,42 @@ test("the details panel says each fact once: how to reach them, who they are, th
   expect(screen.getAllByText("ana@example.com")).toHaveLength(1);
 });
 
-test("Add phone opens the person's form, where it can be typed", async () => {
+test("Add phone opens a box in place, and adding it acts at once with an Undo that puts back what was there", async () => {
   const user = userEvent.setup();
-  serve(friend);
+  const calls = serve(friend, { "POST people/PER-2": () => ({ ok: "PER-2" }) });
   const details = await loaded();
   await user.click(await within(details).findByRole("button", { name: "Add phone" }));
-  const dialog = await screen.findByRole("dialog", { name: "Edit person" });
-  expect(within(dialog).getByLabelText("Phone")).toBeInTheDocument();
+  await user.type(within(details).getByLabelText("New phone for Ana Example"), "555 0100");
+  await user.click(within(details).getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST people/PER-2")).toBe(true));
+  expect(calls.find((c) => c.route === "POST people/PER-2")!.body).toEqual({ how_to_reach: { email: ["ana@example.com"], phone: ["555 0100"] } });
+  expect(await screen.findByText("Added 555 0100 for Ana Example.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST people/PER-2")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST people/PER-2")[1].body).toEqual({ how_to_reach: { email: ["ana@example.com"] } });
+});
+
+test("every address or number they have is listed, a second one is added beside the first, and Remove takes one away with Undo", async () => {
+  const user = userEvent.setup();
+  const two = { "GET record?kind=person&id=PER-2": () => ({ kind: "person", id: "PER-2", version: 3, fields: { id: "PER-2", full_name: ANA, how_to_reach: { email: ["ana@example.com", "ana.home@example.net"] }, aliases: [], name_verified: true, stance: null, relation: "my sister" }, long_text: [] }) };
+  const calls = serve(friend, { ...two, "POST people/PER-2": () => ({ ok: "PER-2" }) });
+  const details = await loaded();
+  expect(await within(details).findByText("ana@example.com")).toBeInTheDocument();
+  expect(within(details).getByText("ana.home@example.net")).toBeInTheDocument();
+  // Adding another keeps the two it has.
+  await user.click(within(details).getByRole("button", { name: "Add another email" }));
+  await user.type(within(details).getByLabelText("New email for Ana Example"), "ana.work@example.org");
+  await user.click(within(details).getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST people/PER-2")).toBe(true));
+  expect(calls.find((c) => c.route === "POST people/PER-2")!.body).toEqual({ how_to_reach: { email: ["ana@example.com", "ana.home@example.net", "ana.work@example.org"] } });
+  // Remove takes only that one, and Undo sends the set as it was.
+  await user.click(within(details).getByRole("button", { name: "Remove ana.home@example.net" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST people/PER-2")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST people/PER-2")[1].body).toEqual({ how_to_reach: { email: ["ana@example.com"] } });
+  expect(await screen.findByText("Removed ana.home@example.net from Ana Example.")).toBeInTheDocument();
+  await user.click(screen.getAllByRole("button", { name: "Undo" }).at(-1)!);
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST people/PER-2")).toHaveLength(3));
+  expect(calls.filter((c) => c.route === "POST people/PER-2")[2].body).toEqual({ how_to_reach: { email: ["ana@example.com", "ana.home@example.net"] } });
 });
 
 test("how you work with them is asked only of someone from a side of work, never of a sister", async () => {

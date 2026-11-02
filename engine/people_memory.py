@@ -25,6 +25,7 @@ from zoneinfo import ZoneInfo
 
 from engine import entry_rules, promises
 from engine.blocked import standing_hold
+from engine.contacts import reach_lists
 from engine.date_names import DateNames, date_names
 from engine.firm_due import firm_due
 from engine.meeting_guests import guests, window
@@ -73,7 +74,7 @@ class Reach:
     """How a person likes to be reached: the ways kept on their record (`kept`, channel to address), and the channel of
     the mail they last wrote from (`replies_on`, a key of `kept`), shown with the input it was read from."""
 
-    kept: dict[str, str] = field(default_factory=dict)
+    kept: dict[str, list[str]] = field(default_factory=dict)
     replies_on: str | None = None
     replies_record: str | None = None
 
@@ -347,9 +348,9 @@ def last_in_touch(view: Any, cfg: Any, people: Any, person: str, now: datetime) 
 def reach_of(view: Any, person: Any, written_from: str | None, written_record: str | None) -> Reach:
     """The ways kept on a person's record, and the one they last wrote from: the channel whose address is the one the
     latest mail from them came from."""
-    kept = {str(k): str(v) for k, v in (person.data.get("how_to_reach") or {}).items()}
+    kept = reach_lists(person.data.get("how_to_reach"))
     address = entry_parts(written_from)[1].strip().casefold() if written_from else ""
-    channel = next((k for k, v in sorted(kept.items()) if address and v.strip().casefold() == address), None)
+    channel = next((k for k, vs in sorted(kept.items()) if address and address in {v.casefold() for v in vs}), None)
     return Reach(kept, channel, written_record if channel else None)
 
 

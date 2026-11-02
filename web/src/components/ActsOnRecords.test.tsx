@@ -49,9 +49,9 @@ function page(kind: "source" | "event", fields: Record<string, unknown>, extra: 
     [`GET record?kind=${kind}&id=${id}`]: () => ({ kind, id, version: 1, fields: { id, ...fields }, long_text: [] }),
     [`GET kinds/${kind}`]: () => ({ kind, fields: [{ name: "title", description: "", type: "text", required: true, editable: false }] }),
     "GET people": () => [
-      { id: "PER-2", name: "Ana Example", how_to_reach: { email: "ana@example.com" }, is_pm: false },
+      { id: "PER-2", name: "Ana Example", how_to_reach: { email: ["ana@example.com"] }, is_pm: false },
       { id: "PER-3", name: "Ben Example", how_to_reach: {}, is_pm: false },
-      { id: "PER-1", name: "Pat Example", how_to_reach: { email: "pat@example.com" }, is_pm: true },
+      { id: "PER-1", name: "Pat Example", how_to_reach: { email: ["pat@example.com"] }, is_pm: true },
     ],
     "GET projects": () => [],
     ...extra,

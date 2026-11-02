@@ -19,6 +19,7 @@ from typing import Any
 
 from engine import learn
 from engine.cleaning import normalize
+from engine.contacts import all_values
 from engine.reply_lines import _address, _bare, _read_source, _stamp, read_message
 from engine.storage import WriteContext
 
@@ -159,7 +160,7 @@ def _addresses_of(view: Any, person: str) -> set[str]:
     record = view.get("person", person)
     if record is None:
         return set()
-    return {a.email.casefold() for a in map(_address, (record.data.get("how_to_reach") or {}).values()) if a}
+    return {a.email.casefold() for a in map(_address, all_values(record.data.get("how_to_reach"))) if a}
 
 
 def match_sent(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> list[str]:

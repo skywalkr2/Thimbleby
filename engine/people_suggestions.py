@@ -15,6 +15,7 @@ from email.utils import getaddresses
 from typing import Any
 
 from engine.connectors import CORE, declared_reads, reads
+from engine.contacts import all_values
 
 
 @dataclass(frozen=True)
@@ -46,7 +47,7 @@ def _own_addresses(store: Any, cfg: Any, sources: list[Any]) -> set[str]:
     own: set[str] = set()
     person = cfg.workspace.user.person
     record = store.read().get("person", person) if person else None
-    own.update(str(v).lower() for v in ((record.data.get("how_to_reach") or {}).values() if record else []))
+    own.update(v.lower() for v in (all_values(record.data.get("how_to_reach")) if record else []))
     for s in sources:
         for value in (s.account, s.settings.get("user")):
             if value:
@@ -59,7 +60,7 @@ def _known(store: Any) -> tuple[set[str], set[str]]:
     addresses: set[str] = set()
     names: set[str] = set()
     for p in store.read().list("person"):
-        addresses.update(str(v).lower() for v in (p.data.get("how_to_reach") or {}).values())
+        addresses.update(v.lower() for v in all_values(p.data.get("how_to_reach")))
         names.update(n.lower() for n in [p.data["full_name"], *p.data.get("aliases", [])] if n)
     return addresses, names
 

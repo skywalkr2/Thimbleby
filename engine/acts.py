@@ -26,6 +26,7 @@ from typing import Any
 
 from engine import act_accounts, audience, outward, reminder_content, reminder_template, standing_yes
 from engine.channels import COPY, OutgoingAbout, OutgoingAct, OutgoingRecipient
+from engine.contacts import reach_lists
 from engine.ops import (
     ACT_ACTIONS,
     ACT_REPLY_ACTIONS,
@@ -77,7 +78,8 @@ def recipient_key(person: str | None, address: str) -> str:
 
 def current_address(view: Any, recipient: Mapping[str, Any]) -> str:
     """The address a recipient resolves to now: a known person's record is read again for the way of reaching them the
-    act used, so an address that moved is a different one; anyone else keeps the address the act holds. Lowercased."""
+    act used, so an address that moved (one they no longer hold) is a different one; anyone else keeps the address the
+    act holds. Lowercased."""
     person = recipient.get("person")
     if person:
         found = view.get("person", person)
@@ -85,7 +87,10 @@ def current_address(view: Any, recipient: Mapping[str, Any]) -> str:
         if found is None:
             return ""
         if kind:
-            return str((found.data.get("how_to_reach") or {}).get(kind, "")).strip().lower()
+            values = reach_lists(found.data.get("how_to_reach")).get(kind, [])
+            written = str(recipient.get("address", "")).strip().lower()
+            # An address the person still holds for that way of reaching them is not a moved one, whichever it is.
+            return written if written in {v.lower() for v in values} else (values[0].lower() if values else "")
     return str(recipient.get("address", "")).strip().lower()
 
 
@@ -544,28 +549,22 @@ def _resolved(tx: Tx, ctx: Any, entries: list[ActRecipientIn]) -> list[dict[str,
             if resolved.status != "ok":
                 raise StoreError(f"{r.person!r} isn't one known person")
             pid = resolved.person
-            reach = (tx.get("person", pid).data.get("how_to_reach") or {}) if pid else {}
+            reach = reach_lists(tx.get("person", pid).data.get("how_to_reach")) if pid else {}
             if kind is None and len(reach) == 1:
                 kind = next(iter(reach))
-            if kind is None or not str(reach.get(kind, "")).strip():
+            if kind is None or not reach.get(kind):
                 raise StoreError(f"{ctx.people.name(pid)} has no {kind or 'way to reach them'} on file")
-            address = str(reach[kind]).strip()
+            # One of the person's own addresses of that kind may be named; otherwise their first is used.
+            address = next((v for v in reach[kind] if address and v.casefold() == address.casefold()), reach[kind][0])
         else:
             for person in ctx.people.records:
+                held = reach_lists(tx.get("person", person).data.get("how_to_reach"))
                 match = next(
-                    (
-                        k
-                        for k, v in (tx.get("person", person).data.get("how_to_reach") or {}).items()
-                        if str(v).strip().lower() == address.lower()
-                    ),
+                    ((k, v) for k, vs in held.items() for v in vs if v.lower() == address.lower()),
                     None,
                 )
                 if match is not None:
-                    pid, kind, address = (
-                        person,
-                        match,
-                        str(tx.get("person", person).data["how_to_reach"][match]).strip(),
-                    )
+                    pid, (kind, address) = person, match
                     break
         key = recipient_key(pid, address)
         if any(recipient_key(x["person"], x["address"]) == key for x in found):

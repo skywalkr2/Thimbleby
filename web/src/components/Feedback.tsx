@@ -1,7 +1,8 @@
 // Sending feedback: the person writes what happened, sees exactly what the email will say, and either opens it in
 // their own mail program or copies it. The app sends nothing, and the only facts it adds (if the person leaves them on)
-// are the app's version, the name of the screen they were on and, when there were any, the last problems (each already
-// masked by the server, and shown in the preview exactly as they will be sent).
+// are the name of the screen they were on and, when there were any, the last problems in plain words, with the app's
+// version and the exact lines of each problem (already masked by the server) under "Details for the makers". The preview
+// shows the plain part and that section; together they are exactly what is sent.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Heading } from "react-aria-components";
@@ -12,7 +13,7 @@ import { missedWeeks } from "../lib/missed-weeks";
 import { copyMessage } from "../lib/copy";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { useToasts } from "../lib/toasts";
-import { problemLines } from "../lib/problem-lines";
+import { problemLines, problemSummary } from "../lib/problem-lines";
 import { parseView, type CoreView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ModalPanel, DialogFooter } from "./ModalPanel";
@@ -53,7 +54,7 @@ export function useScreenLabel(view: View): string {
 }
 
 export function Feedback(props: { onClose: () => void; view: View; version: string; to: string | null | undefined }) {
-  const { t } = useWords();
+  const { t, tn, has } = useWords();
   const { push } = useToasts();
   const base = useId();
   const screen = useScreenLabel(props.view);
@@ -74,15 +75,19 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const missedLines = weeks.length === 0 ? [t("feedback.body_missed_none")] : weeks.map((w) => t("feedback.body_missed_week", { from: monthDay(w.week), to: monthDay(w.end), n: w.count }));
 
   const subject = t("feedback.subject", { app: t("app.name") });
-  const body = [
+  // The message starts with what the person wrote and a plain summary in words; the technical lines (the app's version, the
+  // exact times and error codes) follow under "Details for the makers", so nothing is lost and none of it is the first thing read.
+  const plain = [
     message.trim(),
-    ...(include ? ["", t("feedback.body_version", { version: props.version }), t("feedback.body_screen", { screen })] : []),
+    ...(include ? ["", t("feedback.body_screen", { screen })] : []),
     ...(hasMissed && withMissed ? ["", ...missedLines] : []),
-    ...(addProblems ? ["", ...problemLines(found, t)] : []),
+    ...(addProblems ? ["", ...problemSummary(found, t, tn, has)] : []),
   ]
     .join("\n")
     // With nothing written yet the facts come first, never after blank lines.
     .replace(/^\n+/, "");
+  const details = [...(include ? [t("feedback.body_version", { version: props.version })] : []), ...(addProblems ? [...(include ? [""] : []), ...problemLines(found, t)] : [])].join("\n");
+  const body = details ? `${plain}\n\n${t("feedback.details")}\n${details}`.replace(/^\n+/, "") : plain;
   const ready = message.trim() !== "";
   const link = ready ? mailtoLink(props.to, subject, body) : null;
   const tooLong = ready && tooLongForLink(props.to, subject, body);
@@ -166,8 +171,15 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
             <input id={`${base}-subject`} readOnly value={subject} />
           </FormField>
           <FormField id={`${base}-body`} label={t("feedback.preview_body")}>
-            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(addProblems ? 14 : 10, body.split("\n").length + 1)} value={body} />
+            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(10, plain.split("\n").length + 1)} value={plain} />
           </FormField>
+          {details && (
+            <details className="more-options" data-feedback-details="">
+              <summary>{t("feedback.details")}</summary>
+              <p className="hint">{t("feedback.details_hint")}</p>
+              <textarea aria-label={t("feedback.details")} className="short" readOnly rows={Math.min(14, details.split("\n").length + 1)} value={details} />
+            </details>
+          )}
         </CheckboxGroup>
         {note && (
           <p id={noteId} className="hint" role="status">

@@ -14,9 +14,10 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from engine import agenda as agenda_module
-from engine import entry_rules, repeats
+from engine import entry_rules, own_repeats, repeats
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.connectors import moment
+from engine.contacts import all_values
 from engine.firm_due import firm_due
 from engine.names import People
 from engine.records import entry_time
@@ -43,6 +44,8 @@ class AgendaItem:
     delivery: dict[str, Any] | None = (
         None  # an own entry for a parcel or order: order, tracking, carrier, status, dated
     )
+    repeats: str | None = None  # an own entry that happens again: how often (day, week, two_weeks or month)
+    occurrence: str | None = None  # for one date of such an entry: when its rule had it, to move or cancel that date
 
 
 @dataclass
@@ -201,33 +204,44 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo, today: date, unda
             end = entry_time(data["end"]) if data.get("end") else start
         except (TypeError, ValueError):
             continue
-        all_day = not isinstance(start, datetime)
-        first, last = local_day(start, here), local_day(end, here)
-        waiting = _on_its_way(data)
-        if waiting and not undated:
-            continue
-        on = [] if waiting else [d for d in days if first <= d <= last]
-        if not on and not waiting:
-            continue
-        found.append(
-            AgendaItem(
-                snapshot=entry.id,
-                source=data.get("source") or "",
-                title=data["title"],
-                start=_local_text(start, here),
-                end=_local_text(end, here) if data.get("end") else None,
-                all_day=all_day,
-                where=None,
-                link=None,
-                cancelled=False,
-                days=on,
-                own=True,
-                series=data.get("series"),
-                open_items=_open_on(view, entry, today, here) if data.get("series") else 0,
-                agenda=agenda_module.for_entry(view, entry, today, here),
-                delivery=data.get("delivery"),
+        # One entry, or each date of a repeating one that falls in the days listed.
+        starts: list[tuple[Any, Any, Any]] = [(start, end if data.get("end") else None, None)]
+        if data.get("repeat") and days:
+            try:
+                starts = [(s, e, was) for s, e, was in own_repeats.dates(data, here, days[0], days[-1])]
+            except (TypeError, ValueError):
+                starts = [(start, end if data.get("end") else None, None)]
+        for began, ended, was in starts:
+            span_end = ended if ended is not None else began
+            all_day = not isinstance(began, datetime)
+            first, last = local_day(began, here), local_day(span_end, here)
+            waiting = _on_its_way(data)
+            if waiting and not undated:
+                continue
+            on = [] if waiting else [d for d in days if first <= d <= last]
+            if not on and not waiting:
+                continue
+            found.append(
+                AgendaItem(
+                    snapshot=entry.id,
+                    source=data.get("source") or "",
+                    title=data["title"],
+                    start=_local_text(began, here),
+                    end=_local_text(ended, here) if ended is not None else None,
+                    all_day=all_day,
+                    where=data.get("where"),
+                    link=None,
+                    cancelled=False,
+                    days=on,
+                    own=True,
+                    series=data.get("series"),
+                    open_items=_open_on(view, entry, today, here) if data.get("series") else 0,
+                    agenda=agenda_module.for_entry(view, entry, today, here),
+                    delivery=data.get("delivery"),
+                    repeats=(data["repeat"]["every"] if data.get("repeat") else None),
+                    occurrence=_local_text(was, here) if was is not None else None,
+                )
             )
-        )
     return sorted(found, key=lambda a: (a.days[0] if a.days else date.max, not a.all_day, _sort_key(a, here), a.title))
 
 
@@ -314,7 +328,7 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
     known = {
         str(v).strip().lower(): str(p.data["full_name"])
         for p in view.list("person")
-        for v in (p.data.get("how_to_reach") or {}).values()
+        for v in all_values(p.data.get("how_to_reach"))
         if "@" in str(v)
     }
     from engine.handled import _mail_requests

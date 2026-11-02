@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { dayAndTime } from "../lib/dates";
 import type { View } from "../lib/views";
 import { fakeApi, renderApp } from "../test-utils";
 import { MAIL_LINK_MAX } from "../lib/mail";
@@ -24,6 +25,10 @@ function open(props: { to?: string | null; view?: View; version?: string; proble
 
 const message = () => screen.getByLabelText("What happened, or what would help?");
 const preview = () => screen.getByLabelText("Message") as HTMLTextAreaElement;
+// The technical lines, kept under a collapsed "Details for the makers"; what is sent is the preview, a blank line, that heading and these.
+const details = () => screen.getByLabelText("Details for the makers") as HTMLTextAreaElement;
+const VERSION = "App version: 9.8.7";
+const sent = (plain: string, technical = VERSION) => `${plain}\n\nDetails for the makers\n${technical}`;
 
 test("the dialog is named, the box has the focus and nothing can go until something is written", () => {
   open();
@@ -36,19 +41,22 @@ test("the dialog is named, the box has the focus and nothing can go until someth
   expect(screen.queryByRole("link", { name: "Open in your email app" })).toBeNull();
 });
 
-test("the preview shows the subject and the body, ending with the version and the screen", async () => {
+test("the preview is the message and the screen in plain words, with the version under Details for the makers", async () => {
   const { user } = open();
   expect(screen.getByLabelText("Include the app version and the screen you were on")).toBeChecked();
   await user.type(message(), "The list is empty");
   expect(screen.getByLabelText("Subject")).toHaveValue(SUBJECT);
   expect(screen.getByLabelText("Subject")).toHaveAttribute("readonly");
   expect(preview()).toHaveAttribute("readonly");
-  expect(preview().value).toBe("The list is empty\n\nApp version: 9.8.7\nScreen: Files");
+  expect(preview().value).toBe("The list is empty\n\nScreen: Files");
+  expect(details().value).toBe(VERSION);
+  expect(details().closest("details")).not.toHaveAttribute("open");
+  expect(screen.getByText("Details for the makers").tagName).toBe("SUMMARY");
 });
 
 test("before anything is written the preview starts with the facts, never with blank lines", () => {
   open();
-  expect(preview().value).toBe("App version: 9.8.7\nScreen: Files");
+  expect(preview().value).toBe("Screen: Files");
 });
 
 test("without the version lines the body is only what was written", async () => {
@@ -57,6 +65,7 @@ test("without the version lines the body is only what was written", async () => 
   await user.click(screen.getByLabelText("Include the app version and the screen you were on"));
   expect(preview().value).toBe("Just this");
   expect(preview().value).not.toMatch(/version|Screen/i);
+  expect(screen.queryByText("Details for the makers")).toBeNull();
 });
 
 test("the screen is a plugin panel's title or a record page's general name", async () => {
@@ -76,7 +85,7 @@ test("with an address the mail link is the main action, with the subject and bod
   const { user } = open();
   await user.type(message(), "Line one\nLine & two");
   const link = screen.getByRole("link", { name: "Open in your email app" });
-  const body = "Line one\nLine & two\n\nApp version: 9.8.7\nScreen: Files";
+  const body = sent("Line one\nLine & two\n\nScreen: Files");
   expect(link).toHaveAttribute(
     "href",
     `mailto:${TO}?subject=${encodeURIComponent(SUBJECT)}&body=${encodeURIComponent(body.replace(/\n/g, "\r\n"))}`,
@@ -117,7 +126,7 @@ test("Copy puts the subject, a blank line and the body on the clipboard, and say
   const { user } = open({ to: null });
   await user.type(message(), "Hello");
   await user.click(screen.getByRole("button", { name: "Copy" }));
-  expect(await navigator.clipboard.readText()).toBe(`${SUBJECT}\n\nHello\n\nApp version: 9.8.7\nScreen: Files`);
+  expect(await navigator.clipboard.readText()).toBe(`${SUBJECT}\n\n${sent("Hello\n\nScreen: Files")}`);
   expect(await screen.findByText("Copied. Paste it into an email to send it.")).toBeInTheDocument();
 });
 
@@ -176,20 +185,35 @@ const CALL_LINES = [
 ];
 const READ_LINES = ["2026-10-21 08:00 UTC", "Doing: reading folder", "Error: outage", "Said: couldn't read <path>"];
 
-test("the problems box appears only when there were problems, is ticked, and the preview shows exactly the lines", async () => {
+test("the problems box appears only when there were problems, is ticked; the preview says them in words and the details hold the exact lines", async () => {
   const { user } = open({ problems: [CALL, READ] });
   const box = await screen.findByRole("checkbox", { name: "Add the last problems (2)" });
   expect(box).toBeChecked();
   await user.type(message(), "It failed");
-  const expected = ["It failed", "", "App version: 9.8.7", "Screen: Files", "", "Recent problems", ...CALL_LINES, "", ...READ_LINES].join("\n");
-  expect(preview().value).toBe(expected);
+  const plain = [
+    "It failed",
+    "",
+    "Screen: Files",
+    "",
+    "The assistant ran into 2 problems lately:",
+    `- ${dayAndTime(CALL.at)}: the assistant was working on notes, and it did not work.`,
+    `- ${dayAndTime(READ.at)}: a folder source was being read, and the service could not be reached.`,
+  ].join("\n");
+  expect(preview().value).toBe(plain);
+  // The words carry no raw date, no error code and no text the service gave; every one of those is still in the details.
+  expect(preview().value).not.toMatch(/2026-10|\+10:00|UTC|Error:|Status:|outage|bad key|example-model/);
+  const technical = [VERSION, "", "Recent problems", ...CALL_LINES, "", ...READ_LINES].join("\n");
+  expect(details().value).toBe(technical);
+  expect(details().closest("details")).not.toHaveAttribute("open");
+  expect(screen.getByRole("link", { name: "Open in your email app" }).getAttribute("href")).toContain(encodeURIComponent(sent(plain, technical).replace(/\n/g, "\r\n")));
 });
 
 test("unticking the problems takes every one of their lines out of the preview and the link", async () => {
   const { user } = open({ problems: [CALL] });
   await user.type(message(), "It failed");
   await user.click(await screen.findByRole("checkbox", { name: "Add the last problems (1)" }));
-  expect(preview().value).toBe("It failed\n\nApp version: 9.8.7\nScreen: Files");
+  expect(preview().value).toBe("It failed\n\nScreen: Files");
+  expect(details().value).toBe(VERSION);
   expect(screen.getByRole("link", { name: "Open in your email app" }).getAttribute("href")).not.toContain("Recent");
 });
 
@@ -197,7 +221,7 @@ test("the problems are in the email link and on the clipboard exactly as the pre
   const { user } = open({ problems: [READ] });
   await user.type(message(), "Hello");
   await screen.findByRole("checkbox", { name: "Add the last problems (1)" });
-  const body = preview().value;
+  const body = sent(preview().value, details().value);
   expect(screen.getByRole("link", { name: "Open in your email app" })).toHaveAttribute("href", expect.stringContaining(encodeURIComponent(body.replace(/\n/g, "\r\n"))));
   await user.click(screen.getByRole("button", { name: "Copy" }));
   expect(await navigator.clipboard.readText()).toBe(`${SUBJECT}\n\n${body}`);
@@ -207,7 +231,7 @@ test("with no problems, or when they can't be fetched, there is no problems box"
   const none = open({ problems: [] });
   await none.user.type(message(), "x");
   await waitFor(() => expect(screen.queryByRole("checkbox", { name: /last problems/ })).toBeNull());
-  expect(preview().value).toBe("x\n\nApp version: 9.8.7\nScreen: Files");
+  expect(preview().value).toBe("x\n\nScreen: Files");
 });
 
 test("problems too long for a mail link leave the copy path", async () => {
@@ -240,10 +264,10 @@ test("the form shows how often Missed something? was used each week, and the mes
   expect(box).toHaveAccessibleDescription(/Only the counts are added, never what you said\..*Oct 12 to Oct 18: 4.*Oct 19 to Oct 25: 1/);
   await user.type(message(), "It missed my call notes");
   expect(preview().value).toBe(
-    "It missed my call notes\n\nApp version: 9.8.7\nScreen: Files\n\nMissed something? used Oct 12 to Oct 18: 4\nMissed something? used Oct 19 to Oct 25: 1",
+    "It missed my call notes\n\nScreen: Files\n\nMissed something? used Oct 12 to Oct 18: 4\nMissed something? used Oct 19 to Oct 25: 1",
   );
   await user.click(box);
-  expect(preview().value).toBe("It missed my call notes\n\nApp version: 9.8.7\nScreen: Files");
+  expect(preview().value).toBe("It missed my call notes\n\nScreen: Files");
 });
 
 test("the counts of the people in one week are added, and a week with none used says so", async () => {
@@ -264,5 +288,5 @@ test("when the counts can't be read the form offers nothing about them", async (
   const user = openWithMissed("unreadable");
   await user.type(await screen.findByLabelText("What happened, or what would help?"), "x");
   expect(screen.queryByLabelText(/Missed something/)).toBeNull();
-  expect(preview().value).toBe("x\n\nApp version: 9.8.7\nScreen: Files");
+  expect(preview().value).toBe("x\n\nScreen: Files");
 });

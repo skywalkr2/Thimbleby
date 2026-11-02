@@ -15,6 +15,7 @@ from email.utils import parseaddr
 from typing import Any, Literal
 
 from engine.config import Config
+from engine.contacts import all_values
 from engine.language_words import language_words, shipped
 from engine.storage import Store
 
@@ -245,7 +246,7 @@ class People:
         addresses = {
             value.strip().lower(): pid
             for pid, data in self.records.items()
-            for value in data.get("how_to_reach", {}).values()
+            for value in all_values(data.get("how_to_reach"))
             if "@" in value
         }
         for entry in entries:

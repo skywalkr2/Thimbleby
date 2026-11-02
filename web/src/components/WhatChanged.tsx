@@ -93,7 +93,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   });
   const openChangeset = (changeset: string): boolean => {
     const all = latest.current;
-    const item = all?.find((c) => c.changeset?.id === changeset);
+    const item = all?.find((c) => c.changeset?.id === changeset || (c.edits ?? []).some((e) => e.changeset?.id === changeset));
     if (!all || !item) return false;
     setFilter("all");
     setShown((prev) => new Set([...(prev ?? all.map((c) => c.id)), item.id]));
@@ -122,7 +122,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   // except the PM's own hand-ins, which they expect to see.
   useEffect(() => {
     if (!changes.data) return;
-    const ids = changes.data.map((c) => c.id);
+    const ids = changes.data.flatMap((c) => [c.id, ...(c.edits ?? []).map((e) => e.id)]);
     setShown((prev) => {
       if (prev === null) return new Set(ids);
       const add = ids.filter((id) => !prev.has(id) && own.has(id));
@@ -130,8 +130,10 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
     });
   }, [changes.data, own]);
 
+  // A row of folded edits is shown while any of its edits was: a new edit joins it, it never makes the row vanish.
+  const isShown = (c: S["ChangeItem"]) => !!shown && (shown.has(c.id) || (c.edits ?? []).some((e) => shown.has(e.id)));
   const waiting = useMemo(
-    () => (changes.data && shown ? changes.data.filter((c) => !shown.has(c.id)) : []),
+    () => (changes.data && shown ? changes.data.filter((c) => !(shown.has(c.id) || (c.edits ?? []).some((e) => shown.has(e.id)))) : []),
     [changes.data, shown],
   );
   useEffect(() => {
@@ -147,7 +149,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const rows = (changes.data ?? []).filter(
     (c) =>
       onSide(sideOf(c.project), side.choice) &&
-      (intake !== null ? c.intake === intake : shown?.has(c.id)) &&
+      (intake !== null ? c.intake === intake : isShown(c)) &&
       !waitingGo.has(c.id) &&
       !(c.first_go && !c.dismissed && c.state === "needs_you") &&
       (filter === "all" || (filter === "done") === !needsAttention(c)),
@@ -156,7 +158,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   // A list with nothing in it has nothing to hold still: what arrives shows at once, so the first results after a first go are
   // one list, never "5 new · Show" over an empty one.
   useEffect(() => {
-    if (changes.data && waiting.length > 0 && rows.length === 0) setShown(new Set(changes.data.map((c) => c.id)));
+    if (changes.data && waiting.length > 0 && rows.length === 0) setShown(new Set(changes.data.flatMap((c) => [c.id, ...(c.edits ?? []).map((e) => e.id)])));
   }, [changes.data, waiting.length, rows.length]);
 
   // The list | detail choice (design 7.13): beside the list the newest change is chosen as the list opens; below 1024px the
@@ -210,7 +212,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
         <button
           type="button"
           className="newbar"
-          onClick={() => setShown(new Set([...(shown ?? []), ...waiting.map((c) => c.id)]))}
+          onClick={() => setShown(new Set([...(shown ?? []), ...waiting.flatMap((c) => [c.id, ...(c.edits ?? []).map((e) => e.id)])]))}
         >
           {tn("changes.show_new", waiting.length)}
         </button>
@@ -223,12 +225,14 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
         <EmptyState text={side.choice !== "all" && (changes.data ?? []).length > 0 ? t("sides.empty.changes", { side: side.named }) : t("changes.empty")} />
       ) : (
         <ListDetail
-          title={selected ? changeTitle(selected, t, has) : ""}
+          title={selected ? (folded(selected) ? editsTitle(selected, t) : changeTitle(selected, t, has)) : ""}
           titleHref={selected?.mail_item && selected.source ? viewHref(recordView("source", selected.source)) : undefined}
           onClose={choice.close}
           fit={CHANGES_FIT}
           detail={
-            selected ? (
+            selected && folded(selected) ? (
+              <FoldedEditsPane item={selected} />
+            ) : selected ? (
               <RowList as="ol" detail>
                 <ChangeRow
                   key={selected.id}
@@ -417,7 +421,58 @@ function stateWord(item: S["ChangeItem"], gated: boolean): string {
 
 /** One change as a line of the list (design 7.13): its state, its title, what was done in one line, its one primary and the
  * rest in the menu. Choosing it shows the whole change in the detail beside the list. */
+/** Whether a row stands for several of the person's own edits of one item on one day. */
+const folded = (item: S["ChangeItem"]): boolean => (item.edits ?? []).length > 1;
+
+/** "You changed Pay the deposit 5 times": the title of a row of folded edits. */
+const editsTitle = (item: S["ChangeItem"], t: T): string => t("changes.you_changed", { name: plainTitle(item.edited ?? "") || t("changes.untitled"), n: (item.edits ?? []).length });
+
+/** One row for the person's own edits of one item on one day; choosing it lists the edits in the detail, each a change of its own
+ * with its own Undo. */
+function FoldedListRow(props: { item: S["ChangeItem"]; choice: ListChoice; reveal: number }) {
+  const { t, tn } = useWords();
+  const { item, choice } = props;
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (props.reveal) showRow(ref.current);
+  }, [props.reveal]);
+  useRowKeys(ref, { toggle: () => choice.enter(item.id) });
+  const title = editsTitle(item, t);
+  return (
+    <ExpandableRow
+      ref={ref}
+      aria-labelledby={`t-${item.id}`}
+      {...choice.rowProps(item.id)}
+      pill={<Pill tone="neutral">{t("changes.state.done")}</Pill>}
+      title={title}
+      titleId={`t-${item.id}`}
+      meta={t("changes.edits_sub", { edits: tn("changes.edits", (item.edits ?? []).length), when: dayAndTime(item.created_at) })}
+      expand={{ expanded: choice.chosen === item.id, inert: choice.chosen === item.id, onToggle: () => choice.choose(item.id) }}
+    />
+  );
+}
+
+/** The list of edits a folded row stands for, newest first, each one as a change of its own. */
+function FoldedEditsPane(props: { item: S["ChangeItem"] }) {
+  const { t, tn } = useWords();
+  const edits = props.item.edits ?? [];
+  return (
+    <RowList as="ol" detail>
+      <DetailItem data-row="" tabIndex={-1}>
+        <p className="hint">{t("changes.edits_intro", { edits: tn("changes.edits", edits.length), date: day(props.item.created_at) })}</p>
+      </DetailItem>
+      {edits.map((edit) => (
+        <ChangeRow key={edit.id} item={edit} reveal={0} history />
+      ))}
+    </RowList>
+  );
+}
+
 function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; reveal: number; onWant: (what: ChangeWant["what"]) => void; onOpenGuide?: (step: string) => void }) {
+  return folded(props.item) ? <FoldedListRow item={props.item} choice={props.choice} reveal={props.reveal} /> : <SingleChangeListRow {...props} />;
+}
+
+function SingleChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; reveal: number; onWant: (what: ChangeWant["what"]) => void; onOpenGuide?: (step: string) => void }) {
   const { t } = useWords();
   const { item, choice } = props;
   const ref = useRef<HTMLLIElement>(null);

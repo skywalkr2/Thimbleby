@@ -68,7 +68,7 @@ test("a person's details say names, words and a label for a choice, in the order
   serve(
     "person",
     "PER-1",
-    { full_name: "Robin Sample", aliases: ["Rob"], role: "Editor", team: "TEAM-1", org: "ORG-1", how_to_reach: { email: "robin@example.org" }, name_verified: false, status: "active" },
+    { full_name: "Robin Sample", aliases: ["Rob"], role: "Editor", team: "TEAM-1", org: "ORG-1", how_to_reach: { email: ["robin@example.org"] }, name_verified: false, status: "active" },
     personFields,
     page("person", "PER-1", "Robin Sample", [
       { field: "team", value: "TEAM-1", type: "text", refs: [ref("team", "TEAM-1", "Quarry Editorial")] },
@@ -83,7 +83,7 @@ test("a person's details say names, words and a label for a choice, in the order
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Organization")).toBe("Quarry House");
   expect(value("Team")).toBe("Quarry Editorial");
-  expect(value("Email")).toBe("robin@example.org");
+  expect(value("Email")).toContain("robin@example.org");
   expect(value("Phone")).toBe("Add phone");
   // The name is the heading's and a flag that is off says nothing: neither is a row.
   expect(within(details).queryByText("Full name")).toBeNull();

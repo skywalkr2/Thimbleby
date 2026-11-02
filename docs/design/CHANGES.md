@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 306. Several emails and phones per person, a place and a repeat for the person's own entries, the person's own edits folded, a plain feedback preview (2026-11-02; sweep X40, X45, X29, X61)
+
+| Where | Before | Now |
+|---|---|---|
+| A person's contact details (5.1, 6.11, 7.14) | One value for each kind; mail from a second address was a stranger's | Each kind is a list. Mail from any address matches the person in every place a sender is looked up; the first is used when one is needed; the page lists each with Remove and Add (Undo); the form has "Add another"; old single values read as a list of one and are rewritten once at start (`migrate.contact_lists`) and on import; `person.contact` adds. **Built** (`tests/test_contact_lists.py`, `web/src/components/PersonPage.test.tsx`, `PersonForm.test.tsx`) |
+| The person's own entries (5.1, 6.7, 7.7) | No place (shown none), no repeat | The Add form takes a place and a repeat (none, daily, weekly, every two weeks, monthly) with a last day; the entry is one record, each date is expanded when shown on Day, Week, Month and the Timeline by `engine/recurrence.py`; Move or Cancel one date is an exception with Undo, without a date it acts on every date; only the person makes an entry repeat. **Built** (`tests/test_own_repeats.py`, `web/src/components/ScheduleRepeat.test.tsx`, `TodayRail.test.tsx`) |
+| What changed (7.7) | One row for each edit | The person's own edits of one item on one day are one row that opens to the list of edits, each with its own Undo; two days are two rows; the assistant's changes are not folded. **Built** (`tests/test_changes_own_edits.py`, `web/src/components/WhatChangedOwnEdits.test.tsx`) |
+| The feedback preview (7.1) | Raw times and error codes first | A plain summary in words first; the technical lines (version, exact times, status, error kind, service text) under a collapsed "Details for the makers", sent with the message. **Built** (`web/src/components/Feedback.test.tsx`, `web/e2e/acceptance.spec.ts` "a demo workspace says so on every screen") |
+| Plugin API (3.3) | 0.3.92 | 0.3.93: `Person.how_to_reach` values are lists; `Event.where`, `repeat`, `exceptions`; `event.add` takes `where` and `repeat` (person only). `docs/plugin-guide.md` and `docs/plugin-api-0.x.md` say so |
+| Not built | | Editing a repeat after the entry is made (Change this has no field for it); meeting prep for a repeating entry's later dates (it reads the entry's own first date); "this and following" |
+
 ## 305. A measuring counts toward the daily and monthly spending limits (2026-11-02; P97, owner: "sure otherwise its not honest")
 
 | Where | Before | Now |

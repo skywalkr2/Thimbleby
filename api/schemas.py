@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from api.screen_text import ScreenText
 from engine.config.schema import CalendarColor
@@ -933,6 +933,15 @@ class ChangeItem(BaseModel):
         "about, else its source's only one, else the one its changes name); none when it is about none or several, so "
         "the side filter shows it under every choice.",
     )
+    edits: list[ChangeItem] = Field(
+        default_factory=list,
+        description="When the person's own edits of one item on one day are folded into this row: every one of them, "
+        "newest first, this row's own included, each as it would be listed alone. Empty for any other row, and for "
+        "a day with one edit.",
+    )
+    edited: str | None = Field(
+        None, description="With `edits`: the name of the item that was edited, for the row's title."
+    )
 
 
 class BatchConfirmIn(BaseModel):
@@ -1251,8 +1260,10 @@ class PersonView(BaseModel):
     track_only: bool = False
     open_items: int = Field(0, description="Open actions and questions with them.")
     last_contact: str | None = Field(None, description="When something was last sent or told to them (a date).")
-    how_to_reach: dict[str, str] = Field(
-        default_factory=dict, description="How to reach them: a channel name mapped to its address or handle."
+    how_to_reach: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="How to reach them: a kind of contact detail mapped to every address, number or handle they have "
+        "of it, the first being the one used when a single one is needed.",
     )
     relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
     side: Literal["personal", "business", "both"] | None = Field(
@@ -1275,11 +1286,19 @@ class PersonIn(BaseModel):
     org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
     relation: str | None = Field(None, description="How they relate to the person, in plain words ('my sister').")
-    how_to_reach: dict[str, str] | None = Field(
+    how_to_reach: dict[str, list[str]] | None = Field(
         None,
-        description="How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the "
-        "address or number. A blank value is left out.",
+        description="How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to its "
+        "addresses or numbers (one text is a list of one). A blank value is left out.",
     )
+
+    @field_validator("how_to_reach", mode="before")
+    @classmethod
+    def _each_kind_a_list(cls, value: Any) -> Any:
+        from engine.contacts import reach_lists
+
+        return reach_lists(value) if isinstance(value, dict) else value
+
     side: Literal["personal", "business", "both"] | None = Field(
         None,
         description="Which side of life they belong to. Refused for business or both when there is more than one "
@@ -1355,11 +1374,20 @@ class PersonPatch(BaseModel):
     aliases: list[str] | None = None
     status: Literal["active", "left"] | None = None
     relation: str | None = Field(None, description="How they relate to the person; null clears it.")
-    how_to_reach: dict[str, str] | None = Field(
+    how_to_reach: dict[str, list[str]] | None = Field(
         None,
         description="How to reach them, replacing what is kept: a kind of contact detail the workspace offers (email, "
-        "phone) mapped to the address or number. A blank value is left out; an empty map clears them all.",
+        "phone) mapped to its addresses or numbers (one text is a list of one). A blank value is left out; an empty "
+        "map clears them all.",
     )
+
+    @field_validator("how_to_reach", mode="before")
+    @classmethod
+    def _each_kind_a_list(cls, value: Any) -> Any:
+        from engine.contacts import reach_lists
+
+        return reach_lists(value) if isinstance(value, dict) else value
+
     side: Literal["personal", "business", "both"] | None = Field(
         None,
         description="Which side they belong to. Refused for business or both when there is more than one side "
@@ -2752,6 +2780,14 @@ class AgendaItemView(BaseModel):
         "(its page shows who is asked), when there is one.",
     )
     series: str | None = Field(None, description="The series this date or entry is one meeting of, when it is.")
+    repeats: Literal["day", "week", "two_weeks", "month"] | None = Field(
+        None, description="For one date of the person's own entry that happens again: how often it does."
+    )
+    occurrence: str | None = Field(
+        None,
+        description="For such a date: when the repeat rule had it, as ISO 8601 text, to move or cancel that date alone "
+        "(POST /api/events/{id}/move and /cancel with `occurrence`).",
+    )
     open_items: int = Field(
         0, description="For a meeting of a series: how many open actions and questions sit on it (never shown as zero)."
     )
@@ -7257,6 +7293,14 @@ class MeetingIn(BaseModel):
         description="The id of the side it belongs to (a side's top project, as GET /api/setup/business lists them); "
         "none when it is on no side in particular.",
     )
+    where: str | None = Field(None, description="Where it happens, in a few words; none for no place.")
+    repeat: Literal["day", "week", "two_weeks", "month"] | None = Field(
+        None, description="How often it happens again: every day, week, two weeks or month; none for once."
+    )
+    repeat_until: str | None = Field(
+        None,
+        description="With `repeat`: the last day it can happen, as 2026-12-31 (that day included); none for no end.",
+    )
 
 
 class MeetingAdded(BaseModel):
@@ -7652,12 +7696,22 @@ class EventMoveIn(BaseModel):
     start: str = Field(min_length=1, description="The new start, as ISO 8601 text.")
     end: str | None = Field(None, description="The new end, as ISO 8601 text; left out for an entry with no end.")
     read_version: int = Field(ge=1, description="The version of the entry that was read; the move waits on it.")
+    occurrence: str | None = Field(
+        None,
+        description="For an entry that repeats: the date to move alone, as `occurrence` of its entry on the schedule "
+        "gives it. Left out, the entry itself moves, and with it every date.",
+    )
 
 
 class EventCancelIn(BaseModel):
     """POST /api/events/{id}/cancel: remove an entry the app keeps itself, resting on the version the person read."""
 
     read_version: int = Field(ge=1, description="The version of the entry that was read; the removal waits on it.")
+    occurrence: str | None = Field(
+        None,
+        description="For an entry that repeats: the date to call off alone, as `occurrence` of its entry on the "
+        "schedule gives it. Left out, the entry is removed, and with it every date.",
+    )
 
 
 class EventChanged(BaseModel):
@@ -8274,9 +8328,9 @@ class PrepNoteAsk(BaseModel):
 
 class ReachView(BaseModel):
     """How a person likes to be reached: the ways kept on their record (channel to address), and the channel of the mail
-    they last wrote from, with the input it was read from."""
+    they last wrote from, with the input it was read from. Each channel holds every address or handle kept for it."""
 
-    kept: dict[str, str] = Field(default_factory=dict)
+    kept: dict[str, list[str]] = Field(default_factory=dict)
     replies_on: str | None = None
     replies_record: str | None = None
 

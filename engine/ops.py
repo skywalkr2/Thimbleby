@@ -26,7 +26,7 @@ from pydantic.json_schema import SkipJsonSchema
 
 from engine.dates import DayOrMonthDay, parse_month_day
 from engine.id_words import KNOWLEDGE_KINDS, named, named_one_of, named_text_of
-from engine.records import ActTemplate, FiledBy, RefTo, Scope, canonical_time, entry_problem
+from engine.records import ActTemplate, EntryRepeat, FiledBy, RefTo, Scope, canonical_time, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -241,12 +241,26 @@ class EventAddOp(OpModel):
     series: Annotated[str | None, RefTo("series")] = Field(
         None, description="The id of the series this entry is an instance of, if any."
     )
+    where: str | None = Field(
+        None, description="Where it happens, in a few words, only when the input says so; leave out otherwise."
+    )
+    repeat: EntryRepeat | None = Field(
+        None,
+        description="Leave out: only the person makes an entry repeat, from the Schedule; one from an input is "
+        "refused.",
+    )
     evidence: EvidenceIn = Field(description="The exact words from the input that give the date.")
 
     @field_validator("start", "end")
     @classmethod
     def _readable(cls, value: str | None) -> str | None:
         return _entry_time_text(value)
+
+    @field_validator("where")
+    @classmethod
+    def _one_line(cls, value: str | None) -> str | None:
+        text = " ".join((value or "").split())
+        return text[:200] or None
 
     @model_validator(mode="after")
     def _dated(self) -> EventAddOp:
@@ -877,8 +891,8 @@ class PersonAddOp(OpModel):
 class PersonContactOp(OpModel):
     """A way to reach a person that the input gives, such as a phone number or an address in their signature. It always
     waits for the person to confirm it, whoever proposes it: a detail from outside content would otherwise become a way
-    to reach someone. Confirming sets the detail of that kind on the person, replacing one of the same kind. The kind is
-    one of the contact kinds the workspace offers; evidence is required."""
+    to reach someone. Confirming adds the detail to those of that kind the person already has (one they already have is
+    left as it is). The kind is one of the contact kinds the workspace offers; evidence is required."""
 
     op: Literal["person.contact"] = "person.contact"
     person: str = Field(description="The id of the person the detail belongs to.")

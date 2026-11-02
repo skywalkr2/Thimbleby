@@ -16,8 +16,8 @@ import { entryHref, fullWhen, type Calendars, type Entry } from "./ScheduleEntry
 import styles from "./Schedule.module.css";
 
 /** Moving and cancelling an entry that has a record of its own: the app's own entry, or a connected event the app keeps one for. */
-function EntryChanges(props: { id: string; title: string; link: string | null | undefined }) {
-  const acts = useEventActs(props.id, {}, true, props.link);
+function EntryChanges(props: { id: string; title: string; link: string | null | undefined; date?: { was: string; start: string; end?: string | null } }) {
+  const acts = useEventActs(props.id, {}, true, props.link, props.date);
   return (
     <>
       {acts.menu.length > 0 && <RowMenu label={props.title} actions={acts.menu} />}
@@ -38,6 +38,7 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
   const rows: [string, React.ReactNode][] = [
     [t("schedule.pane.when"), fullWhen(entry, props.date, t)],
     ...(entry.where ? [[t("schedule.event.where"), entry.where] as [string, React.ReactNode]] : []),
+    ...(entry.repeats ? [[t("schedule.pane.repeats"), t(`meeting.repeat.${entry.repeats}`)] as [string, React.ReactNode]] : []),
     [
       t("schedule.event.calendar"),
       <>
@@ -77,7 +78,7 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
           {entry.kind === "due" ? t("schedule.pane.open_todo") : t("schedule.pane.open")}
         </ButtonLink>
         {entry.link && <SafeLink label={t("schedule.open_calendar")} url={entry.link} />}
-        {changeable && <EntryChanges id={changeable} title={entry.title} link={entry.link} />}
+        {changeable && <EntryChanges id={changeable} title={entry.title} link={entry.link} date={entry.own && entry.occurrence ? { was: entry.occurrence, start: entry.start, end: entry.end } : undefined} />}
       </div>
       {appOnly && <p className="hint">{t("acts.event.why.app_only")}</p>}
     </div>

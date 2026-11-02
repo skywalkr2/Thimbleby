@@ -19,7 +19,7 @@ import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
 import { Skeleton } from "../ui/Skeleton";
 import { Organizations } from "./Organizations";
 import styles from "./People.module.css";
-import { PersonDrawer } from "./PersonForm";
+import { PersonDrawer, heldReach } from "./PersonForm";
 import { RecordConversation } from "./RecordConversation";
 import { SideFilter } from "./SideFilter";
 import { RowMenu } from "./RowMenu";
@@ -64,7 +64,7 @@ export function People() {
       {p.track_only && <Pill tone="neutral">{t("people.watching")}</Pill>}
     </>
   );
-  const reach = (p: S["PersonView"]) => Object.entries(p.how_to_reach ?? {}).map(([kind, value]) => `${kind}: ${value}`);
+  const reach = (p: S["PersonView"]) => Object.entries(heldReach(p.how_to_reach)).flatMap(([kind, values]) => values.map((value) => `${kind}: ${value}`));
   const reachColumn: TableColumn<S["PersonView"]> = {
     id: "reach",
     header: t("people.col.reach"),

@@ -1,8 +1,10 @@
 // The lines Send feedback adds for the last problems: one block per problem, in the person's own words, with exactly
 // what the server sent (already masked). The same text is shown in the preview and goes in the email.
 import type { S } from "./api";
+import { dayAndTime } from "./dates";
 
 type Words = (key: string, vars?: Record<string, string | number>) => string;
+type Counted = (key: string, n: number, vars?: Record<string, string | number>) => string;
 
 const PARAM_LABEL: Record<string, string> = {
   tier: "feedback.problem.param.tier",
@@ -55,4 +57,33 @@ export function problemBlock(p: S["FeedbackProblem"], t: Words): string[] {
 export function problemLines(problems: S["FeedbackProblem"][], t: Words): string[] {
   if (problems.length === 0) return [];
   return [t("feedback.problems_heading"), ...problems.flatMap((p, i) => (i === 0 ? problemBlock(p, t) : ["", ...problemBlock(p, t)]))];
+}
+
+/** What was being done, as a clause of a sentence: "the assistant was working on notes". */
+function doingInWords(p: S["FeedbackProblem"], t: Words): string {
+  const what = p.what ?? "";
+  switch (p.doing) {
+    case "task":
+      return what ? t("feedback.summary.doing.task", { what }) : t("feedback.summary.doing.task_unnamed");
+    case "account_check":
+      return what ? t("feedback.summary.doing.account_check_part", { what }) : t("feedback.summary.doing.account_check");
+    case "source_read":
+      return what ? t("feedback.summary.doing.source_read_kind", { what }) : t("feedback.summary.doing.source_read");
+    default:
+      return what ? t("feedback.summary.doing.app_where", { what }) : t("feedback.summary.doing.app");
+  }
+}
+
+/** The plain section for the message: how many problems, then one line each saying when and what was being done and how it
+ * went wrong, in words with no code, raw date or service text. `problemLines` holds the same problems exactly, for the
+ * details. */
+export function problemSummary(problems: S["FeedbackProblem"][], t: Words, tn: Counted, has: (key: string) => boolean): string[] {
+  if (problems.length === 0) return [];
+  return [
+    tn("feedback.summary.problems", problems.length),
+    ...problems.map((p) => {
+      const kind = p.error_kind && has(`feedback.summary.kind.${p.error_kind}`) ? `feedback.summary.kind.${p.error_kind}` : "feedback.summary.kind.other";
+      return t("feedback.summary.problem", { when: dayAndTime(p.at), doing: doingInWords(p, t), went: t(kind) });
+    }),
+  ];
 }

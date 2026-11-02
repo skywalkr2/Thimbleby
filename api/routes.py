@@ -10,7 +10,7 @@ import base64
 import json
 import logging
 from dataclasses import asdict
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -205,6 +205,7 @@ from engine import (
     held_ask,
     learned,
     new_terms,
+    own_edits,
     repeats,
     review_batches,
     source_intake,
@@ -215,6 +216,7 @@ from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
 from engine.backup import run_backup, state
 from engine.config import Config
+from engine.contacts import all_values, reach_lists, values_of
 from engine.corrections import answered_assistant
 from engine.dispatcher import (
     dismiss,
@@ -1733,8 +1735,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def changes() -> list[ChangeItem]:
         from engine import sides
         from engine.titles import head_of, subject_of, title_for
+        from engine.today import zone
         from engine.today_queue import request_project, watched_kinds
 
+        here = zone(cfg)
         people = People(store, cfg)
         projects = sides.project_names(store.read(), cfg)
         sources = {s.id: s.data for s in store.read().list("source")}
@@ -1747,6 +1751,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if s.data.get("message") and not s.data.get("deleted") and not s.data.get("gone")
         }
         out: list[ChangeItem] = []
+        edited: dict[str, tuple[str, str]] = {}  # request id to the one record the person's own edit changed
         for req in reversed(store.read().list("request")):
             d = req.data
             if d.get("set_aside"):
@@ -1777,6 +1782,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     applied=_applied_views(cs.data.get("applied") or []),
                     first_on_account=cs.data.get("first_on_account"),
                 )
+                target = own_edits.edited_record(d, cs.data)
+                if target is not None:
+                    edited[req.id] = target
             out.append(
                 ChangeItem(
                     id=req.id,
@@ -1823,7 +1831,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     ),
                 )
             )
-        return out
+        return _fold_own_edits(out, edited, here)
 
     @r.post("/changesets/{cs_id}/looks-good")
     def approve(cs_id: str) -> Ok:
@@ -2378,7 +2386,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 status=p.data.get("status", "active"),
                 is_pm=p.id == pm,
                 track_only=bool(p.data.get("track_only")),
-                how_to_reach=p.data.get("how_to_reach") or {},
+                how_to_reach=reach_lists(p.data.get("how_to_reach")),
                 relation=p.data.get("relation"),
                 side=sides.side_word_of(view, cfg, held[p.id]) or p.data.get("side"),
                 sides=held[p.id],
@@ -2392,15 +2400,16 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if rec.id != except_id and rec.data[field].strip().lower() == value.strip().lower():
                 raise HTTPException(status_code=409, detail=f"{value} already exists.")
 
-    def _reach(given: dict[str, str], except_id: str | None = None) -> dict[str, str]:
-        """The contact details a person is given, kept as the workspace spells each kind and without blanks. A kind the
-        workspace doesn't offer, or an address someone else already holds, is refused in plain words."""
+    def _reach(given: dict[str, list[str]], except_id: str | None = None) -> dict[str, list[str]]:
+        """The contact details a person is given, kept as the workspace spells each kind, without blanks and without
+        a value twice. A kind the workspace doesn't offer, or an address someone else already holds, is refused in
+        plain words."""
         from engine.applier import contact_kind
 
-        kept: dict[str, str] = {}
-        for raw_kind, raw_value in given.items():
-            value = " ".join(str(raw_value).split())
-            if not value:
+        kept: dict[str, list[str]] = {}
+        for raw_kind, raw_values in given.items():
+            values = values_of(raw_values)
+            if not values:
                 continue
             kind = contact_kind(cfg, raw_kind)
             if kind is None:
@@ -2408,12 +2417,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 raise HTTPException(
                     status_code=409, detail=f"{raw_kind} isn't a kind of contact detail here; use one of: {offered}."
                 )
-            kept[kind] = value
+            kept[kind] = values_of([*kept.get(kind, []), *values])
         for other in store.read().list("person"):
             if other.id == except_id:
                 continue
-            held = {" ".join(str(v).split()).casefold() for v in (other.data.get("how_to_reach") or {}).values()}
-            clash = next((v for v in kept.values() if v.casefold() in held), None)
+            held = {v.casefold() for v in all_values(other.data.get("how_to_reach"))}
+            clash = next((v for vs in kept.values() for v in vs if v.casefold() in held), None)
             if clash is not None:
                 raise HTTPException(status_code=409, detail=f"{clash} is already {other.data['full_name']}'s.")
         return kept
@@ -2449,10 +2458,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     and not any(
                         reach[1].lower() == str(v).strip().lower()
                         for p in tx.list("person")
-                        for v in (p.data.get("how_to_reach") or {}).values()
+                        for v in all_values(p.data.get("how_to_reach"))
                     )
                 ):
-                    data["how_to_reach"] = {reach[0]: reach[1]}
+                    data["how_to_reach"] = {reach[0]: [reach[1]]}
                 return tx.create("person", data, _setup("person.add")).id
 
         return guard(do)
@@ -2952,6 +2961,29 @@ def _side_name(store: Store, cfg: Config | None, project_id: str | None) -> str 
     from engine import sides
 
     return sides.side_name_of(store.read(), cfg, project_id) if cfg is not None else None
+
+
+def _fold_own_edits(items: list[ChangeItem], edited: dict[str, tuple[str, str]], here: Any) -> list[ChangeItem]:
+    """The person's own edits of one item on one day as one row (the newest edit, which keeps every one of them in
+    `edits`); every other change stays a row of its own, in its place. `items` are newest first."""
+    heads: dict[tuple[date, str, str], ChangeItem] = {}
+    rows: list[ChangeItem] = []
+    for item in items:
+        target = edited.get(item.id)
+        if target is None:
+            rows.append(item)
+            continue
+        key = (own_edits.day_of(item.created_at, here), *target)
+        head = heads.get(key)
+        if head is None:
+            heads[key] = head = item
+            rows.append(item)
+        else:
+            if not head.edits:
+                head.edits = [head.model_copy()]
+            head.edits.append(item)
+            head.edited = (head.changeset.ops[0].title if head.changeset and head.changeset.ops else None) or None
+    return rows
 
 
 def _op_view(

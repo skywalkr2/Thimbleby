@@ -30,7 +30,7 @@ async function edit(user: ReturnType<typeof userEvent.setup>, name: string) {
 
 test("people are a table with who they are, open items and last contact; the name links to the person's page, and the organization is in the details", async () => {
   api([
-    person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, open_items: 4, last_contact: "2026-10-08", how_to_reach: { email: "ana@example.com" } }),
+    person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, open_items: 4, last_contact: "2026-10-08", how_to_reach: { email: ["ana@example.com"] } }),
     person("P-2", "Ben Person"),
   ]);
   renderApp(<People />);
@@ -87,7 +87,7 @@ test("the organization filter is offered only when there are two organizations o
 
 test("a row opens its detail with what is known, never zero, and a link to the page", async () => {
   const user = userEvent.setup();
-  api([person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, aliases: ["Anita"], open_items: 1, how_to_reach: { phone: "555-0100" } })]);
+  api([person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, aliases: ["Anita"], open_items: 1, how_to_reach: { phone: ["555-0100"] } })]);
   renderApp(<People />);
   const tr = await row("Ana Person");
   await user.click(within(tr).getByText("Editor"));
@@ -317,7 +317,7 @@ const justMe = {
 
 test("with no side besides Personal people have Name, Who they are and How to reach, with no Role, Organization or Organizations", async () => {
   api(
-    [person("P-1", "Ana Person", { relation: "my sister", role: "Editor", org: firstOrg.id, org_name: firstOrg.name, how_to_reach: { email: "ana@example.com" } }), person("P-2", "Ben Person")],
+    [person("P-1", "Ana Person", { relation: "my sister", role: "Editor", org: firstOrg.id, org_name: firstOrg.name, how_to_reach: { email: ["ana@example.com"] } }), person("P-2", "Ben Person")],
     justMe,
   );
   renderApp(<People />);

@@ -2768,6 +2768,18 @@
             "description": "Where to open it; untrusted, so show its real domain.",
             "title": "Link"
           },
+          "occurrence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For such a date: when the repeat rule had it, as ISO 8601 text, to move or cancel that date alone (POST /api/events/{id}/move and /cancel with `occurrence`).",
+            "title": "Occurrence"
+          },
           "open_items": {
             "default": 0,
             "description": "For a meeting of a series: how many open actions and questions sit on it (never shown as zero).",
@@ -2779,6 +2791,24 @@
             "description": "An entry in the app's own calendar (recorded from what came in), not an event read from a connected calendar. Its end is the last day or moment, included.",
             "title": "Own",
             "type": "boolean"
+          },
+          "repeats": {
+            "anyOf": [
+              {
+                "enum": [
+                  "day",
+                  "week",
+                  "two_weeks",
+                  "month"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For one date of the person's own entry that happens again: how often it does.",
+            "title": "Repeats"
           },
           "series": {
             "anyOf": [
@@ -7665,6 +7695,26 @@
             "title": "Dismissed",
             "type": "boolean"
           },
+          "edited": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `edits`: the name of the item that was edited, for the row's title.",
+            "title": "Edited"
+          },
+          "edits": {
+            "description": "When the person's own edits of one item on one day are folded into this row: every one of them, newest first, this row's own included, each as it would be listed alone. Empty for any other row, and for a day with one edit.",
+            "items": {
+              "$ref": "#/components/schemas/ChangeItem"
+            },
+            "title": "Edits",
+            "type": "array"
+          },
           "estimate_usd": {
             "anyOf": [
               {
@@ -9841,6 +9891,18 @@
       "EventCancelIn": {
         "description": "POST /api/events/{id}/cancel: remove an entry the app keeps itself, resting on the version the person read.",
         "properties": {
+          "occurrence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an entry that repeats: the date to call off alone, as `occurrence` of its entry on the schedule gives it. Left out, the entry is removed, and with it every date.",
+            "title": "Occurrence"
+          },
           "read_version": {
             "description": "The version of the entry that was read; the removal waits on it.",
             "minimum": 1.0,
@@ -9901,6 +9963,18 @@
             ],
             "description": "The new end, as ISO 8601 text; left out for an entry with no end.",
             "title": "End"
+          },
+          "occurrence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an entry that repeats: the date to move alone, as `occurrence` of its entry on the schedule gives it. Left out, the entry itself moves, and with it every date.",
+            "title": "Occurrence"
           },
           "read_version": {
             "description": "The version of the entry that was read; the move waits on it.",
@@ -15939,6 +16013,36 @@
             "title": "Day",
             "type": "string"
           },
+          "repeat": {
+            "anyOf": [
+              {
+                "enum": [
+                  "day",
+                  "week",
+                  "two_weeks",
+                  "month"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How often it happens again: every day, week, two weeks or month; none for once.",
+            "title": "Repeat"
+          },
+          "repeat_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `repeat`: the last day it can happen, as 2026-12-31 (that day included); none for no end.",
+            "title": "Repeat Until"
+          },
           "side": {
             "anyOf": [
               {
@@ -15979,6 +16083,18 @@
             "description": "What the meeting is, in a few words.",
             "title": "What",
             "type": "string"
+          },
+          "where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it happens, in a few words; none for no place.",
+            "title": "Where"
           }
         },
         "required": [
@@ -19676,7 +19792,10 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 "type": "object"
               },
@@ -19684,7 +19803,7 @@
                 "type": "null"
               }
             ],
-            "description": "How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the address or number. A blank value is left out.",
+            "description": "How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to its addresses or numbers (one text is a list of one). A blank value is left out.",
             "title": "How To Reach"
           },
           "org": {
@@ -19886,7 +20005,10 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 "type": "object"
               },
@@ -19894,7 +20016,7 @@
                 "type": "null"
               }
             ],
-            "description": "How to reach them, replacing what is kept: a kind of contact detail the workspace offers (email, phone) mapped to the address or number. A blank value is left out; an empty map clears them all.",
+            "description": "How to reach them, replacing what is kept: a kind of contact detail the workspace offers (email, phone) mapped to its addresses or numbers (one text is a list of one). A blank value is left out; an empty map clears them all.",
             "title": "How To Reach"
           },
           "org": {
@@ -20112,9 +20234,12 @@
           },
           "how_to_reach": {
             "additionalProperties": {
-              "type": "string"
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             },
-            "description": "How to reach them: a channel name mapped to its address or handle.",
+            "description": "How to reach them: a kind of contact detail mapped to every address, number or handle they have of it, the first being the one used when a single one is needed.",
             "title": "How To Reach",
             "type": "object"
           },
@@ -25110,11 +25235,14 @@
         "type": "object"
       },
       "ReachView": {
-        "description": "How a person likes to be reached: the ways kept on their record (channel to address), and the channel of the mail\nthey last wrote from, with the input it was read from.",
+        "description": "How a person likes to be reached: the ways kept on their record (channel to address), and the channel of the mail\nthey last wrote from, with the input it was read from. Each channel holds every address or handle kept for it.",
         "properties": {
           "kept": {
             "additionalProperties": {
-              "type": "string"
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             },
             "title": "Kept",
             "type": "object"
@@ -26823,6 +26951,18 @@
             "description": "Where to open it; untrusted, so show its real domain.",
             "title": "Link"
           },
+          "occurrence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For such a date: when the repeat rule had it, as ISO 8601 text, to move or cancel that date alone (POST /api/events/{id}/move and /cancel with `occurrence`).",
+            "title": "Occurrence"
+          },
           "open_items": {
             "default": 0,
             "description": "For a meeting of a series: how many open actions and questions sit on it (never shown as zero).",
@@ -26834,6 +26974,24 @@
             "description": "An entry in the app's own calendar (recorded from what came in), not an event read from a connected calendar. Its end is the last day or moment, included.",
             "title": "Own",
             "type": "boolean"
+          },
+          "repeats": {
+            "anyOf": [
+              {
+                "enum": [
+                  "day",
+                  "week",
+                  "two_weeks",
+                  "month"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For one date of the person's own entry that happens again: how often it does.",
+            "title": "Repeats"
           },
           "series": {
             "anyOf": [
@@ -28392,7 +28550,10 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 "type": "object"
               },
@@ -28400,7 +28561,7 @@
                 "type": "null"
               }
             ],
-            "description": "How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to the address or number. A blank value is left out.",
+            "description": "How to reach them: a kind of contact detail the workspace offers (email, phone) mapped to its addresses or numbers (one text is a list of one). A blank value is left out.",
             "title": "How To Reach"
           },
           "org": {

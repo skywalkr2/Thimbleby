@@ -137,7 +137,7 @@ function ForwardForm(props: { onCancel: () => void; onSubmit: (text: string, to:
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const reachable = (people.data ?? []).filter((p) => !p.is_pm && (p.how_to_reach?.email ?? "").trim() !== "");
+  const reachable = (people.data ?? []).filter((p) => !p.is_pm && (p.how_to_reach?.email ?? []).length > 0);
   return (
     <form
       className="answer-form"

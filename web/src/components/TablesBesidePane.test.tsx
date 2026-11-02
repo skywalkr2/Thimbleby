@@ -139,7 +139,7 @@ test("when even the priority columns don't fit beside the pane, the pane overlay
 test("a person row has no Details button either, and a long address is clipped with the whole address as its title", async () => {
   const user = userEvent.setup();
   fakeApi({
-    "GET people": () => [person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, how_to_reach: { email: "a.long.address.for.someone@example.org" } })],
+    "GET people": () => [person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, how_to_reach: { email: ["a.long.address.for.someone@example.org"] } })],
     "GET organizations": () => [firstOrg],
   });
   renderApp(<People />);

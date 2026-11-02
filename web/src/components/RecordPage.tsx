@@ -21,7 +21,8 @@ import { FiledLine } from "./Filed";
 import { TieLine } from "./TieLine";
 import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
-import { PersonDrawer, kindLabel, useContactKinds } from "./PersonForm";
+import { PersonDrawer, heldReach, kindLabel, useContactKinds } from "./PersonForm";
+import { PersonReach } from "./PersonReach";
 import { onWorkSide, usePersonMenu } from "./PersonMenu";
 import { PersonPicker } from "./PersonPicker";
 import { AgendaSection } from "./AgendaList";
@@ -65,6 +66,12 @@ import { DefinitionList, Definition } from "../ui/DefinitionList";
 import { TabStrip } from "../ui/TabStrip";
 import styles from "./RecordPage.module.css";
 import { whoTheyAre } from "../lib/people-who";
+/** How an entry repeats, in words: "Every week, until Dec 31". */
+function repeatLines(value: { every?: string; until?: string | null } | null, t: (key: string, vars?: Record<string, string | number>) => string, dayText: (iso: string) => string): string[] {
+  if (!value?.every) return [];
+  return [value.until ? t("record.repeat_until", { how: t(`meeting.repeat.${value.every}`), date: dayText(value.until) }) : t(`meeting.repeat.${value.every}`)];
+}
+
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t, has } = useWords();
   const { kind, id } = props;
@@ -163,7 +170,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const due = kind === "action" && typeof data?.fields.due === "string" ? data.fields.due : null;
   const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "", due) : "";
   const ownOrganization = kind === "project" ? sides.find((s) => s.project === id) : undefined;
-  type Row = { name: string; label?: string; lines: Array<string | { label: string; url: string }>; link?: { text: string; href: string }; muted?: boolean; onAdd?: () => void };
+  type Row = { name: string; label?: string; lines: Array<string | { label: string; url: string }>; link?: { text: string; href: string }; muted?: boolean; onAdd?: () => void; reach?: string };
   const person = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : undefined;
   const generic: Row[] = data && settled && kind !== "person"
     ? inReadingOrder(
@@ -175,7 +182,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter(([name]) => !(kind === "action" && TODO_HIDDEN.has(name)))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
-          .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
+          .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || name === "exceptions" || (name === "cancelled" && value !== true))))
           .map(([name, value]): Row => {
             // A side is its organization too, and has one page: the organization's details are rows of this one (below), and
             // its name is the heading's.
@@ -191,7 +198,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   ? flagLines(value, name, t, has)
                   : kind === "event" && name === "delivery"
                     ? deliveryLines(value as Delivery | null, t)
-                    : detailLines(name, value, info.get(name), names),
+                    : kind === "event" && name === "repeat"
+                      ? repeatLines(value as { every?: string; until?: string | null } | null, t, day)
+                      : detailLines(name, value, info.get(name), names),
             };
           })
           // What the heading already says is not said again under it: the name field, or a to-do's wording, when it is the name.
@@ -219,11 +228,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // to you and on which sides, when you were last in touch, their dates and what matters to them.
   const personRows: Row[] = [];
   if (data && settled && kind === "person") {
-    const held = (data.fields.how_to_reach ?? {}) as Record<string, string>;
+    // Each kind lists every value the person has of it, with Remove and Add in place; the first two kinds are offered even when empty.
+    const held = heldReach(data.fields.how_to_reach);
     kinds.forEach((ck, i) => {
-      const found = Object.entries(held).find(([k]) => k.trim().toLocaleLowerCase() === ck.trim().toLocaleLowerCase());
-      if (found) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [found[1]] });
-      else if (i < 2) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [t("person.add_kind", { kind: ck.toLocaleLowerCase() })], muted: true, onAdd: () => setEditing(true) });
+      const found = Object.keys(held).some((k) => k.trim().toLocaleLowerCase() === ck.trim().toLocaleLowerCase());
+      if (found || i < 2) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [], reach: ck });
     });
     const role = String(data.fields.role ?? "").trim();
     const who = person && !isSelf ? whoTheyAre(person, personal, sides, t) : role;
@@ -313,6 +322,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                     <div>
                       <a href={row.link.href}>{row.link.text}</a>
                     </div>
+                  ) : row.reach ? (
+                    <PersonReach person={id} name={name} kind={row.reach} held={data.fields.how_to_reach} />
                   ) : row.onAdd ? (
                     <Button variant="quiet" size="sm" className={styles.add} onClick={row.onAdd}>
                       {row.lines[0] as string}

@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from engine import reply_lines
+from engine.contacts import reach_lists, values_of
 from engine.ops import EvidenceIn, OpModel, PersonContactOp
 from engine.reply_split import split_message
 
@@ -72,8 +73,9 @@ def proposals(
     numbers = phones_in(signature_lines(head[1]), cfg.workspace.phone_min_digits)
     if not numbers:
         return []
-    held = (record.data.get("how_to_reach") or {}).get(kind)
-    if held and _digits(held) in {_digits(value) for value, _ in numbers}:
+    held = values_of((reach_lists(record.data.get("how_to_reach"))).get(kind))
+    found = {_digits(value) for value, _ in numbers}
+    if any(_digits(v) in found for v in held):
         return []
     if any(
         isinstance(op, PersonContactOp)

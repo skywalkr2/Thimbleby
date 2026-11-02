@@ -20,6 +20,7 @@ from email.utils import parseaddr
 from typing import Any
 
 from engine import reply_lines
+from engine.contacts import all_values
 
 #: The longest sentence kept as the reason a message is limited.
 WHY_MAX = 300
@@ -99,7 +100,7 @@ def narrowest(audiences: Iterable[Mapping[str, Any] | None]) -> dict[str, Any] |
 def addresses_of(people: Any, person: str) -> set[str]:
     """The addresses a person's record holds, lowercased."""
     data = people.records.get(person) or {}
-    return {v.strip().lower() for v in (data.get("how_to_reach") or {}).values() if "@" in str(v)}
+    return {v.strip().lower() for v in all_values(data.get("how_to_reach")) if "@" in str(v)}
 
 
 def within(audience: Mapping[str, Any], people: Any, person: str | None, written: str) -> bool:

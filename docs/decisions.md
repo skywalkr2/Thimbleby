@@ -4,6 +4,42 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Several emails and phones per person, a place and a repeat for the person's own entries, the person's own edits folded into one row a day, and a plain feedback preview (X40, X45, X29, X61)
+
+**Decided:** (1) X40: each kind of contact detail a person has (email, phone) holds a list. Mail from any of a person's
+addresses is that person wherever a sender is looked up (names, sides, the audience limit, replies owed, sent-version
+matching, Today's mail line, people suggestions); the first address of a kind is the one used when a single one is
+needed (an address to send to, the person's own address). The person's page lists every value with Remove and Add (each
+acts at once with Undo); the person's form takes more than one with "Add another". `person.contact` adds a detail to those
+of its kind instead of replacing the one there. A record that still holds one text for a kind is read as a list of one,
+rewritten once when a workspace opens, and an old export loads the same way. (2) X45: the Schedule's Add form takes a
+place and a repeat (none, every day, every week, every two weeks, every month) with an optional last day. A repeating
+entry is one record whose dates are worked out when shown by the expansion connected calendars already use
+(`engine/recurrence.py`), so Day, Week, Month and the Timeline show them with no second recurrence. Move and Cancel on one
+date is an exception on the entry (a `record.edit` with Undo); Move and Cancel without a date act on the whole entry and
+so on every date. Only the person makes an entry repeat. (3) X29: all of the person's own edits of one item on one day
+are one row in What changed ("You changed Pay the deposit 5 times") that opens to the list of the edits, each a change of
+its own with its own Undo; two days are two rows; the assistant's changes stay one row each. This replaces the rule that
+only identical edits fold. (4) X61: the feedback preview starts with a plain summary in words; the technical lines (the
+app's version, every problem's exact time with its offset, account, settings, status and error kind) stay under a
+collapsed "Details for the makers" and are sent with the message, so nothing is lost.
+
+**Decided by:** the owner, 2026-11-02, on batch B's open decisions (open-promises P96).
+
+**Why:** a person has more than one email and phone, and mail from the second address was a stranger's; a dentist visit or
+a weekly walk is a repeat, and a place is the first thing asked of an entry; five edits of one to-do flooded What changed;
+the feedback preview showed "2026-10-28 08:13 -07:00" and "Error: no_access" to someone who only wants to say what
+happened.
+
+**Impact:** design 5.1 (`05-data.md`: Person and Event), 6.7 and 6.11 (`06-engine.md`), 7.7 and the Help part of 7.1
+(`07-ui.md`). Plugin API 0.3.93: `Person.how_to_reach` values are lists (the old single value reads as the first item);
+`Event.where`, `Event.repeat`, `Event.exceptions` and `event.add`'s `where` and `repeat` are new. API: `how_to_reach` is a
+map of lists on `PersonView`, `PersonIn`, `PersonPatch` (a single text is still accepted); `MeetingIn.where`, `repeat`,
+`repeat_until`; `EventMoveIn.occurrence` and `EventCancelIn.occurrence`; `AgendaItemView.repeats` and `occurrence`;
+`ChangeItem.edits` and `edited`. No new setting. Not built: changing the place or repeat of an existing entry other than
+through Change this (the repeat has no field there), meeting prep for a repeating entry's later dates (it reads the entry's own first date),
+a series-wide "this and following" change. Change log: section 306.
+
 ## 2026-11-02: A measuring counts toward the daily and monthly spending limits (P97; section 305)
 
 **Decided:** what Compare › Measure spends is counted in the person's own spending, so the limits are honest. (1) Each case

@@ -30,7 +30,7 @@ type Kind = { kind: string; fields: Record<string, unknown>; views: S["FieldView
 const kinds: Kind[] = [
   {
     kind: "person",
-    fields: { full_name: "Robin Sample", aliases: ["Rob"], role: "Editor", team: "TEAM-1", org: "ORG-1", how_to_reach: { email: "robin@example.org" }, name_verified: false, status: "active", why_they_matter: "Runs the press" },
+    fields: { full_name: "Robin Sample", aliases: ["Rob"], role: "Editor", team: "TEAM-1", org: "ORG-1", how_to_reach: { email: ["robin@example.org"] }, name_verified: false, status: "active", why_they_matter: "Runs the press" },
     views: [field("full_name", "text"), field("aliases", "list"), field("role", "text"), field("team", "text"), field("org", "reference", { refers_to: "organization" }), field("how_to_reach", "other"), field("name_verified", "yes_no"), field("status", "choice", { options: ["active", "left"] }), field("why_they_matter", "text")],
     refs: [["team", [team]], ["org", [house]]],
     page: {
@@ -122,7 +122,7 @@ test.each(kinds.map((k) => [k.kind, k] as const))("the page of a %s record says 
 });
 
 test("the people, projects, open to-dos and unfiled lists say names, dates and words", async () => {
-  const ana = person("PER-1", "Ana Person", { role: "Editor", org: "ORG-1", org_name: "Quarry House", open_items: 4, last_contact: "2026-10-08", how_to_reach: { email: "ana@example.com" } });
+  const ana = person("PER-1", "Ana Person", { role: "Editor", org: "ORG-1", org_name: "Quarry House", open_items: 4, last_contact: "2026-10-08", how_to_reach: { email: ["ana@example.com"] } });
   const open: S["OpenActionView"] = {
     id: "ACT-1", version: 3, text: "Send the proof to the printer", state: "overdue", owners: [{ person: "PER-1", name: "Ana Person" }], due: "2026-10-12", project: "PRJ-1", project_name: "Harbor", parent_name: null, notes: null,
     since: "2026-10-01", on_hold: null, blocker: null, duplicate: null, origin: null, untouched_days: null, owner_question: null, to_send: false,

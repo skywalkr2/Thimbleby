@@ -133,7 +133,7 @@ def test_a_new_person_answers_the_question_releases_every_held_op_records_routed
     done = add_new_person(store, cfg, ws, qid, form, now=NOW)
     (person,) = people_named(store, STRANGER)
     assert person["first_name"] == "Jo" and person["role"] == "Sign printer"
-    assert person["how_to_reach"] == {"phone": "555 0100"}
+    assert person["how_to_reach"] == {"phone": ["555 0100"]}
     assert data(store, "organization", person["org"])["name"] == NEW_ORG
     assert done.released == [0, 1] and done.changeset == cs_id
     for outcome in outcomes(store, cs_id)[:2]:
@@ -315,7 +315,7 @@ def test_a_contact_detail_waits_even_from_the_persons_own_note_and_confirming_se
     assert held["reason"] == "A way to reach someone waits for your confirmation."
     assert not data(store, "person", target["id"]).get("how_to_reach")
     release(store, cfg, cs_id, 0)
-    assert data(store, "person", target["id"])["how_to_reach"] == {"phone": "555 0100"}
+    assert data(store, "person", target["id"])["how_to_reach"] == {"phone": ["555 0100"]}
     assert undo(store, cs_id).restored == [0]
     assert data(store, "person", target["id"]).get("how_to_reach", {}) == {}
     # From an input: the same wait, with evidence from the input's words.
@@ -329,7 +329,7 @@ def test_a_contact_detail_waits_even_from_the_persons_own_note_and_confirming_se
     person_cs = apply_as_person(
         store, cfg, [contact(target, kind="Email", value="  jp@example.org ")], "Added a contact"
     )
-    assert data(store, "person", target["id"])["how_to_reach"] == {"email": "jp@example.org"}
+    assert data(store, "person", target["id"])["how_to_reach"] == {"email": ["jp@example.org"]}
     assert outcomes(store, person_cs)[0]["status"] == "applied"
 
 

@@ -360,7 +360,7 @@ def test_adding_a_suggested_person_keeps_their_address_so_a_later_message_from_i
     )
     assert added.status_code == 200, added.text
     record = store.read().get("person", added.json()["id"]).data
-    assert record["how_to_reach"] == {"email": first["address"]}
+    assert record["how_to_reach"] == {"email": [first["address"]]}
     # A hand-in from that address resolves to them by the header, with no question about who it is.
     found = People(store, cfg).match_entries([f"Someone Else <{first['address']}>"])
     assert found == {added.json()["id"]}
@@ -383,7 +383,7 @@ def test_a_pasted_name_and_address_keeps_the_address(api):
     ).json()
     assert done["added"] == ["Pasted Person", "No Address"]
     people = {p.data["full_name"]: p for p in store.read().list("person")}
-    assert people["Pasted Person"].data["how_to_reach"] == {"email": "pasted.person@example.com"}
+    assert people["Pasted Person"].data["how_to_reach"] == {"email": ["pasted.person@example.com"]}
     assert not people["No Address"].data.get("how_to_reach")
     assert People(store, cfg).match_entries(["x <pasted.person@example.com>"]) == {people["Pasted Person"].id}
 
