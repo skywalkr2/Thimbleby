@@ -850,8 +850,10 @@ export function WelcomeAi(props: {
   const priceFields = unpriced.length > 0 && (
     <FormBlock>
       {unpriced.map((m) => (
-        <fieldset key={m.id} className="price-fields" data-price-fields="">
-          <legend>{t("welcome.ai.price.title", { model: m.id })}</legend>
+        <div key={m.id} className="price-fields" data-price-fields="" role="group" aria-labelledby={`ai-price-title-${m.short}`}>
+          <p id={`ai-price-title-${m.short}`} className="field-group-title">
+            {t("welcome.ai.price.title", { model: m.id })}
+          </p>
           <p className="hint">{t("welcome.ai.price.why", { app: t("app.name") })}</p>
           <FormField id={`ai-price-read-${m.short}`} label={t("welcome.ai.price.read")}>
             <input
@@ -874,7 +876,7 @@ export function WelcomeAi(props: {
             />
           </FormField>
           <p className="hint">{t("welcome.ai.price.hint")}</p>
-        </fieldset>
+        </div>
       ))}
     </FormBlock>
   );

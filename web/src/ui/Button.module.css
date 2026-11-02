@@ -3,16 +3,18 @@
 .wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); max-width: 100%; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
-  height: var(--btn-h); padding: 0 var(--btn-px);
+  min-height: var(--btn-h); max-width: 100%; padding: var(--space-1) var(--btn-px);
   border: 1px solid var(--btn-border); border-radius: var(--radius-btn);
   background: var(--surface); color: var(--text);
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold);
-  white-space: nowrap; text-decoration: none; cursor: pointer;
+  /* One line wherever it fits; a label longer than its column wraps inside the button instead of pushing past it. A
+     button only wraps when it alone is wider than its row: rows wrap whole buttons to the next line first. */
+  white-space: normal; text-align: center; text-wrap: balance; text-decoration: none; cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 .btn:hover { background: var(--surface-sunk); }
 .btn:active { transform: translateY(1px); }
-.sm { height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
+.sm { min-height: var(--btn-h-sm); padding: var(--space-1) var(--btn-px-sm); font-size: var(--text-meta); line-height: var(--lh-meta); }
 .icon-only { width: var(--btn-h); min-width: var(--target-icon); min-height: var(--target-icon); padding: 0; flex: none; border-radius: var(--radius-full); }
 .icon-only.sm { width: var(--btn-h-sm); min-width: var(--target-icon); }
 

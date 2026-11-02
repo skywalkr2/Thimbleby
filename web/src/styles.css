@@ -543,3 +543,4 @@ pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pr
 /* A side's own list of projects under its name, on the grouping by project. */
 .by-side { display: grid; gap: var(--space-2); min-width: 0; }
 .by-side > h2 { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); }
+.field-group-title { margin: 0 0 var(--space-2); font-weight: var(--weight-semibold); }
