@@ -109,10 +109,10 @@ def _held(view: Any) -> list[tuple[str, str]]:
 
 def add_to(changeset: Any, cfg: Any, view: Any, text: str) -> Any:
     """The changeset with the entries the input's bookings make added, and without an `event.add` of the assistant's
-    own that starts at the same moment as one of them (the same booking read twice). An entry that is already in the
-    calendar (the app's own or a connected one) at the same moment with the same or a containing title is not made
-    again. Returns the changeset unchanged when the input carries
-    no booking."""
+    own for the same booking: one that starts at the same moment and shares a word of four or more letters with the
+    booking's title. An entry of the assistant's at that moment about something else is kept. An entry that is already
+    in the calendar (the app's own or a connected one) at the same moment with the same or a containing title is not
+    made again. Returns the changeset unchanged when the input carries no booking."""
     made = entries(cfg, text)
     if made.skipped:
         said = [" ".join(reason.split())[:200] for reason in made.skipped]
@@ -131,6 +131,20 @@ def add_to(changeset: Any, cfg: Any, view: Any, text: str) -> Any:
     ]
     if not fresh:
         return changeset
-    starts = {op.start for op in fresh}
-    kept = [op for op in changeset.ops if not (getattr(op, "op", None) == "event.add" and op.start in starts)]
+    kept = [
+        op
+        for op in changeset.ops
+        if not (getattr(op, "op", None) == "event.add" and any(_same_booking(op, new) for new in fresh))
+    ]
     return changeset.model_copy(update={"ops": [*kept, *fresh]})
+
+
+def _words(title: str | None) -> set[str]:
+    from engine.same_entry import normalized
+
+    return {w for w in normalized(title).split() if len(w) >= 4}
+
+
+def _same_booking(op: Any, new: Any) -> bool:
+    """Whether the assistant's entry is the booking's own: the same start, and a word of its title in common."""
+    return op.start == new.start and bool(_words(op.title) & _words(new.title))

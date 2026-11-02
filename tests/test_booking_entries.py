@@ -102,6 +102,22 @@ def test_the_assistants_own_entry_for_the_same_booking_is_not_added_twice(env):
     ]
 
 
+def test_an_entry_of_the_assistants_about_something_else_at_the_same_moment_is_kept(env):
+    """A booking used to remove every entry the assistant made at its start, whatever it was about."""
+    _, _, store = env
+    answer(
+        {
+            "op": "event.add",
+            "title": "Team planning call",
+            "start": "2026-11-20T09:00:00-05:00",
+            "evidence": {"quote": "Alderfield Airport"},
+        }
+    )
+    run(env, read("flight_jsonld.html"))
+    titles = sorted(e.data["title"] for e in store.read().list("event"))
+    assert titles == ["Flight: Alderfield Airport to Briarford Airport", "Team planning call"]
+
+
 def test_the_same_confirmation_handed_in_again_makes_no_second_entry(env):
     _, _, store = env
     answer()
