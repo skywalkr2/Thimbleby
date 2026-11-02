@@ -254,7 +254,7 @@ async function expectFullWidthHeader(page: Page, width: number) {
   expect(box!.x + box!.width).toBeGreaterThanOrEqual(width - 1);
   expect(box!.height).toBeLessThanOrEqual(56);
   const brand = await header.getByRole("link", { name: /^Go to Today/ }).boundingBox();
-  const menu = await header.getByRole("button", { name: /^Change appearance, / }).boundingBox();
+  const menu = await header.getByRole("button", { name: /^Menu for / }).boundingBox();
   expect(brand!.x).toBeLessThanOrEqual(24);
   expect(menu!.x + menu!.width).toBeGreaterThanOrEqual(width - 24);
 }

@@ -285,7 +285,7 @@ test("Add-ons holds the catalog settings in a closed More settings fold, and Kno
 test("How the assistant is doing is in the person's menu, and opens the page headed the same without the Settings side bar", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("?token=e2e-token");
-  await page.getByRole("button", { name: /^Change appearance, / }).click();
+  await page.getByRole("button", { name: /^Menu for / }).click();
   await page.getByRole("menuitem", { name: /^How .+ is doing$/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: /^How .+ is doing$/ })).toBeVisible(LOADED);
   expect(new URL(page.url()).hash).toBe("#quality");
