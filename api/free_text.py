@@ -80,6 +80,7 @@ ROUTES: dict[str, Declared] = {
     ),
     "POST /api/brief/message": _to("what the person wants from the week's message is queued with the request"),
     # Local: the text is the person's own record or setting.
+    "POST /api/files/{file_id}/edit": _local("a file's new name or description, kept as the person's own record of it"),
     "POST /api/suggestions/choose": _local(
         "the wording of a choice on a suggestion line, taken from the wording sheet and kept as a to-do's reason, what "
         "it waits for or how it repeats; the person typed nothing"

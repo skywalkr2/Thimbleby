@@ -12,12 +12,23 @@ export function useSize() {
   };
 }
 
-/** A list of media types as words ("PNG images, plain text and PDF documents"); a type the sheet doesn't name shows as it is. */
-export function useTypeWords() {
-  const { t, has } = useWords();
-  return (types: string[]): string => {
-    const words = types.map((type) => (has(`media.${type}`) ? t(`media.${type}`) : type));
-    if (words.length < 2) return words.join("");
-    return t("media.list", { first: words.slice(0, -1).join(", "), last: words[words.length - 1] });
+/** The kind of file a media type is, for saying what is accepted without naming types. */
+export function fileGroup(type: string): "picture" | "sound" | "font" | "document" {
+  if (type.startsWith("image/")) return "picture";
+  if (type.startsWith("audio/")) return "sound";
+  if (type.startsWith("font/")) return "font";
+  return "document";
+}
+
+/** What a file kind accepts, in words and never as media types: "Any document, picture or sound file" when it takes all
+ * three, else the kinds it takes ("Picture files only"), each with the size limit. */
+export function useAcceptWords() {
+  const { t } = useWords();
+  return (types: string[], max: number): string => {
+    const groups = new Set(types.map(fileGroup));
+    if (groups.has("document") && groups.has("picture") && groups.has("sound")) return t("addfile.accepts_any", { max });
+    const named = ["document", "picture", "sound", "font"].filter((g) => groups.has(g as ReturnType<typeof fileGroup>)).map((g) => t(`media.group.${g}`));
+    const list = named.length < 2 ? named.join("") : t("media.list", { first: named.slice(0, -1).join(", "), last: named[named.length - 1] });
+    return t("addfile.accepts_some", { types: list, max });
   };
 }

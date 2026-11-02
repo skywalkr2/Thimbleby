@@ -126,6 +126,48 @@ def check_file(
     return name, details
 
 
+def describes(store: Store, file_kind: str) -> bool:
+    """Whether files of this kind keep a description among their details."""
+    kind = store.plugins.file_kinds().get(file_kind)
+    return kind is not None and "description" in kind.details.model_fields
+
+
+def description_of(store: Store, record: Stored) -> str | None:
+    """The description of a file, empty when none was given, or None when its kind keeps none."""
+    if not describes(store, record.data["file_kind"]):
+        return None
+    return str((record.data.get("meta") or {}).get("description") or "")
+
+
+def edit_fields(
+    store: Store, record: Stored, *, name: str | None = None, description: str | None = None
+) -> dict[str, Any]:
+    """The fields a person's rename or description change sets, checked the way adding a file checks them. Raises
+    StoreError in words when the new name is empty, the kind keeps no description, or the details wouldn't be valid."""
+    fields: dict[str, Any] = {}
+    if name is not None:
+        clean = Path(name).name.strip()
+        if not clean:
+            raise StoreError("the file needs a name")
+        if clean != record.data["name"]:
+            fields["name"] = clean
+    if description is not None:
+        kind = store.plugins.file_kinds().get(record.data["file_kind"])
+        if kind is None or not describes(store, record.data["file_kind"]):
+            raise StoreError("this kind of file has no description")
+        meta = {**(record.data.get("meta") or {}), "description": description.strip()}
+        try:
+            checked = kind.details.model_validate(meta).model_dump(mode="json")
+        except ValidationError as err:
+            first = err.errors()[0]
+            raise StoreError(f"{'.'.join(map(str, first['loc'])) or 'details'}: {reason_of(first)}") from None
+        if checked != (record.data.get("meta") or {}):
+            fields["meta"] = checked
+    if not fields:
+        raise StoreError("nothing to change")
+    return fields
+
+
 def store_blob(store: Store, data: bytes) -> str:
     """Keep the bytes under their hash (once, however often they are added). Returns the hash."""
     digest = hashlib.sha256(data).hexdigest()

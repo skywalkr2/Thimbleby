@@ -182,3 +182,93 @@ def test_download_names_make_a_valid_header_for_any_letters(env, name, fallback)
     header = download.headers["content-disposition"]
     assert header == f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(stored, safe='')}"
     header.encode("ascii")
+
+
+def _client(env):
+    from api.app import create_app
+
+    ws, cfg, store = env
+    store.close()
+    client = TestClient(create_app(ws, cfg, "test-token", start_worker=False))
+    client.headers["Authorization"] = "Bearer test-token"
+    return client, cfg.server.base_path.rstrip("/") + "/api", ws
+
+
+def _upload(client, api, name="cover.png", description="Front cover", content=PNG, extra=""):
+    made = client.post(
+        f"{api}/files?name={name}&meta=" + '{"description": "' + description + '"}' + extra,
+        content=content,
+        headers={"Content-Type": "image/png"},
+    )
+    assert made.status_code == 200, made.text
+    return made.json()
+
+
+def test_a_file_shows_its_description(env):
+    client, api, _ = _client(env)
+    made = _upload(client, api)
+    assert made["description"] == "Front cover"
+    assert [f["description"] for f in client.get(f"{api}/files").json()] == ["Front cover"]
+    assert _upload(client, api, "plain.png", "", PNG + b"\x02")["description"] == ""
+
+
+def test_a_file_is_renamed_and_its_description_edited_at_once_with_undo(env):
+    client, api, ws = _client(env)
+    made = _upload(client, api)
+    edited = client.post(f"{api}/files/{made['id']}/edit", json={"read_version": made["version"], "name": "front.png"})
+    assert edited.status_code == 200 and edited.json()["refused"] is None, edited.text
+    now = client.get(f"{api}/files").json()[0]
+    assert (now["name"], now["description"]) == ("front.png", "Front cover")
+    assert client.post(f"{api}/changesets/{edited.json()['changeset']}/undo", json={"ops": None}).status_code == 200
+    assert client.get(f"{api}/files").json()[0]["name"] == "cover.png"
+    again = client.get(f"{api}/files").json()[0]
+    both = client.post(
+        f"{api}/files/{made['id']}/edit",
+        json={"read_version": again["version"], "name": "../sneaky/back.png", "description": "  Back cover "},
+    )
+    assert both.status_code == 200, both.text
+    now = client.get(f"{api}/files").json()[0]
+    assert (now["name"], now["description"], now["meta"]) == ("back.png", "Back cover", {"description": "Back cover"})
+    assert client.post(f"{api}/changesets/{both.json()['changeset']}/undo", json={"ops": None}).status_code == 200
+    back = client.get(f"{api}/files").json()[0]
+    assert (back["name"], back["description"]) == ("cover.png", "Front cover")
+    assert client.get(f"{api}/files/{made['id']}/content").content == PNG
+
+
+def test_an_edit_that_changes_nothing_or_names_nothing_is_refused_in_words(env):
+    client, api, _ = _client(env)
+    made = _upload(client, api)
+    url, version = f"{api}/files/{made['id']}/edit", made["version"]
+    assert client.post(url, json={"read_version": version, "name": "  "}).status_code == 409
+    assert "nothing to change" in client.post(url, json={"read_version": version, "name": "cover.png"}).text
+    assert client.post(f"{api}/files/FILE-404/edit", json={"read_version": 1, "name": "x"}).status_code == 404
+    # A newer version of the file than the one read is a refusal the screen words, not a silent overwrite.
+    assert client.post(url, json={"read_version": version, "name": "one.png"}).json()["refused"] is None
+    stale = client.post(url, json={"read_version": version, "name": "two.png"})
+    assert stale.json() == {"changeset": None, "refused": "changed"}
+    assert client.get(f"{api}/files").json()[0]["name"] == "one.png"
+
+
+def test_a_file_is_removed_at_once_and_undo_brings_it_back_with_its_bytes(env):
+    client, api, ws = _client(env)
+    made = _upload(client, api)
+    gone = client.post(f"{api}/files/{made['id']}/remove", json={"read_version": made["version"]})
+    assert gone.status_code == 200 and gone.json()["refused"] is None, gone.text
+    assert client.get(f"{api}/files").json() == []
+    assert client.get(f"{api}/files/{made['id']}/content").status_code == 404
+    # The bytes stay while the record is gone, so Undo has them.
+    assert [p for p in (ws.root / "files").rglob("*") if p.is_file()]
+    assert client.post(f"{api}/changesets/{gone.json()['changeset']}/undo", json={"ops": None}).status_code == 200
+    assert [f["id"] for f in client.get(f"{api}/files").json()] == [made["id"]]
+    assert client.get(f"{api}/files/{made['id']}/content").content == PNG
+
+
+def test_a_file_something_still_refers_to_is_not_removed(env):
+    client, api, _ = _client(env)
+    first = _upload(client, api)
+    newer = _upload(client, api, "cover-2.png", "Second", PNG + b"\x01", f"&replaces={first['id']}")
+    refused = client.post(f"{api}/files/{first['id']}/remove", json={"read_version": first["version"]})
+    assert refused.json() == {"changeset": None, "refused": "referred_to"}
+    assert len(client.get(f"{api}/files").json()) == 2
+    stale = client.post(f"{api}/files/{newer['id']}/remove", json={"read_version": newer["version"] + 1})
+    assert stale.json() == {"changeset": None, "refused": "changed"}

@@ -17,6 +17,7 @@ import { ListDetail } from "../ui/ListDetail";
 import { Skeleton } from "../ui/Skeleton";
 import { useActionReview } from "./ActionReview";
 import { AddFile } from "./AddFile";
+import { useFileEdits } from "./FileEdit";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SideFilter } from "./SideFilter";
@@ -125,11 +126,15 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
   const actions = usePluginActions("file", file.id);
   const { start, review } = useActionReview();
   const titleId = `file-${file.id}`;
-  const menu: MenuAction[] = (actions.data ?? []).map((action) => ({
-    id: action.name,
-    label: action.label,
-    run: () => start(action, { kind: "file", id: file.id }, () => ref.current?.querySelector<HTMLElement>("button.more")),
-  }));
+  const edits = useFileEdits(file);
+  const menu: MenuAction[] = [
+    ...(actions.data ?? []).map((action) => ({
+      id: action.name,
+      label: action.label,
+      run: () => start(action, { kind: "file", id: file.id }, () => ref.current?.querySelector<HTMLElement>("button.more")),
+    })),
+    ...edits.entries,
+  ];
   const facts = [
     size(file.size),
     ...(props.project ? [props.side ? t("place.in_side", { side: props.project }) : t("files.in_project", { project: props.project })] : []),
@@ -143,7 +148,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
       pill={<Pill>{file.kind_label}</Pill>}
       title={file.name}
       titleId={titleId}
-      metaLines={[facts.join(" · "), file.origin === "tool" ? <Pill tone="warn">{t("files.untrusted")}</Pill> : null]}
+      metaLines={[facts.join(" · "), file.description || null, file.origin === "tool" ? <Pill tone="warn">{t("files.untrusted")}</Pill> : null]}
       expand={{ expanded: choice.chosen === file.id, onToggle: () => choice.choose(file.id) }}
       primary={
         <ButtonLink
@@ -159,6 +164,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
       }
       menu={<RowMenu label={file.name} actions={menu} />}
     >
+      {edits.form}
       {review}
     </ExpandableRow>
   );
@@ -178,6 +184,12 @@ function FileDetail(props: { file: S["FileView"]; project?: string; side?: boole
   ];
   return (
     <>
+      {file.description && (
+        <section aria-labelledby={`file-${file.id}-about`}>
+          <h3 id={`file-${file.id}-about`}>{t("files.detail.about")}</h3>
+          <p>{file.description}</p>
+        </section>
+      )}
       <section aria-labelledby={`file-${file.id}-preview`}>
         <h3 id={`file-${file.id}-preview`}>{t("files.detail.preview")}</h3>
         <Preview file={file} />

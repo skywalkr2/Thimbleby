@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 303. A file can be renamed, described and removed, with Undo; Add a file speaks of documents, pictures and sounds (2026-11-02; sweep X46)
+
+| Where | Before | Now |
+|---|---|---|
+| Add a file (5.3, 7.15) | The hint listed media types ("application/vnd.openxmlformats…", "audio/mp4") and fonts; "What it's for" was a list even with one kind; a refusal quoted the media type | **Built** (`web/src/components/AddFile.test.tsx`): "Any document, picture or sound file. Up to N MB." (or "Only picture files." for a kind that takes fewer), the list only with two or more kinds, and a refusal that names the file |
+| A file's description (5.3) | Typed on upload, never shown | **Built** (`web/src/components/Files.test.tsx`, `FilesDetail.test.tsx`): on the row and in the details pane; `FileView.description` is none for a kind that keeps no description |
+| Rename, Edit description, Remove (5.3, 7.15) | A file could not be renamed, edited or removed | **Built** (`tests/test_files.py`, `web/src/components/Files.test.tsx`): `POST /api/files/{id}/edit` and `/remove` apply at once as the person's own change with an Undo toast; Remove is refused in words while another record refers to the file or when it changed since it was read; the stored bytes are never deleted, so Undo has them |
+| Not built | | Replacing a file's bytes; forgetting the bytes of a removed file |
+
 ## 302. A job's question is asked once; an answer that changed nothing goes back once, then to the person (2026-11-02; P114, the designer's lessons 8 to 10)
 
 | Where | Before | Now |

@@ -107,3 +107,14 @@ test("Connections gets no details pane: a row opens its form in place", async ()
   await screen.findByRole("heading", { name: "Connections" });
   expect(screen.queryByRole("complementary")).toBeNull();
 });
+
+test("the description given with a file is shown in its details, and a file with none shows no empty heading", async () => {
+  const user = userEvent.setup();
+  open([file("FILE-1", "cover.png", { description: "Front cover, final art" }), file("FILE-2", "back.png", { description: "" })]);
+  await user.click(await screen.findByRole("button", { name: "cover.png" }));
+  const pane = await detail();
+  expect(within(pane).getByRole("heading", { name: "Description" })).toBeInTheDocument();
+  expect(within(pane).getByText("Front cover, final art")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "back.png" }));
+  await waitFor(() => expect(within(screen.getByRole("complementary")).queryByRole("heading", { name: "Description" })).toBeNull());
+});

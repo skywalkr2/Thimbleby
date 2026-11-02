@@ -164,3 +164,101 @@ test("actions for the whole workspace are buttons that review with no target", a
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(button).toHaveFocus());
 });
+
+function editable(extra: Partial<S["FileView"]> = {}) {
+  const routes = {
+    "GET projects": () => [],
+    "GET plugin-actions": () => [],
+    "GET plugin-actions?kind=file&id=FILE-1": () => [],
+  };
+  return { ...routes, "GET files": () => [file("FILE-1", "notes.txt", { description: "Minutes of the harbor visit", ...extra })] };
+}
+
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  const row = await screen.findByRole("listitem", { name: "notes.txt" });
+  await user.click(await within(row).findByRole("button", { name: "More actions for notes.txt" }));
+  return row;
+}
+
+test("the description typed when the file was added is shown on its row", async () => {
+  fakeApi(editable());
+  renderApp(<Files />);
+  const row = await screen.findByRole("listitem", { name: "notes.txt" });
+  expect(within(row).getByText("Minutes of the harbor visit")).toBeInTheDocument();
+});
+
+test("a file's menu offers Rename, Edit description and Remove; a kind with no description offers no edit of one", async () => {
+  const user = userEvent.setup();
+  fakeApi(editable());
+  renderApp(<Files />);
+  await openMenu(user);
+  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Rename…", "Edit description…", "Remove"]);
+});
+
+test("a kind that keeps no description has no Edit description", async () => {
+  const user = userEvent.setup();
+  fakeApi(editable({ description: null }));
+  renderApp(<Files />);
+  await openMenu(user);
+  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Rename…", "Remove"]);
+});
+
+test("Rename opens a field with the cursor in it, renames at once, and Undo puts the name back", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    ...editable(),
+    "POST files/FILE-1/edit": () => ({ changeset: "CS-1", refused: null }),
+    "POST changesets/CS-1/undo": () => ({ undone: 1 }),
+  });
+  renderApp(<Files />);
+  await openMenu(user);
+  await user.click(screen.getByRole("menuitem", { name: "Rename…" }));
+  const field = await screen.findByRole("textbox", { name: "New name" });
+  expect(field).toHaveFocus();
+  expect(field).toHaveValue("notes.txt");
+  expect(screen.getByRole("button", { name: "Rename" })).toBeDisabled();
+  await user.clear(field);
+  await user.type(field, "minutes.txt");
+  await user.click(screen.getByRole("button", { name: "Rename" }));
+  expect(await screen.findByText("Renamed to minutes.txt.")).toBeInTheDocument();
+  expect(calls.find((c) => c.route === "POST files/FILE-1/edit")?.body).toEqual({ read_version: 1, name: "minutes.txt" });
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-1/undo"));
+});
+
+test("Edit description changes only the description, with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ ...editable(), "POST files/FILE-1/edit": () => ({ changeset: "CS-2", refused: null }) });
+  renderApp(<Files />);
+  await openMenu(user);
+  await user.click(screen.getByRole("menuitem", { name: "Edit description…" }));
+  const field = await screen.findByRole("textbox", { name: "Description" });
+  expect(field).toHaveFocus();
+  expect(field).toHaveValue("Minutes of the harbor visit");
+  await user.clear(field);
+  await user.type(field, "Visit notes");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("Saved the description of notes.txt.")).toBeInTheDocument();
+  expect(calls.find((c) => c.route === "POST files/FILE-1/edit")?.body).toEqual({ read_version: 1, description: "Visit notes" });
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+});
+
+test("Remove acts at once with Undo, and a file something still uses says why it stays", async () => {
+  const user = userEvent.setup();
+  let refused = true;
+  const calls = fakeApi({
+    ...editable(),
+    "POST files/FILE-1/remove": () => (refused ? { changeset: null, refused: "referred_to" } : { changeset: "CS-3", refused: null }),
+  });
+  renderApp(<Files />);
+  await openMenu(user);
+  await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+  expect(await screen.findByText("notes.txt can't be removed while something still uses it.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  refused = false;
+  await openMenu(user);
+  await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+  expect(await screen.findByText("Removed notes.txt.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "POST files/FILE-1/remove").map((c) => c.body)).toEqual([{ read_version: 1 }, { read_version: 1 }]);
+});

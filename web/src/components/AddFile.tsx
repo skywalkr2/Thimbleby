@@ -6,7 +6,7 @@ import { useId, useMemo, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import { buildDetails, detailFields, initialValue, type DetailField, type FormValues } from "../lib/details-form";
-import { useTypeWords } from "../lib/files";
+import { useAcceptWords } from "../lib/files";
 import { problemText } from "../lib/problem";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
@@ -26,7 +26,7 @@ export function AddFile(props: { onClose: () => void }) {
   const { t } = useWords();
   const client = useQueryClient();
   const { push } = useToasts();
-  const typeWords = useTypeWords();
+  const acceptWords = useAcceptWords();
   const base = useId();
   const kinds = useQuery({ queryKey: ["file-kinds"], queryFn: api.fileKinds });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
@@ -46,7 +46,7 @@ export function AddFile(props: { onClose: () => void }) {
   const checked = tooBig
     ? t("addfile.too_big", { name: file.name, max: kind.max_mb })
     : wrongType
-      ? t("addfile.wrong_type", { type: file.type })
+      ? t("addfile.wrong_type", { name: file.name })
       : "";
   const shown = checked || problem;
 
@@ -94,30 +94,29 @@ export function AddFile(props: { onClose: () => void }) {
             if (ready) add.mutate();
           }}
         >
-          <FormField id={`${base}-kind`} label={t("addfile.kind")}>
-            <Select
-              id={`${base}-kind`}
-              value={kind.name}
-              aria-describedby={`${base}-kind-help`}
-              onChange={(e) => {
-                setKindName(e.target.value);
-                setValues({});
-                setProblem("");
-              }}
-            >
-              {kinds.data.map((k) => (
-                <option key={k.name} value={k.name}>
-                  {k.label}
-                </option>
-              ))}
-            </Select>
-            <span id={`${base}-kind-help`} className="hint">
-              {t("addfile.accepts", { types: typeWords(kind.accept), max: kind.max_mb })}
-            </span>
-          </FormField>
-          <FormField id={`${base}-file`} label={t("addfile.file")}>
+          {kinds.data.length > 1 && (
+            <FormField id={`${base}-kind`} label={t("addfile.kind")}>
+              <Select
+                id={`${base}-kind`}
+                value={kind.name}
+                onChange={(e) => {
+                  setKindName(e.target.value);
+                  setValues({});
+                  setProblem("");
+                }}
+              >
+                {kinds.data.map((k) => (
+                  <option key={k.name} value={k.name}>
+                    {k.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+          <FormField id={`${base}-file`} label={t("addfile.file")} hint={acceptWords(kind.accept, kind.max_mb)}>
             <FileDrop
               id={`${base}-file`}
+              aria-describedby={`${base}-file-hint`}
               accept={kind.accept.join(",")}
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);

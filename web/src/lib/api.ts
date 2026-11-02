@@ -461,6 +461,10 @@ export const api = {
   files: () => call<S["FileView"][]>("GET", "files"),
   /** What refers to a file: newer versions of it, working copies made from it and add-on records that name it. */
   fileUsedBy: (file: string) => call<S["FileUsedBy"]>("GET", `files/${id(file)}/used-by`),
+  /** Rename a file or change its description, resting on the version read; Undo is through the change it returns. */
+  editFile: (file: string, body: S["FileEdit"]) => call<S["FileChanged"]>("POST", `files/${id(file)}/edit`, body),
+  /** Take a file out of the list; its bytes stay, so Undo brings it back. */
+  removeFile: (file: string, body: S["FileRemove"]) => call<S["FileChanged"]>("POST", `files/${id(file)}/remove`, body),
   fileKinds: () => call<S["FileKindView"][]>("GET", "file-kinds"),
   /** Where a file's bytes are, relative to the page like every other address. */
   fileContent: (file: string) => `api/files/${id(file)}/content`,

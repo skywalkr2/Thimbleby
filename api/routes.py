@@ -63,7 +63,10 @@ from api.schemas import (
     EndingAnswer,
     EntryTodoMade,
     FieldView,
+    FileChanged,
+    FileEdit,
     FileKindView,
+    FileRemove,
     FileUse,
     FileUsedBy,
     FileView,
@@ -227,6 +230,7 @@ from engine.dispatcher import (
     waits_on_first_go,
 )
 from engine.drop_notes import note_the_drops
+from engine.files import description_of
 from engine.followups import (
     UNTOLD_STANCES,
     actions_to_send,
@@ -363,6 +367,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 )
             },
             data_level=record.data.get("sensitivity", "internal"),
+            description=description_of(store, record),
         )
 
     def _last_refused(request_id: str) -> bool:
@@ -1255,6 +1260,44 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         disposition = content_disposition("inline" if inline else "attachment", record.data["name"])
         headers = {"Content-Disposition": disposition, "X-Content-Type-Options": "nosniff"}
         return Response(content=data, media_type=media if inline else "application/octet-stream", headers=headers)
+
+    def file_changed(ops: list[dict[str, Any]], summary: str) -> FileChanged:
+        from engine.applier import apply_as_person
+
+        cs_id = guard(lambda: apply_as_person(store, cfg, ops, summary))
+        changed()
+        return FileChanged(changeset=cs_id)
+
+    @r.post("/files/{file_id}/edit")
+    def file_edit(file_id: str, body: FileEdit) -> FileChanged:
+        """Rename a file or change its description, as the person's own change with Undo. The bytes are not touched."""
+        from engine.files import edit_fields
+
+        need("file", file_id)
+        record = store.read().get("file", file_id)
+        if record.version != body.read_version:
+            return FileChanged(refused="changed")
+        fields = guard(lambda: edit_fields(store, record, name=body.name, description=body.description))
+        op = {
+            "op": "record.edit",
+            "record": {"kind": "file", "id": file_id},
+            "fields": fields,
+            "read_version": body.read_version,
+        }
+        return file_changed([op], "Renamed a file" if set(fields) == {"name"} else "Changed a file")
+
+    @r.post("/files/{file_id}/remove")
+    def file_remove(file_id: str, body: FileRemove) -> FileChanged:
+        """Take a file out of the list, with Undo bringing it back. Its bytes stay where they are, so Undo has them;
+        nothing here ever deletes stored bytes. Refused when another record still refers to the file."""
+        need("file", file_id)
+        record = store.read().get("file", file_id)
+        if record.version != body.read_version:
+            return FileChanged(refused="changed")
+        if store.plugins._referrers(store.read())("file", file_id):
+            return FileChanged(refused="referred_to")
+        op = {"op": "record.delete", "record": {"kind": "file", "id": file_id}, "read_version": body.read_version}
+        return file_changed([op], "Removed a file")
 
     @r.get("/files/{file_id}/used-by")
     def file_used_by(file_id: str) -> FileUsedBy:

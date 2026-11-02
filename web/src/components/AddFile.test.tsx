@@ -53,17 +53,17 @@ function routes(extra: Record<string, (body: unknown) => unknown> = {}) {
 const text = (name = "hello.txt", body = "hello") => new File([body], name, { type: "text/plain" });
 const fileInput = () => screen.getByLabelText("File") as HTMLInputElement;
 
-test("the kind defaults to attachment, says what it accepts in words, and narrows the file picker", async () => {
+test("the kind defaults to attachment, says what it accepts in words without media types, and narrows the file picker", async () => {
   fakeApi(routes());
   renderApp(<AddFile onClose={() => undefined} />);
   const kind = (await screen.findByRole("combobox", { name: "What it's for" })) as HTMLSelectElement;
   expect(kind).toHaveValue("attachment");
   expect(within(kind).getAllByRole("option").map((o) => o.textContent)).toEqual(["Attachment", "Report", "Odd"]);
-  expect(kind).toHaveAccessibleDescription("Accepts plain text, PDF documents and PNG images. Up to 1 MB.");
+  expect(fileInput()).toHaveAccessibleDescription("Only document and picture files. Up to 1 MB.");
   expect(fileInput()).toHaveAttribute("accept", "text/plain,application/pdf,image/png");
   const user = userEvent.setup();
   await user.selectOptions(kind, "demo/report");
-  expect(kind).toHaveAccessibleDescription("Accepts plain text. Up to 2.5 MB.");
+  expect(fileInput()).toHaveAccessibleDescription("Only document files. Up to 2.5 MB.");
   expect(fileInput()).toHaveAttribute("accept", "text/plain");
 });
 
@@ -146,7 +146,7 @@ test("a file that is too big or the wrong type is turned away before sending, in
   expect(await screen.findByRole("alert")).toHaveTextContent("big.txt is larger than 1 MB.");
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   await user.upload(fileInput(), new File(["x"], "page.html", { type: "text/html" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("You can't use a text/html file for this purpose.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("page.html is a kind of file that can't be added here.");
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   expect(calls.some((c) => c.route.startsWith("POST files"))).toBe(false);
 });
@@ -202,4 +202,30 @@ test("where a file belongs is grouped by side: the side's own choice first, then
   const group = await within(where).findByRole("group", { name: "Orchard Press" });
   expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog"]);
   expect(within(where).getAllByRole("option").map((o) => o.textContent)).not.toContain("Orchard Press");
+});
+
+
+test("a workspace that takes documents, pictures and sounds says any of them, never a media type or a font", async () => {
+  const wide: S["FileKindView"] = {
+    ...attachment,
+    accept: ["application/pdf", "image/png", "audio/mp4", "font/ttf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    max_mb: 50,
+  };
+  fakeApi({ "GET file-kinds": () => [wide], "GET projects": () => [] });
+  renderApp(<AddFile onClose={() => undefined} />);
+  await screen.findByLabelText("File");
+  expect(fileInput()).toHaveAccessibleDescription("Any document, picture or sound file. Up to 50 MB.");
+  expect(screen.queryByText(/application\/|audio\/|font/i)).toBeNull();
+});
+
+test("with one kind of file there is no choice to make, so there is no list; two kinds bring it back", async () => {
+  fakeApi({ "GET file-kinds": () => [attachment], "GET projects": () => [] });
+  const { unmount } = renderApp(<AddFile onClose={() => undefined} />);
+  await screen.findByLabelText("File");
+  expect(screen.queryByRole("combobox", { name: "What it's for" })).toBeNull();
+  expect(screen.getByRole("textbox", { name: /Description/ })).toBeInTheDocument();
+  unmount();
+  fakeApi(routes());
+  renderApp(<AddFile onClose={() => undefined} />);
+  expect(await screen.findByRole("combobox", { name: "What it's for" })).toBeInTheDocument();
 });

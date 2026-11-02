@@ -4,6 +4,30 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: A file can be renamed, described and removed, with Undo; Add a file speaks of documents, pictures and sounds (X46)
+
+**Decided:** (1) Add a file says what it takes in words, never in media types: "Any document, picture or sound file. Up to
+N MB.", or "Only picture files. Up to N MB." when its kind takes fewer; a refusal names the file, not its type. (2) "What
+it's for" is a list only when there are two or more kinds of file to pick from; with one it is not shown. (3) The
+description typed when a file is added is shown on its row and in its details, and a kind of file that keeps no
+description shows none. (4) A file's menu has Rename, Edit description and Remove. Each acts at once as the person's own
+change with an Undo toast: `POST /api/files/{id}/edit` (`record.edit` of the name or the details) and
+`POST /api/files/{id}/remove` (`record.delete`). Remove is refused, in words, while another record refers to the file
+(a newer version, a working copy, an add-on's record) or when the file changed since it was read. (5) Removing a file
+removes its record only. The stored bytes are never deleted, so Undo has them and a copy shared by another file stays.
+
+**Decided by:** the UI/UX reviewer's sweep finding X46 (D-P1-13, D-P1-14, B-F42); the owner asked for every open P1 to be
+built before the re-sweep.
+
+**Why:** the screen showed "application/vnd.openxmlformats…" and font types the person never asked about, a list with one
+choice, a description that vanished after upload, and no way to fix a typo in a name or take away a file added by mistake.
+
+**Impact:** design 5.3 and 7.15 (`07-ui.md`, the Files part); `engine/files.py` (`describes`, `description_of`,
+`edit_fields`), `api/routes.py` and `api/schemas.py` (`FileView.description`, `FileEdit`, `FileRemove`, `FileChanged`),
+`web/src/components/AddFile.tsx`, `FileEdit.tsx`, `Files.tsx`, `web/src/lib/files.ts`, the wording sheet. No new setting; no
+plugin API change (a file kind's details are as before). Not built: replacing a file's bytes (a new version is a new
+file); a way to forget the bytes of a removed file. Change log: section 303.
+
 ## 2026-11-02: The open P1 findings, finished (X19 to X69; section 300)
 
 **Decided:** (1) **Follow-ups lists other people only** (owner, 2026-11-02; X31, VS09): the "You" group is gone. The person's own

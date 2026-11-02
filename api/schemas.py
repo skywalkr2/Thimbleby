@@ -2322,6 +2322,34 @@ class FileView(BaseModel):
     data_level: Literal["open", "internal", "restricted"] = Field(
         "internal", description="How sensitive its content is: it goes only to AI accounts allowed this level."
     )
+    description: str | None = Field(
+        None,
+        description="What the person said about it when they added it or later, empty when nothing; none when its kind "
+        "of file keeps no description.",
+    )
+
+
+class FileEdit(BaseModel):
+    """POST /api/files/{id}/edit: a new name, a new description, or both, resting on the version the person read."""
+
+    read_version: int = Field(ge=1, description="The version of the file that was read; the change waits on it.")
+    name: str | None = Field(None, description="The new name; left out to keep the name.")
+    description: str | None = Field(None, description="The new description; left out to keep it.")
+
+
+class FileRemove(BaseModel):
+    """POST /api/files/{id}/remove: take a file away, resting on the version the person read."""
+
+    read_version: int = Field(ge=1, description="The version of the file that was read; the removal waits on it.")
+
+
+class FileChanged(BaseModel):
+    """What changing or removing a file came to: the `changeset` (Undo is POST /api/changesets/{changeset}/undo), or
+    none and `refused` saying in a kind why it was not done: `changed` (the file changed since it was read) or
+    `referred_to` (a newer version, a working copy or an add-on's record still needs it). The screen words the kind."""
+
+    changeset: str | None = None
+    refused: Literal["changed", "referred_to"] | None = None
 
 
 class FileUse(BaseModel):

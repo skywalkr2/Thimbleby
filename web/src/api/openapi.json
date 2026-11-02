@@ -10299,6 +10299,79 @@
         "title": "FieldView",
         "type": "object"
       },
+      "FileChanged": {
+        "description": "What changing or removing a file came to: the `changeset` (Undo is POST /api/changesets/{changeset}/undo), or\nnone and `refused` saying in a kind why it was not done: `changed` (the file changed since it was read) or\n`referred_to` (a newer version, a working copy or an add-on's record still needs it). The screen words the kind.",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changeset"
+          },
+          "refused": {
+            "anyOf": [
+              {
+                "enum": [
+                  "changed",
+                  "referred_to"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refused"
+          }
+        },
+        "title": "FileChanged",
+        "type": "object"
+      },
+      "FileEdit": {
+        "description": "POST /api/files/{id}/edit: a new name, a new description, or both, resting on the version the person read.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The new description; left out to keep it.",
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The new name; left out to keep the name.",
+            "title": "Name"
+          },
+          "read_version": {
+            "description": "The version of the file that was read; the change waits on it.",
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "FileEdit",
+        "type": "object"
+      },
       "FileKindView": {
         "description": "A kind of file that can be added, with the details it asks for (as a JSON schema) and what it accepts.",
         "properties": {
@@ -10335,6 +10408,22 @@
           "details_schema"
         ],
         "title": "FileKindView",
+        "type": "object"
+      },
+      "FileRemove": {
+        "description": "POST /api/files/{id}/remove: take a file away, resting on the version the person read.",
+        "properties": {
+          "read_version": {
+            "description": "The version of the file that was read; the removal waits on it.",
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "FileRemove",
         "type": "object"
       },
       "FileUse": {
@@ -10403,6 +10492,18 @@
             ],
             "title": "Data Level",
             "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person said about it when they added it or later, empty when nothing; none when its kind of file keeps no description.",
+            "title": "Description"
           },
           "file_kind": {
             "title": "File Kind",
@@ -39212,6 +39313,106 @@
           }
         },
         "summary": "File Content"
+      }
+    },
+    "/api/files/{file_id}/edit": {
+      "post": {
+        "description": "Rename a file or change its description, as the person's own change with Undo. The bytes are not touched.",
+        "operationId": "file_edit_api_files__file_id__edit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "File Edit"
+      }
+    },
+    "/api/files/{file_id}/remove": {
+      "post": {
+        "description": "Take a file out of the list, with Undo bringing it back. Its bytes stay where they are, so Undo has them;\nnothing here ever deletes stored bytes. Refused when another record still refers to the file.",
+        "operationId": "file_remove_api_files__file_id__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRemove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "File Remove"
       }
     },
     "/api/files/{file_id}/used-by": {
