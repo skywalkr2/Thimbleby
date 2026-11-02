@@ -1,6 +1,7 @@
 [
   {
     "_version": 1,
+    "area": false,
     "group": "Freight Platform",
     "id": "PRJ-1",
     "links": [
@@ -16,6 +17,7 @@
   },
   {
     "_version": 1,
+    "area": false,
     "group": "Customer Billing",
     "id": "PRJ-2",
     "name": "Invoice Engine Migration",
@@ -25,6 +27,7 @@
   },
   {
     "_version": 1,
+    "area": false,
     "group": "Freight Platform",
     "id": "PRJ-3",
     "name": "Carrier Portal Refresh",
@@ -39,7 +42,35 @@
   },
   {
     "_version": 1,
+    "area": false,
     "id": "PRJ-21",
     "name": "Home and family"
+  },
+  {
+    "_version": 1,
+    "area": false,
+    "id": "PRJ-22",
+    "name": "Freight desk"
+  },
+  {
+    "_version": 1,
+    "area": false,
+    "id": "PRJ-23",
+    "name": "Dispatch handover",
+    "parent": "PRJ-22"
+  },
+  {
+    "_version": 1,
+    "area": false,
+    "id": "PRJ-24",
+    "name": "Carrier onboarding",
+    "parent": "PRJ-22"
+  },
+  {
+    "_version": 1,
+    "area": false,
+    "id": "PRJ-25",
+    "name": "Night shift rota",
+    "parent": "PRJ-22"
   }
 ]

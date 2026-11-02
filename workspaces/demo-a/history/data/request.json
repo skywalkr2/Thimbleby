@@ -10,6 +10,7 @@
     "note": "Put on the agenda",
     "origin": "pm",
     "retries": 0,
+    "sort_pending": false,
     "state": "done",
     "task": "notes"
   },
@@ -24,6 +25,7 @@
     "note": "Mark 'Agree who owns the rollback' closed; the Cut-over sync will cover it.",
     "origin": "pm",
     "retries": 0,
+    "sort_pending": false,
     "state": "review",
     "task": "notes"
   },
@@ -38,6 +40,7 @@
     "note": "Changed on screen",
     "origin": "pm",
     "retries": 0,
+    "sort_pending": false,
     "state": "done",
     "task": "notes"
   },
@@ -56,6 +59,7 @@
     "intake_seen": false,
     "origin": "schedule",
     "retries": 0,
+    "sort_pending": false,
     "state": "review",
     "task": "follow-on"
   },
@@ -69,6 +73,7 @@
     "intake_seen": false,
     "origin": "pm",
     "retries": 0,
+    "sort_pending": false,
     "source": "SRC-1",
     "state": "review",
     "task": "notes"
@@ -83,6 +88,7 @@
     "intake_seen": false,
     "origin": "pm",
     "retries": 0,
+    "sort_pending": false,
     "source": "SRC-2",
     "state": "review",
     "task": "notes"

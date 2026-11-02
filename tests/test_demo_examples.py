@@ -77,7 +77,8 @@ def test_the_demo_opens_with_the_project_its_settings_name_as_personal_and_a_new
     with store.transaction() as tx:
         made = tx.create("project", {"name": "Added later"}, WriteContext(actor="pm", trust="trusted", op="test"))
     assert made.id != personal
-    assert sides.side_ids(store.read(), cfg) == [personal]
+    held = sides.side_ids(store.read(), cfg)
+    assert held[0] == personal and made.id not in held  # a new project is on no side of its own
 
 
 def test_the_demo_history_round_trips_through_the_export(env, tmp_path):

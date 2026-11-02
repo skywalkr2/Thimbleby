@@ -151,7 +151,7 @@ def test_the_news_op_records_a_non_answer_and_a_part_delivered_does_not(env):
     body = json.dumps(
         {
             "summary": "News.",
-            "ops": [{"op": "action.news", "id": action_id, "text": "Replied", "evidence": {"quote": said}}],
+            "ops": [{"op": "action.news", "id": action_id, "text": "Replied", "reply": True, "evidence": {"quote": said}}],
         }
     )
     set_responder(lambda task: body)

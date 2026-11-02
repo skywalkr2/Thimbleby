@@ -1415,5 +1415,19 @@
   "subject to",
   "unless",
   "would"
+ ],
+ "open_question_phrases": [
+  "what should",
+  "what do you want",
+  "what would you like",
+  "what happened",
+  "what now",
+  "what next",
+  "how should",
+  "what to do"
+ ],
+ "choice_words": [
+  "or",
+  "either"
  ]
 }

@@ -1,0 +1,24 @@
+[
+  {
+    "_version": 1,
+    "id": "VIEW-1",
+    "label": "Portfolio",
+    "name": "Manager's portfolio",
+    "projects": [
+      "PRJ-23",
+      "PRJ-24"
+    ],
+    "side": "PRJ-22"
+  },
+  {
+    "_version": 1,
+    "id": "VIEW-2",
+    "label": "My",
+    "name": "My projects",
+    "projects": [
+      "PRJ-23",
+      "PRJ-25"
+    ],
+    "side": "PRJ-22"
+  }
+]
