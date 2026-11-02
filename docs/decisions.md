@@ -4,6 +4,26 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The person's sent mail only proposes which replies owed it answers; the assistant decides (P110, J6)
+
+**Decided:**
+- Mail the person sent to the asker on the same conversation after an ask is a candidate, never an ending. The rules note
+  on the sent mail's request which open replies owed it may answer (`may_answer`, only while the assistant has not read
+  it), and write no `action.close`.
+- The notes run's request carries those asks in a marked block. The assistant closes one the mail answers (quoting the
+  person's words), adds news for one it answers in part, and leaves the rest. The close is the person's own work: applied
+  at once, credited to them, shown on the ledger as the assistant's close with its quote.
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's); the audit's row J6.
+
+**Why:** "Got it, will look next week" closed the reply owed as done, with the person credited for an answer they never
+gave.
+
+**Impact:** design 6.35; `engine/reply_lines.py`, `engine/packet.py`, `engine/watch.py`, the notes prompt, the `request`
+record (one optional field; plugin guide and API schema regenerated), and the credit of a close read from the person's
+own sent mail (`engine/applier.py`, `engine/since_yesterday.py`). No new setting. No change to scope. One gap: a sent mail
+whose run happened before the ask's action existed is not read again. Change log: section 285.
+
 ## 2026-11-02: One status in the header; a short line on an account card (P107)
 
 **Decided:**
@@ -16,6 +36,7 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 **Why:** the owner's install showed "All good" beside a red assistant line, and a card too long to read.
 
 **Impact:** header only; no change to scope. Change log: section 284.
+
 
 ## 2026-11-02: The assistant decides which unknown words to ask about; the scan only lists them (P106)
 

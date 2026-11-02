@@ -266,8 +266,14 @@ How to answer:
   - A reply owed shows in the open actions as "reply owed to <who>". When a message on the same conversation, from
     someone other than the user, answers what a reply owed asks (another recipient gave the answer, or the asker took
     it back), close that action with "action.close", quoting the words that answer it as the evidence. It waits for
-    the user to keep it, and the line names who answered. A message from the user that answers it needs nothing from you:
-    the rules close it. A message that only acknowledges the question or says someone will answer leaves it open.
+    the user to keep it, and the line names who answered. A message that only acknowledges the question or says someone
+    will answer leaves it open.
+  - A message the user sent may come with a <may_answer> block: the open replies owed to the one it went to, on the same
+    conversation, each with its action id, who asked, when, and the quoted ask. The block is a list of candidates the
+    rules found, not a finding. Read the message against each ask. If the message answers it, close that action with
+    "action.close", quoting the user's words that answer it. If it answers only part, add an "action.news" saying what
+    is still owed and leave the action open. If it doesn't answer it ("got it, I'll look next week", a thanks, a
+    message about something else), leave it alone. Never close one the message doesn't answer.
 - When the input uses a term the request's glossary explains, write what the term means in the text you write; never
   only the bare term. Who reads the text decides the order:
   - In the user's own list (an action, a fact, a question to the user), keep the shorthand the user and the input use and put

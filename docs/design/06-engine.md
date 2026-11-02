@@ -4926,12 +4926,18 @@ in "Send and follow up", oldest message first, `Reply to {name}: {subject}`, wit
 until the person has copied, edited or written it: Copy reply (which approves it as it is) is the one button, and the
 menu has No reply needed (a drop with the reason, recorded as the `no_reply_needed` signal the learning loop reads),
 Answered another way (a short form with the cursor in the words; closes it as done, credited to the person, the words
-as the evidence) and Edit. A message the person sent on the same conversation to the asker after the ask ends it at
-once, as their own act, by rules when the sent folder's mail is taken in (`engine/reply_lines.py`, one conversation by
+as the evidence) and Edit. A message the person sent on the same conversation to the asker after the ask is a
+candidate answer, never an ending by itself: when the sent folder's mail is taken in, the rules note on that message's
+request which open replies owed it may answer (`may_answer`, `engine/reply_lines.py`, one conversation by
 `engine/mail_threads.py`: the same subject and a person in common within `steward.reply_thread_days`, 14 by default,
-because the mail details carry no thread headers yet); an answer from someone else is the model's `action.close` held
+because the mail details carry no thread headers yet), only while the assistant has not yet read the message. The
+assistant's reading of that message carries a `<may_answer>` block (each ask, who asked, when, its quoted words); it
+closes the reply owed with `action.close` quoting the person's words that answer it, credited to the person and applied
+at once as their own work; adds news saying what is still owed when the message answers only part; and leaves it open
+when it only acknowledges or is about something else (the notes prompt says so; judgment about the person's work is the
+assistant's, never a rule's); an answer from someone else is the model's `action.close` held
 for Keep, whose line names who answered, and the open list a run reads marks each reply owed so it can be closed
-(`tests/test_reply_lines.py`, `web/src/components/TodayReplies.test.tsx`, the golden case
+(`tests/test_reply_lines.py`, `tests/test_since_yesterday.py`, `web/src/components/TodayReplies.test.tsx`, the golden case
 `workspaces/demo-b/evals/reply-owed-answered-by-another-recipient.yaml`).
 
 **A sender's distribution limit travels with the content (S1-2).** Some messages say who may see them: a marking

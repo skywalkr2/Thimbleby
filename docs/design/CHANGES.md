@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 285. A reply owed is closed by the assistant reading the person's sent mail, not by a rule (2026-11-02; P110 J6)
+
+| Where | Before | Now |
+|---|---|---|
+| Replies owed (6.35) | Any mail the person sent to the asker on the same conversation after the ask closed the reply owed as done, credited to them, whether or not it answered the question | **Built** (`tests/test_reply_lines.py`): the rules only note, on the sent mail's request, which open replies owed it may answer (`request.may_answer`); the notes run reads the mail with the asks in a `<may_answer>` block and closes with `action.close` quoting the answer, adds news when it answers part, and leaves it open when it only acknowledges. No rule close is written; a request that already ran is not marked or re-run |
+| Credit (6.7) | The rule's change named the person | An `action.close` read from the person's own sent mail is applied at once as their own work and credited to them, shown on "What changed since yesterday" as theirs with the quote (`tests/test_since_yesterday.py`) |
+| Records (5.1) | | `request` has one optional field, `may_answer`; the plugin guide and the API schema are regenerated |
+
 ## 284. One status in the header, and a short line on an account card (2026-11-02; P107)
 
 | Where | Before | Now |
@@ -1034,6 +1042,7 @@ yet follow, that it is *designed*, with its phase.
 | The header (7.1, `web/src/shell/StatusMenu.tsx`, `Header.tsx`, `status.ts`) | The status chip could say "All good" while the assistant's own line beside it was red (a failed run, stuck background work, an account out of credit or failing) | A problem in the assistant's own state is a state of the chip ("<name>: not working" in danger, "<name>: needs a look" in warning), so the chip is never "All good" beside a stopped assistant. While there is such a problem the assistant's own line is not shown: the chip's popover carries it, with Restart now when background work is stuck. While the assistant is fine, its line (the dot and name) still shows beside "All good". Built: `web/src/shell/Header.test.tsx` |
 | The Add an account cards (`catalog/ai-endpoints.yaml`, 6.16) | A card showed the entry's whole `note` | A card shows the entry's `summary` (one short line) when it has one, else its `note`; with a summary the full note shows once the kind is chosen. Built: `web/src/components/WelcomeAi.test.tsx`, `tests/test_catalog_model_roles.py` |
 | The Add an account panel (7.x, `web/e2e/layout.spec.ts`) | Not in the layout check | Opened at 320, 390, 768 and 1280 with every kind, long model names and a long refusal: nothing wider than the panel, no sideways page scroll |
+
 
 ## 283. Word questions: the assistant decides, the scan only lists, one at a time on Today (2026-11-02; P106)
 

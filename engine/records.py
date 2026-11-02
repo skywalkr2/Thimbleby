@@ -1508,6 +1508,12 @@ class Request(Record):
     folded_into: str | None = Field(
         None, description="The newer request this one's change was folded into, so they are read in order, once."
     )
+    may_answer: list[str] = Field(
+        default_factory=list,
+        description="For a message the person sent: the open replies owed (action ids) it may answer, found by the "
+        "rules from its conversation and recipient. The assistant reads it with them and decides whether it answers "
+        "each one; the rules close nothing.",
+    )
     intake: str | None = Field(
         None,
         description="The id of the watched source this request was taken in from when the source was newly added (or "
@@ -2831,6 +2837,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("follows", "changeset"),
         ("folded_into", "request"),
         ("superseded_by", "request"),
+        ("may_answer[]", "action"),
         ("project", "project"),
     ],
     "changeset": [("request", "request"), ("run", "run")],

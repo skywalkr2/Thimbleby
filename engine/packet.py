@@ -14,7 +14,7 @@ from datetime import date
 from html import escape
 from typing import Any
 
-from engine import areas, audience, new_terms
+from engine import areas, audience, new_terms, reply_lines
 from engine.ai.task import AiTask
 from engine.blocked import standing_hold
 from engine.cleaning import Cleaned, clean
@@ -184,6 +184,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         words = new_terms.packet_section(store, cfg, req.data, f"{raw}\n{note}")
         if words:
             request_parts.append(words)
+    if kind.name == "notes" and req.data.get("may_answer"):
+        owed = reply_lines.packet_section(ws, store, cfg, req.data)
+        if owed:
+            request_parts.append(owed)
     if kind.name == "notes" and own_words and req.data.get("about"):
         request_parts.append(_item_block(ws, store, cfg, req, saved))
     if kind.name == "notes" and own_words and saved.data["kind"] == MISSED_KIND:

@@ -249,6 +249,8 @@ def _who(ws: Any, view: Any, cfg: Any, people: Any, request: Any, cs: Any) -> _W
     if request is None:
         return _Who(None, None, False)
     source = view.get("source", request.data["source"]) if request.data.get("source") else None
+    if source is not None and (source.data.get("watched") or {}).get("by_you") and people.pm:
+        return _Who(people.pm, people.name(people.pm), True)  # their own work in a watched source, mail they sent
     title = title_for(
         request.data,
         source.data if source is not None else None,

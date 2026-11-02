@@ -4,8 +4,9 @@ each open one, and the endings the rules take on their own.
 A reply owed is an action with `reply_owed`, `replies_to` (the message's source) and `asker` (the person it is to). The
 rules in `engine.replies_owed` decide, from the message's own headers and new text, whether a reply is owed at all; the
 applier asks them before it makes the action. A message the person sent to the asker on the same conversation after the
-ask ends it at once, as the person's own act: the change is `action.close` through the applier with the sent message as
-its evidence. Everything else here reads."""
+ask may answer it: the rules only note that on the sent message's request (`mark_candidates`), and the assistant,
+reading the message with the ask beside it (`packet_section`), decides whether it answers, answers part or answers
+nothing. Everything else here reads."""
 
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from typing import Any
 from engine.automatic_mail import classify_automatic
 from engine.blocked import standing_hold
 from engine.mail_threads import ThreadCandidate, normalize_subject, thread_key
+from engine.names import People
 from engine.own_accounts import own_names
 from engine.replies_owed import Address, Message, reply_owed
 from engine.reply_split import split_message
@@ -283,17 +285,19 @@ def _quote_of(sent: Read) -> str:
     return f"Subject: {sent.subject}"
 
 
-def answered_by_sent(ws: Any, store: Any, cfg: Any, owed: Owed, ask: Any, sent_sources: list[Any]) -> Any | None:
-    """The person's sent message that answers this reply owed, when there is one: it is on the same conversation, to the
-    asker, and after the ask. Returns the source record, else None."""
+def sent_candidates(ws: Any, store: Any, cfg: Any, owed: Owed, ask: Any, sent_sources: list[Any]) -> list[Any]:
+    """The person's sent messages that may answer this reply owed: each is on the same conversation, to the asker, and
+    after the ask. Being one says nothing about whether it answers; that is the assistant's to read. Returns the source
+    records."""
     if owed.asker is None:
-        return None
+        return []
     person = store.read().get("person", owed.asker)
     asker_addresses = {a.email.casefold() for a in map(_address, (person.data.get("how_to_reach") or {}).values()) if a}
     asked = read_message(_read_source(ws, ask), _stamp(ask.data["received_at"]))
     if asked is None or not asker_addresses:
-        return None
+        return []
     ask_key = ((ask.data.get("watched") or {}).get("key")) or ask.id
+    found = []
     for source in sent_sources:
         sent = read_message(_read_source(ws, source), _stamp(source.data.get("sent_at") or source.data["received_at"]))
         if sent is None or sent.received is None or sent.received <= asked.received:
@@ -302,8 +306,8 @@ def answered_by_sent(ws: Any, store: Any, cfg: Any, owed: Owed, ask: Any, sent_s
             continue
         key = ((source.data.get("watched") or {}).get("key")) or source.id
         if _thread(asked, str(ask_key), sent, str(key), cfg.steward.reply_thread_days):
-            return source
-    return None
+            found.append(source)
+    return found
 
 
 def close_by_sent(
@@ -313,7 +317,6 @@ def close_by_sent(
     to the person, with the sent message's words as the evidence, applied at once as a change made by the rule
     `ANSWERED_RULE`. Returns the changeset's id."""
     from engine.applier import Context, Inputs, apply_changeset
-    from engine.names import People
     from engine.ops import CHANGESET
     from engine.storage import WriteContext
 
@@ -352,25 +355,78 @@ def close_by_sent(
     return cs_id
 
 
-def close_answered(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> list[str]:
-    """End every open reply owed that the person's own sent mail has answered, as their own act (`close_by_sent`).
-    Idempotent: what is closed is not looked at again. Returns the changesets made."""
+def mark_candidates(ws: Any, store: Any, cfg: Any) -> int:
+    """Note on each of the person's sent messages, while the assistant has not yet read it, which open replies owed it
+    may answer (`may_answer` on its request). The rules close nothing: the assistant reads the message with the asks
+    and decides. A request that already ran is left alone, so no work is run twice. Idempotent. Returns how many
+    requests were changed."""
+    from engine.storage import WriteContext
+
     view = store.read()
     waiting = plan(ws, view)
     if not waiting:
-        return []
+        return 0
     mine = [
         s
         for s in view.list("source")
         if (s.data.get("watched") or {}).get("by_you") and str(s.data.get("kind", "")).startswith("watched:")
     ]
-    made: list[str] = []
+    queued = {
+        r.data["source"]: r
+        for r in view.list("request")
+        if r.data.get("task") == "notes" and r.data.get("state") == "queued" and r.data.get("source")
+    }
+    found: dict[str, list[str]] = {}
     for owed in waiting:
         ask = view.get("source", view.get("action", owed.action).data.get("replies_to") or "")
         if ask is None:
             continue
-        source = answered_by_sent(ws, store, cfg, owed, ask, mine)
-        if source is None:
+        for source in sent_candidates(ws, store, cfg, owed, ask, mine):
+            request = queued.get(source.id)
+            if request is not None and owed.action not in (request.data.get("may_answer") or []):
+                found.setdefault(request.id, []).append(owed.action)
+    if not found:
+        return 0
+    with store.transaction() as tx:
+        for request_id, actions in found.items():
+            current = tx.get("request", request_id)
+            if current.data.get("state") != "queued":
+                continue
+            tx.update(
+                "request",
+                request_id,
+                {"may_answer": [*(current.data.get("may_answer") or []), *actions]},
+                WriteContext("engine", "trusted", "reply.candidates"),
+                read_version=current.version,
+            )
+    return len(found)
+
+
+ASK_CHARS = 600
+
+
+def packet_section(ws: Any, store: Any, cfg: Any, request: dict[str, Any]) -> str:
+    """The block a notes run's request carries for a message the person sent: the open replies owed it may answer
+    (their action ids, who asked, when, what the action says and the ask quoted). Empty when there are none. The ask is
+    outside content, marked so. What to do with the list is the prompt's."""
+    ids = request.get("may_answer") or []
+    if not ids:
+        return ""
+    view = store.read()
+    people = People(store, cfg)
+    entries = []
+    for owed in plan(ws, view):
+        if owed.action not in ids:
             continue
-        made.append(close_by_sent(ws, store, cfg, owed.action, source, "Closed a reply owed: you answered it", now))
-    return made
+        action = view.get("action", owed.action)
+        ask = view.get("source", action.data.get("replies_to") or "")
+        read = read_message(_read_source(ws, ask), None) if ask is not None else None
+        quoted = (read.new_text if read is not None else "").strip()[:ASK_CHARS] or (ask.data["title"] if ask else "")
+        who = (people.name(owed.asker) if owed.asker else None) or owed.sender or ""
+        who = " ".join(who.replace('"', "").split())
+        when = owed.received.strftime("%Y-%m-%d %H:%M UTC")
+        entries.append(
+            f'<owed action="{owed.action}" asked_by="{who}" asked_at="{when}">\n{owed.text}\n'
+            f'<untrusted source="{ask.id if ask else ""}">\n{quoted}\n</untrusted>\n</owed>'
+        )
+    return "<may_answer>\n" + "\n".join(entries) + "\n</may_answer>" if entries else ""

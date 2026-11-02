@@ -470,8 +470,8 @@ def test_a_promise_whose_date_followed_its_meeting_is_listed_as_moved_by_a_rule(
     assert (entry.changeset, entry.op, entry.quote) == (cs, 0, None)
 
 
-def test_a_reply_owed_closed_by_the_persons_sent_mail_is_listed_as_closed_by_a_rule_with_the_day_they_replied(tmp_path):
-    from tests.test_reply_lines import ASKER, SUBJECT, make_reply, named, sent
+def test_a_reply_owed_the_assistant_closed_from_the_persons_sent_mail_is_listed_as_their_own_with_its_quote(tmp_path):
+    from tests.test_reply_lines import ASKER, SUBJECT, end, make_reply, named, run_notes, sent
     from tests.test_reply_lines import NOW as REPLY_NOW
 
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
@@ -484,23 +484,21 @@ def test_a_reply_owed_closed_by_the_persons_sent_mail_is_listed_as_closed_by_a_r
             tx.update("person", ME["id"], {"how_to_reach": reach}, _TEST, read_version=found.version)
         env = (ws, cfg, store)
         action = make_reply(env, received=REPLY_NOW - timedelta(hours=5), subject=SUBJECT)
-        sent(
+        answer = "The interior proofs ship on November 3."
+        source = sent(
             env,
             to=[named(ASKER, ASKER["how_to_reach"]["email"])],
             subject="Re: " + SUBJECT,
             received=REPLY_NOW - timedelta(hours=1),
+            body=answer,
         )
-        from engine import reply_lines
-
-        (cs_id,) = reply_lines.close_answered(ws, store, cfg, REPLY_NOW)
+        end(env)
+        cs_id = run_notes(env, source, [{"op": "action.close", "id": action, "evidence": {"quote": answer}}])
         found = since_yesterday.build(ws, store.read(), cfg, People(store, cfg), REPLY_NOW + timedelta(hours=1))
         (entry,) = found.entries
-        assert (entry.act, entry.because, entry.by_you, entry.record) == ("closed", "replied", True, ("action", action))
-        assert (
-            entry.changeset == cs_id
-            and entry.day == (REPLY_NOW - timedelta(hours=1)).astimezone(since_yesterday.zone(cfg)).date().isoformat()
-        )
-        assert store.read().get("changeset", cs_id).data["by_rule"] == "reply_answered"
+        assert (entry.act, entry.because, entry.by_you, entry.record) == ("closed", "said", True, ("action", action))
+        assert entry.changeset == cs_id and entry.quote == answer
+        assert not store.read().get("changeset", cs_id).data.get("by_rule")
     finally:
         store.close()
 

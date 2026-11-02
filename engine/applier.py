@@ -3242,8 +3242,8 @@ def _filed_by(op: Any) -> dict[str, Any] | None:
 
 
 def _reporter(ctx: Context) -> str | None:
-    """The person who said the work was done: the PM for their own note, else the one person the input came from
-    (its sender or author); none when that isn't one known person."""
+    """The person who said the work was done: the PM for their own note or their own work in a watched source, else the
+    one person the input came from (its sender or author); none when that isn't one known person."""
     view = ctx.store.read()
     request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
     if ctx.reporter is not None:
@@ -3253,6 +3253,8 @@ def _reporter(ctx: Context) -> str | None:
     if request.data["origin"] == "pm" and ctx.inputs.trust == "trusted":
         return ctx.people.pm
     source = view.get("source", ctx.inputs.source) if ctx.inputs.source else None
+    if source is not None and (source.data.get("watched") or {}).get("by_you"):
+        return ctx.people.pm  # their own work in a watched source (mail they sent): they are who said it
     return title_for(
         request.data,
         source.data if source is not None else None,

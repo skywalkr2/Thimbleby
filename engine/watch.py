@@ -316,13 +316,14 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
 
 
 def _after_mail(ws: Any, store: Any, cfg: Any, now: datetime) -> None:
-    """After mail is taken in, use what the person's own sent mail shows (design 6.35): end the replies owed it has
-    answered, and match each sent message to the message they copied, recording what they changed before sending. The
-    rules do both, never the assistant, and a failure here never fails the read."""
+    """After mail is taken in, use what the person's own sent mail shows (design 6.35): note on each sent message which
+    open replies owed it may answer, for the assistant to read, and match each sent message to the message they copied,
+    recording what they changed before sending. The rules find candidates and matches, never decide that a reply
+    answers, and a failure here never fails the read."""
     from engine import reply_lines, sent_version
 
     with contextlib.suppress(StoreError):
-        reply_lines.close_answered(ws, store, cfg, now)
+        reply_lines.mark_candidates(ws, store, cfg)
     with contextlib.suppress(StoreError):
         sent_version.match_sent(ws, store, cfg, now)
 

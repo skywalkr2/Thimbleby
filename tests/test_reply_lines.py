@@ -1,7 +1,8 @@
 """Replies owed (design 6.32, 6.35): a message that asks the person something becomes one action marked as a reply owed,
 automatic mail and mail the person sent never do, each open one is a Today line with a draft under it and its choices,
-and each ends the way a person would end it: their own sent mail on the thread to the asker closes it at once, an
-answer from someone else waits for Keep and names who gave it. Names, ids and texts come from the fixtures."""
+and each ends the way a person would end it: their own sent mail on the thread to the asker is read by the assistant
+beside the ask, which closes it only when the mail answers it; an answer from someone else waits for Keep and names who
+gave it. Names, ids and texts come from the fixtures."""
 
 from __future__ import annotations
 
@@ -400,7 +401,7 @@ def sent(env, *, to, subject: str, received: datetime, body="The interior proofs
     ws, cfg, store = env
     text = mail(("The person", MY_ADDRESS), to, subject, body)
     with store.transaction() as tx:
-        return tx.create(
+        source = tx.create(
             "source",
             {
                 "received_at": received.isoformat(),
@@ -420,31 +421,132 @@ def sent(env, *, to, subject: str, received: datetime, body="The interior proofs
             },
             _TEST,
         ).id
+        tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "input",
+                "state": "queued",
+                "source": source,
+                "created_at": received.isoformat(),
+            },
+            _TEST,
+        )
+        return source
+
+
+def request_of(store, source: str):
+    """The request the assistant has not yet run for a sent message."""
+    return next(r for r in store.read().list("request") if r.data.get("source") == source)
 
 
 def end(env):
+    """What the rules do after the sent folder is read: note the candidates. Returns the requests that were changed."""
     ws, cfg, store = env
-    return reply_lines.close_answered(ws, store, cfg, NOW)
+    return reply_lines.mark_candidates(ws, store, cfg)
+
+
+def run_notes(env, source: str, ops: list[dict], seen: list | None = None):
+    """Let the assistant read the sent message's request, answering with `ops`; `seen` collects each packet's request
+    text. Returns the changeset id."""
+    ws, cfg, store = env
+
+    def answer(task):
+        if seen is not None:
+            seen.append(task.request)
+        return json.dumps({"summary": "Read the sent message.", "ops": ops})
+
+    set_responder(answer)
+    return process(ws, store, cfg, Router(cfg, store, env={}), request_of(store, source).id, now=NOW)
 
 
 def status(store, action) -> str:
     return store.read().get("action", action).data["status"]
 
 
-def test_a_sent_message_on_the_thread_to_the_asker_after_the_ask_ends_it_at_once_as_the_persons_own_act(env):
+def test_a_sent_message_on_the_thread_to_the_asker_after_the_ask_is_a_candidate_and_the_rules_close_nothing(env):
     ws, cfg, store = env
     action = make_reply(env, received=NOW - timedelta(hours=5), subject=SUBJECT)
     source = sent(
         env, to=[named(ASKER, address_of(ASKER))], subject="Re: " + SUBJECT, received=NOW - timedelta(hours=1)
     )
-    (cs_id,) = end(env)
+    assert end(env) == 1 and end(env) == 0  # noted once, and a second look changes nothing
+    assert request_of(store, source).data["may_answer"] == [action]
+    assert status(store, action) == "open" and len(reply_lines_of(env)) == 1
+    assert not [c for c in store.read().list("changeset") if c.data.get("by_rule")]  # no rule closed anything
+
+
+def test_a_sent_message_that_only_acknowledges_leaves_the_reply_owed_open_and_the_packet_lists_it(env):
+    ws, cfg, store = env
+    action = make_reply(env, received=NOW - timedelta(hours=5), subject=SUBJECT)
+    source = sent(
+        env,
+        to=[named(ASKER, address_of(ASKER))],
+        subject="Re: " + SUBJECT,
+        received=NOW - timedelta(hours=1),
+        body="Got it, will look next week.",
+    )
+    end(env)
+    seen: list[str] = []
+    run_notes(env, source, [], seen)
+    assert status(store, action) == "open" and len(reply_lines_of(env)) == 1
+    (request,) = seen
+    section = request[request.index("<may_answer>") : request.index("</may_answer>")]
+    assert f'action="{action}"' in section and ASKER["full_name"] in section and ASK in section
+    assert store.read().get("action", action).data["text"] in section
+    assert section.index("<untrusted") < section.index(ASK)  # the ask is outside content, marked so
+    assert "Got it, will look next week." in request[request.index("</may_answer>") :]
+
+
+def test_when_the_assistant_closes_it_the_close_is_the_persons_with_the_quote_and_is_not_a_rule_close(env):
+    ws, cfg, store = env
+    action = make_reply(env, received=NOW - timedelta(hours=5), subject=SUBJECT)
+    answer = "The interior proofs ship on November 3."
+    source = sent(
+        env,
+        to=[named(ASKER, address_of(ASKER))],
+        subject="Re: " + SUBJECT,
+        received=NOW - timedelta(hours=1),
+        body=answer,
+    )
+    end(env)
+    cs_id = run_notes(env, source, [{"op": "action.close", "id": action, "evidence": {"quote": answer}}])
     found = store.read().get("action", action).data
     assert (found["status"], found["done_by"], found["reported_by"]) == ("done", [me(cfg)], me(cfg))
-    (op,) = store.read().get("changeset", cs_id).data["ops"]
-    assert op["status"] == "applied" and op["op"]["op"] == "action.close"
-    quote = op["op"]["evidence"]["quote"]
-    assert quote in (ws.sources_dir / f"{store.read().get('source', source).data['content_hash']}.txt").read_text()
-    assert reply_lines_of(env) == [] and end(env) == []  # the line is gone and a second look changes nothing
+    changeset = store.read().get("changeset", cs_id).data
+    (op,) = changeset["ops"]
+    assert op["status"] == "applied" and op["op"]["op"] == "action.close" and op["op"]["evidence"]["quote"] == answer
+    assert not changeset.get("by_rule")
+    assert reply_lines_of(env) == []
+
+
+def test_a_sent_message_that_answers_part_adds_news_and_leaves_the_reply_owed_open(env):
+    ws, cfg, store = env
+    action = make_reply(env, received=NOW - timedelta(hours=5), subject=SUBJECT)
+    words = "The proofs are with the printer."
+    source = sent(
+        env,
+        to=[named(ASKER, address_of(ASKER))],
+        subject="Re: " + SUBJECT,
+        received=NOW - timedelta(hours=1),
+        body=words,
+    )
+    end(env)
+    news = {"op": "action.news", "id": action, "text": "Still owed: the ship date.", "evidence": {"quote": words}}
+    run_notes(env, source, [news])
+    assert status(store, action) == "open" and len(reply_lines_of(env)) == 1
+
+
+def test_a_sent_message_the_assistant_already_read_is_not_marked_again(env):
+    ws, cfg, store = env
+    make_reply(env, received=NOW - timedelta(hours=5), subject=SUBJECT)
+    source = sent(
+        env, to=[named(ASKER, address_of(ASKER))], subject="Re: " + SUBJECT, received=NOW - timedelta(hours=1)
+    )
+    with store.transaction() as tx:
+        found = request_of(store, source)
+        tx.update("request", found.id, {"state": "done"}, _TEST, read_version=found.version)
+    assert end(env) == 0 and request_of(store, source).data["may_answer"] == []
 
 
 def test_a_sent_message_to_someone_else_or_before_the_ask_or_on_another_thread_does_not_end_it(env):
@@ -459,7 +561,8 @@ def test_a_sent_message_to_someone_else_or_before_the_ask_or_on_another_thread_d
     elsewhere = sent(
         env, to=[named(ASKER, address_of(ASKER))], subject="Lunch on Friday", received=NOW - timedelta(hours=1)
     )
-    assert {to_other, before, elsewhere} and end(env) == []
+    assert end(env) == 0
+    assert all(request_of(store, s).data["may_answer"] == [] for s in (to_other, before, elsewhere))
     assert status(store, action) == "open" and len(reply_lines_of(env)) == 1
 
 
@@ -480,10 +583,10 @@ def test_a_message_from_someone_else_is_not_the_persons_sent_mail(env):
             },
             _TEST,
         )
-    assert end(env) == [] and status(store, action) == "open"
+    assert end(env) == 0 and status(store, action) == "open"
 
 
-def test_reading_the_sent_folder_takes_the_ending_in_when_the_mail_is_taken_in(tmp_path):
+def test_reading_the_sent_folder_notes_the_candidates_when_the_mail_is_taken_in_and_closes_nothing(tmp_path):
     folder = tmp_path / "sent-mail"
     folder.mkdir()
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
@@ -522,7 +625,9 @@ def test_reading_the_sent_folder_takes_the_ending_in_when_the_mail_is_taken_in(t
             )
         )
         watch.refresh(ws, store, cfg, "sent", NOW)
-        assert status(store, action) == "done"
+        assert status(store, action) == "open"
+        (request,) = [r for r in store.read().list("request") if r.data.get("may_answer")]
+        assert request.data["may_answer"] == [action] and request.data["state"] == "queued"
     finally:
         store.close()
 
