@@ -86,6 +86,8 @@ class Holiday:
     day: int | None = None
     weekday: int | None = None
     nth: int | None = None
+    #: False for a named day people don't take off (Halloween), which the date reader still knows.
+    off: bool = True
 
 
 def _plain(text: str) -> str:
@@ -115,6 +117,7 @@ def load_holidays(calendar_tag: str) -> tuple[Holiday, ...]:
             entry.get("day"),
             entry.get("weekday"),
             entry.get("nth"),
+            entry.get("day_off", True) is not False,
         )
         for entry in entries
     )
@@ -133,6 +136,34 @@ def holiday_date(holiday: Holiday, year: int) -> date:
     if found.month != holiday.month:
         raise ValueError("The holiday has no such day in that year.")
     return found
+
+
+_WEEKDAY_WORDS = r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|tues|thurs|thur"
+_MONTHS = "|".join(sorted(MONTH_NUMBERS, key=len, reverse=True))
+_PHRASE_FINDERS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        rf"\b(?:(?:next|this)\s+)?(?:{_WEEKDAY_WORDS})\b",
+        r"\btomorrow\b",
+        rf"\b(?:{_MONTHS})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?\b(?:,?\s+\d{{4}}\b)?",
+        rf"\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:{_MONTHS})\b\.?(?:,?\s+\d{{4}}\b)?",
+        r"\b\d{4}-\d{2}-\d{2}\b",
+        r"(?<![\w/])\d{1,2}/\d{1,2}(?:/\d{2,4})?(?![\w/])",
+    )
+)
+
+
+def date_phrases(text: str) -> list[str]:
+    """The words of a text that may name a day (a weekday, tomorrow, a written date, an ISO or numeric date), in the
+    order the text gives them and each once. They are candidates only: `resolve` says which of them it can read."""
+    found: list[tuple[int, str]] = []
+    for finder in _PHRASE_FINDERS:
+        found += [(m.start(), m.group(0)) for m in finder.finditer(text)]
+    phrases: list[str] = []
+    for _, phrase in sorted(found):
+        if _plain(phrase) not in {_plain(p) for p in phrases}:
+            phrases.append(phrase)
+    return phrases
 
 
 def after_marker(phrase: str, markers: Sequence[str]) -> str | None:

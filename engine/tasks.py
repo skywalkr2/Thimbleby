@@ -41,9 +41,9 @@ NOT_FROM_NOTES = (
     | ACT_OPS
 )
 #: Ops reading notes is offered that an ask is not: a project the input names, which waits for the person as a
-#: system op, a person's part in a project, which waits the same way, and a contact detail from a signature, which
-#: always waits.
-NOTES_ONLY = frozenset({"project.add", "project.role", "person.contact"})
+#: system op, a person's part in a project, which waits the same way, a contact detail from a signature, which
+#: always waits, and a period someone is away that an input states.
+NOTES_ONLY = frozenset({"project.add", "project.role", "person.contact", "person.away"})
 #: What an ask may do besides what reading notes does: answer, suggest a setting, draft a report to the maintainers.
 ASK_OPS = ("answer", "setting.propose", "report.draft")
 #: What learning from a correction may propose (design 6.22): one entry to keep, or a change to a lesson that should

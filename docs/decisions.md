@@ -4,6 +4,38 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Days off and holidays for teams and people; every to-do gets a date; "Needs a date" (P112 item 4)
+
+**Decided:** (1) Days off are core records, not a pack's. A team has a holiday calendar (one of the shipped ones; none means
+the workspace's), the weekdays it works (none means the workspace's working week) and its own closures; a person has periods
+away. A person's days off are their teams' (the team on their record and any team that lists them) plus their own away. The
+weekly rest days of the workspace's own week are never listed. The person sets them on the team's and the person's page as
+their own change with Undo (`record.edit`); an input that says someone is away ("I'm out Nov 20-24") may propose the period
+with the new data op `person.away`, which needs the exact words and applies like any other fact about a person. (2) To-dos
+from notes always get dates, and the assistant decides them: the request tells it the days off of the people the input names
+(`steward.dates.days_off_weeks`, 6), and the prompt says to give every to-do the working day that fits its owner from the
+dates the input gives, or to ask the person once for the dates of those nothing anchors. Two judgment lints only point,
+and the assistant's second answer stands: `undated-todo` (a to-do with no date when the input has dates the rules read and
+the answer asks for none) and `due-on-day-off` (a new or moved due day on a day off of every owner, with the reason). No
+rule picks a date. (3) The To-dos and questions screen gets a group "Needs a date" at the top: open undated to-dos the person
+owns or has told someone about, each with a date picker that is the person's own change with Undo; Today has one line,
+"Date 3 new to-dos", only for ones added in the last `steward.dates.undated_line_days` (7) days.
+
+**Who:** the owner, 2026-11-02 ("agreed on vacation/holidays", with the go on "to-dos from a meeting always get dates", the
+functional designer's lesson 4: notes that gave only an order, "before training", "after the walkthrough", produced five
+undated to-dos that never showed as due and were never chased).
+
+**Why:** a to-do with no date never shows as due and is never chased; the dates were in the notes, and whoever does the work
+may be on vacation or off for a holiday that week. Rules handle the mechanical (which days are off, what dates the input
+holds); judgment about the person's work (which day fits) is the assistant's, which the lints ask once.
+
+**Impact:** new fields `Team.holiday_calendar`, `Team.working_days`, `Team.days_off` and `Person.away` (a `DateRange` record
+part); the op `person.away`; the holiday data may mark a named day `day_off: false` (Halloween); `engine/days_off.py`; two
+config keys (`steward.dates.days_off_weeks`, `steward.dates.undated_line_days`, demo values in both workspaces) and two lints
+(`undated-todo`, `due-on-day-off`, both judgment lints, default `return`); the packet section "Days off ahead"; a Today line
+kind `needs_date` and `needs_date` on each open to-do; the team and person pages' sections. Not built: a person's own working
+days, half days, and reading a team's holidays from a calendar service. Change log: section 296.
+
 ## 2026-11-02: Thimbleby on screen, a home for the Sent-folder note, a price asked for, the cursor on headings, pills (P102, P99, P97, P101)
 
 **Decided:** (1) The product is called **Thimbleby** on screen: the wording entry `app.name` (the one source; `catalog/product.yaml`

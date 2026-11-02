@@ -51,6 +51,7 @@ def _action(r: OpenAction) -> OpenActionView:
         duplicate=AlikeView(**asdict(r.duplicate)) if r.duplicate is not None else None,
         origin=r.origin,  # type: ignore[arg-type]
         untouched_days=r.untouched_days,
+        needs_date=r.needs_date,
         owner_question=r.owner_question,
         to_send=r.to_send,
         told_names=r.told_names,

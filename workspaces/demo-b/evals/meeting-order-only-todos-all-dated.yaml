@@ -1,0 +1,52 @@
+id: meeting-order-only-todos-all-dated
+title: To-dos that meeting notes give only an order for ("before the walkthrough") are dated from the dates the notes give
+skills: [dates]
+received: '2026-10-15'
+pasted: |-
+  From: Avery Lane
+  Subject: Reprint prep sync
+
+  The jacket walkthrough is Tuesday and the reprint goes live Wednesday.
+
+  - I send the final spine file before the walkthrough.
+  - Maya Okafor checks the new proofs after the walkthrough.
+  - Ines Duarte books the reprint slot with the printer before go-live.
+expect:
+- op: action.add
+  owners: [PER-1]
+  text_has: [spine]
+  due: '2026-10-19'
+- op: action.add
+  owners: [PER-2]
+  text_has: [proofs]
+  due: '2026-10-21'
+- op: action.add
+  owners: [PER-5]
+  text_has: [slot]
+  due: '2026-10-20'
+forbid:
+- op: event.add
+stub_answer:
+  summary: Three to-dos from the prep sync, each dated from the walkthrough and the go-live.
+  ops:
+  - op: action.add
+    text: Send the final spine file
+    owners: [Avery Lane]
+    due: '2026-10-19'
+    project: PRJ-1
+    evidence:
+      quote: I send the final spine file before the walkthrough
+  - op: action.add
+    text: Check the new proofs
+    owners: [Maya Okafor]
+    due: '2026-10-21'
+    project: PRJ-1
+    evidence:
+      quote: Maya Okafor checks the new proofs after the walkthrough
+  - op: action.add
+    text: Book the reprint slot with the printer
+    owners: [Ines Duarte]
+    due: '2026-10-20'
+    project: PRJ-1
+    evidence:
+      quote: Ines Duarte books the reprint slot with the printer before go-live

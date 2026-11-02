@@ -47,6 +47,7 @@ import styles from "./OpenItems.module.css";
 import { OriginLink } from "./Origin";
 import { useHandToAssistant } from "./HandToAssistant";
 import { usePlaceText } from "../lib/place";
+import { NeedsADate } from "./NeedsADate";
 import { ProjectTag } from "./ProjectTag";
 import { ViewTags, useViewLabels } from "./ViewTags";
 import { NotesTitle } from "./ActionNotes";
@@ -97,7 +98,10 @@ export function OpenItems() {
   const { justMe } = useSides();
   const states: readonly string[] = tab === "actions" ? ACTION_STATES.filter((s) => !(justMe && s === "no_owner")) : QUESTION_STATES;
 
-  const shownActions = actionsShown(actions, filters);
+  // The to-dos that need a date are a group of their own at the top of the to-dos, and not in the list below it.
+  const narrowed = actionsShown(actions, filters);
+  const needDate = narrowed.filter((a) => a.needs_date);
+  const shownActions = narrowed.filter((a) => !a.needs_date);
   const shownQuestions = questionsShown(questions, filters);
   const shown = tab === "actions" ? shownActions.length : shownQuestions.length;
   const set = (patch: Partial<Filters>) => setFilters((now) => ({ ...now, ...patch }));
@@ -155,9 +159,10 @@ export function OpenItems() {
         />
       ) : (
         <>
-          {shown === 0 ? (
+          {tab === "actions" && <NeedsADate rows={needDate} />}
+          {shown + (tab === "actions" ? needDate.length : 0) === 0 ? (
             <EmptyState text={t("open.none_match")} />
-          ) : tab === "actions" ? (
+          ) : shown === 0 ? null : tab === "actions" ? (
             <RowList aria-label={t("open.list.actions")}>
               {narrow && (
                 <RowItem>

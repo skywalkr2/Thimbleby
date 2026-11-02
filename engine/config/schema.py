@@ -1579,6 +1579,8 @@ def _default_lints() -> dict[str, Severity]:
         "someone-given-owner": "return",
         "due-move-missed": "return",
         "due-reading-differs": "return",
+        "undated-todo": "return",
+        "due-on-day-off": "return",
         "owed-to-missing": "return",
         "project-start-as-fact": "return",
         "decision-from-list": "return",
@@ -4128,6 +4130,20 @@ class DatesSettings(ConfigModel):
         default_factory=LeadDaysSettings,
         description="How long before each kind of day the offered reminder falls. It falls on the morning your "
         "working hours start (set under Reminders); one that would already be past is not offered.",
+    )
+    days_off_weeks: int = Field(
+        6,
+        ge=0,
+        le=52,
+        description="How many weeks ahead the assistant is told the days off (holidays, closures, time away) of the "
+        "people an input names, so a to-do is given the working day that fits whoever does it. Zero tells it none.",
+    )
+    undated_line_days: int = Field(
+        7,
+        ge=0,
+        le=365,
+        description="For how many days after a to-do was added with no date Today asks you to date it. Older ones are "
+        "left to the reminder about to-dos nobody has touched. Zero never asks.",
     )
 
 

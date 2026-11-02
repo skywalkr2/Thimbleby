@@ -14,7 +14,7 @@ from datetime import date
 from html import escape
 from typing import Any
 
-from engine import areas, audience, new_terms, reply_lines
+from engine import areas, audience, days_off, new_terms, reply_lines
 from engine.ai.task import AiTask
 from engine.blocked import standing_hold
 from engine.cleaning import Cleaned, clean
@@ -184,6 +184,18 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         words = new_terms.packet_section(store, cfg, req.data, f"{raw}\n{note}")
         if words:
             request_parts.append(words)
+    if kind.name == "notes":
+        # The days off of the people the input names (and the user), so a to-do gets the day that fits its owner.
+        named = people.mentioned_in(f"{raw}\n{note}") | People.for_input(store, cfg, req.id, raw).in_context
+        off = days_off.packet_section(
+            store.read(),
+            cfg,
+            today,
+            [p for p in named if p in people.records],
+            {p: n["full_name"] for p, n in people.records.items()},
+        )
+        if off:
+            request_parts.append(off)
     if kind.name == "notes" and req.data.get("may_answer"):
         owed = reply_lines.packet_section(ws, store, cfg, req.data)
         if owed:

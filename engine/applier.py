@@ -89,6 +89,7 @@ from engine.ops import (
     NoteOp,
     OpModel,
     PersonAddOp,
+    PersonAwayOp,
     PersonContactOp,
     PersonStanceOp,
     ProjectAddOp,
@@ -303,6 +304,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _promise_as_fact(cs, ctx)
     problems += _due_move_missed(cs, ctx)
     problems += _due_reading_differs(cs, ctx)
+    problems += _undated_todo(cs, ctx)
+    problems += _due_on_day_off(cs, ctx)
     problems += _project_start_as_fact(cs, ctx)
     problems += _project_unfiled(cs, ctx)
     problems += _decision_from_list(cs, ctx)
@@ -717,6 +720,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             elif ctx.actor != "pm" and not ctx.confirmed_by_pm:
                 # Whoever proposes it, a way to reach someone waits for the person.
                 problems.append(Problem("contact-confirm", "hold", i, CONTACT_WAITS))
+        if isinstance(op, PersonAwayOp) and view.get("person", op.person) is None:
+            refuse(i, "targets", f"there is no person {op.person}")
         if isinstance(op, PersonStanceOp):
             if view.get("person", op.id) is None:
                 refuse(i, "targets", f"there is no person {op.id}")
@@ -2342,6 +2347,8 @@ JUDGMENT_LINTS = frozenset(
     {
         "near-duplicate-promise",
         "due-reading-differs",
+        "undated-todo",
+        "due-on-day-off",
         "ending-reading",
         "reply-not-needed",
         "fact-from-notice",
@@ -3025,6 +3032,114 @@ def _due_reading_differs(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     quote,
                 )
             )
+    return problems
+
+
+def _input_dates(view: Any, ctx: Context) -> list[tuple[str, date]]:
+    """The days the rules read in the input's own new words (a weekday, tomorrow, a written date), each with the words
+    it came from, in the order the input gives them. Only a reading to tell the assistant what the input holds, never an
+    answer: nothing here picks a to-do's day."""
+    from engine.due_phrases import date_phrases
+
+    raw = ctx.inputs.raw_input
+    if not (raw or "").strip():
+        return []
+    from engine.reply_split import split_message
+
+    head = reply_lines.leading_headers(raw)
+    text = split_message(head[1] if head else raw).new
+    found: list[tuple[str, date]] = []
+    for phrase in date_phrases(text):
+        reading = _read_due(view, ctx, ctx.inputs.source, phrase)
+        if reading is not None and reading.day is not None:
+            found.append((phrase, reading.day))
+    return found
+
+
+def _undated_todo(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A to-do added with no date, when the input gives dates the rules can read and the answer asks nobody for the
+    to-do's date, goes back once: the assistant gives it the working day that fits its owner, or asks the person once.
+    A rule that only points; the assistant's answer to it stands (`JUDGMENT_LINTS`). A to-do that waits for something,
+    is tied to a calendar entry, carries words for its date, or is a reply the person owes is left alone."""
+    name = "undated-todo"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    undated = [
+        (i, op)
+        for i, op in enumerate(cs.ops)
+        if isinstance(op, ActionAddOp)
+        and op.due is None
+        and not (op.due_words or "").strip()
+        and not (op.waiting_for or "").strip()
+        and not op.due_at_event
+        and not op.reply_owed
+    ]
+    if not undated or any(isinstance(op, QuestionAddOp) and op.asks_about == "date" for op in cs.ops):
+        return []
+    view = ctx.store.read()
+    found = _input_dates(view, ctx)
+    if not found:
+        return []
+    listed = ", ".join(f"{phrase} ({day.isoformat()})" for phrase, day in found[:6])
+    return [
+        Problem(
+            name,
+            level,
+            i,
+            f"You gave no date for {op.text!r}. The input's dates, as the rules read them: {listed}. Give it the "
+            "working day that fits, or ask the person for its date (one question.add with asks_about date, for all the "
+            "to-dos with no date).",
+            op.evidence.quote,
+        )
+        for i, op in undated
+    ]
+
+
+def _due_on_day_off(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A to-do's due day, new or moved, that falls on a day off of every one who owns it (a holiday of their team, their
+    team's closure, a day the team doesn't work, or their own time away) goes back once with the reason, so the
+    assistant gives the working day that fits or keeps the day knowing why. A rule that only points; the answer to it
+    stands (`JUDGMENT_LINTS`)."""
+    from engine import days_off
+
+    name = "due-on-day-off"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    view = ctx.store.read()
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if (
+            not isinstance(op, (ActionAddOp, ActionMoveOp))
+            or not isinstance(op.due, date)
+            or isinstance(op.due, MonthDay)
+        ):
+            continue
+        if isinstance(op, ActionAddOp):
+            found = [ctx.people.resolve(n) for n in op.owners]
+            owners = [r.person for r in found if r.status == "ok" and r.person]
+            complete = len(owners) == len(op.owners)
+        else:
+            target = view.get("action", op.id)
+            owners = [o["person"] for o in (target.data.get("owners") or [])] if target is not None else []
+            complete = True
+        if not owners or not complete:
+            continue
+        reasons = [days_off.off_on(view, ctx.cfg, pid, op.due, ctx.people.name(pid)) for pid in owners]
+        if any(r is None for r in reasons):
+            continue  # someone who owns it works that day
+        quote = op.evidence.quote if op.evidence is not None else None
+        problems.append(
+            Problem(
+                name,
+                level,
+                i,
+                f"The due day {op.due.isoformat()} is a day off: {'; '.join(str(r) for r in reasons)}. "
+                "Give the working day that fits, or keep it if you are sure.",
+                quote,
+            )
+        )
     return problems
 
 
@@ -4186,6 +4301,16 @@ def _apply_op(
             raise StoreError(f"there is no person {op.id}")
         tx.update("person", op.id, {"stance": op.stance}, w, read_version=found.version)
         made("person", op.id)
+    elif isinstance(op, PersonAwayOp):
+        found = tx.get("person", op.person)
+        if found is None:
+            raise StoreError(f"there is no person {op.person}")
+        period = {"start": op.start.isoformat(), "end": op.end.isoformat() if op.end else None, "label": op.label}
+        away = list(found.data.get("away") or [])
+        if not any((a["start"], a.get("end")) == (period["start"], period["end"]) for a in away):
+            away.append(period)
+            tx.update("person", op.person, {"away": away}, w, read_version=found.version)
+            made("person", op.person)
     elif isinstance(op, PersonContactOp):
         found = tx.get("person", op.person)
         kind = contact_kind(ctx.cfg, op.kind)

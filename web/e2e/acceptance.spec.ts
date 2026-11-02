@@ -338,7 +338,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await status.getByRole("button", { name: "Open AI account setup" }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
-    // The cursor starts on the screen's heading, never in a field (design 7.0; owner, 2026-10-28).
+    // The cursor starts on the screen's heading, never in a field (design 7.0).
     await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe("H2");
     await checkAccessibility(page);
     // Finish later leaves the walkthrough, and Today's setup line stays as it was.

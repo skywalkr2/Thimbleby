@@ -17219,6 +17219,18 @@
             "title": "Id",
             "type": "string"
           },
+          "needs_date": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "It is open with no date, and the person's own or one they told someone about: the screen's \"Needs a date\" group at the top, where a date picker sets its day as the person's own change.",
+            "title": "Needs Date"
+          },
           "notes": {
             "anyOf": [
               {
@@ -23999,6 +24011,7 @@
               "nudge",
               "escalate",
               "stale",
+              "needs_date",
               "capacity",
               "clash",
               "tie",

@@ -1453,7 +1453,7 @@ Plugins read these and refer to them with `RefTo`; they change only through core
 
 ### `person` (PER-n)
 
-Someone the workspace works with or tracks. Added by `person.add`; role, org, why_they_matter, side and relation change through `record.set`; the person edits the rest (the sides included) in the app.
+Someone the workspace works with or tracks. Added by `person.add`; role, org, why_they_matter, side and relation change through `record.set`; a period they are away is added by `person.away`; the person edits the rest (the sides included) in the app.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1466,6 +1466,10 @@ Someone the workspace works with or tracks. Added by `person.add`; role, org, wh
 | `how_to_reach` | dict[str, str] | `{}` | How to reach them: a channel name mapped to the address or handle for it. |
 | `why_they_matter` | str \| None | `None` | Why this person matters to the work, in plain words. |
 | `name_verified` | bool | `False` | True when the name's spelling came from the person, a signed header address or a record the person made; false when it was read from outside content and not yet confirmed. |
+| `away` | list[DateRange] | `[]` | The periods they are away (vacation, leave), each with its first and last day. They are off on these days besides their team's days off. |
+| `away[].start` | date | required | The first day. |
+| `away[].end` | date \| None | `None` | The last day; empty for a single day. |
+| `away[].label` | str \| None | `None` | What it is, in plain words (vacation, leave, a closure). |
 | `track_only` | bool | `False` | True for someone inside the tracked area who is only observed, not given work. |
 | `stance` | Literal['manage', 'alongside', 'report_to', 'watch'] \| None | `None` | Who they are to the person (design 6.34): manage (the person manages them), alongside (they work alongside each other), report_to (the person reports to them) or watch (the person only watches). Empty means the workspace's default stance; someone marked track_only counts as watch. |
 | `sides` | list[Annotated[str, RefTo(kind='project', blocks_delete=False)]] | `[]` | The sides of the person's life this person belongs to, as the ids of the top-level projects that hold them (the personal project's id for family, friends and home). Empty means not known, and then `side` is read. Someone on two or more sides, or not known, never decides where an item that names them is filed. |
@@ -1485,13 +1489,19 @@ A company, client, supplier or other body people work for (design 5.1). Its name
 
 ### `team` (TEAM-n)
 
-A group of people. The person edits it in the app; no core op changes it.
+A group of people. The person edits it in the app (`record.edit`, with Undo); no op from an input changes it. Its days off are the days its members don't work: the holidays of its calendar (the workspace's when none is set), the weekdays it doesn't work, and its own closures.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `name` | str | required | The name shown wherever the team appears. |
 | `aliases` | list[str] | `[]` | Other names that mean this team. |
 | `members` | list[str] | `[]` | The ids of the people in the team. |
+| `holiday_calendar` | str \| None | `None` | Which list of named holidays the team takes off. Empty: the workspace's own. |
+| `working_days` | list[Literal['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']] \| None | `None` | The weekdays the team works. Empty: the workspace's working week. |
+| `days_off` | list[DateRange] | `[]` | The team's own closures: days it doesn't work, with what each is. |
+| `days_off[].start` | date | required | The first day. |
+| `days_off[].end` | date \| None | `None` | The last day; empty for a single day. |
+| `days_off[].label` | str \| None | `None` | What it is, in plain words (vacation, leave, a closure). |
 
 ### `project` (PRJ-n)
 
@@ -3196,6 +3206,20 @@ Someone the input names who isn't on file yet. From outside content it waits for
 | `org` | str \| None | `None` | The organization they work for, if stated. |
 | `aliases` | list[str] | `[]` | Other names the input uses for them. |
 | `first_name` | str \| None | `None` | The name a greeting to them uses, if the input shows how they sign it. |
+
+### `person.away`
+
+A period a person is away that the input states ("I'm out Nov 20-24", "Sam is on leave until the 3rd"): its first day, its last day (leave it out for one day) and a label such as vacation. Days away change who a to-do is given to and on which day, so give every day as a full date, and only for words that say the person is away. Evidence is required unless the person makes it. It adds to the days the person is already away and never removes one.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `person` | str | required | The id of the person who is away. |
+| `start` | date | required | The first day away, YYYY-MM-DD. |
+| `end` | date \| None | `None` | The last day away, YYYY-MM-DD; left out for a single day. |
+| `label` | str \| None | `None` | What it is, in plain words (vacation, leave). |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that give it; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `person.contact`
 

@@ -80,6 +80,8 @@ dates:
   bookings_to_calendar: true   # a booking confirmation with structured details becomes an entry in the app's own calendar
   find_by_rules: true   # an input is also read for a deadline, renewal or expiry with a full date beside words such as due, renews or expires; what is found waits for your yes
   find_most: 5   # the most dates the rules offer from one input
+  days_off_weeks: 6   # how many weeks ahead the assistant is told the days off of the people an input names
+  undated_line_days: 7   # for how many days after a to-do was added with no date Today asks you to date it
   suggest_reminders: true   # a reminder is offered with a deadline, renewal, expiry, warranty end or bill an input states
   lead_days:
     deadline: 3   # days before the day that the offered reminder falls

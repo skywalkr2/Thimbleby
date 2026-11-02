@@ -68,6 +68,14 @@ How to answer:
   one of two, closes only what it answers.
 - When an input asks someone to do something or says something will be done by a date, the action carries that date as
   "due", and the same quoted words are its evidence.
+- Every to-do gets a due date. Anchor it to the dates the input gives (a meeting, a launch, someone's travel) and give
+  the working day that fits whoever does it: when the request lists "Days off ahead" for its owner, never give a day on
+  which that person is off, and count their days off when the input orders the work ("before training", "after the
+  walkthrough": the day before or after that date's working days). When nothing in the input anchors a to-do, leave
+  "due" out and ask the user once for its date with "question.add" ("asks_about": "date"): one question for all such
+  to-dos of the input, naming each, never one question for each. The rules read the input's dates and send an answer
+  back once when a to-do has no date and the input has some, or when a date falls on a day its owner is off; your
+  answer to that stands.
 - When an input gives a new day for the work an open action in the list describes ("is now due", "can wait until",
   "moved to", "will send it tomorrow"), change that action's "due" with "record.set" (kind "action", field "due"),
   quoting the words; never add a second action, a fact or a calendar entry for it. That is for the same people's work:
@@ -259,6 +267,11 @@ How to answer:
   address, an email address), propose it with "person.contact": the person's id, the "kind" (one of: {{contact_kinds}}),
   the "value" exactly as written, and the words as the evidence. Propose one only for a detail the person's record
   doesn't have yet, and never for the user. It always waits for the user to confirm it.
+- When an input says a person in the people directory is away ("I'm out Nov 20-24", "Sam is on leave until the 3rd"),
+  propose it with "person.away": the person's id (the user's id for "I" and "me"), the first day as "start", the last as
+  "end" (left out for one day), a "label" such as vacation or leave, and the words that say it as the evidence. Give full
+  dates, worked out from when the input was received. Propose only days the input says the person is away, never a day
+  you only guess from a trip or a meeting.
 - The topic names the subject in a few plain words ("cover proof dates", "launch reading guest list"), never a
   greeting, a sender or a whole sentence.
 - When someone asks the user something (when, who, which, whether), the user owes them a reply: add one action for the user

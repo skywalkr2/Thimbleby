@@ -147,8 +147,10 @@ class Line:
     suggestion to ask someone else: its id in `questions` or `actions`, its words in `text`, who hasn't answered in
     `person`, the follow-ups it has had in `count` and the days since the last word in `waiting_days`), stale (the
     person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`, one line for each:
-    its id in `actions`, the days untouched in `waiting_days` and its own words in `subject`), terms (the questions
-    about unknown words that wait for an answer, as one line: `count` of them, their ids in `questions`).
+    its id in `actions`, the days untouched in `waiting_days` and its own words in `subject`), needs_date (one line for
+    the person's own to-dos, and ones they told someone about, added in the last `steward.dates.undated_line_days` days
+    with no date: `count` of them, their ids in `actions`; it opens the to-dos screen's "Needs a date" group), terms
+    (the questions about unknown words that wait for an answer, as one line: `count` of them, their ids in `questions`).
     nudge is the one follow-up line for a person the person is waiting on (`count` of their items, `overdue` how many
     are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
     without an answer any of its promises has had, which the line says), opening the one message to them. A promise
@@ -1285,6 +1287,22 @@ def _everything(
             )
         )
 
+    # Review: new to-dos with no date, as one line that opens the group where each is given one (design 7.5).
+    from engine.open_items import undated_new_actions
+
+    undated = [r for r in undated_new_actions(store, cfg, now) if r.id not in on_a_line]
+    if undated:
+        lines.append(
+            Line(
+                key="needs_date",
+                group="review",
+                kind="needs_date",
+                count=len(undated),
+                actions=[r.id for r in undated],
+                since=undated[0].since,
+            )
+        )
+
     # Review: something the person keeps putting off, one line each with its choices (design 6.32, Manner).
     for found in patterns.all_found(store, cfg):
         lines.append(
@@ -1913,6 +1931,7 @@ _KIND_ORDER = {
     "area": 4.5,
     "answer": 0,
     "stale": 5,
+    "needs_date": 4.8,
     "pattern": 5.5,
     "moved": 6,
     "send": 0,

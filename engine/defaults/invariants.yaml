@@ -124,6 +124,7 @@ invariants:
       - project.add
       - project.role
       - person.contact
+      - person.away
       - person.stance
       - record.edit
       - text.edit
@@ -186,6 +187,7 @@ invariants:
       - question.drop
       - question.done
       - person.contact
+      - person.away
       - person.stance
       - project.role
       - source.limit

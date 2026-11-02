@@ -9,7 +9,7 @@ AI or changes anything, apart from `merge_actions`, which is the person's own ch
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from engine import endings, patterns, repeats, sides
@@ -85,6 +85,8 @@ class OpenAction:
     side: str | None = None
     #: The views its project is in, which only change what a screen shows (design 6.32).
     views: list[str] = field(default_factory=list)
+    #: Open, with no date, and the person's own or one they told someone about: the screen's "Needs a date" group.
+    needs_date: bool = False
 
 
 @dataclass
@@ -197,6 +199,7 @@ def open_actions(
             state = "stale"
         else:
             state = "open"
+        told = endings.told_names(view, cfg, people, a)
         rows.append(
             OpenAction(
                 id=a.id,
@@ -218,11 +221,15 @@ def open_actions(
                 untouched_days=untouched if state == "stale" else None,
                 owner_question=asking_owner.get(a.id) if state == "no_owner" else None,
                 to_send=a.id in to_send,
-                told_names=endings.told_names(view, cfg, people, a),
+                told_names=told,
                 due_check=bool(d.get("due_check")) and due is not None,
                 repeat=repeats.view_of(d.get("repeat")),
                 effort_minutes=d.get("effort_minutes"),
                 remind_at=datetime.fromisoformat(str(d["remind_at"])).astimezone(here) if d.get("remind_at") else None,
+                needs_date=due is None
+                and state in ("open", "stale")
+                and not d.get("reply_owed")
+                and (own or bool(told)),
             )
         )
     if not light:
@@ -255,6 +262,18 @@ def _offer_duplicates(rows: list[OpenAction], cfg: Any, view: Any) -> None:
                     best = (score, other)
             if best is not None:
                 r.duplicate = Alike(best[1].id, best[1].text, best[1].version)
+
+
+def undated_new_actions(store: Any, cfg: Any, now: datetime) -> list[OpenAction]:
+    """The to-dos that need a date and were added in the last `steward.dates.undated_line_days` days, oldest first. None
+    when the setting is zero. Older ones are the stale rule's."""
+    days = cfg.steward.dates.undated_line_days
+    if not days:
+        return []
+    today = now.astimezone(zone(cfg)).date()
+    first = (today - timedelta(days=days)).isoformat()
+    found = [r for r in open_actions(store, cfg, today, now=now, light=True) if r.needs_date and r.since >= first]
+    return sorted(found, key=lambda r: (r.since, r.id))
 
 
 def stale_actions(store: Any, cfg: Any, now: datetime) -> list[OpenAction]:
@@ -368,4 +387,5 @@ __all__ = [
     "open_actions",
     "open_questions",
     "stale_actions",
+    "undated_new_actions",
 ]

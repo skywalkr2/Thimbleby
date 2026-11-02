@@ -415,6 +415,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/kinds/{kind:path}")
     def kind_view(kind: str) -> KindView:
         from engine.records import list_fields, ref_fields
+        from engine.settings import CHOICE_LISTS
         from engine.texts import long_text_fields
 
         if kind not in shown_kinds():
@@ -433,6 +434,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if value_type == "number" and isinstance(extra.get("choices"), (list, tuple)):
                 # A number with a known set of values is a list to pick from.
                 options = [str(v) for v in extra["choices"]]
+            elif value_type == "text" and isinstance(extra.get("choices"), str) and extra["choices"] in CHOICE_LISTS:
+                # A text with a named list of values (the holiday calendars) is a list to pick from.
+                value_type, options = "choice", [str(v) for v in CHOICE_LISTS[extra["choices"]]()]
             if name in texts:
                 value_type = "long_text"
             elif name in refs:

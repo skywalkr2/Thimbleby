@@ -1161,6 +1161,15 @@ is marked *designed*, with the phase.
   words that wait for something or sit before a calendar entry) go back once with both readings
   (`due-reading-differs`, *built*, a judgment lint: the second answer stands, never held, never escalated; section
   6.33 "Dates"). `tests/test_due_reading_differs.py`.
+- A to-do added with no date, when the input holds dates the rules can read (a weekday, tomorrow, a written date) and the
+  answer asks nobody for the to-do's date, goes back once (`undated-todo`, *built*, a judgment lint: the second answer
+  stands). A to-do on hold, tied to a calendar entry, with words for its date, or a reply the person owes is left alone. The
+  message names the to-do and lists the input's dates as read, and says to give the working day that fits or to ask the
+  person once for its date. `tests/test_undated_todo.py`, the golden case `meeting-order-only-todos-all-dated`.
+- A due day, new or moved, that is a day off of everyone who owns the to-do (a holiday of their team's calendar, a closure,
+  a weekday the team doesn't work, their own time away; 5.1 "Days off") goes back once with the reason ("Sam's team is off
+  on Thu 11/26 (Thanksgiving)") (`due-on-day-off`, *built*, a judgment lint). It looks only when every owner is a known
+  person and each is off that day. `tests/test_undated_todo.py`.
 - A question that asks something wide open ("… notice: what should have happened?") with none of what the assistant saw
   quoted and no choices offered goes back once (`vague-question`, *built*, a judgment lint: the second answer stands).
   The plain function finds only the plainest case: a title holding a phrase of `language.open_question_phrases`, no
@@ -4670,6 +4679,18 @@ and `due-reading-differs` sends back a first day of the month it gave
 (`tests/test_due_phrases.py::test_before_a_month_is_the_last_day_of_the_month_before_and_before_a_day_is_the_day_before`,
 `tests/test_due_reading_differs.py::test_before_a_month_read_as_that_months_first_day_goes_back_with_the_day_before_it`,
 the golden case `before-a-month-is-the-day-before`).
+**Every to-do gets a date, and the assistant decides it** (owner, 2026-11-02; change log 296). The notes prompt says to give
+each to-do a due date anchored to the dates the input gives (a meeting, a launch, someone's travel), as the working day
+that fits whoever does it, counting their days off, and, when nothing anchors it, to leave `due` out and ask the person once
+for the dates of all such to-dos in one `question.add` (`asks_about: date`), never one each. The request part of the packet,
+after the stable parts, has a section "Days off ahead" for the people the input names (and the person): their days off in
+the next `steward.dates.days_off_weeks` weeks (6), each run of days once with its reason, from `engine/days_off.py`. The rules
+read the same days only to point: `undated-todo` and `due-on-day-off` (above) send the answer back once, and a rule never
+picks a to-do's day. An input that says someone is away may propose the period with `person.away` (the person, `start`,
+`end`, `label` and the exact words); like a fact about a person it needs its evidence, applies with Undo and is never offered
+to an ask. **Built:** `tests/test_days_off.py::test_the_packet_lists_the_days_off_ahead_of_the_people_the_input_names_after_the_stable_parts`,
+`::test_the_notes_prompt_says_every_to_do_gets_a_date_and_one_question_asks_for_the_rest`,
+`::test_an_input_that_says_someone_is_away_is_a_data_op_with_its_words_and_undo_takes_it_back`.
 *The reader and what it can't read (batch B-7).* The reader steps past a leading lead word (`language.due_lead_words`:
 "by", "on", "due", "due by", "no later than") and reads an ordinal day ("the 25th", "by the 30th", "on the 3rd"; the
 endings are `language.due_ordinal_suffixes`) as the next day of the month with that number, marked to check when it is

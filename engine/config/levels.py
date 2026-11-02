@@ -281,6 +281,8 @@ FILES_ONLY = (
     "steward.attention.stopped_kinds",
     "steward.dates.find_by_rules",
     "steward.dates.find_most",
+    "steward.dates.days_off_weeks",
+    "steward.dates.undated_line_days",
     "steward.dates.lead_days.deadline",
     "steward.dates.lead_days.renewal",
     "steward.dates.lead_days.expiry",

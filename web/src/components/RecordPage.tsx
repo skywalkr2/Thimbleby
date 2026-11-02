@@ -26,6 +26,7 @@ import { onWorkSide, usePersonMenu } from "./PersonMenu";
 import { PersonPicker } from "./PersonPicker";
 import { AgendaSection } from "./AgendaList";
 import { Attendees } from "./Attendees";
+import { DAYS_OFF_FIELDS, DaysOff } from "./DaysOff";
 import { MeetingPrep } from "./MeetingPrep";
 import { useInvitationActs } from "./InvitationActs";
 import { useEventActs } from "./EventActs";
@@ -153,7 +154,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const labelOf = useFieldLabel();
 
   const data = record.data;
-  const offered = editableFields(fields.data?.fields ?? []);
+  // A team's days off and a person's time away are edited in their own section, not in the form of ordinary details.
+  const hasDaysOff = kind === "team" || kind === "person";
+  const offered = editableFields(fields.data?.fields ?? []).filter((f) => !(hasDaysOff && DAYS_OFF_FIELDS.has(f.name)));
   // The record's name, never its id: the page says it (a person is named by their full name).
   // While what resolves the names is still on its way the page has no name yet, and no detail: an id is never shown.
   const settled = !page.isPending && !people.isPending && !projects.isPending;
@@ -167,6 +170,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         Object.entries(data.fields)
           // The id of the input an item came from is shown as its "Where it came from" link instead.
           .filter(([name]) => !isSide || SIDE_FIELDS.has(name))
+          .filter(([name]) => !(hasDaysOff && DAYS_OFF_FIELDS.has(name)))
           // A to-do's page says its owner and day once, in words, and keeps what only the app uses out of sight.
           .filter(([name]) => !(kind === "action" && TODO_HIDDEN.has(name)))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin))
@@ -233,7 +237,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       personRows.push({ name: "org", label: t("person.row.own_orgs"), lines: sides.map((x) => x.name) });
     } else if (org && !sides.some((x) => x.name === org)) personRows.push({ name: "org", label: labelOf("org"), lines: [org] });
     const team = names.get(String(data.fields.team ?? ""));
-    if (team) personRows.push({ name: "team", label: labelOf("team"), lines: [team] });
+    // Their team's page is where its days off are kept, so the team is a link to it.
+    if (team) personRows.push({ name: "team", label: labelOf("team"), lines: [team], link: { text: team, href: viewHref(recordView("team", String(data.fields.team))) } });
     if (person && !justMe && sides.length > 0) {
       const named = (person.sides ?? []).map((sid) => (sid === personal ? t("sides.filter.personal") : sides.find((x) => x.project === sid)?.name)).filter((n): n is string => !!n);
       if (named.length > 0) personRows.push({ name: "sides", label: labelOf("sides"), lines: named });
@@ -342,6 +347,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           </details>
         )}
       </section>
+      {hasDaysOff && settled && !editing && <DaysOff kind={kind as "person" | "team"} record={data} />}
       {/* How the person works with someone is a question about people at work: it is asked only of someone from a side of work. */}
       {isPerson && person && !isSelf && !justMe && onWorkSide(person, personal, sides) && (
         <StancePicker person={id} version={data.version} stance={data.fields.stance} trackOnly={data.fields.track_only === true} />

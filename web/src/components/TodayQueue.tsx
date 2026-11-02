@@ -651,6 +651,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.answer", { text: line.text ?? "" });
       case "stale":
         return t("queue.stale.one_named", { text: plainTitle(line.subject ?? "") });
+      case "needs_date":
+        return tn("queue.needs_date", line.count);
       case "pattern": {
         const vars = { text: plainTitle(line.text ?? ""), name };
         return tn(`queue.pattern.${line.state ?? "moved"}`, line.count, vars);
@@ -1125,6 +1127,15 @@ function QueueRow(props: {
           menu: rest.map((c) => ({ id: c.id, label: c.label, run: c.run })),
         };
       }
+      case "needs_date":
+        // One line for all of them: it opens the to-dos, where "Needs a date" gives each a day.
+        return {
+          pill: t("queue.pill.needs_date"),
+          tone: "neutral",
+          meta: t("queue.needs_date.meta"),
+          primary: { label: t("queue.needs_date.open"), run: () => props.handlers.onOpenView?.("work/open") },
+          menu: [],
+        };
       case "promise": {
         const days = line.waiting_days ?? 0;
         // A date still ahead and no date at all are the waiting-ons that ask for a nudge early; only a passed date is late.

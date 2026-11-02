@@ -246,6 +246,29 @@ class LogEntry(BaseModel):
     text: str = Field(min_length=1, description="What the line says.")
 
 
+class DateRange(BaseModel):
+    """A run of days, both ends included, with an optional label: a team's closure, a person's vacation or leave."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start: date = Field(description="The first day.")
+    end: date | None = Field(None, description="The last day; empty for a single day.")
+    label: str | None = Field(
+        None, max_length=80, description="What it is, in plain words (vacation, leave, a closure)."
+    )
+
+    @model_validator(mode="after")
+    def _in_order(self) -> DateRange:
+        if self.end is not None and self.end < self.start:
+            raise ValueError("the last day can't come before the first")
+        return self
+
+    @property
+    def last(self) -> date:
+        """The last day it covers."""
+        return self.end or self.start
+
+
 class Owner(BaseModel):
     """An action owner: always a person, optionally with the team they act for."""
 
@@ -333,7 +356,8 @@ class ActionNews(BaseModel):
 
 class Person(Record):
     """Someone the workspace works with or tracks. Added by `person.add`; role, org, why_they_matter, side and relation
-    change through `record.set`; the person edits the rest (the sides included) in the app."""
+    change through `record.set`; a period they are away is added by `person.away`; the person edits the rest (the
+    sides included) in the app."""
 
     record_kind: ClassVar[str] = "person"
     prefix: ClassVar[str] = "PER"
@@ -360,6 +384,11 @@ class Person(Record):
         False,
         description="True when the name's spelling came from the person, a signed header address or a record the "
         "person made; false when it was read from outside content and not yet confirmed.",
+    )
+    away: list[DateRange] = Field(
+        default_factory=list,
+        description="The periods they are away (vacation, leave), each with its first and last day. They are off on "
+        "these days besides their team's days off.",
     )
     track_only: bool = Field(
         False, description="True for someone inside the tracked area who is only observed, not given work."
@@ -406,7 +435,9 @@ class Organization(Record):
 
 
 class Team(Record):
-    """A group of people. The person edits it in the app; no core op changes it."""
+    """A group of people. The person edits it in the app (`record.edit`, with Undo); no op from an input changes it. Its
+    days off are the days its members don't work: the holidays of its calendar (the workspace's when none is set), the
+    weekdays it doesn't work, and its own closures."""
 
     record_kind: ClassVar[str] = "team"
     prefix: ClassVar[str] = "TEAM"
@@ -415,6 +446,20 @@ class Team(Record):
     name: str = Field(min_length=1, description="The name shown wherever the team appears.")
     aliases: list[str] = Field(default_factory=list, description="Other names that mean this team.")
     members: list[str] = Field(default_factory=list, description="The ids of the people in the team.")
+    holiday_calendar: str | None = Field(
+        None,
+        description="Which list of named holidays the team takes off. Empty: the workspace's own.",
+        json_schema_extra={"choices": "holiday_calendars"},
+    )
+    working_days: list[Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]] | None = (
+        Field(
+            None,
+            description="The weekdays the team works. Empty: the workspace's working week.",
+        )
+    )
+    days_off: list[DateRange] = Field(
+        default_factory=list, description="The team's own closures: days it doesn't work, with what each is."
+    )
 
 
 class Project(Record):

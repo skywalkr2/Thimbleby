@@ -859,6 +859,31 @@ class PersonContactOp(OpModel):
         return f"Add a {self.kind} for {named(view, 'person', self.person)}"
 
 
+class PersonAwayOp(OpModel):
+    """A period a person is away that the input states ("I'm out Nov 20-24", "Sam is on leave until the 3rd"): its first
+    day, its last day (leave it out for one day) and a label such as vacation. Days away change who a to-do is given
+    to and on which day, so give every day as a full date, and only for words that say the person is away. Evidence is
+    required unless the person makes it. It adds to the days the person is already away and never removes one."""
+
+    op: Literal["person.away"] = "person.away"
+    person: str = Field(description="The id of the person who is away.")
+    start: date = Field(description="The first day away, YYYY-MM-DD.")
+    end: date | None = Field(None, description="The last day away, YYYY-MM-DD; left out for a single day.")
+    label: str | None = Field(None, max_length=80, description="What it is, in plain words (vacation, leave).")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that give it; required unless the person makes it."
+    )
+
+    @model_validator(mode="after")
+    def _in_order(self) -> PersonAwayOp:
+        if self.end is not None and self.end < self.start:
+            raise ValueError("the last day away can't come before the first")
+        return self
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Note that {named(view, 'person', self.person)} is away"
+
+
 class PersonStanceOp(OpModel):
     """Who a person is to the person, proposed from a correction such as "not my job to ask them" or "we are not their
     boss". A system op: it changes what the assistant may draft or ask them, so from anyone but the person's own words
@@ -1889,6 +1914,7 @@ Op = Annotated[
     | QuestionMarkSentOp
     | PersonAddOp
     | PersonContactOp
+    | PersonAwayOp
     | PersonStanceOp
     | StageMoveOp
     | RecordDeleteOp
@@ -1973,6 +1999,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "question.mark_sent": QuestionMarkSentOp,
     "person.add": PersonAddOp,
     "person.contact": PersonContactOp,
+    "person.away": PersonAwayOp,
     "person.stance": PersonStanceOp,
     "stage.move": StageMoveOp,
     "record.delete": RecordDeleteOp,
@@ -2123,6 +2150,7 @@ NEEDS_EVIDENCE = {
     "question.drop",
     "question.done",
     "person.contact",
+    "person.away",
     "person.stance",
     "project.role",
     "source.limit",

@@ -3242,6 +3242,7 @@ class QueueLineView(BaseModel):
         "nudge",
         "escalate",
         "stale",
+        "needs_date",
         "capacity",
         "clash",
         "tie",
@@ -7038,6 +7039,11 @@ class OpenActionView(BaseModel):
     )
     origin: Origin | None = Field(None, description="Where it came from, for its link.")
     untouched_days: int | None = Field(None, description="For a stale one, the days nothing has changed on it.")
+    needs_date: bool | None = Field(
+        None,
+        description="It is open with no date, and the person's own or one they told someone about: the screen's "
+        '"Needs a date" group at the top, where a date picker sets its day as the person\'s own change.',
+    )
     to_send: bool = Field(
         False, description="An owner other than the person hasn't been told about it yet (design 6.10)."
     )

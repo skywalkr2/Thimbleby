@@ -155,9 +155,9 @@ Approval before anything goes out is not a setting; it is always on.
 
 People are records (5.1), not config: added by the AI with `person.add` or by the PM, edited in the app, exported to
 `data/people.json`. Fields built today: `full_name`, `aliases`, `role`, `team`, `org` (the id of an organization record),
-`how_to_reach` (per channel), `why_they_matter`, `track_only` (inside the tracked area but only observed) and `status`.
+`how_to_reach` (per channel), `why_they_matter`, `track_only` (inside the tracked area but only observed), `away` (periods the person is away; 5.1 "Days off") and `status`.
 Designed, not yet built: communication fields (`prefers` a channel and time, `cadence` for regular updates, `influence` and
-`interest`; the last three serve 6.24, which moves to the project management pack), `non_working_calendar` and `verified`
+`interest`; the last three serve 6.24, which moves to the project management pack) and `verified`
 (spelling checked against a primary source). A person's area (tracked, a domain, or unknown) will come from their team and
 `config/scope.yaml` (4.4). Fictional workspaces ship people in `data/people.json`, imported at test time.
 
@@ -412,7 +412,9 @@ Built keys:
   suggestion makes Today ask whether to quiet or stop it; `keep_showing_days` (14): how long before it asks again after
   Keep showing; `quieted_kinds` and `stopped_kinds` (empty): the person's own yes, kept in the files (no Settings row: the cut's budget, 7.9) (6.32). `steward.dates.find_by_rules` (true) and `find_most` (5): whether and how many dated facts the
   rules offer from an input the assistant missed them in; the words are `language.dated_deadline_words`,
-  `dated_renewal_words`, `dated_expiry_words` and `dated_doubt_words` (6.32). Demo values are in both fictional workspaces.
+  `dated_renewal_words`, `dated_expiry_words` and `dated_doubt_words` (6.32). `steward.dates.days_off_weeks` (6; 0 tells the assistant none) and
+  `undated_line_days` (7; 0 never asks): how many weeks ahead the days off of the people an input names are put in its request (6.6, 6.7), and for how many days after
+  a to-do was added with no date Today asks for one (7.5). The lints `undated-todo` and `due-on-day-off` are in `checks.lints` (both `return`, both judgment lints). Demo values are in both fictional workspaces.
 - `ask_lead_words` (Can you, Could you, Would you, Please) and `own_promise_words` (I'll, I will): what the
   `own-request-not-promise` lint reads (6.33): a sentence in the person's own sent mail that starts with an asking word
   or ends in a question mark, and holds no promising word, asks someone else, so an action owned by the person from it is
