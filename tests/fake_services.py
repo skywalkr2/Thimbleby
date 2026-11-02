@@ -508,7 +508,7 @@ def messages(now: datetime, later: list[dict] | None = None, evening: bool = Fal
             "Catering quote",
             timedelta(hours=5),
             True,
-            "We need a catering quote.",
+            "We need a catering quote by 2026-11-04.",
             "To do: send the headcount by 2026-11-04.",
         ),  # fmt: skip
         work("m-3", first, "Thanks", timedelta(hours=1), False, "Thanks for the update. See you there."),

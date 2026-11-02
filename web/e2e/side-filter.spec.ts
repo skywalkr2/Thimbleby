@@ -118,14 +118,19 @@ test.describe("The side filter changes what the screens show", () => {
     await expectUnder(page, main, questions.shown, questions.hidden);
   });
 
-  test("Follow-ups: the questions waiting for the person's answer are under their side", async ({ page }) => {
+  test("Follow-ups: only other people are listed, and the promises they made are under their side", async ({ page }) => {
     test.setTimeout(120_000);
     await go(page, "work/followups");
     await heading(page, "Follow-ups");
     const main = page.locator("main");
-    await expect(main.getByText(seeded.questions.personal)).toBeVisible(LOADED);
-    const questions = bySide({ personal: [seeded.questions.personal], job: [seeded.questions.job], business: [seeded.questions.business] });
-    await expectUnder(page, main, questions.shown, questions.hidden);
+    // The person's own questions and to-dos are one row that opens To-dos and questions, never listed here.
+    await expect(main.getByRole("link", { name: "Your own to-dos" })).toBeVisible(LOADED);
+    for (const side of SIDES) await expect(main.getByText(seeded.questions[side])).toHaveCount(0);
+    await page.getByRole("button", { name: "Waiting on them" }).click();
+    // The list is by person, each with the promises waiting on them: under a side, only the people who owe something on it.
+    await expect(main.getByText(seeded.owed_by.personal).first()).toBeVisible(LOADED);
+    const owing = bySide({ personal: [seeded.owed_by.personal], job: [seeded.owed_by.job], business: [seeded.owed_by.business] });
+    await expectUnder(page, main, owing.shown, owing.hidden);
   });
 
   test("the Schedule: each calendar's meetings are under the side it serves", async ({ page }) => {

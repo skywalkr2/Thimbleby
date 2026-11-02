@@ -7,7 +7,7 @@ shows under every choice. Nothing here is read from a real service."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from engine.storage import WriteContext
 from tests.conftest import DEMO_B, fixture_records
@@ -82,6 +82,11 @@ VIEWS = {
 }
 
 
+def _due() -> str:
+    """A day a month ahead: every to-do has a date, so each lists as a row with its menu, not under Needs a date."""
+    return (date.today() + timedelta(days=30)).isoformat()
+
+
 def seed_views(store, cfg, seeded):
     """Two views of the job side, one project in both and one in the first only, each with a to-do, made as the person
     makes them (`view.add`, with Undo). Adds what the browser test reads to `seeded` and returns it."""
@@ -93,8 +98,10 @@ def seed_views(store, cfg, seeded):
     with store.transaction() as tx:
         both = tx.create("project", {"name": VIEWS["project"], "parent": job}, ctx).id
         only = tx.create("project", {"name": VIEWS["only_project"], "parent": job}, ctx).id
-        tx.create("action", {"text": VIEWS["todo"], "owners": [{"person": me}], "project": both}, ctx)
-        tx.create("action", {"text": VIEWS["only_todo"], "owners": [{"person": me}], "project": only}, ctx)
+        tx.create("action", {"text": VIEWS["todo"], "owners": [{"person": me}], "project": both, "due": _due()}, ctx)
+        tx.create(
+            "action", {"text": VIEWS["only_todo"], "owners": [{"person": me}], "project": only, "due": _due()}, ctx
+        )
     for name, projects in ((VIEWS["first"], [both, only]), (VIEWS["second"], [both])):
         apply_as_person(
             store, cfg, [{"op": "view.add", "name": name, "side": job, "projects": projects}], "Added a view"
@@ -120,8 +127,8 @@ def seed_sides(client, store, cfg):
     ctx = WriteContext(actor="pm", trust="trusted", op="e2e.sides")
     with store.transaction() as tx:
         for side, home in homes.items():
-            tx.create("action", {"text": TODOS[side], "owners": [{"person": me}], "project": home}, ctx)
-        tx.create("action", {"text": TODOS["none"], "owners": [{"person": me}]}, ctx)
+            tx.create("action", {"text": TODOS[side], "owners": [{"person": me}], "project": home, "due": _due()}, ctx)
+        tx.create("action", {"text": TODOS["none"], "owners": [{"person": me}], "due": _due()}, ctx)
         for side, home in homes.items():
             tx.create("question", {"to": me, "title": QUESTIONS[side], "kind": "decision", "projects": [home]}, ctx)
         owed_by = {}

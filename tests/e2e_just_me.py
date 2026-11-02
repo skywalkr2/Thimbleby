@@ -5,7 +5,7 @@ Personal."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from engine.storage import WriteContext
 from tests.conftest import DEMO_B, fixture_records
@@ -30,6 +30,8 @@ def seed_just_me(store, cfg):
     personal = cfg.workspace.project.personal
     relative = fixture_records(DEMO_B, "person")[1]["full_name"]
     ctx = WriteContext(actor="pm", trust="trusted", op="e2e.just-me")
+    # Every to-do has a date: a month ahead, so it lists as a row with its menu and not under Needs a date.
+    due = (date.today() + timedelta(days=30)).isoformat()
     with store.transaction() as tx:
         area = tx.create("project", {"name": AREA, "parent": personal, "area": True}, ctx).id
         person = tx.create(
@@ -37,7 +39,7 @@ def seed_just_me(store, cfg):
             {"full_name": relative, "relation": RELATION, "how_to_reach": {"email": ADDRESS}},
             ctx,
         ).id
-        todo = tx.create("action", {"text": TODO, "owners": [{"person": me}], "project": area}, ctx).id
+        todo = tx.create("action", {"text": TODO, "owners": [{"person": me}], "project": area, "due": due}, ctx).id
         question = tx.create(
             "question", {"to": me, "title": QUESTION, "kind": "decision", "projects": [personal]}, ctx
         ).id

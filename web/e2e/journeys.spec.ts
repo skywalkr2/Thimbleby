@@ -151,7 +151,7 @@ test.describe.serial("journeys", () => {
     // I hand in a short note of my own.
     await page.getByRole("button", { name: "Hand something in" }).first().click();
     await page.getByLabel("Paste or type it here").fill(
-      "I will send the venue list by 2026-11-02.\nDecided: the offsite is on a Friday.\nWe need a catering quote.",
+      "I will send the venue list by 2026-11-02.\nDecided: the offsite is on a Friday.\nWe need a catering quote by 2026-11-04.",
     );
     await visit(page);
     await page.getByRole("button", { name: "Hand in", exact: true }).click();
@@ -233,7 +233,7 @@ test.describe.serial("journeys", () => {
     // A new file lands in the folder. Check now reads it, hands it in, and the assistant's result appears.
     const put = await fetch(`${FAKE}/__e2e/source-file`, {
       method: "POST",
-      body: JSON.stringify({ text: "I will book the venue by 2026-11-05.\nWe need a printed agenda.\n" }),
+      body: JSON.stringify({ text: "I will book the venue by 2026-11-05.\nWe need a printed agenda by 2026-11-06.\n" }),
     });
     expect(put.ok).toBe(true);
     await dismissToasts(page);
@@ -468,6 +468,8 @@ test.describe.serial("journeys", () => {
 
     // 6. Drop, on an action that is no longer needed: it asks why, leaves the list at once, and Undo puts it back.
     const agenda = "I will print the agenda.";
+    // A to-do with no date is listed under Needs a date with a date picker and no menu, so the answer gives it its day.
+    await script("I will print the agenda", [{ op: "action.add", text: "Print the agenda.", owners: ["me"], due: "2026-11-09", evidence: { quote: agenda } }]);
     row = await handIn(agenda);
     // The to-do is in To-dos and questions, its one home.
     await openView(page, "To-dos and questions");
@@ -556,16 +558,16 @@ test.describe.serial("journeys", () => {
     await expect(page.getByText("This page comes from the example add-on.")).toBeVisible();
     await visit(page);
 
-    // Turn it off, restart, and remove it from the row's menu; after another restart it is gone.
+    // Turn it off, restart, and remove it from the row's menu (Installed names it as the catalog does); after another restart it is gone.
     await openView(page, "Add-ons");
     await page.getByRole("tab", { name: "Installed" }).click();
-    const installed = page.locator("[data-row-list] > li", { hasText: "journey-panel" });
-    await installed.getByRole("button", { name: "Turn off journey-panel" }).click();
+    const installed = page.locator("[data-row-list] > li", { hasText: "Example panel" });
+    await installed.getByRole("button", { name: "Turn off Example panel" }).click();
     await expect(installed).toContainText("Off after a restart");
 
     // The menu offers Remove as soon as it is off, and Remove works then: it still runs until the restart, so new work
     // waits for that restart, which the header offers.
-    await installed.getByRole("button", { name: "More actions for journey-panel" }).click();
+    await installed.getByRole("button", { name: "More actions for Example panel" }).click();
     const removed = page.waitForResponse((r) => r.url().endsWith("/uninstall") && r.request().method() === "POST");
     await page.getByRole("menuitem", { name: "Remove" }).click();
     // The restart below must come after the removal has been answered, not race it.
@@ -584,11 +586,11 @@ test.describe.serial("journeys", () => {
 
     // Removed: the row is gone from Installed, the files are gone from the place the app installs into, and the
     // catalog offers it again.
-    await expect(page.locator("[data-row-list] > li", { hasText: "journey-panel" })).toHaveCount(0);
+    await expect(page.locator("[data-row-list] > li", { hasText: "Example panel" })).toHaveCount(0);
     expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(false);
     await page.reload();
     await page.getByRole("tab", { name: "Installed" }).click();
-    await expect(page.locator("[data-row-list] > li", { hasText: "journey-panel" })).toHaveCount(0);
+    await expect(page.locator("[data-row-list] > li", { hasText: "Example panel" })).toHaveCount(0);
     await page.getByRole("tab", { name: "Available" }).click();
     await expect(
       page.locator("[data-row-list] > li", { hasText: "Example panel" }).getByRole("button", { name: "Install Example panel" }),

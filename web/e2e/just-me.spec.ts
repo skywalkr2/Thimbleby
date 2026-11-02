@@ -135,6 +135,7 @@ test.describe('"Just me" sees no work words', () => {
     const labels = (await nav.getByRole("link").allInnerTexts()).map((text) => text.replace(/\s*\d+$/, "").trim());
     expect(labels).toEqual([
       "Today",
+      "Schedule",
       "What changed",
       "Handled for you",
       "Follow-ups",
@@ -331,8 +332,8 @@ test.describe('"Just me" sees no work words', () => {
     expect(found).toEqual([]);
   });
 
-  // Where something waits, the side menu says so (a sheet on a phone), and one group is shown in place (design 7.1, 7.5).
-  test("the menu counts what waits, and Follow-ups with one group shows its items in place, at 1440 and at a phone width", async ({ page }) => {
+  // Where something waits, the side menu says so (a sheet on a phone), and Follow-ups keeps the person's own items to one row (design 7.1, 7.5; X31).
+  test("the menu counts what waits, and Follow-ups with nobody else shows one row for the person's own to-dos, at 1440 and at a phone width", async ({ page }) => {
     for (const size of [
       { width: 1440, height: 900 },
       { width: 390, height: 844 },
@@ -349,15 +350,16 @@ test.describe('"Just me" sees no work words', () => {
       await expect(page.getByRole("link", { name: /^Handled for you(?!,)/ })).toBeVisible();
       if (size.width < 1024) await page.keyboard.press("Escape");
 
-      // The one group on Follow-ups is the person's own: its questions stand in place, with no list and no pane beside it.
+      // Follow-ups lists other people only: with nobody else, the person's own decisions and to-dos are the one row at the top,
+      // which opens them where they are kept, and the page says nobody has a follow-up yet (X31).
       await go(page, "work/followups");
       await heading(page, "Follow-ups");
-      const place = page.locator("[data-in-place]");
+      const place = page.getByRole("list", { name: "Your own to-dos" });
       await expect(place).toBeVisible(LOADED);
-      await expect(place.getByRole("heading", { level: 2, name: "You", exact: true })).toBeVisible();
-      await expect(place.getByText(seeded.question.title)).toBeVisible();
+      await expect(place.getByText("1 decision · 1 to-do of yours")).toBeVisible();
+      await expect(page.getByText(/Nobody has one yet/)).toBeVisible();
+      await expect(page.getByText(seeded.question.title)).toHaveCount(0);
       await expect(page.locator("[data-detail-pane]")).toHaveCount(0);
-      await expect(page.getByRole("listitem", { name: "You", exact: true })).toHaveCount(0);
       // Nothing is wider than the window.
       const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       expect(wide).toBe(false);

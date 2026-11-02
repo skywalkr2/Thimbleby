@@ -4,7 +4,7 @@
 // 1024px) and stack on a phone, so the table is never wider than the window. While a pane stands beside the table only the
 // columns marked `core` stay; the column picker shows or hides any column. No word is ever broken: a value too long for its
 // column ends in an ellipsis, with the whole value as its title.
-import { useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { useRowKeys } from "../lib/keys";
 import { useIsNarrow } from "../lib/media";
 import { useWords } from "../lib/wording";
@@ -64,6 +64,15 @@ export function RecordsTable<T>(props: {
   // A column the person asked for stays whatever the window width; the others drop out by rank.
   const rank = (c: TableColumn<T>) => (picked[c.id] ? "" : c.rank === 2 ? styles.rank2 : c.rank === 3 ? styles.rank3 : "");
   const optional = hasCore && !narrow;
+  // How many column-widths the table shares at each window width (the name counts twice), so that a cell's cap leaves room for the
+  // others: the columns that drop out by rank are not counted where they are hidden.
+  const hidden = (rank: 2 | 3) => visible.filter((c) => !picked[c.id] && c.rank === rank).length;
+  const shares = (props.actions ? 3 : 2) + visible.length;
+  const widths = {
+    "--cols-all": shares,
+    "--cols-mid": shares - hidden(2),
+    "--cols-small": shares - hidden(2) - hidden(3),
+  } as CSSProperties;
   return (
     <div className={styles.wrap}>
       {optional && (
@@ -81,7 +90,7 @@ export function RecordsTable<T>(props: {
           />
         </div>
       )}
-      <table className={styles.table}>
+      <table className={styles.table} style={widths}>
         <caption className="sr">{props.label}</caption>
         <thead>
           <tr>
@@ -117,6 +126,9 @@ export function RecordsTable<T>(props: {
   );
 }
 
+/** A cell with nothing in it has no box, so a phone's list leaves it out. */
+const hasContent = (content: ReactNode) => content !== null && content !== undefined && content !== false && content !== "";
+
 function TableRow<T>(props: { row: T; table: Parameters<typeof RecordsTable<T>>[0]; columns: TableColumn<T>[]; rank: (c: TableColumn<T>) => string }) {
   const { row, table, rank } = props;
   const ref = useRef<HTMLTableRowElement>(null);
@@ -144,13 +156,13 @@ function TableRow<T>(props: { row: T; table: Parameters<typeof RecordsTable<T>>[
       }}
     >
       <td className={styles.name} title={table.name.title?.(row) || undefined}>
-        {table.name.cell(row, open)}
+        <div className={styles.nameBox}>{table.name.cell(row, open)}</div>
       </td>
       {props.columns.map((c) => {
         const content = c.cell(row);
         return (
           <td key={c.id} data-label={c.header} title={typeof content === "string" && content ? content : undefined} className={[rank(c), c.numeric ? styles.num : ""].filter(Boolean).join(" ")}>
-            {content}
+            {hasContent(content) ? <div className={styles.cellBox}>{content}</div> : null}
           </td>
         );
       })}

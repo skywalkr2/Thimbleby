@@ -1374,7 +1374,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await page.getByRole("tab", { name: "Installed" }).click();
     await expect(page.getByRole("tab", { name: "Installed" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("listitem", { name: "example", exact: true })).toBeVisible();
+    await expect(page.getByRole("listitem", { name: "Example", exact: true })).toBeVisible();
     await checkAccessibility(page);
   });
 

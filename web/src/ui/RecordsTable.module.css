@@ -2,11 +2,19 @@
    as the window narrows (rank 2 under 1280px, rank 3 under 1024px), and on a phone each row stacks as a list row with its
    cells under the name. No word is broken: headers stay on one line, a cell wraps only at its spaces, and what is still too
    long ends in an ellipsis. */
-.wrap { min-width: 0; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; }
+.wrap { min-width: 0; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; container-type: inline-size; }
 .table { width: 100%; border-collapse: collapse; table-layout: auto; }
 .tools { display: flex; justify-content: flex-end; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border); background: var(--surface-sunk); }
 .table th, .table td { text-align: left; vertical-align: middle; padding: var(--space-2) var(--space-3); overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; word-break: normal; hyphens: none; font-size: var(--text-sm); line-height: var(--lh-sm); }
-.table td:not(.name) { white-space: nowrap; max-width: 16rem; }
+.table td:not(.name) { white-space: nowrap; }
+/* A cell's own width is capped by a box inside it, because a table that sizes its columns by content ignores a cap on the cell
+   itself: one long value would otherwise widen the whole table past the window. The cap is one share of the table's width (the
+   name takes two), so the columns together never need more room than there is; the cut text ends in an ellipsis. */
+.table { --cols: var(--cols-all); }
+@media (max-width: 1279px) { .table { --cols: var(--cols-mid); } }
+@media (max-width: 1023px) { .table { --cols: var(--cols-small); } }
+.cellBox { max-width: min(16rem, calc(100cqw / var(--cols) - 2 * var(--space-3) - 1px)); overflow: hidden; text-overflow: ellipsis; }
+.nameBox { max-width: min(24rem, calc(200cqw / var(--cols) - 2 * var(--space-3) - 1px)); overflow: hidden; text-overflow: ellipsis; }
 .table thead th { white-space: nowrap; background: var(--surface-sunk); color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--border); }
 .row { border-bottom: 1px solid var(--border); background: var(--surface); }
 .row:last-child { border-bottom: 0; }
@@ -38,5 +46,6 @@
 :global([data-narrow]) .row td.name::before, :global([data-narrow]) .row td.acts::before { content: none; }
 :global([data-narrow]) .acts, :global([data-narrow]) .name { width: auto; }
 :global([data-narrow]) .actsInner { justify-content: flex-start; }
-:global([data-narrow]) .row td:empty { display: none; }
+:global([data-narrow]) .row td:empty, :global([data-narrow]) .row td:has(> .cellBox:empty) { display: none; }
+:global([data-narrow]) .cellBox, :global([data-narrow]) .nameBox { max-width: none; }
 :global([data-narrow]) .table td:not(.name) { white-space: normal; }
