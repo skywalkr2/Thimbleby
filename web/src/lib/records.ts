@@ -60,15 +60,6 @@ export function inReadingOrder<T extends { name: string }>(rows: T[]): T[] {
   return rows.map((row, i) => ({ row, i })).sort((a, b) => rank(a.row.name) - rank(b.row.name) || a.i - b.i).map(({ row }) => row);
 }
 
-/** A list whose items are records of their own (a to-do's news, say), not words or links: it has its own section on the page, and
- * joined into one detail it would read as a row of unrelated values. */
-export function isNestedRecords(value: unknown): boolean {
-  return (
-    Array.isArray(value) &&
-    value.some((item) => typeof item === "object" && item !== null && !Array.isArray(item) && typeof (item as Record<string, unknown>).url !== "string")
-  );
-}
-
 /** One line of a detail: words, or a link shown by its title with the domain beside it. */
 export type DetailLine = string | { label: string; url: string };
 

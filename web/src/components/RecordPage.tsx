@@ -8,7 +8,7 @@ import { resolveOffers, usePluginActions, useTaskKinds, type Offer } from "../li
 import { usePluginRun } from "../lib/plugin-run";
 import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
-import { inReadingOrder, isNestedRecords, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
+import { inReadingOrder, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
 import { reconcile, type Refreshed } from "../lib/refreshed";
 import { day, time } from "../lib/dates";
 import { useAct } from "../lib/act";
@@ -168,8 +168,6 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter(([name]) => !isSide || SIDE_FIELDS.has(name))
           // A to-do's page says its owner and day once, in words, and keeps what only the app uses out of sight.
           .filter(([name]) => !(kind === "action" && TODO_HIDDEN.has(name)))
-          // A list of records of their own is never joined into one detail: the page shows it as its own section, or not at all.
-          .filter(([, value]) => !isNestedRecords(value))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
@@ -498,7 +496,8 @@ const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invit
 
 /** What a to-do's page does not list as a detail: its words are the heading, owner and day are said once above, and the
  * rest is the app's own bookkeeping. */
-const TODO_HIDDEN = new Set<string>(["text", "owners", "due", "due_words", "due_check", "due_event", "due_by_person", "evidence", "told", "status"]);
+// `news` is the page's own "What was heard since" section, never a joined detail.
+const TODO_HIDDEN = new Set<string>(["text", "owners", "due", "due_words", "due_check", "due_event", "due_by_person", "evidence", "told", "status", "news"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);
