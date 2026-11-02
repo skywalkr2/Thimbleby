@@ -3770,12 +3770,19 @@ people and details, and never acts in their name without their yes on the exact 
   and the ones put off today), most important first by `steward.attention.importance`; what is due or at risk is never
   held. What is saved for the brief is one line each under "needs your yes". "Not now" (in a suggestion's menu) records the
   signal `suggestion_dismissed` with the line and what it was, stays off until its items change, and Undo takes it back.
-  *What dismissals teach* (`engine/attention_learning.py`, by rules, never AI): each "Not now" and each "Leave it" names its
-  kind of suggestion, and when the same kind has been put off `steward.attention.quiet_after_dismissals` (3; 0 is off) times
-  within `steward.attention.learn_days` (30) days, that kind stops interrupting on Today and is kept for the brief, one line
-  each; at `steward.attention.stop_after_dismissals` (0, never; it must exceed the first) it is not offered at all. A
-  dismissal taken back, a snooze and a clash marked fine count for nothing, and old ones are forgotten with the window, so
-  raising a setting or taking dismissals back shows the kind again at once. `tests/test_attention_learning.py`.
+  *What dismissals show* (`engine/attention_learning.py`, by rules, never AI; P110 J17): each "Not now" and each "Leave it" names
+  its kind of suggestion, and when the same kind has been put off `steward.attention.quiet_after_dismissals` (3; 0 is off)
+  times within `steward.attention.learn_days` (30) days (or `stop_after_dismissals`, 0, never, which must exceed the first),
+  nothing is quieted: Today shows one line, "You've set aside <kind in words> N times lately. Quiet them into the morning
+  brief?" (or "Stop offering them?"), with Quiet them (Stop them) and Keep showing, and the person's own taps are its
+  reason. Quiet them keeps the kind in `steward.attention.quieted_kinds` (kept for the brief, one line each) and Stop them in
+  `stopped_kinds` (not offered at all), settings the person can read and edit in the files (a row in Settings waits for the Settings cut's budget), with Undo; Keep showing snoozes the
+  question for `steward.attention.keep_showing_days` (14) and the kind keeps showing. A dismissal taken back, a snooze, the
+  answer to this question and a clash marked fine count for nothing, and old ones are forgotten with the window, so
+  taking dismissals back removes the question at once. A workspace from before the question keeps what the counts had
+  quieted for it, once at start, as its own choice in those settings. The brief's run reads no knowledge today, so the
+  dismissals are not yet part of what it reads. `tests/test_attention_learning.py`,
+  `web/src/components/TodayAttention.test.tsx`.
   *The reminder offer:* for the person's own to-do with a day within `steward.brief.remind_within_days` and no reminder,
   the brief says "Add a reminder on Thu at 9:00 for 'X'" with **Remind me**, which sets it for the working morning before
   the day (else the morning of it), the person's own change with Undo. Only to-dos carry a reminder; a date inside a mail or

@@ -131,8 +131,8 @@ def split(cfg: Any, view: Any, lines: list[Any], now: datetime) -> Split:
     """The lines with the suggestions among them sorted by the attention rules. A line that isn't a suggestion is shown;
     a suggestion put off, or below the threshold, is dropped; one saved for the brief goes to the digest."""
     settings = cfg.steward.attention
-    taught = attention_learning.verdicts(view, cfg, now)
-    # What the person's dismissals taught: a kind they keep putting off is kept for the brief, or not offered at all.
+    taught = attention_learning.verdicts(cfg)
+    # What the person chose after being asked: a kind is kept for the brief, or not offered at all.
     stopped = [line for line in lines if line.kind in KINDS and taught.get(line.kind) == attention_learning.STOPPED]
     quieted = [line for line in lines if line.kind in KINDS and taught.get(line.kind) == attention_learning.QUIET]
     gone = {id(line) for line in stopped + quieted}

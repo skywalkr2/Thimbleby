@@ -65,6 +65,9 @@ attention:
   quiet_after_dismissals: 3   # putting off the same kind of suggestion this many times keeps that kind for the morning brief; 0 is off
   stop_after_dismissals: 0   # putting it off this many times stops that kind altogether; 0 never stops one
   learn_days: 30   # how many days back dismissals are counted
+  keep_showing_days: 14   # after Keep showing, how many days before Today asks again about quieting or stopping a kind
+  quieted_kinds: []   # the kinds of suggestion you chose to keep for the morning brief; Today asks before one is added
+  stopped_kinds: []   # the kinds of suggestion you chose not to be offered at all
   importance:
     escalate: 0.8   # how much each kind of suggestion matters, from 0 to 1
     unfiled: 0.4

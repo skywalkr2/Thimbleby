@@ -3255,8 +3255,9 @@ class MailKinds(FileModel):
     enabled: bool = Field(
         True,
         description="Use the words below to spot bills and statements, orders, and shipping and delivery notices. The "
-        "words are only a hint: with the assistant's sorting on, each message's hint goes beside its header and the "
-        "assistant says what kind it is; with rules only sorting, or when that run can't be made, the words decide. "
+        "words only hint at the kind. With the assistant's sorting on, each message's hint goes beside its header and "
+        "the assistant says what kind it is; with rules only sorting, or when that run can't be made, the words "
+        "decide. "
         "Such mail is never set aside and is handed to the assistant as something to do for your own life. It applies "
         "after your own rules, so a rule that sets mail aside from a sender wins.",
     )
@@ -4002,17 +4003,16 @@ class AttentionSettings(ConfigModel):
         3,
         ge=0,
         le=50,
-        description="How many times you can put off the same kind of suggestion (Not now, or Leave it) before the "
-        "assistant stops interrupting you with that kind on Today and keeps it for the morning brief. Putting a "
-        "suggestion off and then taking it back doesn't count. Zero never changes what shows.",
+        description="How many times you can put off the same kind of suggestion (Not now, or Leave it) before Today "
+        "asks whether to quiet that kind into the morning brief. Nothing is quieted until you say yes. Putting a "
+        "suggestion off and then taking it back doesn't count. Zero never asks.",
     )
     stop_after_dismissals: int = Field(
         0,
         ge=0,
         le=100,
-        description="How many times you can put off the same kind of suggestion before the assistant stops offering "
-        "that kind at all, on Today and in the brief. Zero never stops one. Raise it, or take dismissals back, to "
-        "see that kind again.",
+        description="How many times you can put off the same kind of suggestion before Today asks whether to stop "
+        "offering that kind at all, on Today and in the brief. Nothing is stopped until you say yes. Zero never asks.",
     )
     learn_days: int = Field(
         30,
@@ -4020,6 +4020,25 @@ class AttentionSettings(ConfigModel):
         le=365,
         description="How many days back the assistant counts the times you put off a kind of suggestion. Older "
         "dismissals are forgotten.",
+    )
+    keep_showing_days: int = Field(
+        14,
+        ge=1,
+        le=365,
+        description="How many days Today waits before asking again about quieting or stopping a kind of suggestion, "
+        "after you chose to keep showing it.",
+    )
+    quieted_kinds: list[str] = Field(
+        default_factory=list,
+        description="The kinds of suggestion you chose to keep for the morning brief instead of Today. Saying yes to "
+        "the question on Today adds one; take one out to see that kind on Today again.",
+        json_schema_extra={"choices": "attention_kinds"},
+    )
+    stopped_kinds: list[str] = Field(
+        default_factory=list,
+        description="The kinds of suggestion you chose not to be offered at all, on Today or in the brief. Saying yes "
+        "to the question on Today adds one; take one out to be offered that kind again.",
+        json_schema_extra={"choices": "attention_kinds"},
     )
 
     @model_validator(mode="after")
@@ -4030,6 +4049,10 @@ class AttentionSettings(ConfigModel):
             and self.stop_after_dismissals <= self.quiet_after_dismissals
         ):
             raise ValueError("stopping a kind of suggestion must take more dismissals than quieting it")
+        known = set(ImportanceSettings.model_fields)
+        for name in (*self.quieted_kinds, *self.stopped_kinds):
+            if name not in known:
+                raise ValueError(f"{name!r} is not a kind of suggestion")
         return self
 
 

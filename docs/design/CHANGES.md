@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 292. A kind put off enough times asks whether to quiet it; it is never quieted by a count (2026-11-02; P110 J17)
+
+| Where | Before | Now |
+|---|---|---|
+| Attention budget (6.32, `engine/attention_learning.py`) | After `quiet_after_dismissals` Not now or Leave it taps in `learn_days`, the whole kind went to the brief (or at `stop_after_dismissals` was not offered), by a counter, with no reason shown | **Built** (`tests/test_attention_learning.py`, `web/src/components/TodayAttention.test.tsx`): reaching a threshold shows one Today line, "You've set aside ... N times lately. Quiet them into the morning brief?", with Quiet them (or Stop them) and Keep showing; only the person's yes quiets, kept in `quieted_kinds` or `stopped_kinds`; Keep showing snoozes the question `keep_showing_days` |
+| Existing workspaces | | **Built** (`tests/test_attention_learning.py::test_a_kind_the_counts_had_quieted_before_the_question_stays_quiet`): kinds the counts had quieted are kept once at start as the person's own choice in those settings |
+| Settings (4.0) | | `steward.attention.quieted_kinds`, `stopped_kinds`, `keep_showing_days`, with demo values in both workspaces; the two thresholds' descriptions say they ask. API: `POST /api/attention/{kind}/quiet`, `/stop`, `/show`, `/keep`; the Today line kind `attention` |
+| Brief (6.32) | | Not built: the dismissals as part of what the brief's run reads (the brief reads no knowledge today) |
+
 ## 291. The assistant files its own items; the rules' filing is a marked guess put to it once (2026-11-02; P110 J10)
 
 | Where | Before | Now |

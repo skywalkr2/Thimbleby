@@ -4,6 +4,30 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Putting a kind off enough times asks whether to quiet it; the person's yes quiets it (P110, J17)
+
+**Decided:** Reaching `steward.attention.quiet_after_dismissals` (or `stop_after_dismissals`) in `learn_days` days no longer
+quiets or stops a kind of Today line. Today shows one line, "You've set aside <kind in words> N times lately. Quiet them
+into the morning brief?", whose reason is the person's own taps, with Quiet them (or Stop them) and Keep showing. Quiet
+them is the person's own change, kept in the settings `steward.attention.quieted_kinds` (`stopped_kinds` for Stop them),
+with Undo; Keep showing is a snooze of the question (`steward.attention.keep_showing_days`, 14) and the kind keeps
+showing. The settings are the one place the quieting lives; they are kept in the files, with no Settings row yet because the Settings cut's advanced budget (30) is full. A workspace from before this keeps the
+kinds the counts had quieted, written once at start into those settings as its own earlier choice; the key's presence
+marks that it was done.
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's, a count only
+proposes); the audit's row J17.
+
+**Why:** A counter silently stopped a whole kind of line the person might still need, with no reason shown and nobody
+deciding. Their own taps are good evidence for asking, not for deciding.
+
+**Impact:** design 6.32 and 4.0 (`06-engine.md`, `04-configuration.md`); `engine/attention_learning.py` (`proposals`,
+`choose`, `keep_earlier_choices`), `engine/suggestions.py`, `engine/today_queue.py` (the `attention` line),
+`api/attention_routes.py` (`POST /api/attention/{kind}/quiet`, `/stop`, `/show`, `/keep`), the screens' wording. New
+settings `quieted_kinds`, `stopped_kinds` and `keep_showing_days`, with demo values in both workspaces; the descriptions of
+the two thresholds now say they ask. Not built: the dismissals as part of what the brief's run reads, because the
+brief reads no knowledge today. No change to scope. Change log: section 292.
+
 ## 2026-11-02: The assistant files its own items; the rules only offer a guess, put to it once (P110, J10)
 
 **Decided:** The notes packet lists each project with the other names it goes by and the side it belongs to, and the notes

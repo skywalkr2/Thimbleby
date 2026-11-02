@@ -2792,11 +2792,11 @@ the code by the main session),** for S1 before the gate week:
   touched, items filed under no project, what was learned), what waits is in the next morning brief, and "Not now" puts a
   suggestion off until its items change, with Undo and the signal `suggestion_dismissed`
   (`engine/suggestions.py`, `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
-  `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`). **Built (S2, dismissals that teach):** a kind put off `quiet_after_dismissals` times
-  within `learn_days` goes to the brief instead of Today, and at `stop_after_dismissals` (off by default) is not offered, by
-  rules from the signals; Undo, a snooze and old dismissals count for nothing (`engine/attention_learning.py`;
-  `tests/test_attention_learning.py::test_a_kind_put_off_the_configured_number_of_times_goes_to_the_brief_instead_of_today`,
-  `tests/test_attention_learning.py::test_taking_dismissals_back_teaches_nothing_and_the_kind_comes_back`).
+  `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`). **Built (S2, dismissals that show; changed by P110 J17, 2026-11-02):** a kind put off `quiet_after_dismissals` times
+  within `learn_days` (or `stop_after_dismissals`, off by default) makes Today ask whether to quiet it into the brief (or stop
+  offering it), and only the person's yes does; Undo, a snooze and old dismissals count for nothing (`engine/attention_learning.py`;
+  `tests/test_attention_learning.py::test_reaching_the_threshold_only_asks_and_quiets_nothing`,
+  `tests/test_attention_learning.py::test_taking_dismissals_back_removes_the_question`).
 - [x] [S3] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
   **Built so far (S3, change log 193):** for any calendar entry with other people on it, by rules: who is coming (by id,
   without anyone who declined), what is open with each of them both ways with the exact words it was made from, the last

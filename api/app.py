@@ -12,6 +12,7 @@ import os
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ from starlette.types import ASGIApp
 from api.act_routes import build_act_router
 from api.action_work_routes import build_action_work_router
 from api.ask_routes import build_ask_router
+from api.attention_routes import build_attention_router
 from api.brief_routes import build_brief_router
 from api.calendar_routes import build_calendar_router
 from api.correction_routes import build_correction_router
@@ -202,6 +204,13 @@ def create_app(
         start_catch_up(store, cfg)
     except Exception as err:  # never stops the app from starting
         log.warning("Couldn't make the catch-up list: %s", err)
+    try:
+        # Kinds of suggestion already quieted by counting are kept as the person's own choice, once.
+        from engine import attention_learning
+
+        attention_learning.keep_earlier_choices(ws, store.read(), cfg, datetime.now(UTC))
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't keep what the dismissals had quieted: %s", err)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
     if sync_held:
         worker.hold_sync()
@@ -360,6 +369,7 @@ def create_app(
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_repeat_router(cfg, store, events, worker))
     inner.include_router(build_tie_router(cfg, store, events, worker))
+    inner.include_router(build_attention_router(ws, cfg, store, events, worker))
     inner.include_router(build_todo_router(cfg, store, events, worker))
     inner.include_router(build_day_router(ws, cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))

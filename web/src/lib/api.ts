@@ -499,6 +499,10 @@ export const api = {
   tieTodo: (action: string) => call<S["TieDone"]>("POST", `actions/${id(action)}/tie`),
   /** Say the entry proposed for a to-do isn't its one: it isn't proposed again. Undo is `undoNotNowSuggestion`. */
   notThisEntry: (action: string) => call<S["NotNowDone"]>("POST", `actions/${id(action)}/not-this`),
+  /** Keep a kind of suggestion for the morning brief (`quiet`) or stop offering it (`stop`), as the person's own yes; `show` is its undo. */
+  chooseAttention: (kind: string, how: "quiet" | "stop" | "show") => call<S["AttentionChosen"]>("POST", `attention/${id(kind)}/${how}`),
+  /** Keep showing a kind of suggestion: the question about it isn't raised again for a while. Undo is `undoNotNowSuggestion`. */
+  keepShowing: (kind: string) => call<S["NotNowDone"]>("POST", `attention/${id(kind)}/keep`),
   thisWeek: () => call<S["ThisWeekView"]>("GET", "today/week"),
   /** The form of the brief that is due now, or the one named: the morning brief, the evening wrap-up or the Monday briefing. */
   brief: (form?: string) => call<S["BriefView"]>("GET", form ? `brief?form=${id(form)}` : "brief"),

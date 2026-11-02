@@ -402,8 +402,9 @@ Built keys:
   `steward.meetings.capture_alone` (false): whether the Today line asking what happened also shows for an entry nobody else is
   on (6.32). `steward.brief.dated_risk_days` (3; 0 is off): how many days ahead a deadline, renewal or expiry that a fact
   records is an at-risk line in the morning brief. `steward.attention.quiet_after_dismissals` (3; 0 is off),
-  `stop_after_dismissals` (0, never; it must exceed the first) and `learn_days` (30): what putting off the same kind of
-  suggestion teaches (6.32). `steward.dates.find_by_rules` (true) and `find_most` (5): whether and how many dated facts the
+  `stop_after_dismissals` (0, never; it must exceed the first) and `learn_days` (30): when putting off the same kind of
+  suggestion makes Today ask whether to quiet or stop it; `keep_showing_days` (14): how long before it asks again after
+  Keep showing; `quieted_kinds` and `stopped_kinds` (empty): the person's own yes, kept in the files (no Settings row: the cut's budget, 7.9) (6.32). `steward.dates.find_by_rules` (true) and `find_most` (5): whether and how many dated facts the
   rules offer from an input the assistant missed them in; the words are `language.dated_deadline_words`,
   `dated_renewal_words`, `dated_expiry_words` and `dated_doubt_words` (6.32). Demo values are in both fictional workspaces.
 - `ask_lead_words` (Can you, Could you, Would you, Please) and `own_promise_words` (I'll, I will): what the

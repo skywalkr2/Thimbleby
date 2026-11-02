@@ -2163,6 +2163,15 @@ class TieDone(BaseModel):
     changeset: str
 
 
+class AttentionChosen(BaseModel):
+    """The person's answer to the question about a kind of suggestion (POST /api/attention/{kind}/quiet, /stop or
+    /show): `state` is what is kept now, `quiet` for the morning brief, `stopped` for not offered, `shown` for neither.
+    Undo is POST /api/attention/{kind}/show."""
+
+    kind: str
+    state: Literal["quiet", "stopped", "shown"]
+
+
 class TieProposal(BaseModel):
     """The calendar entry proposed for a to-do, on its page: the `entry` and its `title`, and the `day` it is on. The
     answer is POST /api/actions/{id}/tie or POST /api/actions/{id}/not-this."""
@@ -3125,7 +3134,10 @@ class QueueLineView(BaseModel):
     `entry` the entry to open); `tie` is a calendar entry proposed for an open to-do whose words and the entry's
     title contain one another on its day (the to-do's id in `actions` and its words in `text`, the entry in `entry`
     and its title in `other`, `due` the day; Tie it is POST /api/actions/{id}/tie and Not this is
-    POST /api/actions/{id}/not-this, both with Undo); `stale` is the person's own open to-dos nobody has touched for
+    POST /api/actions/{id}/not-this, both with Undo); `attention` is the question of whether to quiet a kind of
+    suggestion the person keeps putting off (the kind in `text`, how many times in `count`, `state` quiet or stopped;
+    Quiet them is POST /api/attention/{kind}/quiet or /stop, Keep showing is POST /api/attention/{kind}/keep, both
+    with Undo); `stale` is the person's own open to-dos nobody has touched for
     `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
     Look over opens GET /api/open-items narrowed to them); `pattern` is
     something the person keeps putting off (`state` moved, redated or replies; `count` how many times or how many
@@ -3209,6 +3221,7 @@ class QueueLineView(BaseModel):
         "capacity",
         "clash",
         "tie",
+        "attention",
         "unfiled",
         "moved",
         "since_yesterday",
@@ -3423,6 +3436,8 @@ class QueueLineView(BaseModel):
             "moved",
             "redated",
             "replies",
+            "quiet",
+            "stopped",
         ]
         | None
     ) = Field(

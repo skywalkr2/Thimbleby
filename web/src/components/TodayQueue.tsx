@@ -16,6 +16,7 @@ import { durationWords } from "../lib/duration";
 import { useRowKeys } from "../lib/keys";
 import { SUGGESTION_KINDS, useNotNow } from "../lib/not-now";
 import { useTie } from "../lib/tie";
+import { useAttention } from "../lib/attention";
 import { useChoices } from "../lib/suggestion-choices";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
@@ -661,6 +662,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.clash", { text: line.text ?? "", other: line.other ?? "", when: day(line.due) });
       case "tie":
         return t("queue.tie", { text: plainTitle(line.text ?? "").replace(/[.!?\s]+$/, ""), other: line.other ?? "", when: day(line.due) });
+      case "attention":
+        return tn(`queue.attention.${line.state === "stopped" ? "stopped" : "quiet"}`, line.count, { kind: t(`queue.attention.kind.${line.text ?? ""}`) });
       case "promise": {
         const vars = { name, text: plainTitle(line.text ?? "", line.due).replace(/[.!?\s]+$/, ""), date: line.due ? day(line.due) : "" };
         if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
@@ -755,6 +758,7 @@ function QueueRow(props: {
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null, () => ref.current?.focus());
   const notNow = useNotNow();
   const tieAnswers = useTie();
+  const attention = useAttention();
   const quietRow = useQuietChoices(line);
   // The offered area's name is a field the person may change before starting it.
   const [areaName, setAreaName] = useState(line.text ?? "");
@@ -1068,6 +1072,21 @@ function QueueRow(props: {
           meta: t("queue.tie.meta"),
           primary: { label: t("queue.tie.yes"), run: () => void tieAnswers.tie(action, text, other) },
           other: { label: t("queue.tie.no"), run: () => void tieAnswers.notThis(action, text, other) },
+          menu: [show],
+        };
+      }
+      case "attention": {
+        // The person's own taps reached a threshold: ask once whether to quiet (or stop) the kind. Nothing changes until they say.
+        const kind = line.text ?? "";
+        const stopping = line.state === "stopped";
+        return {
+          pill: t("queue.pill.attention"),
+          tone: "neutral",
+          meta: t("queue.attention.meta"),
+          primary: stopping
+            ? { label: t("queue.attention.stop_yes"), run: () => void attention.stop(kind) }
+            : { label: t("queue.attention.quiet_yes"), run: () => void attention.quiet(kind) },
+          other: { label: t("queue.attention.keep"), run: () => void attention.keep(kind) },
           menu: [show],
         };
       }

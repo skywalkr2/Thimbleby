@@ -420,6 +420,13 @@ def _date_time_formats() -> list[str]:
     return _date_formats_of("date_time_formats")
 
 
+def _attention_kinds() -> list[str]:
+    """The kinds of suggestion Today can quiet or stop, as the importance settings name them."""
+    from engine.config.schema import ImportanceSettings
+
+    return list(ImportanceSettings.model_fields)
+
+
 #: Lists of choices a text setting can name (`json_schema_extra={"choices": ...}`), so the screens offer a list
 #: instead of a box to type in.
 CHOICE_LISTS = {
@@ -431,6 +438,7 @@ CHOICE_LISTS = {
     "date_time_formats": _date_time_formats,
     "owner_formats": _owner_formats,
     "media_types": _media_types,
+    "attention_kinds": _attention_kinds,
 }
 
 

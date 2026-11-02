@@ -15,6 +15,7 @@ from typing import Any
 
 from engine import (
     areas,
+    attention_learning,
     dated_facts,
     day_capacity,
     day_clashes,
@@ -149,6 +150,10 @@ class Line:
     tie (a calendar entry proposed for an open to-do, because its title and the to-do's words contain one another on the
     to-do's day: the to-do's id in `actions`, its words in `text`, the entry's id in `entry`, its title in `other` and
     its day in `due`; Tie it is POST /api/actions/{id}/tie and Not this POST /api/actions/{id}/not-this),
+    attention (the person has put off one kind of suggestion enough times that Today asks whether to quiet it into the
+    morning brief, or stop offering it: the kind in `text`, how many times in `count`, `state` quiet or stopped; Quiet
+    them is POST /api/attention/{kind}/quiet (or /stop) and Keep showing POST /api/attention/{kind}/keep, both with
+    Undo),
     invitation (a calendar entry that came as an invitation and has not been answered, starting soon: its id in `event`,
     its title in `text`, who invited in `subject`, `at` when it starts; the entry's page answers it), meeting_prep (a
     calendar entry with other people on it that starts soon: its id in `event`, its title in `text`, `at` when it
@@ -1575,6 +1580,7 @@ def _everything(
 
     lines += _day_lines(store, cfg, now)
     lines += _tie_lines(store)
+    lines += _attention_lines(store, cfg, now)
 
     if cfg.steward.hold_outside_hours:
         # What the assistant or a rule added on its own waits for the person's hours; what waited arrives under one row.
@@ -1670,6 +1676,26 @@ def _tie_lines(store: Any) -> list[Line]:
             since=str(entry.data["start"])[:10],
         )
         for action, entry in entry_ties.proposals(store.read())
+    ]
+
+
+def _attention_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
+    """One line for each kind of suggestion the person's own dismissals reached a threshold for, asking whether to quiet
+    it into the brief (or stop offering it). Nothing is quieted until they say yes (`engine.attention_learning`)."""
+    reader = store.read()
+    today = now.astimezone(zone(cfg)).date()
+    found = attention_learning.proposals(reader, cfg, now, suggestions.KINDS, suggestions.snoozed(reader, today))
+    return [
+        Line(
+            key=attention_learning.line_key(p.kind),
+            group="decide",
+            kind="attention",
+            count=p.count,
+            text=p.kind,
+            state=p.state,
+            since=now.date().isoformat(),
+        )
+        for p in found
     ]
 
 
@@ -1808,6 +1834,7 @@ _KIND_ORDER = {
     "capacity": 2,
     "clash": 3,
     "tie": 3.5,
+    "attention": 3.6,
     "promise": 2,
     "reminder": 0,
     "reminder_digest": 1,
