@@ -134,5 +134,7 @@ def test_the_line_goes_once_the_to_dos_have_dates_or_are_old_and_zero_days_turns
         found = tx.get("action", todo)
         tx.update("action", todo, {"due": (TODAY + timedelta(days=4)).isoformat()}, _PM, read_version=found.version)
     assert all(todo not in line.actions for line in lines())
-    # A week and a day on, what was added then is the stale rule's, not this line's.
-    assert undated_new_actions(store, cfg, NOW + timedelta(days=30)) == []
+    # A week and a day on, what was added then is the stale rule's, not this line's. (A fixture record stamped by a clock
+    # that runs ahead of this test's own day is not "added then".)
+    later = undated_new_actions(store, cfg, NOW + timedelta(days=30))
+    assert [a.id for a in later if a.since and a.since <= TODAY.isoformat()] == []
