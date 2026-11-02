@@ -4,6 +4,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: An account out of credit waits for the person, and its work goes on by itself after (P104, P108)
+
+**Decided:**
+- An empty balance is a usage limit with no reset. The account is paused with no end and is never tried again
+  meanwhile, for that item or any other.
+- The work waits queued with one Today line saying the account is out of credit or at its plan's limit, and what to do.
+  The header and the account row say the same.
+- A check of the account that is answered lifts the pause. So does any change to the AI accounts or tiers, such as
+  adding an account or moving one up. Either way the waiting work goes on with nobody resubmitting it.
+- `classify_error` reads the empty balance from the error code or the service's words, including when the service sends
+  it as a bad request.
+
+**Decided by:** the owner ("when you run out of API ... and then add one that is working and move it to the top it
+should automatically push all the items that were waiting"); the mechanism is the main session's.
+
+**Why:** the owner's install. An empty balance was read as "other". Each item was tried three times and stopped with the
+service's raw words, Today said nothing, and adding a working account left eight items to resubmit one by one.
+
+**Impact:** design 6.16 and 8 (the product rule's test), the router's pauses, both adapters' `classify_error`, and four
+wording keys. No new setting. No change to scope. Change log: section 276.
+
 ## 2026-11-02: Setup never picks a paid service's model by its place in the list (P97)
 
 **Decided:**

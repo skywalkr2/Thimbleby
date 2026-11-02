@@ -14,7 +14,7 @@ from engine.ai.borrow import Borrowed, borrowed_path, chain
 from engine.ai.calibration import Calibration, estimate_tokens, learn_from_run, lookup, scaled
 from engine.ai.catalog import Catalogs
 from engine.ai.checked import folder_of
-from engine.ai.pauses import Pauses, pauses_path, waiting_text
+from engine.ai.pauses import NO_RESET, Pauses, pauses_path, waiting_text
 from engine.ai.task import AiError, AiResult, AiTask, CountNotOffered, ModelInfo
 from engine.config import Config
 from engine.money import usd
@@ -512,11 +512,14 @@ class Router:
         return fitting[0]
 
     def _pause_until(self, err: AiError, last_in_line: bool) -> datetime | None:
-        """When a failed call's account can be used again, if the failure is a usage limit with a reset to wait for:
-        the reset the account gave, or for a request to slow down that kept coming after the waits in the call, the
-        configured pause. A short wait the call itself made, or a limit with no reset time, is no pause."""
+        """When a failed call's account can be used again, if the failure is a usage limit: the reset the account
+        gave, or for a request to slow down that kept coming after the waits in the call, the configured pause. A
+        usage limit with no reset (an account out of credit) pauses it until a check is answered or the accounts
+        change (`NO_RESET`). A short wait the call itself made is no pause."""
         limits = self.cfg.ai.rate_limits
         if err.kind == "quota":
+            if err.retry_after is None:
+                return NO_RESET  # no credit, or a limit with no reset given: it waits for the person, never retried
             seconds = err.retry_after
         elif err.kind == "rate_limited":
             known = err.retry_after

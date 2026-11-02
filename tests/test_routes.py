@@ -309,7 +309,7 @@ def test_a_stopped_request_can_be_tried_again(api):
     from engine.ai.task import AiError
 
     def fail(task):
-        raise AiError("quota", "out of credit")
+        raise AiError("auth", "the key was refused")
 
     set_responder(fail)
     req = client.post(f"{base}/handin", json={"note": "file this"}).json()["request"]
@@ -327,7 +327,7 @@ def _stopped_request(client, base, worker):
     from engine.ai.task import AiError
 
     def fail(task):
-        raise AiError("quota", "out of credit")
+        raise AiError("auth", "the key was refused")
 
     set_responder(fail)
     req = client.post(f"{base}/handin", json={"note": "file this"}).json()["request"]

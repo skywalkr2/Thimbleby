@@ -8,7 +8,7 @@ import { Button as AriaButton, DialogTrigger } from "react-aria-components";
 import { Popover } from "../ui/Popover";
 import { useAccountNames } from "../lib/account-names";
 import { api, type S } from "../lib/api";
-import { wallWhen } from "../lib/dates";
+import { noReset, wallWhen } from "../lib/dates";
 import { useRestart } from "../lib/restart";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -29,6 +29,7 @@ function sayText(kind: AliveKind, a: S["AssistantStatus"], t: (key: string, vars
       return t("alive.say.run_failed", { time: when });
     case "paused": {
       const first = a.paused[0];
+      if (noReset(first.until)) return t("alive.say.paused_credit", { account: nameOf(first.account) });
       return t("alive.say.paused", { account: nameOf(first.account), time: wallWhen(first.until) });
     }
     case "stuck":
@@ -139,7 +140,7 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                 )}
                 {a.paused.map((p) => (
                   <p key={p.account} className={styles.note}>
-                    {t("alive.paused_until", { account: nameOf(p.account), time: wallWhen(p.until) })}
+                    {noReset(p.until) ? t("alive.paused_credit", { account: nameOf(p.account) }) : t("alive.paused_until", { account: nameOf(p.account), time: wallWhen(p.until) })}
                   </p>
                 ))}
               </li>

@@ -60,6 +60,23 @@ def says_retired(message: str, markers: Any = None) -> bool:
     return any(m.lower() in text for m in (markers or RETIRED_MARKERS))
 
 
+#: Words a service's error uses when the account has no credit left. Only a classifier reads them.
+NO_CREDIT_MARKERS = (
+    "credit balance is too low",
+    "insufficient credit",
+    "insufficient funds",
+    "insufficient_quota",
+    "exceeded your current quota",
+    "out of credit",
+)
+
+
+def says_no_credit(message: str, markers: Any = None) -> bool:
+    """Whether a service's error words say the account has no credit left. Only a classifier calls this."""
+    text = " ".join(str(message).lower().split())
+    return any(m.lower() in text for m in (markers or NO_CREDIT_MARKERS))
+
+
 #: Failed runs that say nothing about an account or the model's work: no connection could be made, or the run did
 #: nothing. They are no try, never a mistake, and are left out of counts of how an account is doing.
 NO_WORK_KINDS = ("offline", "no_work")

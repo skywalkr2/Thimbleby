@@ -233,6 +233,33 @@ def test_a_wait_longer_than_the_limit_gives_up_without_sleeping(cfg, store):
     assert len(seen) == 1 and paused.value.account == "main" and paused.value.until == NOW + timedelta(hours=1)
 
 
+def test_an_account_out_of_credit_is_paused_until_the_person_acts_and_is_never_called_again_meanwhile(cfg, store):
+    from engine.ai.pauses import NO_RESET
+
+    cfg.ai.tiers["routine"].fallback = []
+    empty = {"error": {"message": "You exceeded your current quota.", "code": "insufficient_quota"}}
+    router, seen = router_with(cfg, store, {"main": lambda r: httpx.Response(429, json=empty)})
+    router.sleep = lambda s: pytest.fail("an empty balance is never waited out")
+    for _ in range(2):
+        with pytest.raises(AccountPaused) as paused:
+            router.call(TASK, request_id="REQ-1")
+    assert len(seen) == 1 and paused.value.until == NO_RESET
+    assert "out of credit" in str(paused.value) and "9999" not in str(paused.value)
+
+
+def test_work_goes_to_the_next_account_in_line_when_the_first_is_out_of_credit(cfg, store):
+    empty = {"error": {"message": "You exceeded your current quota.", "code": "insufficient_quota"}}
+    assert cfg.ai.tiers["routine"].fallback, "the shared config has a second account in line"
+    backup = cfg.ai.tiers["routine"].fallback[0].split("/", 1)[0]
+    handlers = {
+        "main": lambda r: httpx.Response(429, json=empty),
+        backup: lambda r: httpx.Response(200, json=ok_body()),
+    }
+    router, seen = router_with(cfg, store, handlers)
+    _, choice, _ = router.call(TASK, request_id="REQ-1")
+    assert choice.provider != "main" and router.pauses.until("main") is not None
+
+
 def test_an_answer_stopped_at_the_output_limit_is_marked_cut_off(cfg, store):
     body = ok_body('{"summary": "s", "ops": [')
     body["choices"][0]["finish_reason"] = "length"

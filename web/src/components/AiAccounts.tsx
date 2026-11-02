@@ -27,7 +27,7 @@ import {
 } from "../lib/ai-accounts";
 import { useAccountCheck, setAccountCheck } from "../lib/account-checks";
 import { EVERYDAY, HARDER, modelsOf, planFor, useAccountActs, useConfirmAbove } from "../lib/ai-account-acts";
-import { day, monthDay, wallWhen } from "../lib/dates";
+import { day, monthDay, noReset, wallWhen } from "../lib/dates";
 import { useMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
@@ -576,6 +576,7 @@ function AccountRow(props: {
       case "failed":
         return t("ai_accounts.state.failed", { work: workWords(state.tiers, t) });
       case "paused":
+        if (noReset(account.paused_until)) return t("ai_accounts.state.paused_credit");
         return t("ai_accounts.state.paused", { time: account.paused_until ? wallWhen(account.paused_until) : "" });
       case "ending":
         return t("ai_accounts.state.ending", { date: monthDay(account.credential_expires) });

@@ -365,7 +365,7 @@ def test_once_the_account_is_out_of_quota_the_rest_are_not_run_and_never_called(
     finally:
         set_responder(None)
     assert [r.not_run for r in report.results] == [True, True, True, True]
-    assert "usage limit" in (report.results[0].error or "")
+    assert "out of credit" in (report.results[0].error or "")
     assert all("plan was used up" in (r.error or "") for r in report.results[1:])
     assert after_first and len(calls) == after_first[0], "nothing is called after the plan is spent"
 

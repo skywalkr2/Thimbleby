@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from engine.ai.task import AiError, AiResult, AiTask, ModelInfo, says_retired
+from engine.ai.task import AiError, AiResult, AiTask, ModelInfo, says_no_credit, says_retired
 
 
 class OpenAICompatibleAdapter:
@@ -257,6 +257,11 @@ def _error_message(response: httpx.Response) -> str:
     return message if isinstance(message, str) else ""
 
 
+def _error_code(response: httpx.Response) -> str:
+    error = _error_body(response)
+    return " ".join(str(error.get(key) or "") for key in ("code", "type"))
+
+
 def _refusal_code(response: httpx.Response) -> bool:
     error = _error_body(response)
     return any(str(error.get(key, "")).lower() in REFUSAL_CODES for key in ("code", "type"))
@@ -282,6 +287,8 @@ def classify_http_error(response: httpx.Response, settings: Any = None, *, listi
     retry_after = _retry_after(response)
     if status in (400, 403) and _refusal_code(response):
         return AiError("refused", detail)
+    if status in (400, 402, 403, 429) and says_no_credit(f"{_error_code(response)} {_error_message(response)}"):
+        return AiError("quota", detail)  # no credit left: a limit with no reset, never retried
     if status in (401, 403):
         return AiError("auth", detail)
     if settings is not None:

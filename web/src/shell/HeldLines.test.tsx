@@ -108,6 +108,14 @@ test("a paused account is a line that names the account, the reset time and the 
   expect(onOpenAiAccounts).toHaveBeenCalledTimes(1);
 });
 
+test("an account out of credit says so and what to do, with no reset time", async () => {
+  show([paused({ count: 8, until: "9999-01-01T00:00:00+00:00" })]);
+  const row = await screen.findByRole("region", { name: "Paused account" });
+  expect(row).toHaveTextContent("main is out of credit or at its plan's limit. 8 tasks are waiting.");
+  expect(row).toHaveTextContent(/Add credit .* then check the account, or add another account\. The waiting work goes on by itself\./);
+  expect(row.textContent).not.toMatch(/9999|Jan/);
+});
+
 test("a reset on another day names the day with the time, and one waiting request is singular", async () => {
   show([paused({ count: 1, until: `${addDays(localDate(new Date()), 1)}T08:05:00-05:00` })]);
   const row = await screen.findByRole("region", { name: "Paused account" });

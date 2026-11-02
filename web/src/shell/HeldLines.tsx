@@ -13,7 +13,7 @@ import { useAct } from "../lib/act";
 import { useAccountNames } from "../lib/account-names";
 import { useTierName } from "../lib/ai-routing";
 import { whenWords } from "../lib/coverage";
-import { day, wallWhen } from "../lib/dates";
+import { day, noReset, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
 import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
@@ -154,7 +154,8 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const { t, tn } = useWords();
   const nameOf = useAccountNames();
   const { line } = props;
-  const label = tn("queue.paused", line.count, { account: nameOf(line.account ?? ""), time: line.until ? wallWhen(line.until) : "" });
+  const credit = noReset(line.until);
+  const label = tn(credit ? "queue.paused_credit" : "queue.paused", line.count, { account: nameOf(line.account ?? ""), time: line.until && !credit ? wallWhen(line.until) : "" });
   return (
     <Row
       as="section"
@@ -162,7 +163,7 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
       data-queue-line="paused"
       pill={<Pill tone="warn">{t("queue.paused.label")}</Pill>}
       title={label}
-      meta={t("queue.paused.sub")}
+      meta={t(credit ? "queue.paused_credit.sub" : "queue.paused.sub")}
       primary={
         
         <>

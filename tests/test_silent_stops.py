@@ -175,7 +175,11 @@ def test_a_fallback_account_takes_the_work_while_the_first_is_paused(env):
     assert limited.calls == 1, "the paused account was tried once and then left alone"
 
 
-def test_a_limit_with_no_reset_time_is_not_a_pause(env):
+def test_a_limit_with_no_reset_time_pauses_the_account_until_the_person_acts(env):
+    """An account out of credit is never retried: it waits, with no end, until a check is answered or the accounts
+    change (then the waiting work goes on by itself)."""
+    from engine.ai.pauses import NO_RESET
+
     _, cfg, store, clock = env
     router = Router(
         cfg,
@@ -184,10 +188,10 @@ def test_a_limit_with_no_reset_time_is_not_a_pause(env):
         now=clock,
         adapter_factory=adapters_by_account(cfg, {account_of(cfg): Scripted(quota(None))}),
     )
-    with pytest.raises(AiError) as stopped:
+    with pytest.raises(AccountPaused) as stopped:
         router.call(TASK, request_id="REQ-1")
-    assert stopped.value.kind == "quota" and not isinstance(stopped.value, AccountPaused)
-    assert Pauses(pauses_path(store), clock).active() == {}
+    assert stopped.value.until == NO_RESET
+    assert Pauses(pauses_path(store), clock).active() == {account_of(cfg): NO_RESET}
 
 
 def test_a_request_to_slow_down_that_keeps_coming_pauses_for_the_configured_time(env):
@@ -299,12 +303,28 @@ def test_a_failed_call_that_another_try_may_clear_is_retried(env, kind):
     assert waiting["state"] == "queued" and waiting["retries"] == 1 and waiting["cause"]["kind"] == "retry"
 
 
-@pytest.mark.parametrize("kind", ["auth", "no_key", "refused", "quota"])
+@pytest.mark.parametrize("kind", ["auth", "no_key", "refused"])
 def test_a_failure_another_try_cannot_clear_goes_to_the_person_at_once(env, kind):
     set_responder(Scripted(AiError(kind, "it went wrong")))
     request = hand(env)
     worker_of(env).run_pending()
     assert data(env, request)["state"] == "needs_you" and data(env, request)["retries"] == 0
+
+
+def test_work_on_an_account_out_of_credit_waits_with_a_today_line_and_goes_on_when_the_accounts_change(env):
+    """The person's path: out of credit, eight items each tried three times and stopped; adding a working account
+    then meant resubmitting them one by one. Now they wait, and a change to the accounts lets them all go."""
+    from engine.worker import release_paused
+
+    _, cfg, store, clock = env
+    set_responder(Scripted(AiError("quota", "no credit")))
+    request = hand(env)
+    worker_of(env).run_pending()
+    waiting = data(env, request)
+    assert waiting["state"] == "queued" and waiting["retries"] == 0 and waiting["cause"]["kind"] == "paused"
+    assert "out of credit" in waiting["waiting"]
+    assert release_paused(store) == 1
+    assert data(env, request)["cause"] is None
 
 
 def test_no_retries_configured_means_the_first_failure_goes_to_the_person(env):

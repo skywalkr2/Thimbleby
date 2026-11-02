@@ -20,6 +20,15 @@ from engine.today import zone
 
 _LOCK = threading.Lock()
 
+#: A pause with no reset to wait for (an account out of credit): it holds until a check of the account is answered or
+#: the AI accounts change. Stored as a time far ahead so every reader of pauses keeps working.
+NO_RESET = datetime(9999, 1, 1, tzinfo=UTC)
+
+
+def no_reset(until: datetime) -> bool:
+    """Whether a pause waits for the person rather than for a time."""
+    return until >= NO_RESET
+
 
 def pauses_path(store: Any) -> Path:
     """Where the workspace keeps its pauses."""
@@ -92,4 +101,9 @@ def when_text(cfg: Any, until: datetime, now: datetime) -> str:
 
 def waiting_text(cfg: Any, account: str, until: datetime, now: datetime) -> str:
     """What work waits on while an account's limit is not yet reset."""
+    if no_reset(until):
+        return (
+            f"Waiting for {account}: the service says it is out of credit or at its plan's limit. Add credit, then "
+            "check the account under AI accounts, or add another account; the waiting work goes on by itself"
+        )
     return f"Waiting for {account}'s limit to reset at {when_text(cfg, until, now)}"

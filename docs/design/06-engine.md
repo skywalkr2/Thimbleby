@@ -2500,8 +2500,13 @@ until the reset and no keeps the work waiting; `ai.borrow_other_tier` (ask, neve
 A fallback the person put in the tier's own chain is their choice already and is not asked about. When none is, the
 request stays queued, says "Waiting for <account>'s limit to reset at <local time>" (the account's name, never
 a model), and the worker leaves it alone until then and runs it again by itself at the reset, with nobody pressing anything. A
-limit with no reset time is not a pause: the request waits for the person ("out of credit"). Changing the accounts or tiers lifts
-the pauses, since another account may take the work
+limit with no reset time (an account out of credit) pauses the account with no end (owner, 2026-11-02, P104 and P108;
+change log 276): it is never tried again for that item or any other, the requests wait queued, and the Today line and the
+header say "<account> is out of credit or at its plan's limit" with what to do (add credit and check the account, or
+add another account). An answered check of the account lifts its pause, and `classify_error` reads an empty balance
+from the service's error code or words even when the service sends it as a bad request
+(`tests/test_silent_stops.py::test_work_on_an_account_out_of_credit_waits_with_a_today_line_and_goes_on_when_the_accounts_change`).
+Changing the accounts or tiers lifts the pauses, since another account may take the work
 (`tests/test_silent_stops.py::test_changing_the_accounts_lets_waiting_requests_try_the_new_setup_at_once`).
 
 **A lost network is `offline`, and it waits** (built: `tests/test_ai.py::test_a_timeout_no_connection_at_all_and_a_broken_exchange_are_their_own_kinds`,

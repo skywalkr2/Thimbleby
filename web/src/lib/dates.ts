@@ -153,6 +153,11 @@ export function wallWhen(iso: string): string {
   return iso.slice(0, 10) === localDate(new Date()) ? clock : `${day(iso)}, ${clock}`;
 }
 
+/** Whether an account's pause has no reset to wait for (out of credit): the server writes its end far ahead. */
+export function noReset(iso: string | null | undefined): boolean {
+  return !!iso && iso.startsWith("9999");
+}
+
 /** The weekday of a yyyy-mm-dd date, short, in the reader's language. */
 export function weekday(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);

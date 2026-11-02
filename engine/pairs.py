@@ -459,11 +459,23 @@ class _Play:
         return (found.data.get("waiting") if found is not None else None) or "it did not finish"
 
     def refused(self, request: str) -> bool:
-        return self._last_error(request) in ("rate_limited", "quota")
+        return self._last_error(request) in ("rate_limited", "quota") or self._paused(request) is not None
 
     def spent(self, request: str) -> bool:
-        """Whether the account's plan was used up on this request's last call."""
-        return self._last_error(request) == "quota"
+        """Whether the account's plan was used up on this request's last call, or it waits on an account whose plan
+        was (a pause with no reset)."""
+        from engine.ai.pauses import no_reset
+
+        until = self._paused(request)
+        return self._last_error(request) == "quota" or (until is not None and no_reset(until))
+
+    def _paused(self, request: str) -> datetime | None:
+        """When the account this request waits on resets, if it waits on a paused account."""
+        found = self.store.read().get("request", request)
+        cause = (found.data.get("cause") or {}) if found is not None else {}
+        if cause.get("kind") != "paused" or not cause.get("until"):
+            return None
+        return datetime.fromisoformat(str(cause["until"]))
 
     def _last_error(self, request: str) -> str | None:
         runs = [r for r in self.store.read().list("run") if r.data.get("request") == request]

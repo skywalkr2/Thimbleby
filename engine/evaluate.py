@@ -472,7 +472,9 @@ def _run_case(
             if cs_id is None:
                 why = store.read().get("request", request_id).data.get("waiting")
                 last = runs[-1] if runs else {}
-                refused = last.get("error_kind") in ("rate_limited", "quota")
+                cause = store.read().get("request", request_id).data.get("cause") or {}
+                paused = cause.get("kind") == "paused"
+                refused = last.get("error_kind") in ("rate_limited", "quota") or paused
                 return RunResult(
                     case["id"],
                     n,
@@ -481,7 +483,7 @@ def _run_case(
                     cost_usd=cost,
                     seconds=seconds,
                     not_run=refused,
-                    out_of_quota=last.get("error_kind") == "quota",
+                    out_of_quota=last.get("error_kind") == "quota" or (paused and _no_reset(cause.get("until"))),
                     accounts=accounts,
                     models=models,
                 )
@@ -1176,3 +1178,13 @@ def estimate_cases(
     if not prices or any(p is None for p in prices):
         return None, len(cases)
     return sum(p for p in prices if p is not None) / len(prices) * len(cases) * runs, len(cases)
+
+
+def _no_reset(until: object) -> bool:
+    """Whether a paused request waits on an account out of credit (a pause with no reset)."""
+    from engine.ai.pauses import no_reset
+
+    try:
+        return no_reset(datetime.fromisoformat(str(until)))
+    except ValueError:
+        return False

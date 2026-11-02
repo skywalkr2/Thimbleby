@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 
 from engine.ai.adapters.openai_compatible import _int, _retry_after, transport_error
-from engine.ai.task import AiError, AiResult, AiTask, ErrorKind, ModelInfo, says_retired
+from engine.ai.task import AiError, AiResult, AiTask, ErrorKind, ModelInfo, says_no_credit, says_retired
 
 #: The interface's version header, which every request carries.
 API_VERSION = "2023-06-01"
@@ -349,6 +349,8 @@ def classify_http_error(response: httpx.Response) -> AiError:
     status = response.status_code
     detail = f"HTTP {status}: {response.text[:500]}"
     kind: ErrorKind | None = ERROR_TYPES.get(_error_type(response)) or STATUS_KINDS.get(status)
+    if kind is None and status in (400, 403) and says_no_credit(_error_message(response)):
+        kind = "quota"  # the service answers an empty balance as a bad request; it is no credit, never retried
     if kind is None and status in (400, 404, 410) and says_retired(_error_message(response)):
         kind = "model_retired"
     if kind is None:

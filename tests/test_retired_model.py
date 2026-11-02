@@ -164,3 +164,17 @@ def test_the_preset_family_is_chosen_for_everyday_work_even_when_a_dearer_model_
     listing = {"top-1": ModelInfo(released="2031-01-01T00:00:00+00:00"), "fit-1": ModelInfo()}
     easy, _ = suggest_models(entry_with(), listing)
     assert easy == "fit-1"
+
+
+def test_classify_error_reads_an_account_out_of_credit_in_both_adapters_and_never_retries_it():
+    """The person's path: an empty balance came back as a bad request, was read as "other", and was tried three times
+    per item with the service's words on screen."""
+    said = "Your credit balance is too low to access the API. Please go to Plans & Billing to purchase credits."
+    for got in (
+        classify_messages(response(400, said, type="invalid_request_error")),
+        classify_common(response(400, said)),
+    ):
+        assert got.kind == "quota" and got.retry_after is None
+    assert classify_common(response(429, "You exceeded your current quota.", code="insufficient_quota")).kind == "quota"
+    # A plain request to slow down is still a rate limit, not an empty balance.
+    assert classify_common(response(429, "Slow down.")).kind == "rate_limited"

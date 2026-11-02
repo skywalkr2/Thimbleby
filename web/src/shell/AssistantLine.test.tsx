@@ -71,6 +71,16 @@ test("amber: a paused account names itself and when its limit resets, in the pop
   expect(within(dialog.querySelector("[data-section='problem']") as HTMLElement).getByText(/main-account paused until 11:30/)).toBeInTheDocument();
 });
 
+test("amber: an account out of credit says so, with no reset time, in the line and the popover", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { assistant: { ...ran, paused: [{ account: "main-account", until: "9999-01-01T00:00:00+00:00" }] } }));
+  await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "paused"));
+  const dialog = await open(user);
+  expect(dialog.textContent).toMatch(/main-account is out of credit/);
+  expect(dialog.textContent).toMatch(/main-account: out of credit or at its plan's limit/);
+  expect(dialog.textContent).not.toMatch(/9999/);
+});
+
 test("amber: a restart waiting to be done shows as waiting for a restart, in the popover", async () => {
   const user = userEvent.setup();
   show(statusFixture({ restart_needed: "A change needs the app to restart." }, { assistant: ran }));

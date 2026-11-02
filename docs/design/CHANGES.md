@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 276. An account out of credit pauses with no end, and its waiting work goes on by itself (2026-11-02; P104, P108)
+
+| Where | Before | Now |
+|---|---|---|
+| Reading an empty balance (`classify_error`, both adapters) | A bad request carrying "credit balance is too low" was "other"; an `insufficient_quota` code was a rate limit | Both are `quota` with no reset |
+| A limit with no reset (6.16, the router) | Not a pause: each item was tried three times and stopped for the person, with the service's words on screen | A pause with no end: never retried, the work waits queued with one Today line; a check answered or a change to the accounts lets it all go on |
+| The Today line, header and account row | "paused until {time}" only | "out of credit or at its plan's limit", with what to do |
+
 ## 275. A paid service's model is never picked by its place in the list (2026-11-02; P97)
 
 | Where | Before | Now |
