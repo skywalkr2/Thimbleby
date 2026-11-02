@@ -1138,6 +1138,12 @@ class FollowupAction(BaseModel):
         description="Whether the follow-up rule says chasing is the next step: its due date is near or past, "
         "or it has waited long enough with no word, and it is not on hold.",
     )
+    due_soon: bool | None = Field(
+        None,
+        description="Whether its date is a deadline that is past, today or within `ui.followups.soon_days`, and it "
+        "is not on hold: the screen lists it in the due soon band of its person's group, whichever tab is open. "
+        "Always false when that setting is zero.",
+    )
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
     side: str | None = Field(
         None,
@@ -3067,6 +3073,15 @@ class MadeBy(BaseModel):
     inferred: bool = False
 
 
+class NudgeDueItem(BaseModel):
+    """One to-do a nudge line names: its words and the day it is (or was) due."""
+
+    id: str
+    text: str
+    due: str = Field(description="The day it is due, as an ISO date.")
+    overdue: bool = Field(description="Whether that day has passed, where the workspace is.")
+
+
 class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `stuck`
     is background work that stopped checking in (`waiting_since`, when it last did; the screen offers Restart
@@ -3316,6 +3331,11 @@ class QueueLineView(BaseModel):
     )
     overdue: int | None = Field(
         None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
+    )
+    due_items: list[NudgeDueItem] = Field(
+        default_factory=list,
+        description="For a nudge line: its to-dos that are overdue or due within the follow-up window, earliest "
+        "first. The line names the first two with their days; a line with none reads as waiting.",
     )
     replies: int | None = Field(
         None,

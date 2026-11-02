@@ -4,6 +4,26 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The follow-up line says what is due and when; a "due soon" band on each person's Follow-ups group (P112 items 5 and 6)
+
+**Decided:** (1) Today's one follow-up line per person names the person's to-dos that are overdue or due within
+`ui.followups.action_due_within_days`, earliest first, the first two with kind word and day ("To-do: Send the floor plan,
+due Tue, Nov 3"), then "and N more"; with no dated to-do it keeps the count and the wait. A to-do is called a to-do. A
+question has no date of its own, so it reads as waiting. (2) Each person's group on Follow-ups, and each project's detail
+by project, opens with a "due soon" band of their to-dos that are overdue, due today or due within the new
+`ui.followups.soon_days` (default 3, 0 to 30, 0 is off), whichever tab is open; what the open tab already lists is not
+repeated. A to-do already told has its own row there with its Waiting on them primary; one not yet sent has Show message,
+which opens the To send tab. A Waiting on them row now says its day. (3) `soon_days` is kept in files with the other
+follow-up timings: the Settings walk is at its cap of 30 advanced fields, and the cap is not raised to fit it.
+
+**Who:** the owner, 2026-11-02 (the functional designer's lessons 5 and 6).
+
+**Why:** the line gave a count, not what was due, and an item due tomorrow on another tab was invisible. This is a read
+of dates already on the records: it changes no rule about when something is chased, and `action_due_within_days` stays.
+
+**Impact:** a config key with schema, default and demo values; a field on the queue line and on the follow-up action.
+Change log: section 298.
+
 ## 2026-11-02: Nine P1 findings of the UI/UX sweep built before its re-sweep (X31, X48, X50, X52, X53, X54, X62, X63, X65)
 
 **Decided:** (1) Follow-ups keeps the person's own section first in the list (design 7.5) but opens its pane on the first

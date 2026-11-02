@@ -992,12 +992,17 @@ function QueueRow(props: {
         };
       }
       case "nudge": {
-        // One line for the person: what is past its date and since when, then whatever else waits for a reply.
+        // One line for the person: the first two to-dos that are overdue or due soon with their days, earliest first, and how
+        // many more wait; with no dated to-do, how many wait for a reply and for how long.
         const days = line.waiting_days ?? 0;
-        const late = line.overdue ?? 0;
+        const dated = line.due_items ?? [];
+        const named = dated.slice(0, 2).map((item) =>
+          t(item.overdue ? "queue.nudge.item_late" : "queue.nudge.item_due", { text: plainTitle(item.text, item.due).replace(/[?.!\s]+$/, ""), date: day(item.due) }),
+        );
+        const more = Math.max(0, line.count - named.length);
         const words =
-          late > 0 && line.due
-            ? [tn("queue.nudge.overdue", late, { date: day(line.due) }), line.count > late ? tn("queue.nudge.others", line.count - late) : ""].filter(Boolean).join(" · ")
+          named.length > 0
+            ? [...named, more > 0 ? tn("queue.nudge.more", more) : ""].filter(Boolean).join(" · ")
             : days === 0
               ? tn("queue.nudge.meta_today", line.count)
               : tn("queue.nudge.meta", line.count, { days });

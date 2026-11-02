@@ -11,6 +11,7 @@ import { useAct } from "../lib/act";
 import { actTitle, useWaitingActs } from "../lib/acts";
 import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
 import { day, todayOn, monthDay, sinceDay } from "../lib/dates";
+import { dueState } from "../lib/due-state";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
 import { sendKeyTo, useRowKeys, type RowKey } from "../lib/keys";
 import { choiceRow, useListChoice, type ListChoice } from "../lib/list-choice";
@@ -214,7 +215,19 @@ export function FollowUps(props: { compact?: boolean }) {
   const phone = useIsNarrow() && !compact;
   const [reviewing, setReviewing] = useState(false);
   const reviewable = filter === "send" && group === "person" ? shown.filter((s) => !s.is_pm).map((s) => ({ id: s.person, section: s })) : [];
-  const detailOf = (s: S["FollowupSection"]) =>
+  // A person's group opens with what is due soon, whichever tab is open, so a date on another tab is never out of sight.
+  const detailOf = (s: S["FollowupSection"]) => (
+    <>
+      <DueSoonBand section={s} filter={filter} compact={compact} onShowMessage={showMessage} />
+      {detailBody(s)}
+    </>
+  );
+  const showMessage = (person: string) => {
+    setGroup("person");
+    setFilter("send");
+    setPicked({ key: person, n: Date.now(), focus: false });
+  };
+  const detailBody = (s: S["FollowupSection"]) =>
     filter === "later" ? (
       <LaterSection section={s} pane />
     ) : s.is_pm ? (
@@ -263,7 +276,7 @@ export function FollowUps(props: { compact?: boolean }) {
         projectSections.length === 0 ? (
           <EmptyState text={t(`followups.empty_${filter}`)} />
         ) : (
-          <FollowUpsByProject sections={projectSections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
+          <FollowUpsByProject sections={projectSections} everything={sections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
         )
       ) : shown.length === 0 && actRows.length === 0 ? (
         <EmptyState text={t(`followups.empty_${filter}`)} />
@@ -953,6 +966,51 @@ export function WaitingSection(props: { section: S["FollowupSection"]; compact: 
   );
 }
 
+/** What is due soon for one person (design 7.5): their to-dos that are overdue, due today or due within `ui.followups.soon_days`,
+ * at the top of their group on every tab. What the open tab already lists is not repeated. A to-do that waits on a reply has
+ * its own row, with the primary it has on Waiting on them; one not yet sent has Show message, which opens the message. */
+function DueSoonBand(props: { section: S["FollowupSection"]; filter: Filter; compact: boolean; onShowMessage: (person: string) => void }) {
+  const { tn } = useWords();
+  const s = props.section;
+  // On Later nothing is a to-do, so every due soon to-do is from another tab.
+  const rows = s.is_pm ? [] : s.actions.filter((a) => a.due_soon && (props.filter === "send" ? !a.to_send : props.filter === "waiting" ? a.to_send : true));
+  if (rows.length === 0) return null;
+  const Heading = props.compact ? "h4" : "h3";
+  const id = `soon-${s.person}`;
+  return (
+    <DetailItem data-due-soon="" aria-labelledby={id}>
+      <Heading id={id}>{tn("followups.due_soon.title", rows.length)}</Heading>
+      <ItemList pane>
+        {rows.map((a) => (a.to_send ? <DueSoonToSend key={a.id} action={a} name={s.name} person={s.person} onShow={props.onShowMessage} /> : <WaitingAction key={a.id} action={a} person={s.person} name={s.name} />))}
+      </ItemList>
+    </DetailItem>
+  );
+}
+
+function DueSoonToSend(props: { action: S["FollowupAction"]; name: string; person: string; onShow: (person: string) => void }) {
+  const { t } = useWords();
+  const a = props.action;
+  const when = dueState(a.due, a.due_check, todayOn(new Date()), t);
+  return (
+    <Item>
+      <div>
+        <div className="title">
+          <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
+        </div>
+        <div className="meta">
+          <ActionMeta a={a} rest={[when, t("followups.by_project.to_send")].filter(Boolean).join(" · ")} />
+        </div>
+        <OriginLink origin={a.origin} />
+      </div>
+      <Actions>
+        <Button variant="primary" aria-label={t("followups.due_soon.show_named", { name: props.name })} onClick={() => props.onShow(props.person)}>
+          {t("followups.due_soon.show_message")}
+        </Button>
+      </Actions>
+    </Item>
+  );
+}
+
 /** The drafted follow-up to one person, from a template with no AI run: what it lists, the message to edit, then Copy and
  * Mark sent, as for every message. Marking it sent records a chase on each item and starts the wait again; what the
  * message listed was first asked stays on each item. */
@@ -1229,7 +1287,8 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
   const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
   const drop = useDropAction(a, () => ref.current?.focus());
   const reassign = useReassign({ id: a.id, version: a.version ?? 0, owners: a.owners ?? [] }, () => ref.current?.focus(), props.person);
-  const rest = a.followed_up ? t("followups.followed_up_on", { date: day(a.followed_up) }) : sentLine(a.told, a.told_days, "", tn, t);
+  const sent = a.followed_up ? t("followups.followed_up_on", { date: day(a.followed_up) }) : sentLine(a.told, a.told_days, "", tn, t);
+  const rest = [dueState(a.due, a.due_check, todayOn(new Date()), t), sent].filter(Boolean).join(" · ");
   const finish: MenuAction = { id: "finished", label: t("followups.they_finished"), run: () => void finished() };
   const chased: MenuAction = { id: "followed-up", label: t("followups.followed_up"), run: () => void followedUp() };
   const note: MenuAction = { id: "note", label: t("note.add"), run: () => setNoting(true) };

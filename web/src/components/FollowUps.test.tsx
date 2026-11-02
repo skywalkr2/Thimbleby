@@ -1376,7 +1376,8 @@ test("a waiting ask that is an action names its project with the project it is p
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = screen.getByText("Send the index").closest("li") as HTMLElement;
   expect(within(row).getByText("Upper Shelf › Book")).toBeInTheDocument();
-  expect(row).toHaveTextContent("Upper Shelf › Book · sent Fri, Oct 9");
+  // Its date is said in words with the day it was sent; whether that date is past depends on the day the test runs.
+  expect(row).toHaveTextContent(/Upper Shelf › Book · (due|overdue since) .*Oct 16 · sent Fri, Oct 9/);
 });
 
 test("an ask's notes are on hover, on focus and to a screen reader; an ask with none has neither", async () => {
@@ -1491,4 +1492,80 @@ test("a question's link that came from an email says so beside the link, and one
   expect(asked.some((r) => within(r).queryByText("From an email; check the address before you open it."))).toBe(true);
   expect(own.length).toBeGreaterThan(0);
   expect(own.every((r) => within(r).queryByText("From an email; check the address before you open it.") === null)).toBe(true);
+});
+
+// What is due soon (design 7.5): at the top of a person's group on every tab, so a date on another tab is never out of sight.
+
+/** Robin with a message to send and a to-do already told to them that is overdue (so it is on Waiting on them, not on this tab). */
+function dueElsewhere(): S["FollowupSection"][] {
+  const robin = structuredClone(sections[1]);
+  robin.actions = [
+    { ...robin.actions[0], id: "ACT-1", text: "Send the index", due: "2020-10-14", told: "2020-10-09", to_send: false, told_days: 5, chase_due: true, due_soon: true },
+  ];
+  return [robin];
+}
+
+test("a to-do due soon that sits on Waiting on them is listed at the top of the person's group while To send is open, with its own primary", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ "GET followups": () => dueElsewhere(), "GET people": () => [], ...finishRoutes });
+  renderApp(<FollowUps />);
+  const band = await screen.findByRole("heading", { name: "1 due soon" });
+  const row = within(band.closest("[data-due-soon]") as HTMLElement).getByText("Send the index").closest("li") as HTMLElement;
+  expect(row).toHaveTextContent("overdue since");
+  // The same primary as on its own tab, and it acts at once.
+  await user.click(within(row).getByRole("button", { name: "Followed up" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")).toBe(true));
+  // The message to send is still there below it.
+  expect(screen.getAllByRole("button", { name: "Copy message" }).length).toBeGreaterThan(0);
+});
+
+test("a to-do that is not sent yet and is due soon is listed while Waiting on them is open, and Show message opens the message", async () => {
+  const user = userEvent.setup();
+  const robin = structuredClone(sections[1]);
+  robin.questions = [{ ...robin.questions[0], id: "Q-2", status: "sent", sent: "2026-10-08", waiting_days: 2 }];
+  robin.actions = [{ ...robin.actions[0], id: "ACT-2", text: "Order the signs", due: "2020-10-14", to_send: true, due_soon: true }];
+  fakeApi({ "GET followups": () => [robin], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const band = (await screen.findByRole("heading", { name: "1 due soon" })).closest("[data-due-soon]") as HTMLElement;
+  expect(within(band).getByText("Order the signs")).toBeInTheDocument();
+  await user.click(within(band).getByRole("button", { name: "Show message to Robin Sample" }));
+  expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+  expect(await screen.findByRole("textbox", { name: /Message to Robin Sample/ })).toBeInTheDocument();
+  // On its own tab it is in the message, not in a band.
+  expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
+});
+
+test("a to-do already listed on the open tab is not repeated in the band, and with nothing due soon there is no band", async () => {
+  const user = userEvent.setup();
+  const waiting = waitingSections();
+  waiting[0].actions[0].due_soon = true;
+  fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await findInPlace();
+  expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
+  cleanup();
+  fakeApi({ "GET followups": () => [{ ...dueElsewhere()[0], actions: dueElsewhere()[0].actions.map((a) => ({ ...a, due_soon: false })) }], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByRole("button", { name: "Copy message" });
+  expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
+});
+
+test("by project, what is due soon on another tab opens the project's detail, with the same Open button as its other rows", async () => {
+  const user = userEvent.setup();
+  const robin = dueElsewhere()[0];
+  robin.actions[0].project_name = "Book";
+  robin.questions = [{ ...robin.questions[0], project_name: "Book" }];
+  fakeApi({ "GET followups": () => [robin], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("radio", { name: "By project" }));
+  const band = (await screen.findByRole("heading", { name: "1 due soon" })).closest("[data-due-soon]") as HTMLElement;
+  expect(within(band).getByText("Send the index")).toBeInTheDocument();
+  expect(band).toHaveTextContent("Robin Sample · overdue since");
+  expect(within(band).getByRole("button", { name: "Open Robin Sample's follow-ups" })).toBeInTheDocument();
+  // Its own tab is Waiting on them: there it is listed once, in the project's items.
+  await user.click(screen.getByRole("button", { name: "Waiting on them" }));
+  await screen.findByRole("heading", { name: "Book", level: 2 });
+  expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
 });

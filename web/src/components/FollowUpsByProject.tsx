@@ -7,6 +7,8 @@ import type { S } from "../lib/api";
 import { useRowKeys } from "../lib/keys";
 import { useListChoice, type ListChoice } from "../lib/list-choice";
 import { useSideFilter, type Side } from "../lib/sides";
+import { todayOn } from "../lib/dates";
+import { dueState } from "../lib/due-state";
 import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
@@ -28,6 +30,8 @@ interface Item {
   /** Where it stands, from the sheet. */
   state: string;
   kind: "question" | "action";
+  /** For a to-do that is overdue or due soon: its date in words. */
+  when?: string;
   origin?: S["FollowupQuestion"]["origin"];
 }
 
@@ -63,7 +67,8 @@ function itemsOf(section: Section, names: Map<Side, string>, w: Words): Array<[P
   }
   for (const a of section.actions) {
     const state = section.is_pm ? w.t("followups.by_project.yours") : waiting(a.told_days, a.chase_due, w);
-    out.push([place(a.project_name, a.side, a.side_name), { ...base, id: a.id, title: a.text, state, kind: "action", origin: a.origin }]);
+    const when = a.due_soon ? dueState(a.due, a.due_check, todayOn(new Date()), w.t) : undefined;
+    out.push([place(a.project_name, a.side, a.side_name), { ...base, id: a.id, title: a.text, state, kind: "action", when, origin: a.origin }]);
   }
   return out;
 }
@@ -116,12 +121,16 @@ export function groupBySide(sections: Section[], sideOrder: Array<{ id: Side; na
 /** The width the list needs beside the pane: a project's name and how many are open. */
 const BY_PROJECT_FIT = 420;
 
-export function FollowUpsByProject(props: { sections: Section[]; compact: boolean; beside?: boolean; onOpenPerson: (person: string) => void }) {
+export function FollowUpsByProject(props: { sections: Section[]; everything?: Section[]; compact: boolean; beside?: boolean; onOpenPerson: (person: string) => void }) {
   const words = useWords();
   const { t } = words;
   const filter = useSideFilter();
   const bySide = groupBySide(props.sections, filter.options, words, props.compact);
   const groups = bySide.flatMap((s) => s.groups);
+  // What is due soon on any tab, by the same project lines: each project's detail opens with it.
+  const soonOnly = (props.everything ?? props.sections).map((s) => ({ ...s, questions: [], later: [], actions: s.actions.filter((a) => a.due_soon) }));
+  const soon = new Map(groupBySide(soonOnly, filter.options, words, props.compact).flatMap((s) => s.groups).map((g) => [g.key, g.items] as const));
+  const soonOf = (g: Group) => (soon.get(g.key) ?? []).filter((item) => !g.items.some((i) => i.id === item.id));
   const choice = useListChoice({ keys: groups.map((g) => g.key), beside: !!props.beside });
   const selected = groups.find((g) => g.key === choice.chosen) ?? null;
   // With one group there is nothing to choose between: its items are shown where the list would be.
@@ -130,7 +139,7 @@ export function FollowUpsByProject(props: { sections: Section[]; compact: boolea
     return (
       <div className="in-place" data-in-place="">
         <h2 id="followups-group-title">{only.title}</h2>
-        <ProjectItems group={only} onOpenPerson={props.onOpenPerson} />
+        <ProjectItems group={only} soon={soonOf(only)} onOpenPerson={props.onOpenPerson} />
       </div>
     );
   }
@@ -139,7 +148,7 @@ export function FollowUpsByProject(props: { sections: Section[]; compact: boolea
       title={selected ? selected.title : ""}
       onClose={choice.close}
       fit={BY_PROJECT_FIT}
-      detail={selected ? <ProjectItems group={selected} onOpenPerson={props.onOpenPerson} /> : null}
+      detail={selected ? <ProjectItems group={selected} soon={soonOf(selected)} onOpenPerson={props.onOpenPerson} /> : null}
     >
       {bySide.map((s) => (
         <section key={s.side ?? "none"} className="by-side" aria-labelledby={bySide.length > 1 && s.name ? `by-side-${s.side}` : undefined}>
@@ -173,26 +182,34 @@ function ProjectLine(props: { group: Group; choice: ListChoice }) {
   );
 }
 
-/** A project's items, each with who it is with and the button that goes to that person's group. */
-function ProjectItems(props: { group: Group; onOpenPerson: (person: string) => void }) {
-  const { t } = useWords();
+/** A project's items, each with who it is with and the button that goes to that person's group. What is due soon on another tab
+ * comes first, under its own heading, with the same button. */
+function ProjectItems(props: { group: Group; soon: Item[]; onOpenPerson: (person: string) => void }) {
+  const { t, tn } = useWords();
+  const row = (item: Item, soon: boolean) => (
+    <Item row key={item.id}>
+      <div>
+        <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
+        <div className="title">{plainTitle(item.title)}</div>
+        <div className="meta">{[item.mine ? t("followups.you") : item.name, soon ? item.when : "", item.state].filter(Boolean).join(" · ")}</div>
+        <OriginLink origin={item.origin} />
+      </div>
+      <Actions>
+        <Button aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
+          {t("followups.by_project.open")}
+        </Button>
+      </Actions>
+    </Item>
+  );
   return (
-    <ItemList>
-      {props.group.items.map((item) => (
-        <Item row key={item.id}>
-          <div>
-            <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
-            <div className="title">{plainTitle(item.title)}</div>
-            <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].filter(Boolean).join(" · ")}</div>
-            <OriginLink origin={item.origin} />
-          </div>
-          <Actions>
-            <Button aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
-              {t("followups.by_project.open")}
-            </Button>
-          </Actions>
-        </Item>
-      ))}
-    </ItemList>
+    <>
+      {props.soon.length > 0 && (
+        <section data-due-soon="" aria-labelledby="followups-soon-title">
+          <h3 id="followups-soon-title">{tn("followups.due_soon.title", props.soon.length)}</h3>
+          <ItemList>{props.soon.map((item) => row(item, true))}</ItemList>
+        </section>
+      )}
+      <ItemList>{props.group.items.map((item) => row(item, false))}</ItemList>
+    </>
   );
 }

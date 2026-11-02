@@ -240,6 +240,7 @@ FILES_ONLY = (
     "ui.today.top_priorities_lines",
     "ui.today.top_priorities_ahead_days",
     "ui.followups.action_due_within_days",
+    "ui.followups.soon_days",
     "ui.followups.undated_after_days",
     "ui.followups.second_nudge_items",
     "ui.followups.escalate_after_chases",

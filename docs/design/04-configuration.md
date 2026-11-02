@@ -696,7 +696,10 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   whose own due date is this near or past (an action on hold is never chased); `undated_after_days` (14): a told action with
   no due date and no word after this many days; `second_nudge_items` (2): how many items a second follow-up names; and
   `escalate_after_chases` (2; 0 is off): once something has had this many follow-ups and the wait has run its length again,
-  Today suggests asking someone else (6.8). They replace the old `today.nudge_after_days`, which an existing file may still
+  Today suggests asking someone else (6.8); and `soon_days` (3; 0 to 30, 0 is off): how far ahead Follow-ups lists what is
+  due soon at the top of each person's group on every tab (7.5; a different thing from `action_due_within_days`, which is
+  when a told action is chased, and which it leaves as it is). `soon_days` is kept in files with the other timings here:
+  the Settings walk is at its 30 advanced fields; demo values in both fictional workspaces. They replace the old `today.nudge_after_days`, which an existing file may still
   carry and is read as `question_after_days`; the promise lines (6.33) read `action_due_within_days` and `undated_after_days` too,
   replacing `steward.chase_dated_days` and `steward.chase_undated_days`, which are read for one release and noted on the
   setting's row (change log 196).

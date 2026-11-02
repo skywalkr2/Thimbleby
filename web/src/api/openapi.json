@@ -11380,6 +11380,18 @@
             "description": "Its date is one the rules couldn't read for certain: shown to be checked, never a deadline, so never overdue or chased by it.",
             "title": "Due Check"
           },
+          "due_soon": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether its date is a deadline that is past, today or within `ui.followups.soon_days`, and it is not on hold: the screen lists it in the due soon band of its person's group, whichever tab is open. Always false when that setting is zero.",
+            "title": "Due Soon"
+          },
           "followed_up": {
             "anyOf": [
               {
@@ -16525,6 +16537,37 @@
           "where"
         ],
         "title": "NotifyWebhookView",
+        "type": "object"
+      },
+      "NudgeDueItem": {
+        "description": "One to-do a nudge line names: its words and the day it is (or was) due.",
+        "properties": {
+          "due": {
+            "description": "The day it is due, as an ISO date.",
+            "title": "Due",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "overdue": {
+            "description": "Whether that day has passed, where the workspace is.",
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "due",
+          "overdue"
+        ],
+        "title": "NudgeDueItem",
         "type": "object"
       },
       "NudgeRecorded": {
@@ -23841,6 +23884,14 @@
               }
             ],
             "title": "Due"
+          },
+          "due_items": {
+            "description": "For a nudge line: its to-dos that are overdue or due within the follow-up window, earliest first. The line names the first two with their days; a line with none reads as waiting.",
+            "items": {
+              "$ref": "#/components/schemas/NudgeDueItem"
+            },
+            "title": "Due Items",
+            "type": "array"
           },
           "ends": {
             "anyOf": [

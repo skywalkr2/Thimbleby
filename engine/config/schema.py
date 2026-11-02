@@ -2465,6 +2465,13 @@ class FollowupsSettings(ConfigModel):
         description="A second or later follow-up message to a person names only this many of what is still waiting, "
         "the longest-waiting first, and asks who else to ask or for a date.",
     )
+    soon_days: int = Field(
+        3,
+        ge=0,
+        le=30,
+        description="Follow-ups lists what is overdue, due today or due within this many days at the top of each "
+        "person's group, whichever tab is open, so nothing due soon is hidden on another tab. Zero turns the list off.",
+    )
     escalate_after_chases: int = Field(
         2,
         ge=0,

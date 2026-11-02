@@ -152,8 +152,10 @@ class Line:
     with no date: `count` of them, their ids in `actions`; it opens the to-dos screen's "Needs a date" group), terms
     (the questions about unknown words that wait for an answer, as one line: `count` of them, their ids in `questions`).
     nudge is the one follow-up line for a person the person is waiting on (`count` of their items, `overdue` how many
-    are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
-    without an answer any of its promises has had, which the line says), opening the one message to them. A promise
+    are past their date and `due` the oldest of those, `due_items` the to-dos that are overdue or due within
+    `ui.followups.action_due_within_days`, earliest first (each its `id`, `text`, `due` and whether it is
+    `overdue`), which the line names, `waiting_days` the longest wait, `replies` the most replies without an answer
+    any of its promises has had, which the line says), opening the one message to them. A promise
     line says its `replies` the same way.
     tie (a calendar entry proposed for an open to-do, because its title and the to-do's words contain one another on the
     to-do's day: the to-do's id in `actions`, its words in `text`, the entry's id in `entry`, its title in `other` and
@@ -262,6 +264,7 @@ class Line:
     stance: str | None = None
     sent_copy: str | None = None
     overdue: int = 0
+    due_items: list[dict[str, Any]] = field(default_factory=list)
     replies: int = 0
     age_hours: float | None = None
     event: str | None = None
@@ -1624,6 +1627,15 @@ def _everything(
                 for a in told
                 if a["due"] and not a["due_check"] and str(a["due"]) < today.isoformat()
             )
+            window = cfg.ui.followups.action_due_within_days
+            dated = sorted(
+                (
+                    (date.fromisoformat(str(a["due"])), a["text"], a["id"])
+                    for a in told
+                    if a["due"] and not a["due_check"] and (date.fromisoformat(str(a["due"])) - today).days <= window
+                ),
+                key=lambda x: (x[0], x[1]),
+            )
             lines.append(
                 Line(
                     key=f"nudge:{s.person}",
@@ -1637,6 +1649,10 @@ def _everything(
                     waiting_days=longest,
                     due=late_on[0].isoformat() if late_on else None,
                     overdue=len(late_on),
+                    due_items=[
+                        {"id": item, "text": text, "due": when.isoformat(), "overdue": when < today}
+                        for when, text, item in dated
+                    ],
                     replies=max((replied.get(a["id"], 0) for a in told), default=0),
                     since=s.name.lower(),
                 )

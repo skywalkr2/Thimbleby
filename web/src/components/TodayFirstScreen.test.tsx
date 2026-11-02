@@ -109,7 +109,7 @@ test("the Schedule card holds today's agenda and not the week, which is never a 
 
 // ---- one follow-up line per person ------------------------------------------------------------------------------------
 
-test("a person waited on is one follow-up line saying how many are overdue and since when, with Draft a nudge", async () => {
+test("a person waited on is one follow-up line naming what is overdue with its day, with Draft a nudge", async () => {
   const user = userEvent.setup();
   const waiting: S["FollowupSection"] = {
     person: "PER-2",
@@ -124,11 +124,12 @@ test("a person waited on is one follow-up line saying how many are overdue and s
     to_send: 0,
     nudge: { text: "Hi Sam,\n\nTwo things.", round: 1, question_ids: [], action_ids: ["ACT-2", "ACT-3"] },
   };
-  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 2, overdue: 2, due: "2026-10-13", waiting_days: 18, actions: ["ACT-2", "ACT-3"] })], {
+  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 2, overdue: 2, due: "2026-10-13", waiting_days: 18, actions: ["ACT-2", "ACT-3"], due_items: [{ id: "ACT-2", text: "Send the index", due: "2026-10-13", overdue: true }, { id: "ACT-3", text: "Book the room", due: "2026-10-15", overdue: true }] })], {
     "GET followups": () => [waiting],
   });
   const found = await screen.findByRole("group", { name: "Follow up with Robin Sample" });
-  expect(found).toHaveTextContent("2 overdue, oldest Tue, Oct 13");
+  expect(found).toHaveTextContent("To-do: Send the index, overdue since Tue, Oct 13 · To-do: Book the room, overdue since Thu, Oct 15");
+  expect(found).not.toHaveTextContent("and ");
   expect(document.querySelectorAll("[data-queue-line]")).toHaveLength(1);
   await user.click(within(found).getByRole("button", { name: "Draft a nudge" }));
   expect(await screen.findByRole("textbox", { name: /Message to Robin Sample/ })).toHaveValue("Hi Sam,\n\nTwo things.");
@@ -138,12 +139,59 @@ test("a person waited on is one follow-up line saying how many are overdue and s
   expect(screen.getAllByRole("button", { name: "Followed up" }).length).toBeGreaterThanOrEqual(2);
 });
 
-test("items that are not overdue are said after the overdue ones", async () => {
-  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 3, overdue: 1, due: "2026-10-13", waiting_days: 5, actions: ["ACT-2"], questions: ["Q-1", "Q-2"] })]);
-  expect(await screen.findByRole("group", { name: "Follow up with Robin Sample" })).toHaveTextContent("1 overdue, oldest Tue, Oct 13 · 2 others awaiting a reply");
+test("a follow-up names a to-do due soon as due, a late one as overdue since, and a question only as waiting", async () => {
+  show([
+    line("nudge", {
+      key: "nudge:PER-2",
+      person: "PER-2",
+      person_name: "Robin Sample",
+      count: 2,
+      overdue: 1,
+      due: "2026-10-13",
+      waiting_days: 5,
+      actions: ["ACT-2", "ACT-3"],
+      due_items: [
+        { id: "ACT-2", text: "Send the floor plan", due: "2026-10-13", overdue: true },
+        { id: "ACT-3", text: "Order the signs", due: "2026-10-27", overdue: false },
+      ],
+    }),
+  ]);
+  const found = await screen.findByRole("group", { name: "Follow up with Robin Sample" });
+  expect(found).toHaveTextContent("To-do: Send the floor plan, overdue since Tue, Oct 13 · To-do: Order the signs, due Tue, Oct 27");
+  // Never an "action" or a "task": a to-do is a to-do.
+  expect(found).not.toHaveTextContent(/\b(action|task)\b/i);
 });
 
-test("a follow-up with nothing overdue keeps the count and the longest wait", async () => {
+test("more than two dated to-dos name the first two, earliest first, then how many more", async () => {
+  show([
+    line("nudge", {
+      key: "nudge:PER-2",
+      person: "PER-2",
+      person_name: "Robin Sample",
+      count: 5,
+      overdue: 1,
+      due: "2026-10-13",
+      waiting_days: 5,
+      actions: ["ACT-1", "ACT-2", "ACT-3"],
+      questions: ["Q-1", "Q-2"],
+      due_items: [
+        { id: "ACT-1", text: "Send the floor plan", due: "2026-10-13", overdue: true },
+        { id: "ACT-2", text: "Order the signs", due: "2026-10-20", overdue: false },
+        { id: "ACT-3", text: "Print the badges", due: "2026-10-22", overdue: false },
+      ],
+    }),
+  ]);
+  const found = await screen.findByRole("group", { name: "Follow up with Robin Sample" });
+  expect(found).toHaveTextContent("To-do: Send the floor plan, overdue since Tue, Oct 13 · To-do: Order the signs, due Tue, Oct 20 · and 3 more");
+  expect(found).not.toHaveTextContent("Print the badges");
+});
+
+test("one dated to-do among others waiting says how many more wait", async () => {
+  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 2, waiting_days: 5, actions: ["ACT-2"], questions: ["Q-1"], due_items: [{ id: "ACT-2", text: "Send the index", due: "2026-10-27", overdue: false }] })]);
+  expect(await screen.findByRole("group", { name: "Follow up with Robin Sample" })).toHaveTextContent("To-do: Send the index, due Tue, Oct 27 · and 1 more");
+});
+
+test("a follow-up with no dated to-do reads as waiting: the count and the longest wait", async () => {
   show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 2, waiting_days: 6, questions: ["Q-1", "Q-2"] })]);
   expect(await screen.findByRole("group", { name: "Follow up with Robin Sample" })).toHaveTextContent("2 items awaiting a reply · waiting up to 6 days");
 });

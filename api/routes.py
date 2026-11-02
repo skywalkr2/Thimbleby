@@ -3063,6 +3063,7 @@ def _section(
             on_hold=a["on_hold"],
             blocker=BlockerView(**a["blocker"]) if a.get("blocker") else None,
             chase_due=a["chase_due"],
+            due_soon=a["due_soon"],
             origin=action_origin.get(a["id"]),
             side=a.get("side"),
             views=a.get("views", []),

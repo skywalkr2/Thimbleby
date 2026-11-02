@@ -262,6 +262,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     history = store.read().field_changes("action", TOLD_FIELDS) if any(a.data.get("told") for a in open_actions) else {}
     view = store.read()
     made_actions = view.creators("action")
+    soon_days = cfg.ui.followups.soon_days
     owner_changes = view.field_changes("action", ("owners",))
     for a in open_actions:
         d = a.data
@@ -328,6 +329,10 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                         on_hold=bool(hold),
                     )
                     or (a.id in pulled and told_days is not None and owner["person"] != people.pm and not hold),
+                    "due_soon": soon_days > 0
+                    and not hold
+                    and (deadline := firm_due(d)) is not None
+                    and (deadline - today).days <= soon_days,
                     "holds_up": len(held_up.get(a.id, [])),
                     "holds_overdue": pulled.get(a.id, 0),
                 }
