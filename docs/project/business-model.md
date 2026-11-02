@@ -9,7 +9,7 @@ them in (open promise P25).
 | | **Thimbleby** (free) | **Thimbleby Plus** (one licence) |
 |---|---|---|
 | What it is | The core: the daily steward, hand-in, the define-your-own kit and its templates, the person's own AI accounts, everything kept on the person's computer. Mail and calendars from any service: IMAP and calendar links, and **Gmail and Outlook through the person's own app registration**, pasted on the Sign-ins row beside the add-on's numbered steps | Everything in the free app, plus **one-click** Gmail and Outlook sign-in (the add-on's own registration), every pack (writing first, then project management, publishing and the ones that follow) and updates |
-| Where it lives | Open source under Apache-2.0, published from the private working repository at each release. The Gmail and Outlook add-on is open source under Apache-2.0 too, in its own public repository, and a free download from the catalog | The packs' private repositories, as today; the add-on's own registration, which only its release build carries |
+| Where it lives | Source-available under FSL-1.1-ALv2 (Apache-2.0 two years after each release; decisions, 2026-11-02), published from the private working repository at each release. The Gmail and Outlook add-on is open source under Apache-2.0 too, in its own public repository, and a free download from the catalog | The packs' private repositories, as today; the add-on's own registration, which only its release build carries |
 | Installers | Installers, free to download; unsigned at 1.0, and the download page says so (owner, 2026-10-21) | The same installers; the licence turns on the add-on's own registration and the packs. Plus revenue pays for signing once there are more users |
 | Price | Free | A yearly licence; what a lapse keeps is below. The amount follows from the break-even line below |
 
@@ -33,7 +33,7 @@ registration in place, and a Today line says mail isn't being read until they ch
 Google's yearly costs for people who have stopped paying. Tested both ways (below).
 
 **Why the core and the mail add-on stay open:** an assistant that reads mail is easier to trust when its code can be
-read, and companies approve Apache-2.0 (decisions, 2026-10-09). For most people the Gmail and Outlook add-on is the code
+read, and FSL-1.1-ALv2 allows use at work while forbidding a competing hosted service (decisions, 2026-11-02). For most people the Gmail and Outlook add-on is the code
 that signs in and reads their mail, so it is open as well; nothing paid is given away, since Plus sells the one-click
 registration and the packs, not the mail code. The add-on's repository leaves its registration empty and its release
 build fills it in, as `catalog/product.yaml` does for the core.
@@ -140,7 +140,7 @@ Fits after phase S, beside phase I (installers). Each item gets its batch tag wh
 - **The template gallery** (item 3), with templates handled as untrusted content. After the paid 1.0 if time is short;
   the loop works without it.
 - **Repository files** for the public core: CONTRIBUTING (ideas welcome, no pull requests), SECURITY (how to report a
-  problem privately), and a trademark note (Apache-2.0 doesn't license the name, so a changed copy can't be called
+  problem privately), and a trademark note (the licence doesn't license the name, so a changed copy can't be called
   Thimbleby).
 
 **Tests that come with them:**

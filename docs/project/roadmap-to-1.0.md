@@ -1106,9 +1106,9 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   checks the rest by hand on both systems.
 
 - [ ] [I-3] **The free core release** (owner, 2026-10-20: "get to Thimbleby core faster and push and update the website";
-  `docs/project/business-model.md`): after phase I's exit test, the open core is published under Apache-2.0 from a fresh
+  `docs/project/business-model.md`): after phase I's exit test, the core is published under FSL-1.1-ALv2 (Apache-2.0 after two years) from a fresh
   public repository (owner action M5), with CONTRIBUTING (ideas welcome, no pull requests), SECURITY (how to report a
-  problem privately) and a trademark note (Apache-2.0 doesn't license the name); the website shows the release (M6,
+  problem privately) and a trademark note (the licence doesn't license the name); the website shows the release (M6,
   I-2). A journey test: a free install connects an Outlook.com mailbox through a pasted registration, on the fake
   sign-in service the tests use; and the owner's live check of the same on a real Outlook.com and a real Gmail account
   (registration "In production"), which confirms the add-on's steps. Nothing in it waits for phase T.
@@ -1457,7 +1457,7 @@ keeps its own test, two packs unchanged through real use (decisions, 2026-10-20)
 mechanics.
 
 - [ ] [Publish 1.0] Self-check against the private workspace (`cockpit selfcheck --workspace <path>`).
-- [ ] [Publish 1.0] A fresh repository with one starting commit, under Apache-2.0; secret scanning on.
+- [ ] [Publish 1.0] A fresh repository with one starting commit, under FSL-1.1-ALv2; secret scanning on.
 - [ ] [Publish 1.0] The README and docs match what 1.0 does.
 
 ## Not in 1.0

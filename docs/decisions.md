@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The core is licensed FSL-1.1-ALv2, Apache-2.0 two years after each release
+
+**Decided by:** project owner: "i dont need someone just taking it - loading it as a SasS and charging", choosing the
+Functional Source License 1.1 with the Apache 2.0 future license over staying on Apache-2.0 or the Business Source
+License.
+
+**What:** `LICENSE` is FSL-1.1-ALv2 (the published template, unchanged apart from the year and the licensor); `NOTICE`,
+`README.md`, `pyproject.toml` and `web/package.json` say so. Anyone may use, read, change and run the software for any
+purpose except a Competing Use: offering it, or something substantially like it, to others as a commercial product or
+service. Use inside a company, at work, for education and research, and professional services to a licensee are all
+allowed. Each version becomes available under Apache-2.0 on the second anniversary of its release.
+
+**Why:** the owner's work must not become someone else's hosted paid service. The AGPL would only make such a host
+publish its changes; FSL forbids the competing service outright, while keeping the reasons for leaving the AGPL: use at
+work is allowed, the code stays readable, and the patent grant stays. It replaces Apache-2.0 (2026-10-09).
+
+**Impact:** everything already pushed to the public repository stays available under Apache-2.0 to anyone who took it;
+FSL covers what is published from now on. The product is described as source-available, becoming open source two years
+after each release, never as "open source" today (business model, roadmap's release items). Add-ons in their own
+repositories keep their own licences (the owner's choice per add-on). Recommended to the owner the same day: make this
+repository private soon, ahead of phase I's public repository step (P113), to stop further Apache exposure of the work
+in progress. Change log: none.
+
 ## 2026-11-02: The assistant ties and confirms what the rules propose; guests named in a title are a proposal; the filing review and the brief's quieted kinds finish (P110, J8, J10, J17, the parity case)
 
 **Decided:** (1) A new data op **`action.tie`** (the to-do, the calendar entry, the words) lets the assistant confirm a tie

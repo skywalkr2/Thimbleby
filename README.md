@@ -121,9 +121,11 @@ themselves. It is a developer switch, not a setting, and does nothing when unset
 
 ## License
 
-[Apache License 2.0](LICENSE). You may use, change and share it, including at work and in commercial settings, as long as
-you keep the copyright notice and the [`NOTICE`](NOTICE) file. The license also grants a patent license from every
-contributor, which ends for anyone who sues over patents in the project.
+[Functional Source License 1.1, Apache 2.0 future license](LICENSE) (FSL-1.1-ALv2). You may use, read, change and run
+it for any purpose, at home and at work, inside your organization, except offering it, or something substantially like
+it, to others as a commercial product or service. Each version becomes available under the Apache License 2.0 two
+years after its release. Keep the copyright notice and the [`NOTICE`](NOTICE) file. The license includes a patent
+license, which ends for anyone who sues over patents in the software.
 
 ## Documents
 
