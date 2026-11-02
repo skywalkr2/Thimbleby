@@ -41,6 +41,9 @@ async function open(content: Content = WEEK, over: Partial<S["ScheduleView"]> = 
   const view = renderApp(<Schedule />);
   await screen.findByRole("heading", { level: 2, name: /–|2026/ });
   await waitFor(() => expect(document.querySelector("[data-grid], [data-month]")).not.toBeNull());
+  // The first page asked for is the computer's week; the server's today (the fixtures') follows. Waiting for its day
+  // keeps the tests the same in any week the suite runs.
+  await waitFor(() => expect(document.querySelector(`[data-day="${TODAY}"]`)).not.toBeNull());
   return { calls, view };
 }
 

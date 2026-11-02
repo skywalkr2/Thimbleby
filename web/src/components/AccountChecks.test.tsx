@@ -79,7 +79,7 @@ function server(extra: Record<string, (body: unknown) => unknown> = {}) {
     "GET ai/skills": () => ({ min_score: 0.8, stale_days: 60, accounts: [] }),
     "GET ai/check-size": () => ({ calls: 10, input_tokens: 1000, output_tokens: 200 }),
     "GET settings": () => ({ fingerprint: "fp-1", items: [{ key: "ai.budgets.confirm_above_usd", value: 0.1 }] }),
-    "POST ai/models": () => ({ models: [{ id: "model-a", input_per_million: 3, output_per_million: 15 }] }),
+    "POST ai/models": () => ({ models: [{ id: "model-a", input_per_million: 3, output_per_million: 15 }], suggested: "model-a" }),
     "POST ai/accounts": () => {
       accounts = [...accounts, view(NEW, "Service A account")];
       return SAVED;

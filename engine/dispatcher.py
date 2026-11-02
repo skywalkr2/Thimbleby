@@ -140,8 +140,8 @@ def _describe_error(error: dict, data: object, models: dict) -> str:
     message = error["msg"].removeprefix("Value error, ")
     if error["loc"] and error["loc"][0] == "ops" and not (len(error["loc"]) > 1 and isinstance(error["loc"][1], int)):
         # The op union reports no index, so the op it means is found by checking each op on its own.
-        ops = data.get("ops", []) if isinstance(data, dict) else []
-        for index, op in enumerate(ops):
+        ops = data.get("ops") if isinstance(data, dict) else None
+        for index, op in enumerate(ops if isinstance(ops, list) else []):
             model = models.get(op.get("op")) if isinstance(op, dict) else None
             if model is None:
                 continue
