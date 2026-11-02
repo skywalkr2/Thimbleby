@@ -134,8 +134,13 @@ whose title's **first word is one of `language.task_verbs`** ("Pay the deposit")
 agenda row's menu: the person's own `action.add`, in the entry's words, on the entry (due on its day, moving with it), with
 Undo (`POST /api/events/{id}/todo`, `AgendaItemView.todo_offer`). A plain entry whose title **names a known person** (their
 full name, else a first name or alias only one person has; never the person themselves) is linked to them
-(`CalendarEntry.people`); one that **names a promise's words**, on that promise's day, becomes the day the promise is due at
-(`due_event`), so it moves with it; a promise on another day, or with none, is never linked. *Built:*
+(`CalendarEntry.people`); one that **names a promise's words**, on that promise's day, is only **proposed** to the promise
+(`Action.proposed_event`, `engine/entry_ties.py`): word overlap narrows what the person looks at and decides nothing.
+Today and the promise's page show one line, "Tie <to-do> to <entry> on <day>?", with Tie it (the person's own edit with
+Undo: the promise's `due_event`, so it moves with the entry and is told if the entry is called off) and Not this (a
+`suggestion_dismissed` signal that keeps the pair from being proposed again). Nothing follows a proposal; a promise on
+another day, or with none, is never proposed. A promise the assistant makes at an entry (`action.add` with `due_at_event`)
+is tied from the start. *Not built:* the assistant tying a proposal in the run that reads the calendar change. *Built:*
 `tests/test_plain_calendar_entries.py` (a calendar fixture of each kind), `web/src/components/TodayRail.test.tsx`.
 *Built so far (P17, B-5):*
 `tests/test_ics_full.py` (the connector, a source's read, the entries, the agenda and the add-source routes),

@@ -4,6 +4,32 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: A calendar entry whose words overlap a promise's is only proposed to it; the person ties it (P110, J8)
+
+**Decided:** A plain calendar entry that names an open promise's words (or the reverse) on the promise's day no longer
+sets the promise's `due_event`. The rule writes `proposed_event` on the promise, and Today and the promise's page show
+one line, "Tie <to-do> to <entry> on <day>?", with Tie it and Not this. Tie it is the person's own `record.edit` (the
+promise's `due_event` and the entry's day, `proposed_event` cleared) with Undo; Not this records a `suggestion_dismissed`
+signal (kind `tie`, the pair named) so the same pair is never proposed again, and taking it back shows the line again. Only
+a tie (`due_event`, set by the person or by the assistant's own `action.add` at an entry) moves the promise's date when
+the entry moves or tells it the entry was called off; a proposal follows nothing. A proposal that has gone stale (the
+entry called off or on another day, the promise closed or tied) shows no line. Linking an entry to the known people its
+title names (`people`) is unchanged: it only fills the guest hint, from a full name or the one person a first name can
+mean.
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's); the audit's row J8.
+
+**Why:** Overlapping words on one day decided that a calendar entry was what a promise was due at, and from then on the
+promise's date moved with it and it was told the entry was called off, with nobody confirming that the two were the same
+thing. A function may narrow what the person looks at, never decide for them.
+
+**Impact:** design 6.2 and 6.32 (`06-engine.md`, plain entries); `engine/entry_rules.py` (`link` proposes),
+`engine/entry_ties.py` (new), `engine/records.py` (`Action.proposed_event`), `engine/today_queue.py` (the `tie` line),
+`engine/record_page.py`, `api/tie_routes.py` (`POST /api/actions/{id}/tie` and `/not-this`), `RecordPageView.tie`, the
+plugin guide. No new setting; no change to scope. Not built: the assistant tying a proposal in the run that reads the
+calendar change (it can still tie by its own `action.add` with `due_at_event`); the proposals are not yet in a run's
+packet. Change log: section 289.
+
 ## 2026-11-02: An ending's words and a "no need to reply" phrase are put to the assistant, never acted on by a rule (P110, J5, J7)
 
 **Decided:** The rules no longer rewrite an ending or write a question about one. A close whose quote reads as no longer

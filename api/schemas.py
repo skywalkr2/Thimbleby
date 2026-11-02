@@ -2156,6 +2156,22 @@ class TodoAdded(BaseModel):
     changesets: list[str]
 
 
+class TieDone(BaseModel):
+    """A calendar entry tied to a to-do (POST /api/actions/{id}/tie): `changeset` is what Undo (POST
+    /api/changesets/{id}/undo) takes back."""
+
+    changeset: str
+
+
+class TieProposal(BaseModel):
+    """The calendar entry proposed for a to-do, on its page: the `entry` and its `title`, and the `day` it is on. The
+    answer is POST /api/actions/{id}/tie or POST /api/actions/{id}/not-this."""
+
+    entry: str
+    title: str
+    day: date
+
+
 class RecordPageView(BaseModel):
     """A record's page (design 7.14): its name, details in declared order with names resolved, what is open with
     it, and its activity, newest first."""
@@ -2184,6 +2200,11 @@ class RecordPageView(BaseModel):
         default_factory=list,
         description="For a calendar entry: what is to be taken up at it, its own items and, when it is the next "
         "meeting of a series, the series' after them.",
+    )
+    tie: TieProposal | None = Field(
+        None,
+        description="For a to-do with a calendar entry proposed for it: the entry, to tie it to (POST "
+        "/api/actions/{id}/tie) or not (POST /api/actions/{id}/not-this).",
     )
     repeat: RepeatView | None = Field(None, description="For a to-do that repeats: how, said back from data.")
     earlier_occurrences: list[EarlierOccurrence] = Field(
@@ -3101,7 +3122,10 @@ class QueueLineView(BaseModel):
     `due` the day to offer; the proposal is GET /api/capacity and each move is the person's own date change, with Undo);
     `clash` is two meetings that overlap or leave too little time to get from one place to the next (`state` overlap or
     travel, `minutes`, `text` and `other` the two titles, `due` the day and `at` the later one's start,
-    `entry` the entry to open); `stale` is the person's own open to-dos nobody has touched for
+    `entry` the entry to open); `tie` is a calendar entry proposed for an open to-do whose words and the entry's
+    title contain one another on its day (the to-do's id in `actions` and its words in `text`, the entry in `entry`
+    and its title in `other`, `due` the day; Tie it is POST /api/actions/{id}/tie and Not this is
+    POST /api/actions/{id}/not-this, both with Undo); `stale` is the person's own open to-dos nobody has touched for
     `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
     Look over opens GET /api/open-items narrowed to them); `pattern` is
     something the person keeps putting off (`state` moved, redated or replies; `count` how many times or how many
@@ -3184,6 +3208,7 @@ class QueueLineView(BaseModel):
         "stale",
         "capacity",
         "clash",
+        "tie",
         "unfiled",
         "moved",
         "since_yesterday",

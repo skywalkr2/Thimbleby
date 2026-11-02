@@ -15,6 +15,7 @@ import { useFirstGoText } from "../lib/first-go";
 import { durationWords } from "../lib/duration";
 import { useRowKeys } from "../lib/keys";
 import { SUGGESTION_KINDS, useNotNow } from "../lib/not-now";
+import { useTie } from "../lib/tie";
 import { useChoices } from "../lib/suggestion-choices";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
@@ -658,6 +659,8 @@ export function useLineTitle(): (line: QueueLine) => string {
       }
       case "clash":
         return t("queue.clash", { text: line.text ?? "", other: line.other ?? "", when: day(line.due) });
+      case "tie":
+        return t("queue.tie", { text: plainTitle(line.text ?? "").replace(/[.!?\s]+$/, ""), other: line.other ?? "", when: day(line.due) });
       case "promise": {
         const vars = { name, text: plainTitle(line.text ?? "", line.due).replace(/[.!?\s]+$/, ""), date: line.due ? day(line.due) : "" };
         if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
@@ -751,6 +754,7 @@ function QueueRow(props: {
   const sentRow = useSentCheckChoices(line);
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null, () => ref.current?.focus());
   const notNow = useNotNow();
+  const tieAnswers = useTie();
   const quietRow = useQuietChoices(line);
   // The offered area's name is a field the person may change before starting it.
   const [areaName, setAreaName] = useState(line.text ?? "");
@@ -1051,6 +1055,20 @@ function QueueRow(props: {
           meta: line.state === "travel" ? travel : tn("queue.clash.meta.overlap", line.minutes ?? 0),
           primary: { label: first.label, run: first.run },
           menu: [show, ...rest],
+        };
+      }
+      case "tie": {
+        // A calendar entry on the to-do's day whose title and the to-do's words contain one another: tie it, or not this one.
+        const action = (line.actions ?? [])[0] ?? "";
+        const text = plainTitle(line.text ?? "").replace(/[.!?\s]+$/, "");
+        const other = line.other ?? "";
+        return {
+          pill: t("queue.pill.tie"),
+          tone: "neutral",
+          meta: t("queue.tie.meta"),
+          primary: { label: t("queue.tie.yes"), run: () => void tieAnswers.tie(action, text, other) },
+          other: { label: t("queue.tie.no"), run: () => void tieAnswers.notThis(action, text, other) },
+          menu: [show],
         };
       }
       case "pattern": {

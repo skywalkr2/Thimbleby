@@ -2,8 +2,9 @@
 
 An entry of a calendar file with no one else invited, no description and no change to a date a promise is due at is
 kept in the app's calendar by rule: no run of the assistant and no Review line. One whose title starts with a task verb
-(a language setting) is offered as a to-do with one click, by rule. One whose title names a known person, or a promise's
-words, is linked to them by rule, so a promise due at it moves with it. The assistant still reads an invitation from
+(a language setting) is offered as a to-do with one click, by rule. One whose title names a known person is linked to
+them by rule; one that names a promise's words on its day is only proposed to the promise, and the promise moves with
+it once the person ties it (J8). The assistant still reads an invitation from
 someone else, an entry with a description, and one that moved a date a promise is due at. Names, addresses and ids
 come from the fixtures; the calendar is a file."""
 
@@ -384,27 +385,157 @@ def promise(store, text, *, due):
     return action
 
 
-def test_an_entry_that_names_a_promises_words_on_the_promises_day_is_linked_and_the_promise_moves_with_it(cal):
+def moved_entry(day="20300310"):
+    return calendar(vevent("a", "Return the signed contract", day=day))
+
+
+def test_an_entry_naming_a_promises_words_on_its_day_is_proposed_not_linked_and_the_promise_stays_put(cal):
     ws, cfg, store, put = cal
     action = promise(store, "Return the signed contract to the printer", due="2030-03-07")
     put(calendar(vevent("a", "Return the signed contract", day="20300307")))
     entry = entry_of(store, "Return the signed contract")
-    assert store.read().get("action", action).data["due_event"] == entry.id
-    put(calendar(vevent("a", "Return the signed contract", day="20300310")), NOW + timedelta(hours=1))
+    made = store.read().get("action", action).data
+    assert (made["due_event"], made["proposed_event"]) == (None, entry.id)
+    (line,) = [x for x in queue(ws, store, cfg, NOW) if x.kind == "tie"]
+    assert (line.actions, line.entry, line.other, line.due) == ([action], entry.id, entry.data["title"], "2030-03-07")
+    put(moved_entry(), NOW + timedelta(hours=1))
+    assert store.read().get("action", action).data["due"] == "2030-03-07"  # a proposal follows nothing
+
+
+def test_a_called_off_entry_tells_a_proposed_promise_nothing(cal):
+    ws, cfg, store, put = cal
+    action = promise(store, "Return the signed contract to the printer", due="2030-03-07")
+    put(calendar(vevent("a", "Return the signed contract", day="20300307")))
+    put(
+        calendar(vevent("a", "Return the signed contract", day="20300307", status="CANCELLED")),
+        NOW + timedelta(hours=1),
+    )
+    assert store.read().get("action", action).data["news"] == []
+    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "tie"] == []  # called off, so nothing to tie
+
+
+def test_tie_it_links_the_promise_with_undo_and_a_moved_entry_then_moves_its_date_and_a_called_off_one_tells_it(cal):
+    from engine import entry_ties
+    from engine.dispatcher import undo_changeset
+
+    ws, cfg, store, put = cal
+    action = promise(store, "Return the signed contract to the printer", due="2030-03-07")
+    put(calendar(vevent("a", "Return the signed contract", day="20300307")))
+    entry = entry_of(store, "Return the signed contract")
+    changeset = entry_ties.tie(store, cfg, action)
+    tied = store.read().get("action", action).data
+    assert (tied["due_event"], tied["proposed_event"], tied["due"]) == (entry.id, None, "2030-03-07")
+    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "tie"] == []
+    put(moved_entry(), NOW + timedelta(hours=1))
+    assert store.read().get("action", action).data["due"] == "2030-03-10"
+    put(
+        calendar(vevent("a", "Return the signed contract", day="20300310", status="CANCELLED")),
+        NOW + timedelta(hours=2),
+    )
+    assert "called off" in store.read().get("action", action).data["news"][0]["text"]
+    undo_changeset(store, changeset)
+    assert store.read().get("action", action).data["due_event"] is None
+
+
+def test_not_this_is_never_proposed_again_and_taking_it_back_shows_the_line_again(cal):
+    from engine import entry_ties, suggestions
+
+    ws, cfg, store, put = cal
+    action = promise(store, "Return the signed contract to the printer", due="2030-03-07")
+    put(calendar(vevent("a", "Return the signed contract", day="20300307")))
+    signal = entry_ties.decline(store, cfg, action, NOW)
+    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "tie"] == []
+    # The same pair on a later read, and once the proposal field is cleared, is not proposed again.
+    with store.transaction() as tx:
+        current = tx.get("action", action)
+        tx.update("action", action, {"proposed_event": None}, _TEST, read_version=current.version)
+    put(calendar(vevent("a", "Return the signed contract", day="20300307")), NOW + timedelta(hours=1))
+    put(calendar(vevent("a", "Return the signed contract", day="20300307", hour="16")), NOW + timedelta(hours=2))
+    assert store.read().get("action", action).data["proposed_event"] is None
+    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "tie"] == []
+    assert suggestions.take_back(store, signal)
+    put(calendar(vevent("a", "Return the signed contract", day="20300307", hour="17")), NOW + timedelta(hours=3))
+    assert [x.kind for x in queue(ws, store, cfg, NOW) if x.kind == "tie"] == ["tie"]
+
+
+def test_a_link_the_assistant_made_in_its_own_op_follows_the_entry(cal):
+    ws, cfg, store, put = cal
+    action = promise(store, "Return the signed contract to the printer", due="2030-03-07")
+    put(calendar(vevent("a", "Return the signed contract", day="20300307")))
+    entry = entry_of(store, "Return the signed contract")
+    with (
+        store.transaction() as tx
+    ):  # what an `action.add` at an entry writes (tests/test_promises.py runs the op itself)
+        current = tx.get("action", action)
+        tx.update("action", action, {"due_event": entry.id}, _TEST, read_version=current.version)
+    put(moved_entry(), NOW + timedelta(hours=1))
     assert store.read().get("action", action).data["due"] == "2030-03-10"
 
 
-def test_a_promise_on_another_day_or_with_no_day_or_other_words_is_not_linked(cal):
+def test_a_promise_on_another_day_or_with_no_day_or_other_words_is_not_proposed(cal):
     ws, cfg, store, put = cal
     entries = calendar(
         vevent("a", "Return the signed contract", day="20300307"), vevent("b", "Book the room", day="20300307")
     )
     elsewhere = promise(store, "Return the signed contract to the printer", due="2030-03-20")
     put(entries)
-    assert store.read().get("action", elsewhere).data["due_event"] is None
+    assert store.read().get("action", elsewhere).data["proposed_event"] is None
     undated = promise(store, "Return the signed contract to the printer", due=None)
     put(entries.replace("SUMMARY:Book the room", "SUMMARY:Book the large room"), NOW + timedelta(hours=1))
-    assert store.read().get("action", undated).data["due_event"] is None
+    assert store.read().get("action", undated).data["proposed_event"] is None
     other_words = promise(store, "Order the bookmarks", due="2030-03-07")
     put(entries, NOW + timedelta(hours=2))
-    assert store.read().get("action", other_words).data["due_event"] is None
+    assert store.read().get("action", other_words).data["proposed_event"] is None
+
+
+# ---- the person's answers to a proposal, through the routes ----------------------------------------------------------
+
+
+def proposed_todo(store, entry):
+    with store.transaction() as tx:
+        return tx.create(
+            "action",
+            {
+                "text": "Pay the deposit by card",
+                "owners": [{"person": ME["id"]}],
+                "due": TOMORROW.isoformat(),
+                "proposed_event": entry.id,
+            },
+            _TEST,
+        ).id
+
+
+def test_the_to_dos_page_and_today_carry_the_proposal_and_tie_it_ties_it_with_undo(api):
+    client, store, cfg = api
+    entry = entry_of(store, "Pay the deposit")
+    action = proposed_todo(store, entry)
+    page = client.get(f"/api/record-pages/{action}?kind=action")
+    assert page.status_code == 200, page.text
+    assert page.json()["tie"] == {"entry": entry.id, "title": "Pay the deposit", "day": TOMORROW.isoformat()}
+    lines = [x for x in client.get("/api/today/queue").json() if x["kind"] == "tie"]
+    assert [(x["key"], x["actions"], x["entry"], x["other"]) for x in lines] == [
+        (f"tie:{action}", [action], entry.id, "Pay the deposit")
+    ]
+    done = client.post(f"/api/actions/{action}/tie")
+    assert done.status_code == 200, done.text
+    tied = store.read().get("action", action).data
+    assert (tied["due_event"], tied["proposed_event"]) == (entry.id, None)
+    assert client.get(f"/api/record-pages/{action}?kind=action").json()["tie"] is None
+    assert client.post(f"/api/actions/{action}/tie").status_code == 409  # nothing proposed any more
+    assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={"ops": None}).status_code == 200
+    assert store.read().get("action", action).data["due_event"] is None
+
+
+def test_not_this_through_the_route_hides_the_line_and_its_undo_brings_it_back(api):
+    client, store, cfg = api
+    entry = entry_of(store, "Pay the deposit")
+    action = proposed_todo(store, entry)
+    said = client.post(f"/api/actions/{action}/not-this")
+    assert said.status_code == 200, said.text
+    assert store.read().get("action", action).data["due_event"] is None
+    assert [x for x in client.get("/api/today/queue").json() if x["kind"] == "tie"] == []
+    assert client.get(f"/api/record-pages/{action}?kind=action").json()["tie"] is None
+    assert client.post(f"/api/actions/{action}/not-this").status_code == 409
+    assert client.post(f"/api/suggestions/not-now/{said.json()['signal']}/undo").status_code == 200
+    assert [x["key"] for x in client.get("/api/today/queue").json() if x["kind"] == "tie"] == [f"tie:{action}"]
+    assert client.post("/api/actions/ACT-NOPE/tie").status_code == 404

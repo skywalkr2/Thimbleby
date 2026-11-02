@@ -9,7 +9,7 @@ from typing import Any, Literal, get_args, get_origin
 from zoneinfo import ZoneInfo
 
 from engine import agenda as agenda_module
-from engine import repeats, sides
+from engine import entry_ties, repeats, sides
 from engine.followups import ABOUT_THE_APP
 from engine.history import changes_for_person
 from engine.names import render_owner
@@ -168,6 +168,7 @@ def page(
         "fact_source": fact_source(view, record) if kind == "fact" else None,
         "filed": sides.filed_view(view, cfg, kind, record) if cfg is not None else None,
         "agenda": _agenda(view, record, today, here),
+        "tie": entry_ties.view_of(view, record) if kind == "action" else None,
         "repeat": repeats.view_of(data.get("repeat")) if kind == "action" else None,
         "earlier_occurrences": repeats.earlier_occurrences(view, record)
         if kind == "action" and (data.get("repeat") or data.get("occurrence_of"))

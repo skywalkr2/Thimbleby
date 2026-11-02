@@ -1572,6 +1572,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `due_words` | str \| None | `None` | The exact words its due date was read from. |
 | `due_check` | bool | `False` | The rules' reading of `due_words` is uncertain, so the person checks the date. |
 | `due_event` | str \| None | `None` | The calendar entry it is due at: its date follows the entry's when the entry moves. |
+| `proposed_event` | str \| None | `None` | A calendar entry on its day whose title and its words contain one another, proposed for the person to tie it to; nothing follows the entry until they say yes, which sets `due_event`. |
 | `due_by_person` | bool | `False` | Its date came from the person's own words, so another source's date doesn't replace it. |
 | `also_said` | list[Evidence] | `[]` | Other sources that said the same promise, each with its words; one promise, every quote kept. |
 | `also_said[].source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
@@ -1842,7 +1843,7 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `delivery.carrier` | str \| None | `None` | Who carries it, as the mail gives it. |
 | `delivery.status` | Literal['on_its_way', 'out_for_delivery', 'arrived'] | `'on_its_way'` | How far it has got; it only moves forward. |
 | `delivery.dated` | bool | `True` | Whether the mail gave a date or window. False for a delivery with no date yet: its entry sits on the day the mail came and shows under the schedule's "On its way", not on a day. |
-| `plain` | bool | `False` | Nobody else is invited and it has no description, so the rules kept it without the assistant reading it. A plain entry whose title starts with a task verb is offered as a to-do, and one whose title names a known person or a promise's words is linked to them. |
+| `plain` | bool | `False` | Nobody else is invited and it has no description, so the rules kept it without the assistant reading it. A plain entry whose title starts with a task verb is offered as a to-do, one whose title names a known person is linked to them, and one that names an open promise's words on its day is proposed to that promise for the person to tie. |
 | `people` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | The known people its title names, linked by rule when it is plain. |
 | `agenda` | list[AgendaItem] | `[]` | What is to be taken up at it, each item linked to the action, question or note it came from; added by `agenda.add`. |
 | `agenda[].action` | str \| None | `None` | The id of the action it came from. |

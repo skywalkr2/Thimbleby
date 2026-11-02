@@ -33,7 +33,7 @@ def _kind_of(signal: Any) -> str | None:
         said = json.loads(note)
     except (ValueError, TypeError):
         return None
-    if not isinstance(said, dict) or said.get("until") or said.get("kind") in (None, "snooze", "clash"):
+    if not isinstance(said, dict) or said.get("until") or said.get("kind") in (None, "snooze", "clash", "tie"):
         return None
     if data["kind"] == "suggestion_chosen" and said.get("choice") not in patterns.STAYS_OFF:
         return None

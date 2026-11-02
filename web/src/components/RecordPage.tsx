@@ -18,6 +18,7 @@ import { AnswerOnToday } from "./AnswerOnToday";
 import { useChangeThis, useQuestionMenu, type ChangeKind } from "./ChangeThis";
 import { FactSource } from "./FactSource";
 import { FiledLine } from "./Filed";
+import { TieLine } from "./TieLine";
 import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonDrawer, kindLabel, useContactKinds } from "./PersonForm";
@@ -411,6 +412,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && eventActs.note}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
+      {data && kind === "action" && page.data?.tie && <TieLine action={id} text={plainTitle(page.data.name || "", due)} tie={page.data.tie} />}
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
@@ -497,7 +499,7 @@ const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invit
 /** What a to-do's page does not list as a detail: its words are the heading, owner and day are said once above, and the
  * rest is the app's own bookkeeping. */
 // `news` is the page's own "What was heard since" section, never a joined detail.
-const TODO_HIDDEN = new Set<string>(["text", "owners", "due", "due_words", "due_check", "due_event", "due_by_person", "evidence", "told", "status", "news"]);
+const TODO_HIDDEN = new Set<string>(["text", "owners", "due", "due_words", "due_check", "due_event", "proposed_event", "due_by_person", "evidence", "told", "status", "news"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);

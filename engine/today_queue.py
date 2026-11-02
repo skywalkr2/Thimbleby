@@ -146,6 +146,9 @@ class Line:
     are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
     without an answer any of its promises has had, which the line says), opening the one message to them. A promise
     line says its `replies` the same way.
+    tie (a calendar entry proposed for an open to-do, because its title and the to-do's words contain one another on the
+    to-do's day: the to-do's id in `actions`, its words in `text`, the entry's id in `entry`, its title in `other` and
+    its day in `due`; Tie it is POST /api/actions/{id}/tie and Not this POST /api/actions/{id}/not-this),
     invitation (a calendar entry that came as an invitation and has not been answered, starting soon: its id in `event`,
     its title in `text`, who invited in `subject`, `at` when it starts; the entry's page answers it), meeting_prep (a
     calendar entry with other people on it that starts soon: its id in `event`, its title in `text`, `at` when it
@@ -1571,6 +1574,7 @@ def _everything(
             )
 
     lines += _day_lines(store, cfg, now)
+    lines += _tie_lines(store)
 
     if cfg.steward.hold_outside_hours:
         # What the assistant or a rule added on its own waits for the person's hours; what waited arrives under one row.
@@ -1645,6 +1649,28 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
             )
         )
     return lines
+
+
+def _tie_lines(store: Any) -> list[Line]:
+    """One line for each calendar entry proposed for an open to-do, for the person to say whether it is the one."""
+    from engine import entry_ties
+
+    return [
+        Line(
+            key=f"tie:{action.id}",
+            group="decide",
+            kind="tie",
+            text=str(action.data["text"]),
+            subject=str(action.data["text"]),
+            other=str(entry.data["title"]),
+            entry=entry.id,
+            actions=[action.id],
+            due=str(entry.data["start"])[:10],
+            project=action.data.get("project"),
+            since=str(entry.data["start"])[:10],
+        )
+        for action, entry in entry_ties.proposals(store.read())
+    ]
 
 
 def _clash_source(entry: Any, labels: dict[str, str]) -> str | None:
@@ -1781,6 +1807,7 @@ _KIND_ORDER = {
     "overdue": 2,
     "capacity": 2,
     "clash": 3,
+    "tie": 3.5,
     "promise": 2,
     "reminder": 0,
     "reminder_digest": 1,

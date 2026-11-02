@@ -5,8 +5,9 @@ plain: it is kept in the calendar by rule, with no run of the assistant and no R
 invitation from someone else, an entry with a description (or one whose connector doesn't say), and one that changed a
 date a promise is due at. A plain entry whose title starts with one of the language's task verbs is offered as a to-do
 with one click; one whose title names a known person is linked to them, and one that names a promise's words on that
-promise's day is linked to the promise, so the promise moves with it. Nothing here calls AI, and the words come from
-the language settings. Reads only, except `link`, which writes the links it finds."""
+promise's day is only proposed to the promise: the person ties it (`engine.entry_ties`), and only then does the
+promise move with the entry. Nothing here calls AI, and the words come from the language settings. Reads only, except
+`link`, which writes the links and proposals it finds."""
 
 from __future__ import annotations
 
@@ -114,9 +115,13 @@ def people_named(title: str, people: list[Any], pm: str | None) -> list[str]:
 
 
 def link(tx: Any, entry_id: str, writer: Any, pm: str | None) -> None:
-    """Link a plain, kept calendar entry by its title: to the known people it names (`people`), and each open promise
-    due on its day whose words the title names, or that names the title's words, to the entry (`due_event`), so the
-    promise moves with it. A promise on another day or with none is left as it is."""
+    """Link a plain, kept calendar entry by its title to the known people it names (`people`), and propose it to each
+    open, untied promise due on its day whose words the title names, or that names the title's words
+    (`proposed_event`). The overlap only proposes: the promise moves with the entry once the person ties it
+    (`engine.entry_ties`). A promise on another day or with none, or one the person said isn't this entry's, is left as
+    it is."""
+    from engine import entry_ties
+
     entry = tx.get("event", entry_id)
     if entry is None or not entry.data.get("plain") or entry.data.get("cancelled"):
         return
@@ -124,9 +129,14 @@ def link(tx: Any, entry_id: str, writer: Any, pm: str | None) -> None:
     named = people_named(title, tx.list("person"), pm)
     if named != entry.data.get("people", []):
         tx.update("event", entry_id, {"people": named}, writer, read_version=entry.version)
+    refused = entry_ties.declined(tx)
     for action in tx.list("action"):
         d = action.data
         if d.get("status") != "open" or d.get("due_event") or str(d.get("due") or "") != day:
             continue
+        if d.get("proposed_event") == entry_id or entry_ties.pending(tx, action, refused) is not None:
+            continue
+        if entry_ties.subject(action.id, entry_id) in refused:
+            continue
         if names_title(title, str(d["text"])) or names_title(str(d["text"]), title):
-            tx.update("action", action.id, {"due_event": entry_id}, writer, read_version=action.version)
+            tx.update("action", action.id, {"proposed_event": entry_id}, writer, read_version=action.version)

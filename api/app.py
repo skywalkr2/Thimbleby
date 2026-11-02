@@ -54,6 +54,7 @@ from api.sent_routes import build_sent_router
 from api.setup_routes import build_setup_router
 from api.sign_in_routes import build_sign_in_router
 from api.since_routes import build_since_router
+from api.tie_routes import build_tie_router
 from api.today_routes import build_today_router
 from api.todo_routes import build_todo_router
 from api.waiting_routes import build_waiting_router
@@ -358,6 +359,7 @@ def create_app(
     inner.include_router(build_promise_router(ws, cfg, store, events, worker))
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_repeat_router(cfg, store, events, worker))
+    inner.include_router(build_tie_router(cfg, store, events, worker))
     inner.include_router(build_todo_router(cfg, store, events, worker))
     inner.include_router(build_day_router(ws, cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))

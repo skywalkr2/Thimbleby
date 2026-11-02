@@ -91,13 +91,23 @@ def a_source(store, *, author: str, by_you: bool = False, key: str = "k") -> str
         ).id
 
 
-def apply_at(env, ops, at, *, quote_in: str, author: str | None = None, by_you: bool = False, origin="input", key="k"):
+def apply_at(
+    env,
+    ops,
+    at,
+    *,
+    quote_in: str,
+    author: str | None = None,
+    by_you: bool = False,
+    origin="input",
+    key="k",
+    source=None,
+):
     """Apply ops at a given moment as the assistant does for an input that says `quote_in` (a message from `author`),
     or as the person's own note. Returns the changeset's id."""
     ws, cfg, store = env
-    source = (
-        a_source(store, author=author or SENDER["full_name"], by_you=by_you, key=key) if origin == "input" else None
-    )
+    if source is None and origin == "input":
+        source = a_source(store, author=author or SENDER["full_name"], by_you=by_you, key=key)
     with store.transaction() as tx:
         fields = {"task": "notes", "origin": origin, "state": "done", "created_at": at.isoformat()}
         request = tx.create("request", {**fields, **({"source": source} if source else {})}, _TEST).id
@@ -243,10 +253,13 @@ def test_a_change_a_rule_closed_before_the_assistant_read_it_is_listed_as_closed
 
 
 def test_a_repeat_of_an_open_promise_is_listed_as_merged_into_it(env):
+    """Only an exact repeat of one input is folded by a rule (P110 J4); a like promise from another input is the
+    assistant's call."""
     ws, cfg, store = env
     owed = {"promised_to": [SENDER["id"]]}
-    first = apply_at(env, [add_op(**owed)], ADDED_AT - timedelta(days=3), quote_in=FLOOR_QUOTE, key="first")
-    again = apply_at(env, [add_op(**owed)], ADDED_AT, quote_in=f"Again: {FLOOR_QUOTE}", key="again")
+    read_once = a_source(store, author=SENDER["full_name"], key="first")
+    first = apply_at(env, [add_op(**owed)], ADDED_AT - timedelta(days=3), quote_in=FLOOR_QUOTE, source=read_once)
+    again = apply_at(env, [add_op(**owed)], ADDED_AT, quote_in=FLOOR_QUOTE, source=read_once)
     (action,) = [a for a in store.read().list("action") if a.data["text"] == FLOOR_PLAN]
     (entry,) = entries(env).entries
     assert (entry.act, entry.title, entry.record, entry.changeset) == (

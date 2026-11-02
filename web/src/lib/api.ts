@@ -495,6 +495,10 @@ export const api = {
   agendaSpan: () => call<S["AgendaSpanView"]>("GET", "today/agenda-span"),
   /** Make the to-do a plain calendar entry is offered as: the person's own, due on the entry's day. */
   entryTodo: (entry: string) => call<S["EntryTodoMade"]>("POST", `events/${id(entry)}/todo`),
+  /** Tie a to-do to the calendar entry proposed for it, as the person's own change with Undo. */
+  tieTodo: (action: string) => call<S["TieDone"]>("POST", `actions/${id(action)}/tie`),
+  /** Say the entry proposed for a to-do isn't its one: it isn't proposed again. Undo is `undoNotNowSuggestion`. */
+  notThisEntry: (action: string) => call<S["NotNowDone"]>("POST", `actions/${id(action)}/not-this`),
   thisWeek: () => call<S["ThisWeekView"]>("GET", "today/week"),
   /** The form of the brief that is due now, or the one named: the morning brief, the evening wrap-up or the Monday briefing. */
   brief: (form?: string) => call<S["BriefView"]>("GET", form ? `brief?form=${id(form)}` : "brief"),

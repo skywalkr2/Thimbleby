@@ -630,6 +630,11 @@ class Action(Record):
     due_event: Annotated[str | None, RefTo("event")] = Field(
         None, description="The calendar entry it is due at: its date follows the entry's when the entry moves."
     )
+    proposed_event: Annotated[str | None, RefTo("event")] = Field(
+        None,
+        description="A calendar entry on its day whose title and its words contain one another, proposed for the "
+        "person to tie it to; nothing follows the entry until they say yes, which sets `due_event`.",
+    )
     due_by_person: bool = Field(
         False, description="Its date came from the person's own words, so another source's date doesn't replace it."
     )
@@ -1904,8 +1909,9 @@ class CalendarEntry(Record):
     plain: bool = Field(
         False,
         description="Nobody else is invited and it has no description, so the rules kept it without the assistant "
-        "reading it. A plain entry whose title starts with a task verb is offered as a to-do, and one whose title "
-        "names a known person or a promise's words is linked to them.",
+        "reading it. A plain entry whose title starts with a task verb is offered as a to-do, one whose title "
+        "names a known person is linked to them, and one that names an open promise's words on its day is "
+        "proposed to that promise for the person to tie.",
     )
     people: list[Annotated[str, RefTo("person")]] = Field(
         default_factory=list, description="The known people its title names, linked by rule when it is plain."
