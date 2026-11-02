@@ -911,6 +911,14 @@ code. Nearly all is built or planned. What is left, in two batches:
   export drops the citations).
 - [ ] [I-0p] **Packs and the catalog pin the public release tags** instead of this repository's working branch, so they
   build without access to the private coordinator.
+- [ ] [I-0p] **Licences of what ships:** a scan of every Python and web dependency the public tree and the installers
+  carry, run in the export check, refusing a GPL or AGPL licence (or any not on an allowed list kept as data) and listing
+  each with its licence in the release; the words "open source" appear nowhere in the product, the README or the site
+  (FSL is source-available until each version turns Apache-2.0).
+- [ ] [I-0p] **What leaves the computer, said exactly:** the README, the install page and the website (P24's content
+  brief) say that the person's data stays on their computer except what they send to the AI accounts they choose (the
+  input and the records a run needs, limited by data levels), the mail and calendar services they connect, and a backup
+  folder they pick; the app sends nothing to its makers unless the person sends feedback they read first.
 - [ ] [I-0p] **CI split and names:** the full suites run in the public repository (free minutes); this one runs the docs
   checks and scans. The owner creates the public repository first and makes this one private after it is set up, at the alpha release (owner, 2026-11-02); the names and both settings are the owner's clicks.
 - [ ] [I-0d] **The person can always start and restart the app without a terminal** (owner, 2026-10-26: "the user watches
