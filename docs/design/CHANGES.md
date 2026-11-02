@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 284. One status in the header, and a short line on an account card (2026-11-02; P107)
+
+| Where | Before | Now |
+|---|---|---|
+| The header (7.1, `web/src/shell/StatusMenu.tsx`, `Header.tsx`, `status.ts`) | The status chip could say "All good" while the assistant's own line beside it was red (a failed run, stuck background work, an account out of credit or failing) | A problem in the assistant's own state is a state of the chip ("<name>: not working" in danger, "<name>: needs a look" in warning), so the chip is never "All good" beside a stopped assistant. While there is such a problem the assistant's own line is not shown: the chip's popover carries it, with Restart now when background work is stuck. While the assistant is fine, its line (the dot and name) still shows beside "All good". Built: `web/src/shell/Header.test.tsx` |
+| The Add an account cards (`catalog/ai-endpoints.yaml`, 6.16) | A card showed the entry's whole `note` | A card shows the entry's `summary` (one short line) when it has one, else its `note`; with a summary the full note shows once the kind is chosen. Built: `web/src/components/WelcomeAi.test.tsx`, `tests/test_catalog_model_roles.py` |
+| The Add an account panel (7.x, `web/e2e/layout.spec.ts`) | Not in the layout check | Opened at 320, 390, 768 and 1280 with every kind, long model names and a long refusal: nothing wider than the panel, no sideways page scroll |
+
 ## 283. Word questions: the assistant decides, the scan only lists, one at a time on Today (2026-11-02; P106)
 
 | Where | Before | Now |
@@ -1035,6 +1043,7 @@ yet follow, that it is *designed*, with its phase.
 | Op reference (3.3) | `question.add` had no way to say it asks a word's meaning | One optional field, `term`; the plugin guide is regenerated |
 | Evaluation (6.16) | A case forbade the scan's question | The same cases now forbid the assistant's question; `unknown-acronym-asked-once` expects one (both fictional workspaces) |
 | Word questions on Today (7.7) | The line opened every question at once, each with an answer box | **Built** (`web/src/components/TodayTerms.test.tsx`): one word at a time with its answer box, where it came up, Skip, "Not a term" (the existing drop, with Undo) and "1 of N" |
+
 
 ## 282. Setup's People step, and a step count that matches the rail (2026-11-02; P103, X68)
 

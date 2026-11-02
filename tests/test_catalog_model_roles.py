@@ -26,3 +26,15 @@ def test_every_role_is_one_of_the_three_words_and_names_a_listed_example():
         for name, role in entry["model_roles"].items():
             assert role in ROLE_WORDS, f"{entry['id']}: {name} has role {role!r}"
             assert name in examples, f"{entry['id']}: role given to {name!r}, which the entry does not list"
+
+
+def test_a_card_line_fits_a_card_and_an_entry_with_a_long_note_has_a_summary():
+    """The card shows `summary` when an entry has one, else `note`: so whichever is shown is one short line."""
+    from engine.setup import known_endpoints
+
+    for entry in known_endpoints():
+        shown = entry["summary"] or entry["note"]
+        assert len(shown) <= 160, f"{entry['id']}: the card's line is {len(shown)} characters; give the entry a summary"
+        assert shown.count(". ") <= 1, (
+            f"{entry['id']}: the card's line is more than two sentences; give the entry a summary"
+        )

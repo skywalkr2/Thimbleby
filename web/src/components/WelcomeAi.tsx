@@ -707,7 +707,7 @@ export function WelcomeAi(props: {
       onChange={() => choose(e.id)}
       tag={e.recommended && guide ? <Pill tone="ok">{t("welcome.ai.recommended")}</Pill> : undefined}
       title={e.name}
-      description={e.note || undefined}
+      description={e.summary || e.note || undefined}
     />
   );
 
@@ -1045,6 +1045,11 @@ export function WelcomeAi(props: {
           </CheckboxGroup>
           {kind && (
             <>
+              {kind.summary && kind.note && (
+                <p className="hint" data-kind-note="">
+                  {kind.note}
+                </p>
+              )}
               {kind && asksAddress(kind) && (
                 <FormField id="ai-address" label={t("welcome.ai.address")}>
                   <input

@@ -9609,6 +9609,7 @@
           },
           "note": {
             "default": "",
+            "description": "What the service or program is, in a line or more; shown once it is chosen.",
             "title": "Note",
             "type": "string"
           },
@@ -9647,6 +9648,18 @@
             ],
             "description": "Where the person makes an account with the service, if anywhere.",
             "title": "Signup Url"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "One short line for its card; the card shows the note when there is none.",
+            "title": "Summary"
           }
         },
         "required": [

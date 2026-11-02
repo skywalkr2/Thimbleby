@@ -70,7 +70,8 @@ const KINDS: S["EndpointView"][] = ([
     key_url: "",
     needs_key: false,
     local: false,
-    note: "Uses the app you are signed in to.",
+    note: "Uses the app you are signed in to. A longer account of what it does and does not do, which a card has no room for.",
+    summary: "Uses the app you are signed in to.",
     program: "app-a-cli",
     installed: true,
     model_examples: ["alpha", "beta"],
@@ -230,6 +231,24 @@ test("the service the data recommends has the tag, the alternative is beside it,
     expect(document.querySelector(`input[name^="ai-kind"][value="${value}"]`)).toBeNull();
   }
   expect(screen.queryByText(/need a technical setup/)).toBeNull();
+});
+
+test("a card shows an entry's short summary, and the full note appears once the kind is chosen", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await user.click(await screen.findByRole("radio", { name: /Something else/ }));
+  await user.click(await screen.findByRole("button", { name: /^An app you're signed in to/ }));
+  const card = (await screen.findByRole("radio", { name: /^App A/ })).closest("label") as HTMLElement;
+  expect(card).toHaveTextContent("Uses the app you are signed in to.");
+  expect(card).not.toHaveTextContent(/which a card has no room for/);
+  expect(document.querySelector("[data-kind-note]")).toBeNull();
+  await pick(user, "App A");
+  expect(await screen.findByText(/which a card has no room for/)).toBeInTheDocument();
+  expect(document.querySelector("[data-kind-note]")).not.toBeNull();
+  // An entry with no summary shows its note on the card, and says nothing twice once chosen.
+  const bCard = screen.getByRole("radio", { name: /^App B/ }).closest("label");
+  expect(bCard).toHaveTextContent("Another signed-in app.");
 });
 
 test("choosing Something else opens three lines, one note each, and each opens its own short list", async () => {

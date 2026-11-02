@@ -21,7 +21,7 @@ import { useCoverage } from "../lib/coverage";
 import { settingsView, viewHref } from "../lib/views";
 import { afterClose } from "../ui/afterClose";
 import { useAlive } from "./AssistantLine";
-import { connectionState, toneOf, worstState, type StatusKind } from "./status";
+import { ASSISTANT_OWN, connectionState, toneOf, worstState, type StatusKind } from "./status";
 import styles from "./StatusMenu.module.css";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -49,6 +49,8 @@ const CHIP_WORD: Record<StatusKind, string> = {
   restart: "status.chip_restart",
   restarting: "status.chip_restarting",
   restart_failed: "status.chip_restart_failed",
+  assistant_stopped: "status.chip_assistant_stopped",
+  assistant_held: "status.chip_assistant_held",
   connection_failed: "status.chip_connection_failed",
   connection_retrying: "status.chip_connection_retrying",
   backup: "status.chip_backup",
@@ -61,7 +63,7 @@ export function StatusMenu(props: {
   demo: boolean;
   /** Opens the setup guide, at a step when one is named. */
   onOpenGuide: (step?: string) => void;
-  /** A phone: the header has no room for the assistant's own line, so the popover says its state. */
+  /** A phone or a mid-width window: the header has no room for the assistant's own line, so the popover says its state. The popover also says it whenever the assistant has a problem, as the chip then carries it. */
   narrow?: boolean;
 }) {
   const { t, tn } = useWords();
@@ -72,7 +74,9 @@ export function StatusMenu(props: {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const alive = useAlive();
   const found = useCoverage();
-  const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase, connections: connectionState(found) });
+  const assistant = alive && alive.tone !== "ok" && ASSISTANT_OWN.includes(alive.kind) ? alive.tone : undefined;
+  const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase, connections: connectionState(found), assistant });
+  const assistantShown = !!alive && (props.narrow || assistant !== undefined);
   const word = t(CHIP_WORD[kind]);
   const b = status.data?.backup;
   const ai = status.data?.ai;
@@ -112,7 +116,7 @@ export function StatusMenu(props: {
                 {t("status.refresh")}
               </Button>
             </li>
-            {props.narrow && alive && (
+            {assistantShown && alive && (
               <li className={[styles.state, alive.tone === "ok" ? "" : styles.warn].join(" ")} data-state="alive" data-tone={alive.tone}>
                 <p className={styles.name}>{t("alive.name")}</p>
                 <p className={`${styles.text} ${styles.full}`}>
@@ -121,6 +125,11 @@ export function StatusMenu(props: {
                   </span>
                   <span>{alive.say}</span>
                 </p>
+                {alive.kind === "stuck" && status.data?.can_restart && (
+                  <Button size="sm" variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+                    {t("restart.now")}
+                  </Button>
+                )}
               </li>
             )}
             {b && (

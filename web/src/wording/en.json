@@ -6253,6 +6253,8 @@
   "form.file_choose": "Choose a file",
   "form.file_or_drop": "or drop it here",
   "status.chip_connection_failed": "Connection failed",
+  "status.chip_assistant_stopped": "{assistant}: not working",
+  "status.chip_assistant_held": "{assistant}: needs a look",
   "status.chip_connection_retrying": "Connection retrying",
   "status.connections": "Connections",
   "status.connections_open": "Open Connections",

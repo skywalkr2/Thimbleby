@@ -35,7 +35,9 @@
 #   effort_param, effort_option (provider and agent settings): how a service takes an effort. Each is set on an
 #                      entry only once the service's own documentation confirms the parameter for it; an entry
 #                      without one records a tier's effort but never sends it.
-#   note               one line shown with it
+#   note               what it is, shown once the kind is chosen (and on its card when there is no summary)
+#   summary            one short line for the kind's card, for an entry whose note is too long for a card; the card
+#                      shows the summary when there is one, else the note
 # Model ids are never listed here: the screen asks the service for its models with the person's key.
 endpoints:
   - id: openai
@@ -237,6 +239,7 @@ endpoints:
         errors:
           unsupported: ["ineligibletiererror", "unsupported_client", "no longer supported for"]  # as it printed, on a personal account
         sign_in_hint: Open a terminal, run gemini and sign in, then press Test again.
+    summary: Uses your Google account through the Gemini CLI. A key or a paid plan is needed.
     note: Uses your Google account through the Gemini CLI. It refuses personal free Google accounts, so a key or a paid plan is needed. Its documentation says it asks before writing files or running commands; it names no option that stops it reading files or fetching pages.
   - id: agent
     name: Another command-line agent signed in as you

@@ -4324,7 +4324,10 @@ class EndpointView(BaseModel):
         description="What each example model is for, by name: the one chosen first, a stronger one or a faster one.",
     )
     model_optional: bool = Field(False, description="The program picks its own model when none is named.")
-    note: str = ""
+    note: str = Field("", description="What the service or program is, in a line or more; shown once it is chosen.")
+    summary: str | None = Field(
+        None, description="One short line for its card; the card shows the note when there is none."
+    )
 
 
 class AiAccountView(BaseModel):

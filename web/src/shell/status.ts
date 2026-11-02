@@ -1,7 +1,7 @@
 // The status chip's one state (design 7.1, 7.12): the worst thing going on, so the header says one word, with a dot that is a
 // warning or a danger. In order: offline, work waiting for the network, a restart to finish, a connection that can't be read
 // or is trying again (read from the connections themselves, as the Connections screen and Today show them), a backup needed,
-// spend near a limit, otherwise live.
+// the assistant stopped or held up (so there is never an "all good" beside a stopped assistant), spend near a limit, otherwise live.
 import type { S } from "../lib/api";
 import type { Coverage } from "../lib/coverage";
 import type { LiveState } from "../lib/live";
@@ -13,6 +13,8 @@ export type StatusKind =
   | "restart"
   | "restarting"
   | "restart_failed"
+  | "assistant_stopped"
+  | "assistant_held"
   | "connection_failed"
   | "connection_retrying"
   | "backup"
@@ -36,6 +38,8 @@ export function worstState(input: {
   restartPhase: string;
   /** How the connections stand (`connectionState`); unknown counts as fine. */
   connections?: "ok" | "retrying" | "failed";
+  /** A problem the assistant's own state names that no other state here already says (a failing account, a failed or stuck run, a paused account): "bad" when it can't do its work, "warn" when work is held. */
+  assistant?: "warn" | "bad";
 }): StatusKind {
   if (input.live === "offline") return "offline";
   if (input.status?.network_wait) return "network";
@@ -43,13 +47,18 @@ export function worstState(input: {
   // A restart waiting for the person's go is a warning; one that failed is the only restart state that is a danger.
   if (["stuck", "refused"].includes(input.restartPhase)) return "restart_failed";
   if (input.restartPhase === "asking" || input.status?.restart_needed) return "restart";
+  if (input.assistant === "bad") return "assistant_stopped";
   if (input.connections === "failed") return "connection_failed";
+  if (input.assistant === "warn") return "assistant_held";
   if (input.connections === "retrying") return "connection_retrying";
   if (input.status?.backup.needs_attention) return "backup";
   if (input.status?.spend.warn) return "spend";
   if (input.live === "connecting") return "connecting";
   return "live";
 }
+
+/** The assistant's states the chip says itself (network and restarts are the chip's own kinds already). */
+export const ASSISTANT_OWN: AliveKind[] = ["failing", "run_failed", "stuck", "loop_restarted", "paused", "not_set_up"];
 
 /** What the assistant's own line says, worst first: a failing account or run (bad), then the states the chip knows that
  * hold work up (warn), otherwise fine. */
@@ -74,9 +83,9 @@ export function aliveState(input: { status: S["Status"]; restartPhase: string })
 /** Everything but "live"and "connecting" is something the person may want to act on. */
 export const isWarn = (kind: StatusKind): boolean => kind !== "live" && kind !== "connecting";
 
-/** The dot's state: a danger when nothing is being read or done (offline, a connection that failed, a restart that failed), a warning for the rest. */
+/** The dot's state: a danger when nothing is being read or done (offline, a connection that failed, a restart that failed, the assistant stopped), a warning for the rest. */
 export function toneOf(kind: StatusKind): StatusTone {
-  if (kind === "offline" || kind === "connection_failed" || kind === "restart_failed") return "danger";
+  if (kind === "offline" || kind === "connection_failed" || kind === "restart_failed" || kind === "assistant_stopped") return "danger";
   return isWarn(kind) ? "warn" : "ok";
 }
 

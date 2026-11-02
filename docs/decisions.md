@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: One status in the header; a short line on an account card (P107)
+
+**Decided:**
+- The assistant's own problem states are states of the header's status chip. The assistant's own line shows only while the
+  assistant is fine, so the header never has two statuses that disagree.
+- A catalog entry with a long note gets a `summary` for its card; the full note shows once the kind is chosen.
+
+**Decided by:** the owner's report, 2026-11-02 (P107).
+
+**Why:** the owner's install showed "All good" beside a red assistant line, and a card too long to read.
+
+**Impact:** header only; no change to scope. Change log: section 284.
+
 ## 2026-11-02: The assistant decides which unknown words to ask about; the scan only lists them (P106)
 
 **Decided:**
@@ -32,6 +45,7 @@ list short.
 `question.add` (one optional field; the plugin guide is regenerated), `engine/defaults/known_terms.yaml` (currencies,
 places and everyday words), the wording sheet (`terms.came_up_in.*`), the Today card. No new setting; the two limits'
 descriptions change. A new evaluation case in both fictional workspaces. No change to scope. Change log: section 283.
+
 
 ## 2026-11-02: The visible rename comes forward, and every button is a pill (P102, P101)
 

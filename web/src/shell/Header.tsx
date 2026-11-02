@@ -19,10 +19,10 @@ import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { MenuButton, type MenuGroup } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
-import { AssistantLine } from "./AssistantLine";
+import { AssistantLine, useAlive } from "./AssistantLine";
 import { usePagesGroup } from "./HeaderLinks";
 import { StatusMenu } from "./StatusMenu";
-import { initials } from "./status";
+import { ASSISTANT_OWN, initials } from "./status";
 import styles from "./Header.module.css";
 
 /** The menu of this device's appearance: theme and density, each a choice with a check. Shared with the phone's More sheet. */
@@ -107,6 +107,9 @@ export function Header(props: {
   // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
   const tight = useMediaQuery("(max-width: 1439px)");
   const inChip = props.narrow || tight;
+  // One status on screen: when the assistant has a problem the status chip says it, so its own line shows only while it is fine.
+  const alive = useAlive();
+  const lineShown = !inChip && !(alive && alive.tone !== "ok" && ASSISTANT_OWN.includes(alive.kind));
   return (
     <header className={styles.header}>
       <a className={styles.brand} href={viewHref("today")} aria-label={t("nav.brand_named", { name: rc.workspace_name })} title={rc.workspace_name}>
@@ -128,7 +131,7 @@ export function Header(props: {
       <span className={styles.spacer} />
       <div className={styles.status}>
         <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} narrow={inChip} />
-        {!inChip && <AssistantLine onOpenGuide={props.onOpenGuide} />}
+        {lineShown && <AssistantLine onOpenGuide={props.onOpenGuide} />}
       </div>
       {!props.narrow && (
         <div className={styles.end}>

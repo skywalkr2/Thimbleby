@@ -608,7 +608,8 @@ def known_endpoints() -> list[dict[str, Any]]:
     """The kinds of AI account the Add account screen offers, from the product's catalog: id, name, adapter,
     base_url, key_url, signup_url, credit_url, install_url, needs_key, local, recommended, alternative, allowed_data,
     settings (a new account's starting provider settings), model_examples with model_roles (what each is for, only for
-    an example the entry lists), tier_presets (the model family and effort each tier takes, by tier name) and a note.
+    an example the entry lists), tier_presets (the model family and effort each tier
+    takes, by tier name), a note and an optional one-line summary for its card.
     Entries missing an id, a name or an adapter are left out. At most one entry is the recommended one and at most one
     the alternative: the first marked, so the guide never offers two."""
     try:
@@ -656,6 +657,7 @@ def known_endpoints() -> list[dict[str, Any]]:
                 "model_optional": bool(e.get("model_optional", False)),
                 "tier_presets": clean_presets(e.get("tier_presets")),
                 "note": str(e.get("note") or ""),
+                "summary": str(e.get("summary") or ""),
             }
         )
     return found

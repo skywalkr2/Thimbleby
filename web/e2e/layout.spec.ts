@@ -187,6 +187,94 @@ test.describe("no screen is wider than the window", () => {
     }
   });
 
+  test("the Add an account panel has nothing wider than itself and the page never scrolls sideways", async ({ page }) => {
+    test.setTimeout(240_000);
+    const long = strings["token-02"] ?? strings["web-01"];
+    // What a service might answer, as long unbroken words: a model's id, the sign-in's name, a refusal's reason.
+    const longModels = {
+      models: [{ id: `model-${long}`, context_tokens: 200000, input_per_million: 3, output_per_million: 15 }, { id: "short-model" }],
+      suggested: `model-${long}`,
+    };
+    let listed: Record<string, unknown> = longModels;
+    await page.route("**/api/ai/models", (route) => route.fulfill({ json: listed }));
+    const measure = (label: string) =>
+      page.evaluate((label) => {
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        const box = dialog.getBoundingClientRect();
+        const name = (el: Element) => `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}`;
+        const all = Array.from(dialog.querySelectorAll("*"));
+        // Past the panel's right edge, or a box whose own content is wider than it (clipped or scrolling inside it).
+        const wide = all.filter((el) => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().right > box.right + 1).map((el) => `${name(el)} right ${Math.round(el.getBoundingClientRect().right)}`);
+        const inside = all
+          .filter((el) => !["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName) && el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0)
+          .map((el) => `${name(el)} content ${el.scrollWidth} in ${el.clientWidth}`);
+        const widest = all.map((el) => ({ el, w: el.getBoundingClientRect().width })).sort((x, y) => y.w - x.w).slice(0, 3).map(({ el, w }) => `${name(el)} ${Math.round(w)}`);
+        const found = { label, window: window.innerWidth, panel: Math.round(box.width), panelScroll: dialog.scrollWidth - dialog.clientWidth, page: document.documentElement.scrollWidth, widest, wide: wide.slice(0, 6), inside: inside.slice(0, 6) };
+        return found;
+      }, label);
+    const check = async (label: string) => {
+      for (const spacing of ["", "0.08em"]) {
+        await page.evaluate((s) => document.querySelectorAll<HTMLElement>('[role="dialog"] *').forEach((e) => (e.style.letterSpacing = s)), spacing);
+        const found = await measure(`${label}${spacing ? ", wider text" : ""}`);
+        const bad = found.wide.length > 0 || found.inside.length > 0 || found.panelScroll > 0 || found.page > found.window;
+        if (bad) console.log(`Add an account: ${JSON.stringify(found)}`);
+        expect(bad, `Add an account: ${JSON.stringify(found)}`).toBe(false);
+      }
+    };
+    // A window with scroll bars that take room (Windows, a mouse): the browser here hides them, so they are drawn by hand.
+    await page.addInitScript(() => {
+      const style = document.createElement("style");
+      style.textContent = "*::-webkit-scrollbar { width: 15px; height: 15px; background: #ddd; } *::-webkit-scrollbar-thumb { background: #888; }";
+      document.addEventListener("DOMContentLoaded", () => document.head.appendChild(style));
+    });
+    for (const width of [320, 390, 768, 1280]) {
+      listed = longModels;
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("?token=e2e-token");
+      // Each width starts with an empty form: what was typed before is kept for the tab.
+      await page.evaluate(() => {
+        window.sessionStorage.clear();
+      });
+      await page.reload();
+      await page.evaluate(() => {
+        window.location.hash = "settings/ai";
+      });
+      await section(page, "AI accounts");
+      await page.getByRole("button", { name: "Add an account" }).first().click();
+      const panel = page.getByRole("dialog", { name: "Add an account" });
+      await expect(panel).toBeVisible(LOADED);
+      await check(`${width}px, as opened`);
+      // Open every line under Something else, so the longest cards show.
+      const more = panel.getByRole("radio", { name: /Something else/ });
+      if (await more.count()) await more.first().click();
+      for (const line of await panel.getByRole("button", { name: /^(Another service|An app you're signed in to|One on this computer)/ }).all()) {
+        if ((await line.getAttribute("aria-expanded")) !== "true") await line.click();
+      }
+      await check(`${width}px, every kind shown`);
+      // Each kind in turn, since choosing one opens its own fields.
+      const kinds = await panel.locator('input[type="radio"][name^="ai-kind"]').evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
+      for (const kind of new Set(kinds.filter(Boolean))) {
+        await panel.locator(`input[type="radio"][name^="ai-kind"][value="${kind}"]`).first().click({ force: true });
+        await check(`${width}px, kind ${kind}`);
+      }
+      // A key typed into a service that takes one, then Check: the model list holds a long id, then the service refuses with a long reason.
+      const key = panel.locator("input#ai-key");
+      await panel.locator('input[type="radio"][name^="ai-kind"]').first().click({ force: true });
+      if (await key.count()) {
+        await key.first().fill("secret-value");
+        await panel.getByRole("button", { name: "Check", exact: true }).click();
+        await expect(panel.locator("select#ai-model")).toBeAttached(LOADED);
+        // What a closed disclosure holds is measured too.
+        await page.evaluate(() => document.querySelectorAll('[role="dialog"] details').forEach((d) => d.setAttribute("open", "")));
+        await check(`${width}px, models listed, a long id`);
+        listed = { models: [], problem: long };
+        await panel.getByRole("button", { name: "Check", exact: true }).click();
+        await expect(panel.getByText(long.slice(0, 20)).first()).toBeVisible(LOADED);
+        await check(`${width}px, the service refused with a long reason`);
+      }
+    }
+  });
+
   test("Quality fits the smallest and largest supported widths", async ({ page }) => {
     for (const width of [320, 2000]) {
       await page.setViewportSize({ width, height: 900 });

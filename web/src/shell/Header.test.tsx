@@ -11,10 +11,10 @@ function below1440() {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width:\s*1439px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
 }
 
-function show(over: { changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide" | "onOpenQuality", () => void>> } = {}) {
+function show(over: { status?: ReturnType<typeof statusFixture>; changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide" | "onOpenQuality", () => void>> } = {}) {
   fakeApi({
     "GET settings": () => ({ fingerprint: "fp", items: over.links === undefined ? [] : [linksItem(over.links)] }),
-    "GET status": () => statusFixture(),
+    "GET status": () => over.status ?? statusFixture(),
     "GET me": () => ({ full_name: "Casey Example", person: null }),
     "GET runtime-config": () => ({ instance: null }),
     "GET changes": () => over.changes ?? [{ id: "REQ-1" }],
@@ -90,6 +90,30 @@ test("the assistant's line is a dot and its name in the header beside the status
   expect(alive).toHaveTextContent(/^Helper$/);
   expect(alive.querySelector("[data-indicator]")).not.toBeNull();
   expect(alive.parentElement).toBe(chip.parentElement);
+});
+
+// One status on screen: a stopped or held-up assistant used to show a red "x" line beside a chip saying "All good".
+const BAD_ASSISTANTS: [string, ReturnType<typeof statusFixture>][] = [
+  ["a failed run", statusFixture({}, { assistant: { last_run_failed: true } })],
+  ["an account out of credit", statusFixture({}, { assistant: { paused: [{ account: "acct-1", until: "9999-01-01T00:00:00+00:00" }] } })],
+  ["stuck background work", statusFixture({}, { assistant: { loop_stuck_since: "2026-10-13T08:00:00+00:00" } })],
+];
+
+test.each(BAD_ASSISTANTS)("%s: one status in the header, it names the assistant's state and never says All good", async (_name, status) => {
+  show({ status });
+  await waitFor(() => expect(screen.getByRole("button", { name: /^App status: / })).not.toHaveTextContent("All good"));
+  const chip = screen.getByRole("button", { name: /^App status: / });
+  expect(chip).toHaveTextContent(/^Helper: /);
+  expect(screen.queryByRole("button", { name: /^Helper: / })).toBeNull();
+  expect(screen.queryByText("All good")).toBeNull();
+  expect(document.querySelectorAll("[data-status], [data-alive]")).toHaveLength(1);
+});
+
+test("a fine assistant: the chip says All good, and the assistant's line shows beside it", async () => {
+  show();
+  const chip = await screen.findByRole("button", { name: /^App status: / });
+  await waitFor(() => expect(chip).toHaveTextContent("All good"));
+  expect(await screen.findByRole("button", { name: /^Helper/ })).toHaveAttribute("data-alive", "fine");
 });
 
 test("no Demo chip when the workspace is not a demo", () => {
