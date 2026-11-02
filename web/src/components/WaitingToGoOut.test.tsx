@@ -29,7 +29,7 @@ describe("nothing waiting", () => {
   test("the To send tab is Follow-ups' own: nothing is listed to approve and the screen says nobody is waiting", async () => {
     show([]);
     expect(screen.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeInTheDocument();
-    expect(await screen.findByText(/Nobody is waiting on anything from you/)).toBeInTheDocument();
+    expect(await screen.findByText(/A follow-up is a message to someone/)).toBeInTheDocument();
     // With nothing on any tab the tabs change nothing, so they are not drawn.
     expect(screen.queryByRole("button", { name: "To send" })).toBeNull();
     expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
@@ -37,7 +37,7 @@ describe("nothing waiting", () => {
 
   test("acts that have gone out or been taken back are not listed", async () => {
     show([actFixture({ status: "sent" }), actFixture({ id: "XACT-2", status: "withdrawn" })]);
-    expect(await screen.findByText(/Nobody is waiting on anything from you/)).toBeInTheDocument();
+    expect(await screen.findByText(/A follow-up is a message to someone/)).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
   });
 });

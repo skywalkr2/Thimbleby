@@ -38,10 +38,31 @@ test("the pattern is behind Edit the pattern, the preview follows what is typed,
   await user.type(box, "Hello {{first_name},");
   expect(posted(calls)).toHaveLength(0);
   await user.tab();
+  await user.tab();
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0].changes).toEqual({ [GREETING]: "Hello {first_name}," });
   expect(await screen.findByText("Hello Ada,")).toBeVisible();
   expect(await screen.findByText("Changed")).toBeInTheDocument();
+});
+
+test("the first name goes in with a button, at the cursor, so nobody types the marker", async () => {
+  const calls = fakeSettings(items());
+  renderApp(<MessageStyle />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("How your messages start and end"));
+  await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages start/ }));
+  const box = screen.getByLabelText("How your messages start, the pattern");
+  await user.clear(box);
+  await user.type(box, "Dear ");
+  await user.click(screen.getByRole("button", { name: "Add first name to How your messages start" }));
+  expect(box).toHaveFocus();
+  expect(box).toHaveValue("Dear {first_name}");
+  expect(screen.getByText("Dear Ada")).toBeVisible();
+  await user.tab();
+  await user.tab();
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0].changes).toEqual({ [GREETING]: "Dear {first_name}" });
+  expect(screen.queryByText(/Write \{first_name\}/)).toBeNull();
 });
 
 test("Reset puts a line back to the default in one save, with its read-back", async () => {
@@ -89,10 +110,12 @@ test("the closing changed while the greeting is still being saved is saved too, 
   await user.clear(greeting);
   await user.type(greeting, "Hello {{first_name},");
   await user.tab();
+  await user.tab();
   await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages end/ }));
   const closing = screen.getByLabelText("How your messages end, the pattern");
   await user.clear(closing);
   await user.type(closing, "Cheers");
+  await user.tab();
   await user.tab();
   await waitFor(() => expect(state.map((i) => i.value)).toEqual(["Hello {first_name},", "Cheers"]), { timeout: 3000 });
   expect(screen.queryByRole("alert")).toBeNull();

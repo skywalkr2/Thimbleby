@@ -25,6 +25,7 @@ import {
   waitsForRestart,
   type Summary,
 } from "../lib/packs";
+import { useAddonName } from "../lib/addon-names";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
 import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
@@ -848,7 +849,8 @@ function InstalledList(props: { items: Installed[]; removed: ReadonlySet<string>
 /** Installed add-ons that come in one file, as one row with each one's own state, switch and Remove under it. */
 function InstalledGroup(props: { slots: { item: Installed; index: number }[]; onRemove: (id: string) => void }) {
   const { t } = useWords();
-  const names = props.slots.map((s) => s.item.name);
+  const nameOf = useAddonName();
+  const names = props.slots.map((s) => nameOf(s.item.name));
   const base = `installed-group-${props.slots[0].index}`;
   return (
     <Row
@@ -878,13 +880,15 @@ function InstalledGroup(props: { slots: { item: Installed; index: number }[]; on
 function InstalledRow(props: { item: Installed; index: number; onRemoved: () => void }) {
   const { t } = useWords();
   const { item } = props;
+  const nameOf = useAddonName();
+  const name = nameOf(item.name);
   const base = `installed-${props.index}`;
-  const power = useSwitch(item.name, item.name);
+  const power = useSwitch(item.name, name);
   const change = usePackChange(
     item.name,
-    item.name,
+    name,
     () => restoreFocus(() => document.getElementById(`${base}-row`) ?? document.getElementById("addons-title")),
-    undefined,
+    nameOf,
     props.onRemoved,
   );
   const problem = change.problem || power.problem;
@@ -902,8 +906,8 @@ function InstalledRow(props: { item: Installed; index: number; onRemoved: () => 
         ? t("addons.state.because", { reason: item.reason })
         : t("addons.state.off");
   return (
-    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={item.name} titleId={`${base}-name`} meta={(item.version ? <>{t("addons.version", { version: item.version })}</> : null)} actions={<><SwitchButton on={isOn} label={item.name} busy={power.busy} onRun={() => void power.run(!isOn)} />
-          <RowMenu label={item.name} actions={actions} /></>}>
+    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} meta={(item.version ? <>{t("addons.version", { version: item.version })}</> : null)} actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
+          <RowMenu label={name} actions={actions} /></>}>
 {item.description && <p className="pack-summary">{item.description}</p>}
 <p className="hint">
             {statusText}
@@ -917,7 +921,7 @@ function InstalledRow(props: { item: Installed; index: number; onRemoved: () => 
             </p>
           )}
 <WhatLines what={item.what} base={base} />
-{item.state === "enabled" && <AddonSecrets plugin={item.name} />}
+{item.state === "enabled" && item.signed_in !== true && <AddonSecrets plugin={item.name} name={name} />}
 </Row>
   );
 }

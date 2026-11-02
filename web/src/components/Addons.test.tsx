@@ -466,16 +466,16 @@ test("Installed lists one row per pack with its version, description, status and
     }),
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
-  const alpha = await row("alpha");
+  const alpha = await row("Alpha");
   expect(alpha).toHaveTextContent("Version 0.2.0");
   expect(alpha).toHaveTextContent("Does alpha things");
   expect(alpha).toHaveTextContent("On and running");
   expect(within(alpha).getByRole("list", { name: "Adds" })).toHaveTextContent("1 screen");
   expect(within(alpha).getByRole("list", { name: "What it can access" })).toHaveTextContent(`Websites: ${SITE}`);
   expect(alpha).toHaveTextContent("May store private material");
-  expect(await row("beta")).toHaveTextContent("Off");
-  expect(await row("gamma")).toHaveTextContent("Turned off because: it needs a newer version of the app");
-  expect(screen.getAllByRole("listitem", { name: /^(alpha|beta|gamma)$/ })).toHaveLength(3);
+  expect(await row("Beta")).toHaveTextContent("Off");
+  expect(await row("Gamma")).toHaveTextContent("Turned off because: it needs a newer version of the app");
+  expect(screen.getAllByRole("listitem", { name: /^(Alpha|Beta|Gamma)$/ })).toHaveLength(3);
 });
 
 test("Installed with nothing installed says so", async () => {
@@ -533,11 +533,11 @@ test("an installed add-on that is off has Turn on as its one action: it acts at 
     "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
   });
   await calls.user.click(await screen.findByRole("tab", { name: "Installed" }));
-  const beta = await row("beta");
-  expect(within(beta).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Turn on beta"]);
-  await calls.user.click(within(beta).getByRole("button", { name: "Turn on beta" }));
+  const beta = await row("Beta");
+  expect(within(beta).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Turn on Beta"]);
+  await calls.user.click(within(beta).getByRole("button", { name: "Turn on Beta" }));
   await waitFor(() => expect(calls.calls.find((c) => c.route === "POST packs/beta/on")?.body).toEqual({ fingerprint: "fp-1" }));
-  expect(await screen.findByText("Turned on beta.")).toBeInTheDocument();
+  expect(await screen.findByText("Turned on Beta.")).toBeInTheDocument();
   await calls.user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST settings")).toBe(true));
   // Nothing restarts by itself.
@@ -557,9 +557,9 @@ test("a turned-on add-on offers Turn off, and a catalog row that is installed bu
   await calls.user.click(within(off).getByRole("button", { name: "Turn on Name of off" }));
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/off/on")).toBe(true));
   await calls.user.click(await screen.findByRole("tab", { name: "Installed" }));
-  await calls.user.click(within(await row("beta")).getByRole("button", { name: "Turn off beta" }));
+  await calls.user.click(within(await row("Beta")).getByRole("button", { name: "Turn off Beta" }));
   await waitFor(() => expect(calls.calls.find((c) => c.route === "POST packs/beta/off")?.body).toEqual({ fingerprint: "fp-1" }));
-  expect(await screen.findByText("Turned off beta.")).toBeInTheDocument();
+  expect(await screen.findByText("Turned off Beta.")).toBeInTheDocument();
 });
 
 test("a refusal shows the server's words on the row", async () => {
@@ -568,10 +568,10 @@ test("a refusal shows the server's words on the row", async () => {
     "POST packs/beta/on": () => new Refuse(409, "The settings changed. Try again."),
   });
   await calls.user.click(await screen.findByRole("tab", { name: "Installed" }));
-  const beta = await row("beta");
-  await calls.user.click(within(beta).getByRole("button", { name: "Turn on beta" }));
+  const beta = await row("Beta");
+  await calls.user.click(within(beta).getByRole("button", { name: "Turn on Beta" }));
   expect(await within(beta).findByRole("alert")).toHaveTextContent("The settings changed. Try again.");
-  expect(within(beta).getByRole("button", { name: "Turn on beta" })).toBeEnabled();
+  expect(within(beta).getByRole("button", { name: "Turn on Beta" })).toBeEnabled();
 });
 
 test("turning an add-on on that needs a restart asks first, and never restarts by itself", async () => {
@@ -589,7 +589,7 @@ test("turning an add-on on that needs a restart asks first, and never restarts b
     </RestartProvider>,
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
-  await user.click(within(await row("beta")).getByRole("button", { name: "Turn on beta" }));
+  await user.click(within(await row("Beta")).getByRole("button", { name: "Turn on Beta" }));
   await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Restart to finish this change?"));
   expect(screen.getByRole("button", { name: "Restart now" })).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
@@ -615,10 +615,10 @@ test("after Turn on the row says the add-on is on, and 'On after a restart' whil
     </RestartProvider>,
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
-  const beta = await row("beta");
+  const beta = await row("Beta");
   expect(beta).toHaveTextContent("Off");
-  await user.click(within(beta).getByRole("button", { name: "Turn on beta" }));
-  await waitFor(() => expect(within(beta).getByRole("button", { name: "Turn off beta" })).toBeInTheDocument());
+  await user.click(within(beta).getByRole("button", { name: "Turn on Beta" }));
+  await waitFor(() => expect(within(beta).getByRole("button", { name: "Turn off Beta" })).toBeInTheDocument());
   expect(beta).toHaveTextContent("On after a restart");
   // Asking to restart is the person's choice; nothing restarted by itself.
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
@@ -637,9 +637,9 @@ test("an add-on that is on and running says so, and one that is on but refused k
     }),
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
-  expect(await row("running")).toHaveTextContent("On and running");
-  expect(await row("refused")).toHaveTextContent("Turned off because: it needs a newer version of the app");
-  expect(await row("refused")).not.toHaveTextContent("On after a restart");
+  expect(await row("Running")).toHaveTextContent("On and running");
+  expect(await row("Refused")).toHaveTextContent("Turned off because: it needs a newer version of the app");
+  expect(await row("Refused")).not.toHaveTextContent("On after a restart");
 });
 
 test("a catalog row for an add-on that is on but not running yet says it is on after a restart", async () => {
@@ -660,7 +660,7 @@ test("turning on refetches the add-ons list so the row reads what was saved", as
   });
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
   const before = calls.calls.filter((c) => c.route === "GET packs").length;
-  await user.click(within(await row("beta")).getByRole("button", { name: "Turn on beta" }));
+  await user.click(within(await row("Beta")).getByRole("button", { name: "Turn on Beta" }));
   await waitFor(() => expect(calls.calls.filter((c) => c.route === "GET packs").length).toBeGreaterThan(before));
 });
 
@@ -869,10 +869,10 @@ test("on Installed, Remove is offered for an add-on the app installed that is of
     },
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
-  expect(within(await row("other")).queryByRole("button", { name: /More actions/ })).toBeNull();
-  expect(within(await row("on")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  expect(within(await row("Other")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  expect(within(await row("On")).queryByRole("button", { name: /More actions/ })).toBeNull();
   const before = calls.calls.filter((call) => call.route === "GET packs").length;
-  await user.click(within(await row("mine")).getByRole("button", { name: "More actions for mine" }));
+  await user.click(within(await row("Mine")).getByRole("button", { name: "More actions for Mine" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   await waitFor(() => expect(calls.calls.filter((call) => call.route === "GET packs").length).toBeGreaterThan(before));
   await waitFor(() => expect(screen.queryByRole("listitem", { name: "mine" })).toBeNull());
@@ -1134,16 +1134,16 @@ test("on Installed, entries of one file are one row too, each with its own switc
     { "POST packs/b/uninstall": () => ({ name: "pack-duo", version: "1.0.0", needs_restart: false, file_kept: true, still_used_by: ["a"] }) },
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
-  const group = await row("a and b");
-  expect(within(group).getByText("Includes a, b")).toBeInTheDocument();
-  expect(within(await row("a")).getByText("Not signed in yet")).toBeInTheDocument();
-  expect(within(await row("a")).getByRole("button", { name: "Turn off a" })).toBeInTheDocument();
-  expect(within(await row("b")).getByRole("button", { name: "Turn on b" })).toBeInTheDocument();
-  expect(within(await row("a")).queryByRole("button", { name: /More actions/ })).toBeNull(); // on, so not removable
-  await user.click(within(await row("b")).getByRole("button", { name: "More actions for b" }));
+  const group = await row("A and B");
+  expect(within(group).getByText("Includes A, B")).toBeInTheDocument();
+  expect(within(await row("A")).getByText("Not signed in yet")).toBeInTheDocument();
+  expect(within(await row("A")).getByRole("button", { name: "Turn off A" })).toBeInTheDocument();
+  expect(within(await row("B")).getByRole("button", { name: "Turn on B" })).toBeInTheDocument();
+  expect(within(await row("A")).queryByRole("button", { name: /More actions/ })).toBeNull(); // on, so not removable
+  await user.click(within(await row("B")).getByRole("button", { name: "More actions for B" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/b/uninstall")).toBe(true));
-  expect(await screen.findByText("b is removed. The file stays because it is still in use by a.")).toBeInTheDocument();
+  expect(await screen.findByText("B is removed. The file stays because it is still in use by A.")).toBeInTheDocument();
 });
 
 test("what an install adds besides the add-on is listed before it is installed, and a library with no build for this computer is said", async () => {
@@ -1163,4 +1163,36 @@ test("what an install adds besides the add-on is listed before it is installed, 
   expect(within(stuck).getByText(/no build for this computer/)).toBeInTheDocument();
   expect(within(stuck).queryByRole("list", { name: "Also adds" })).toBeNull();
   expect(within(stuck).queryByRole("button", { name: /Install/ })).toBeNull();
+});
+
+test("an installed add-on carries the name its catalog gives it, so one add-on has one name across the lists", async () => {
+  const { user } = open(
+    view({
+      available: [pack("journey-mail", { name: "Example mail" })],
+      installed: [{ name: "journey-mail", version: "1.0.0", description: "Reads mail", enabled: false, state: "off", reason: null, removable: false, what: summary() }],
+    }),
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const installed = await row("Example mail");
+  expect(within(installed).getByRole("button", { name: "Turn on Example mail" })).toBeInTheDocument();
+  expect(screen.queryByText("journey-mail")).toBeNull();
+  expect(screen.queryByText("Journey mail")).toBeNull();
+});
+
+test("an add-on that is signed in is not asked for its keys", async () => {
+  const keys = [{ plugin: "alpha", secrets: [{ secret: "client-id", where: "none" as const, name: null }] }];
+  const on = (signed_in: boolean | null): S["InstalledPackView"] => ({ name: "alpha", version: "1.0.0", description: "", enabled: true, state: "enabled", reason: null, removable: false, what: summary(), signed_in });
+  const first = open(view({ installed: [on(true)] }), { "GET addon-secrets": () => keys, "GET setup": () => ({ local: true }) });
+  await first.user.click(await screen.findByRole("tab", { name: "Installed" }));
+  await row("Alpha");
+  expect(document.querySelector(".kept-secrets")).toBeNull();
+});
+
+test("an add-on that is on but not signed in is asked for its keys", async () => {
+  const keys = [{ plugin: "alpha", secrets: [{ secret: "client-id", where: "none" as const, name: null }] }];
+  const off: S["InstalledPackView"] = { name: "alpha", version: "1.0.0", description: "", enabled: true, state: "enabled", reason: null, removable: false, what: summary(), signed_in: false };
+  const { user } = open(view({ installed: [off] }), { "GET addon-secrets": () => keys, "GET setup": () => ({ local: true }) });
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  await row("Alpha");
+  await waitFor(() => expect(document.querySelector(".kept-secrets")).not.toBeNull());
 });

@@ -240,11 +240,15 @@ test("the style guide opens in a demo workspace, and is not there otherwise", as
   fakeApi(quiet);
   const hidden = renderApp(<App rc={rc()} />);
   await screen.findByRole("link", { name: "Go to Today · Workspace" });
-  expect(screen.queryByRole("heading", { level: 1, name: "Style guide" })).toBeNull();
+  // Outside a demo or development workspace the page says it isn't there, with a way back, never a blank page.
+  expect(await screen.findByText("This page isn't available here.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Back to Today" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 2, name: "Type scale" })).toBeNull();
   hidden.unmount();
   fakeApi(quiet);
   renderApp(<App rc={rc({ demo: true })} />);
   expect(await screen.findByRole("heading", { level: 1, name: "Style guide" })).toBeInTheDocument();
+  expect(screen.queryByText("This page isn't available here.")).toBeNull();
   vi.unstubAllEnvs();
 });
 
@@ -309,4 +313,11 @@ test("a new name for the workspace shows in the header at once, with no reload",
   await act(() => client.invalidateQueries());
   expect(await screen.findByRole("link", { name: "Go to Today · My projects" })).toBeInTheDocument();
   expect(within(screen.getByRole("banner")).getByText("My projects")).toBeInTheDocument();
+});
+
+test("the accent color is applied from what the app has now, so a saved color shows with no reload", async () => {
+  fakeApi({ "GET panels": () => [], "GET asks": () => [] });
+  renderApp(<App rc={rc({ brand_color: "#3446b5" })} />);
+  await waitFor(() => expect(document.documentElement.style.getPropertyValue("--brand-600")).toBe("#3446b5"));
+  document.documentElement.removeAttribute("style");
 });

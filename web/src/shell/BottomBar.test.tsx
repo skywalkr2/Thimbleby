@@ -82,7 +82,7 @@ test("More lists Records and Settings, with no Connections or Add-ons beside it,
   await waitFor(() => expect(onHelp).toHaveBeenCalledTimes(1));
 });
 
-test("with no side besides Personal the phone's bar says Your day, not Work, and its sheet lists no Stages", async () => {
+test("with no side besides Personal the phone's bar says Keeping track, not Work, and its sheet lists no Stages", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET panels": () => [],
@@ -94,8 +94,8 @@ test("with no side besides Personal the phone's bar says Your day, not Work, and
   const noop = () => undefined;
   renderApp(<BottomBar current="today" version="9.8.7" onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />);
   const bar = screen.getByRole("navigation", { name: "Views" });
-  await user.click(await within(bar).findByRole("button", { name: "Your day" }));
-  const sheet = await screen.findByRole("dialog", { name: "Your day" });
+  await user.click(await within(bar).findByRole("button", { name: "Keeping track" }));
+  const sheet = await screen.findByRole("dialog", { name: "Keeping track" });
   expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "To-dos and questions"]);
   expect(within(bar).queryByRole("button", { name: "Work" })).toBeNull();
 });

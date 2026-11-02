@@ -3,13 +3,15 @@
 // (see lib/sign-in-return.ts). The address the service's app registration must allow is always shown, since the
 // person needs it when registering the app.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Heading } from "react-aria-components";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { ModalPanel, DialogFooter, restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { useFocusAfterRender } from "../lib/focus-after-render";
@@ -75,16 +77,29 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   const act = useAct();
   const [signingOut, setSigningOut] = useState(false);
   const [outProblem, setOutProblem] = useState("");
+  // Signing out is asked about first: it ends reading and acting, and nothing can bring it back but signing in again.
+  const [confirming, setConfirming] = useState<{ account: Account | null } | null>(null);
+  const client = useQueryClient();
+  const { push } = useToasts();
   // The paste form: open by itself on a row with no registration yet, until the person closes it; elsewhere only when asked for.
   const [formChoice, setFormChoice] = useState<boolean | null>(null);
   const { item } = props;
   const base = `sign-in-${item.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   const signedIn = item.status === "signed_in";
 
-  const { start, busy: starting, problem: startProblem } = useSignInWindow(item.name);
+  const { start, phase, busy: starting, problem: startProblem } = useSignInWindow(item.name);
+  // The window that was opened says how it went: every list of what is signed in reads again, and the person is told, so a
+  // window that closes itself (a service that signs in at once) is never left without a word.
+  useEffect(() => {
+    if (phase !== "done") return;
+    void client.invalidateQueries();
+    push({ message: t("sign_in.return.done", { label: item.label }) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
   const busy = starting || signingOut;
   const problem = startProblem || outProblem;
 
+  const askToSignOut = (account: Account | null) => setConfirming({ account });
   const signOut = async () => {
     setSigningOut(true);
     setOutProblem("");
@@ -179,7 +194,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
     actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name)), disabled: busy });
   }
   if (signedIn && !several) {
-    actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => void signOut(), disabled: busy });
+    actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => askToSignOut(null), disabled: busy });
     actions.push({ id: "sign-in-again", label: t("sign_in.sign_in_again"), run: () => void start(), disabled: busy || !item.ready });
   }
   if (item.can_paste && !formOpen && !pasted && (item.app === "add-on" || item.app === "none")) {
@@ -257,7 +272,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                       <Button variant="quiet"
                         disabled={busy}
                         aria-label={t("sign_in.sign_out_account", { account: who })}
-                        onClick={() => void signOutAccount(a)}
+                        onClick={() => askToSignOut(a)}
                       >
                         {t("sign_in.sign_out")}
                       </Button>
@@ -340,7 +355,48 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
               disabled={busy}
             />
           ) : null}
+          {confirming && (
+            <SignOutConfirm
+              label={item.label}
+              account={confirming.account ? (confirming.account.address ?? t("sign_in.account_unnamed")) : null}
+              acting={confirming.account ? confirming.account.acting : false}
+              onCancel={() => {
+                setConfirming(null);
+                restoreFocus(() => document.getElementById(menuId) ?? document.getElementById(`${base}-title`));
+              }}
+              onConfirm={() => {
+                const which = confirming.account;
+                setConfirming(null);
+                void (which ? signOutAccount(which) : signOut());
+                restoreFocus(() => document.getElementById(menuId) ?? document.getElementById(`${base}-title`));
+              }}
+            />
+          )}
     </Row>
+  );
+}
+
+/** Asks before signing out, and says what stops. Signing out can't be taken back with Undo, so it is one of the few things
+ * that ask first; Cancel and Escape leave everything as it was. */
+function SignOutConfirm(props: { label: string; account: string | null; acting: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const { t } = useWords();
+  const titleId = useId();
+  const where = props.account ?? props.label;
+  return (
+    <ModalPanel titleId={titleId} onClose={props.onCancel}>
+      <Heading slot="title" id={titleId}>
+        {t("sign_in.confirm.title", { where })}
+      </Heading>
+      <p>{t("sign_in.confirm.stops", { where })}</p>
+      {props.acting && <p>{t("sign_in.confirm.acting", { where })}</p>}
+      <p className="hint">{t("sign_in.confirm.stays")}</p>
+      <DialogFooter>
+        <Button onClick={props.onCancel}>{t("sign_in.confirm.cancel")}</Button>
+        <Button variant="danger" onClick={props.onConfirm}>
+          {t("sign_in.sign_out")}
+        </Button>
+      </DialogFooter>
+    </ModalPanel>
   );
 }
 

@@ -139,10 +139,10 @@ test.describe("the visual system", () => {
   test("the user menu's theme and density are kept for this device", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: HEIGHT });
     await signIn(page);
-    await page.getByRole("button", { name: /^Change appearance, / }).click();
+    await page.getByRole("button", { name: /^Menu for / }).click();
     await page.getByRole("menuitemradio", { name: "Dark" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.getByRole("button", { name: /^Change appearance, / }).click();
+    await page.getByRole("button", { name: /^Menu for / }).click();
     await page.getByRole("menuitemradio", { name: "Compact" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
     await page.reload();
@@ -504,7 +504,7 @@ test.describe("screen use and the shell", () => {
           .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
       );
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
-      const menu = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
+      const menu = (await header.getByRole("button", { name: /^Menu for / }).boundingBox())!;
       expect(menu.x + menu.width).toBeLessThanOrEqual(width);
       if (width >= 1280) {
         // Nothing in the status is cut off: the chip's word and the assistant's name (when it is there) show whole.
@@ -520,7 +520,7 @@ test.describe("screen use and the shell", () => {
           const name = h.querySelector<HTMLElement>("[data-alive] span:last-child");
           if (name) name.textContent = "an assistant with a rather long name that someone chose";
         });
-        const after = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
+        const after = (await header.getByRole("button", { name: /^Menu for / }).boundingBox())!;
         expect(after.x + after.width).toBeLessThanOrEqual(width);
       }
       // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.
@@ -536,7 +536,7 @@ test.describe("screen use and the shell", () => {
         header.evaluate((h, v) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = v; }), value);
       // A wider font leaves the row tight: the status chip gives up its age before anything is pushed past the window's edge.
       await spacing("0.1em");
-      const tight = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
+      const tight = (await header.getByRole("button", { name: /^Menu for / }).boundingBox())!;
       expect(tight.x + tight.width).toBeLessThanOrEqual(width);
       await spacing("0.25em");
       expect(await narrowest()).toBeGreaterThanOrEqual(24);
@@ -567,7 +567,7 @@ test.describe("screen use and the shell", () => {
         header.getByRole("button", { name: /^App status: / }),
         header.getByRole("button", { name: "Hand something in" }),
         header.getByRole("button", { name: "Help" }),
-        header.getByRole("button", { name: /^Change appearance, / }),
+        header.getByRole("button", { name: /^Menu for / }),
       ];
       for (const control of controls) {
         await expect(control).toBeVisible();

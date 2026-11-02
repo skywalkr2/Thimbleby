@@ -50,6 +50,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { ActTodayRows } from "./ActToday";
 import { ReminderWhereRow } from "./ReminderWhereRow";
+import { ReadingOffRows, useReadingOff } from "./ReadingOffRow";
 import { staleLine, useReminderWhere } from "../lib/reminder-where";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { NoteBox } from "./NoteBox";
@@ -103,6 +104,7 @@ export function TodayQueue(props: {
   const stage = useStageToday();
   const outgoing = useActToday();
   const staleReminders = staleLine(useReminderWhere().data, t) !== null;
+  const readingOff = useReadingOff().length > 0;
   const plugins = usePluginToday(props.handlers.onOpenRecord);
   const pane = useRef<HTMLDivElement>(null);
   const lines = queue.data ?? [];
@@ -356,7 +358,7 @@ export function TodayQueue(props: {
                 const extra = group === "decide" && stage.count > 0;
                 const added = plugins.in(group);
                 const sending = group === "decide" || group === "risk" ? outgoing.in(group) : [];
-                if (these.length === 0 && !extra && added.length === 0 && sending.length === 0 && !(group === "decide" && staleReminders)) return null;
+                if (these.length === 0 && !extra && added.length === 0 && sending.length === 0 && !(group === "decide" && (staleReminders || readingOff))) return null;
                 return (
                   <QueueGroup key={group} id={`queue-group-${group}`} title={t(`queue.group.${group}`)} count={these.length + (extra ? stage.count : 0) + added.length + sending.length}>
                     {these.map((line) => (
@@ -375,6 +377,7 @@ export function TodayQueue(props: {
                     {extra && <StageTodayRows today={stage} />}
                     <ActTodayRows lines={sending} onView={props.handlers.onOpenView} />
                     {group === "decide" && <ReminderWhereRow onView={props.handlers.onOpenView} />}
+                    {group === "decide" && <ReadingOffRows onView={props.handlers.onOpenView} />}
                     <PluginRows lines={added} plugins={plugins} />
                   </QueueGroup>
                 );

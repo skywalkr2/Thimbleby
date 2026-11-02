@@ -1205,8 +1205,8 @@ def _everything(
             )
         )
 
-    # What the assistant or a rule did since yesterday that the person hasn't looked over: one line, in the risk group
-    # below promises, which goes when the list is opened and comes back with the next change.
+    # What the assistant or a rule did since yesterday that the person hasn't looked over: one line, in the review group
+    # with the other things to look over, which goes when the list is opened and comes back with the next change.
     # A new to-do that a batch on Today already holds to look over is left out of it: the review lines show it, so the
     # list isn't a second place to read the same thing.
     done = since_yesterday.build(ws, reader, cfg, people, now)
@@ -1229,7 +1229,7 @@ def _everything(
         lines.append(
             Line(
                 key="since_yesterday",
-                group="risk",
+                group="review",
                 kind="since_yesterday",
                 count=len(unseen),
                 outcome={act: counts[act] for act in since_yesterday.ACTS if act in counts},

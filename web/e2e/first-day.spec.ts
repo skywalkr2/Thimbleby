@@ -139,7 +139,7 @@ test.describe("the first day, read as a person reads it", () => {
   // F6: a fold shows that it is one, and tabs over nothing are not drawn.
   test("Follow-ups with nothing to follow up draws no tabs, and the message style is a fold with a visible control", async ({ page }) => {
     await openScreen(page, "work/followups", "Follow-ups");
-    await expect(page.getByText(/Nobody is waiting on anything from you/)).toBeVisible(LOADED);
+    await expect(page.getByText(/A follow-up is a message to someone/)).toBeVisible(LOADED);
     for (const name of ["By person", "By project", "To send", "Later", "Waiting on them"]) await expect(page.getByRole("button", { name })).toHaveCount(0);
     const fold = page.locator("summary", { hasText: "How your messages start and end" });
     await expect(fold).toBeVisible(LOADED);

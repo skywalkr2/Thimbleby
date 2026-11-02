@@ -1,5 +1,5 @@
-// The person's quick links (design 7.9), a section of Settings of their own: a name and a web address each, shown as buttons
-// in the header. A link is added from a name and an address and removed from its row; both are saved at once with Undo, like
+// The person's quick links (design 7.9), a section of Settings of their own: a name and a web address each, shown in the menu
+// under the person's initials. A link is added from a name and an address and removed from its row; both are saved at once with Undo, like
 // every other setting. The server checks the list (how many, how long, a web address); this checks the address first so
 // the person is told in plain words before anything is sent.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,15 @@ import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
 
 const WEB = /^https?:\/\/\S+$/i;
+/** The longest name a link can have (the server's limit, shown beside the field rather than cut without a word). */
+const NAME_MAX = 40;
+/** What was typed as an address: a bare web address ("example.org/bank") gets https:// in front; anything that names another
+ * kind of address (it has a scheme other than http or https) is left as typed so it is refused. */
+export function webAddress(typed: string): string {
+  const text = typed.trim();
+  if (/^[a-z][a-z0-9+.-]*:/i.test(text) && !/^[^/\s]+:\d+(\/|$)/.test(text)) return text;
+  return /^[^\s/]+\.[^\s/]+/.test(text) ? `https://${text.replace(/^\/\//, "")}` : text;
+}
 
 export function PageLinks() {
   const { t } = useWords();
@@ -45,7 +54,7 @@ export function PageLinks() {
   };
 
   const add = async () => {
-    const entry = { name: name.trim(), address: address.trim() };
+    const entry = { name: name.trim(), address: webAddress(address) };
     if (!entry.name || !entry.address) return;
     if (!WEB.test(entry.address)) {
       setProblem(t("pages.bad_address", { name: entry.name }));
@@ -82,16 +91,17 @@ export function PageLinks() {
       {!locked && (
         <form
           className="answer-form"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             void add();
           }}
         >
-          <FormField id={`${base}-name`} label={t("pages.name")}>
-            <input id={`${base}-name`} type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+          <FormField id={`${base}-name`} label={t("pages.name")} hint={t("pages.name_hint", { n: name.length, max: NAME_MAX })}>
+            <input id={`${base}-name`} type="text" maxLength={NAME_MAX} value={name} onChange={(e) => setName(e.target.value)} aria-describedby={`${base}-name-hint`} />
           </FormField>
-          <FormField id={`${base}-address`} label={t("pages.address")}>
-            <input id={`${base}-address`} type="url" inputMode="url" value={address} onChange={(e) => setAddress(e.target.value)} aria-describedby={problem ? `${base}-problem` : undefined} />
+          <FormField id={`${base}-address`} label={t("pages.address")} hint={t("pages.address_hint")}>
+            <input id={`${base}-address`} type="url" inputMode="url" value={address} onChange={(e) => setAddress(e.target.value)} aria-describedby={[`${base}-address-hint`, problem ? `${base}-problem` : ""].filter(Boolean).join(" ")} />
           </FormField>
           {problem && (
             <p className="problem-note" id={`${base}-problem`} role="alert">

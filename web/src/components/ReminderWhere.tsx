@@ -9,6 +9,7 @@ import { useReminderWhere, whereWords, type Where } from "../lib/reminder-where"
 import { inOrder, knownFingerprint, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { undoBody } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
+import { settingsView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../ui/Button";
@@ -40,6 +41,9 @@ export function ReminderWhere() {
   const outward = where === "calendar" || where === "mail" ? (where as Outward) : null;
   const chosenAccount = account ?? (pick === null ? data.account : null);
   const options = (data.accounts ?? []).filter((a) => (outward ? a[outward] : false));
+  // A choice that needs an account no account can carry is off, with its reason and where to put that right; what is
+  // saved stays shown even then, so the person sees what is in effect.
+  const canCarry = (form: Outward) => (data.accounts ?? []).some((a) => a[form]);
   const going = data.standing && data.standing.form === outward && data.standing.account === chosenAccount ? data.standing : null;
 
   const refresh = () => client.invalidateQueries({ queryKey: ["reminder-where"] });
@@ -140,10 +144,24 @@ export function ReminderWhere() {
         {choices.map((c) => (
           <div key={c.id} className={styles.choice}>
             <label>
-              <input type="radio" name={group} checked={where === c.id} onChange={() => choose(c.id)} />
+              <input
+                type="radio"
+                name={group}
+                checked={where === c.id}
+                disabled={(c.id === "calendar" || c.id === "mail") && !canCarry(c.id) && data.where !== c.id}
+                onChange={() => choose(c.id)}
+              />
               {c.label}
             </label>
             {c.hint && <p className={styles.hint}>{c.hint}</p>}
+            {(c.id === "calendar" || c.id === "mail") && !canCarry(c.id) && (
+              <p className={styles.hint} data-unavailable={c.id}>
+                {t(`reminders.where.none_${c.id}`)}{" "}
+                <a href={viewHref(settingsView("connections"))}>{t("reminders.where.none.sign_in")}</a>
+                {" · "}
+                <a href={viewHref(settingsView("you"))}>{t("reminders.where.none.switch_on")}</a>
+              </p>
+            )}
             {where === c.id && (c.id === "calendar" || c.id === "mail") && (
               <div className={styles.account}>
                 {options.length === 0 ? (
@@ -193,6 +211,7 @@ export function ReminderWhere() {
         </div>
       )}
       {!outward && <p role="status">{t(`reminders.where.state.${where === "app" ? "app" : "nowhere"}`)}</p>}
+      {outward && !chosenAccount && options.length > 0 && <p role="status">{t("reminders.where.unsaved")}</p>}
       {problem && (
         <p className="problem-note" role="alert">
           {problem}

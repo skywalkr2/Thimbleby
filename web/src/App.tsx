@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
+import { applyBrand } from "./lib/theme";
 import { showNewLines } from "./lib/queue-hold";
 import { useMediaQuery, useNarrow } from "./lib/media";
 import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
@@ -24,6 +25,7 @@ import { Notes } from "./components/Notes";
 import { FollowUps } from "./components/FollowUps";
 import { OpenItems } from "./components/OpenItems";
 import { HandIn } from "./components/HandIn";
+import { NotAvailable } from "./components/NotAvailable";
 import { Handover } from "./components/Handover";
 import { Schedule } from "./components/Schedule";
 import { Quality } from "./components/Quality";
@@ -57,6 +59,9 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const live = useLive();
   // What the app is called is read again after any saved change, so a new name shows in the header at once, with no reload.
   const fresh = useQuery({ queryKey: ["runtime-config"], queryFn: api.runtimeConfig, initialData: props.rc, staleTime: Infinity });
+  // A new accent color shows at once, with no reload: the page's brand colors follow what is saved.
+  const brand = fresh.data.brand_color;
+  useEffect(() => applyBrand(brand), [brand]);
   return (
     <RestartProvider hellos={live.hellos}>
       <MissedOneProvider>
@@ -313,11 +318,11 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "settings/ai-compare":
         return framed("ai", <AiCompare onBack={() => setView(settingsView("ai"))} />);
       case "handover":
-        return <Handover />;
+        return <Handover onBack={() => setView("today")} />;
       case "quality":
         return <Quality onBack={() => setView("today")} />;
       case "styleguide":
-        return styleGuideShown(rc) ? <StyleGuide /> : null;
+        return styleGuideShown(rc) ? <StyleGuide /> : <NotAvailable title={t("nav.styleguide")} onBack={() => setView("today")} />;
       default:
         return null;
     }
@@ -397,6 +402,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           onFeedback={openFeedback}
           onOpenGuide={openGuide}
           onOpenQuality={() => setView("quality")}
+          onOpenSettings={() => setView("settings")}
         />
         {!narrow && <Sidebar current={navView} expanded={sidebar.expanded} onToggle={sidebar.toggle} />}
         <main id="main" className={shell.main} tabIndex={-1}>

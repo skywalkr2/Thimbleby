@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { rememberReturn, useSignInReturn } from "../lib/sign-in-return";
+import { announceSignIn } from "../lib/sign-in-window";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { SignIns } from "./SignIns";
 
@@ -217,7 +218,38 @@ test("Sign in is disabled until the app registration is set, and says why", asyn
   expect(button).toHaveAccessibleDescription("Set the add-on's app registration first. Then you can sign in.");
 });
 
-test("Sign out signs out at once and says so, with no undo", async () => {
+test("Sign out asks first, saying what stops; Keep signed in changes nothing", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { status: "signed_in" })], "DELETE sign-ins/demo/one": () => ({ ok: true }) });
+  open();
+  await user.click(await screen.findByRole("button", { name: "More actions for Service demo/one" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+  const dialog = await screen.findByRole("dialog", { name: "Sign out of Service demo/one?" });
+  expect(within(dialog).getByText(/Reading from Service demo\/one stops until you sign in again/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Signing out can't be undone/)).toBeInTheDocument();
+  await user.click(within(dialog).getByRole("button", { name: "Keep signed in" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.some((c) => c.route === "DELETE sign-ins/demo/one")).toBe(false);
+  expect(screen.getByText("Signed in")).toBeInTheDocument();
+});
+
+test("a sign-in that finishes in the window that opened reads every list again and says so", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    ...settings,
+    "GET sign-ins": () => [signIn("demo/one", { status: "signed_out" })],
+    "POST sign-ins/demo/one/start": () => ({ url: "http://localhost:9090/login" }),
+  });
+  open();
+  await user.click(await screen.findByRole("button", { name: "Sign in to Service demo/one" }));
+  await waitFor(() => expect(assign).toHaveBeenCalled());
+  const before = calls.filter((c) => c.route === "GET sign-ins").length;
+  announceSignIn({ outcome: "done", name: "demo/one", error: "", detail: "" });
+  expect(await screen.findByText("Signed in to Service demo/one.")).toBeInTheDocument();
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET sign-ins").length).toBeGreaterThan(before));
+});
+
+test("Sign out signs out once confirmed and says so, with no undo", async () => {
   const user = userEvent.setup();
   let status: S["SignInView"]["status"] = "signed_in";
   const calls = fakeApi({
@@ -231,6 +263,7 @@ test("Sign out signs out at once and says so, with no undo", async () => {
   open();
   await user.click(await screen.findByRole("button", { name: "More actions for Service demo/one" }));
   await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+  await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sign out" }));
   expect(await screen.findByText("Signed out of Service demo/one.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "DELETE sign-ins/demo/one")).toHaveLength(1);
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
@@ -626,6 +659,7 @@ test("a service that names its accounts lists each by its address with Sign out 
   expect(within(one).queryByText("Signed in as pat@example.com")).toBeNull();
   // Signing one account out forgets only that one; the other stays listed.
   await user.click(within(list).getByRole("button", { name: "Sign out pat@example.com" }));
+  await user.click(within(await screen.findByRole("dialog", { name: "Sign out of pat@example.com?" })).getByRole("button", { name: "Sign out" }));
   expect(await screen.findByText("Signed out pat@example.com of Service demo/one.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "DELETE sign-ins/demo/one?account=k1")).toHaveLength(1);
   await waitFor(() => expect(within(one).queryByText("pat@example.com")).toBeNull());

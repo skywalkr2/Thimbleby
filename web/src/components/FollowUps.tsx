@@ -163,8 +163,12 @@ export function FollowUps(props: { compact?: boolean }) {
   // What waits to go out leads the list, so no row is chosen as the first until it has been read: the messages below may be
   // here sooner, and the first row would then be one of them.
   const actsComing = !compact && !byProject && filter === "send" && acts.isPending;
+  // The person's own section stays first in the list, but the pane opens on someone else's message when there is one: the
+  // person's own decisions and to-dos are acted on where they are kept, and the message to send is what this screen is for.
+  const firstOther = actRows.length === 0 ? (shown.find((s) => !s.is_pm)?.person ?? null) : null;
   const choice = useListChoice({
     keys: [...actRows.map((a) => actKey(a.id)), ...shown.map((s) => s.person)],
+    first: firstOther,
     beside,
     reset: `${group}|${filter}|${side.picked}`,
     wait: actsComing,
@@ -629,6 +633,8 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const setDraft = (value: string | null) => (shared ? shared.set({ draft: value }) : setOwnDraft(value));
   const setCopied = (value: boolean) => (shared ? shared.set({ copied: value }) : setOwnCopied(value));
   const [view, setView] = useState<"message" | "table">("message");
+  // The browser refused the last copy: Mark sent is then offered beside the box, for a message sent some other way.
+  const [copyRefused, setCopyRefused] = useState(false);
   const message = draft ?? s.message;
   const questions = toSendQuestions(s);
   const actions = toSendActions(s);
@@ -652,6 +658,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     if (!message.trim()) return;
     if ((await put(message)) === "blocked") {
       setCopied(false);
+      setCopyRefused(true);
       setOpen(true);
       window.setTimeout(() => {
         area.current?.focus();
@@ -661,6 +668,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
       return;
     }
     markMessageSeen(s.person, message);
+    setCopyRefused(false);
     setCopied(true);
     push({ message: t(done) });
   };
@@ -690,6 +698,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   // If the browser won't copy, the table on screen is selected so the person can copy it by hand.
   const blocked = () => {
     setCopied(false);
+    setCopyRefused(true);
     const shown = preview.current;
     if (shown) {
       const range = document.createRange();
@@ -733,6 +742,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     if (result) {
       setDraft(null);
       setCopied(false);
+      setCopyRefused(false);
     }
   };
 
@@ -838,6 +848,11 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                       {t("followups.reset")}
                     </Button>
                   )}
+                  {copyRefused && !copied && (
+                    <Button variant="secondary" onClick={() => void markSent()} disabled={!!s.withheld}>
+                      {t("followups.mark_sent")}
+                    </Button>
+                  )}
                   <Button variant="primary" onClick={primary} disabled={!!s.withheld}>
                     {copied ? t("followups.mark_sent") : t("followups.copy_message")}
                   </Button>
@@ -850,7 +865,8 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   if (props.pane) {
     return (
       <DetailItem data-row="" tabIndex={-1} ref={ref}>
-        <DetailTop state={<span>{tn("followups.to_send", s.to_send)}</span>} actions={buttons} />
+        {/* The message is on screen with its own Copy and Mark sent, so the detail's top holds only the menu: one button for each step. */}
+        <DetailTop state={<span>{tn("followups.to_send", s.to_send)}</span>} actions={open ? <Actions><RowMenu label={s.name} actions={menu} /></Actions> : buttons} />
         {hold.form}
         {open && <RowBody pane>{opened}</RowBody>}
       </DetailItem>

@@ -119,10 +119,10 @@ test("a close the person has not seen says so in words, and what was seen or isn
   open([CLOSED, MOVED, ADDED, SORTED]);
   await screen.findByRole("list", { name: "What changed since yesterday" });
   const [closed, moved, added, sorted] = rows();
-  expect(closed).toHaveTextContent("You haven't seen this close");
-  expect(sorted).toHaveTextContent("You haven't seen this close");
-  expect(moved).not.toHaveTextContent("You haven't seen this close");
-  expect(added).not.toHaveTextContent("You haven't seen this close");
+  expect(closed).toHaveTextContent("Closed since you last looked");
+  expect(sorted).toHaveTextContent("Closed since you last looked");
+  expect(moved).not.toHaveTextContent("Closed since you last looked");
+  expect(added).not.toHaveTextContent("Closed since you last looked");
 });
 
 test("rules and sorting say which kind of rule did it and why", async () => {
@@ -191,7 +191,7 @@ test("opening the list marks it seen as it was drawn", async () => {
 
 test("an empty list says nothing changed and has nothing to mark", async () => {
   const { calls } = open([]);
-  expect(await screen.findByText("Nothing changed since yesterday.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing new since yesterday, or since you last looked.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST since-yesterday/seen")).toBe(false);
 });
 

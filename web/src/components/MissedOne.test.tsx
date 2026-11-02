@@ -34,7 +34,7 @@ function header(routes: Parameters<typeof fakeApi>[0] = {}) {
   renderApp(
     <RestartProvider hellos={1}>
       <MissedOneProvider>
-        <Header rc={rc} live={{ state: "live", lastUpdate: null, refresh: noop }} narrow={false} shortcuts={rc.shortcuts} onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} onOpenQuality={noop} />
+        <Header rc={rc} live={{ state: "live", lastUpdate: null, refresh: noop }} narrow={false} shortcuts={rc.shortcuts} onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} onOpenQuality={noop} onOpenSettings={noop} />
       </MissedOneProvider>
     </RestartProvider>,
   );
@@ -111,7 +111,7 @@ test("the empty list of what changed offers it too", async () => {
       <SinceYesterday onOpenRecord={noop} />
     </MissedOneProvider>,
   );
-  expect(await screen.findByText("Nothing changed since yesterday.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing new since yesterday, or since you last looked.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Missed something?" })).toBeInTheDocument();
 });
 

@@ -398,7 +398,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await sections.getByRole("link", { name: "Appearance" }).click();
     await expect(page).toHaveURL(/#settings\/appearance$/);
-    await expect(page.getByRole("combobox", { name: "Light or dark" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Theme" })).toBeVisible();
     // The rarely changed settings of the page are in one closed fold at its foot.
     await expect(page.locator("details.more-settings")).toHaveCount(1);
     await expect(page.locator("details.more-settings")).not.toHaveAttribute("open", /.*/);

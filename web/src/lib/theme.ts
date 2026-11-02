@@ -211,6 +211,22 @@ export function setDensity(density: Density): void {
   publish({ ...current, density });
 }
 
+/** What Settings saved for the theme or the spacing is this device's choice at once, with no reload: the same one setting the
+ * user menu changes. Changes to other settings are ignored. Returns whether anything was applied. */
+export function applyAppearanceChanges(changes: ReadonlyArray<{ key: string; after?: unknown }>): boolean {
+  let applied = false;
+  for (const { key, after } of changes) {
+    if (key === "ui.theme" && isTheme(after)) {
+      setTheme(after);
+      applied = true;
+    } else if (key === "ui.density" && isDensity(after)) {
+      setDensity(after);
+      applied = true;
+    }
+  }
+  return applied;
+}
+
 /** The theme and density now showing, updated when either changes. */
 export function useAppearance(): Appearance {
   return useSyncExternalStore(

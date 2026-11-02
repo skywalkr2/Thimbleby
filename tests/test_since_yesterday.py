@@ -354,7 +354,7 @@ def test_nothing_unseen_means_no_line_and_a_day_of_changes_is_one_line_with_coun
     assert line_of(env) is None
     a_day(env)
     line = line_of(env)
-    assert (line.group, line.kind, line.count, line.key) == ("risk", "since_yesterday", 3, "since_yesterday")
+    assert (line.group, line.kind, line.count, line.key) == ("review", "since_yesterday", 3, "since_yesterday")
     assert line.outcome == {"added": 1, "closed": 1, "moved": 1}
 
 
@@ -378,12 +378,12 @@ def test_a_to_do_the_review_lines_already_hold_is_not_counted_again_and_the_line
     assert (line.count, line.outcome) == (1, {"closed": 1})
 
 
-def test_the_line_ranks_in_the_risk_group_below_promises(env):
+def test_the_line_is_in_the_review_group_with_the_other_things_to_look_over_and_not_under_at_risk(env):
     ws, cfg, store = env
     a_day(env)
-    ranked = [x.kind for x in queue(ws, store, cfg, NOW) if x.group == "risk"]
-    assert ranked[-1] == "since_yesterday"
-    assert ranked.index("since_yesterday") > max((i for i, k in enumerate(ranked) if k == "promise"), default=-1)
+    lines = queue(ws, store, cfg, NOW)
+    assert "since_yesterday" in [x.kind for x in lines if x.group == "review"]
+    assert "since_yesterday" not in [x.kind for x in lines if x.group == "risk"]
 
 
 def test_opening_the_list_marks_it_seen_the_line_goes_and_a_new_change_brings_it_back(env):
@@ -528,7 +528,7 @@ def test_the_words_of_the_list_and_the_line_come_from_the_wording_sheet():
     for key in ("said", "said_you", "said_unknown", "reason", "rule", "sorting", "replied", "meeting", "nothing"):
         assert words[f"since.why.{key}"].strip(), key
     assert words["queue.since.title"] == "Look over what changed since yesterday"
-    assert words["since.empty"] == "Nothing changed since yesterday."
+    assert words["since.empty"] == "Nothing new since yesterday, or since you last looked."
 
 
 # ---- the screen's API -----------------------------------------------------------------------------------------------
@@ -549,7 +549,7 @@ def test_after_a_day_of_promises_arriving_closing_and_moving_the_line_is_there_a
     env = (api.ws, api.cfg, api.store)
     made = a_day(env)
     line = next(x for x in api.get("/api/today/queue").json() if x["kind"] == "since_yesterday")
-    assert (line["group"], line["count"], line["outcome"]) == ("risk", 3, {"added": 1, "closed": 1, "moved": 1})
+    assert (line["group"], line["count"], line["outcome"]) == ("review", 3, {"added": 1, "closed": 1, "moved": 1})
     body = api.get("/api/since-yesterday").json()
     assert body["unseen"] == 3 and [e["act"] for e in body["entries"]] == ["moved", "closed", "added"]
     closed = next(e for e in body["entries"] if e["act"] == "closed")

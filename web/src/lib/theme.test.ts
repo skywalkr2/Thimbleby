@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { accentContrast, applyBrand, applyDensity, applyTheme, brandTokens, contrast, initAppearance, parseHex, setDensity, setTheme, useAppearance } from "./theme";
+import { accentContrast, applyAppearanceChanges, applyBrand, applyDensity, applyTheme, brandTokens, contrast, initAppearance, parseHex, setDensity, setTheme, useAppearance } from "./theme";
 
 const root = () => document.documentElement;
 
@@ -128,4 +128,14 @@ test("the contrast of the text on an accent color is measured against white and 
   expect(mid!.ok).toBe(false);
   expect(mid!.ratio).toBeLessThan(4.5);
   expect(accentContrast("not a color")).toBeNull();
+});
+
+test("a saved theme or spacing is this device's choice at once, and other settings change nothing", () => {
+  expect(applyAppearanceChanges([{ key: "demo.title", after: "x" }])).toBe(false);
+  expect(applyAppearanceChanges([{ key: "ui.theme", after: "nonsense" }])).toBe(false);
+  expect(root().hasAttribute("data-theme")).toBe(false);
+  expect(applyAppearanceChanges([{ key: "ui.theme", after: "dark" }, { key: "ui.density", after: "compact" }])).toBe(true);
+  expect(root().getAttribute("data-theme")).toBe("dark");
+  expect(root().getAttribute("data-density")).toBe("compact");
+  expect(window.localStorage.getItem("cockpit:theme")).toBe("dark");
 });

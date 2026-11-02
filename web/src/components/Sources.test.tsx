@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { whenText } from "../lib/dates";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
-import { Sources } from "./Sources";
+import { Sources, signedOutOf } from "./Sources";
 
 type Source = S["WatchSourceView"];
 type Run = NonNullable<Source["last"]>;
@@ -1298,4 +1298,15 @@ test("a connection the app itself reads has no add-on line", async () => {
   await row("Source a");
   await row("Source b");
   expect(screen.queryByText(/isn't installed/)).toBeNull();
+});
+
+test("a source reads through its add-on's sign-in: signed out of every one of them it says it is not read, and signed in to one it reads", () => {
+  const signIn = (name: string, status: S["SignInView"]["status"]) => ({ name, label: `Service ${name}`, status }) as S["SignInView"];
+  expect(signedOutOf("pack/inbox", [signIn("pack/account", "signed_out")])).toBe("Service pack/account");
+  expect(signedOutOf("pack/inbox", [signIn("pack/account", "expired")])).toBe("Service pack/account");
+  expect(signedOutOf("pack/inbox", [signIn("pack/a", "signed_out"), signIn("pack/b", "signed_in")])).toBeNull();
+  // A connection of the app's own, or of an add-on with no sign-in, is never held back by one.
+  expect(signedOutOf("folder", [signIn("pack/account", "signed_out")])).toBeNull();
+  expect(signedOutOf("other/inbox", [signIn("pack/account", "signed_out")])).toBeNull();
+  expect(signedOutOf("pack/inbox", undefined)).toBeNull();
 });

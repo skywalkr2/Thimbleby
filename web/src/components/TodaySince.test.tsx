@@ -8,7 +8,7 @@ import { forgetLine } from "../lib/today";
 import { fakeApi, renderApp, statusFixture } from "../test-utils";
 import { Today } from "./Today";
 
-// What changed since yesterday on Today (design 6.32, 7.7): one line in the risk group that starts with Look over and counts
+// What changed since yesterday on Today (design 6.32, 7.7): one line in the review group that starts with Look over and counts
 // what is unseen in plain words. Look over opens the list.
 
 type Line = S["QueueLineView"];
@@ -62,7 +62,7 @@ test("the line says what is unseen in plain words, in the order closed, moved, n
   expect(within(row).getByRole("button", { name: "Look over" })).toBeInTheDocument();
 });
 
-test("Look over is the one button and opens the list; the line is in the risk group", async () => {
+test("Look over is the one button and opens the list", async () => {
   const user = userEvent.setup();
   const { onView } = show([since({ closed: 1 })]);
   const row = (await screen.findByRole("group", { name: TITLE })) as HTMLElement;

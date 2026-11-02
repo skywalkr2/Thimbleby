@@ -8,6 +8,7 @@ import { project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Settings } from "./Settings";
+import { setDensity, setTheme } from "../lib/theme";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
@@ -247,7 +248,7 @@ test("choosing a section shows that section's settings and no others; the choice
   const chosen = vi.fn();
   renderApp(<Settings section="you" onSection={chosen} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByLabelText("The display name.");
-  expect(screen.queryByLabelText("Light or dark")).toBeNull();
+  expect(screen.queryByLabelText("Theme")).toBeNull();
   await user.click(screen.getByRole("link", { name: "Appearance" }));
   expect(chosen).toHaveBeenCalledWith("appearance");
 });
@@ -279,7 +280,7 @@ test("Quick links is a section of its own with the list of the person's links as
   open("links");
   expect(await screen.findByRole("heading", { level: 2, name: "Quick links" })).toBeInTheDocument();
   expect(screen.getByRole("list", { name: "Quick links" })).toHaveTextContent("Planning board");
-  expect(screen.getByText("Sites you open every day, shown as buttons in the header. Helper doesn't read them.")).toBeInTheDocument();
+  expect(screen.getByText("Sites you open every day, shown in the menu under your initials at the top right. Helper doesn't read them.")).toBeInTheDocument();
   expect(screen.queryByText("Links to your own pages.")).toBeNull();
 });
 
@@ -289,7 +290,7 @@ test("without an address to change, the section list still moves between section
   renderApp(<Settings onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByLabelText("The display name.");
   await user.click(screen.getByRole("link", { name: "Appearance" }));
-  expect(await screen.findByLabelText("Light or dark")).toBeInTheDocument();
+  expect(await screen.findByLabelText("Theme")).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
   expect(screen.getByRole("heading", { level: 2, name: "Appearance" })).toBeInTheDocument();
 });
@@ -309,7 +310,7 @@ test("the search looks at every setting in every section by its key and descript
   expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
   await user.clear(search);
   await user.type(search, "looks");
-  expect(screen.getByLabelText("Light or dark")).toBeInTheDocument();
+  expect(screen.getByLabelText("Theme")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 3, name: "Appearance" })).toBeInTheDocument();
   await user.clear(search);
   await user.type(search, "zzz");
@@ -1679,4 +1680,40 @@ test("Your name asks for a last name too, and doesn't save one word", async () =
   await user.tab();
   expect(await screen.findByRole("alert")).toHaveTextContent("Add your last name too");
   expect(calls.some((c) => c.route === "POST me")).toBe(false);
+});
+
+test("the theme and the spacing apply at once when saved, show what this device has in effect, and carry the menu's names", async () => {
+  const user = userEvent.setup();
+  const root = document.documentElement;
+  api(
+    [
+      item("ui.theme", { group: "ui", type: "choice", options: ["system", "light", "dark"], value: "dark", default: "system", source: "file", description: "Light or dark screens." }),
+      item("ui.density", { group: "ui", type: "choice", options: ["comfortable", "compact"], value: "comfortable", default: "comfortable", description: "How much fits." }),
+    ],
+  );
+  // The menu under the initials chose Light on this device while the workspace says Dark: Settings shows what is in effect.
+  setTheme("light");
+  try {
+    open("appearance");
+    const theme = await screen.findByLabelText("Theme");
+    expect(screen.getByLabelText("Spacing")).toBeInTheDocument();
+    expect(theme).toHaveValue("light");
+    await user.selectOptions(theme, "dark");
+    await waitFor(() => expect(root.getAttribute("data-theme")).toBe("dark"));
+    await user.selectOptions(screen.getByLabelText("Spacing"), "compact");
+    await waitFor(() => expect(root.getAttribute("data-density")).toBe("compact"));
+    expect(await screen.findByText(/Saved\. Spacing: Compact/)).toBeInTheDocument();
+  } finally {
+    setTheme("system");
+    setDensity("comfortable");
+    window.localStorage.clear();
+  }
+});
+
+test("an address naming a page Settings doesn't have here says so and shows the You page, not a silent swap", async () => {
+  api();
+  renderApp(<Settings section="files" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  const note = await screen.findByText(/Add-on files isn't in Settings here, so this is You instead\./);
+  expect(note).toHaveAttribute("data-not-available");
+  expect(screen.getByLabelText("The display name.")).toBeInTheDocument();
 });

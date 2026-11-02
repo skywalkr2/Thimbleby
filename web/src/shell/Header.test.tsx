@@ -11,7 +11,7 @@ function below1440() {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width:\s*1439px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
 }
 
-function show(over: { status?: ReturnType<typeof statusFixture>; changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide" | "onOpenQuality", () => void>> } = {}) {
+function show(over: { status?: ReturnType<typeof statusFixture>; changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide" | "onOpenQuality" | "onOpenSettings", () => void>> } = {}) {
   fakeApi({
     "GET settings": () => ({ fingerprint: "fp", items: over.links === undefined ? [] : [linksItem(over.links)] }),
     "GET status": () => over.status ?? statusFixture(),
@@ -36,6 +36,7 @@ function show(over: { status?: ReturnType<typeof statusFixture>; changes?: unkno
         onFeedback={h.onFeedback ?? noop}
         onOpenGuide={h.onOpenGuide ?? noop}
         onOpenQuality={h.onOpenQuality ?? noop}
+        onOpenSettings={h.onOpenSettings ?? noop}
       />
     </RestartProvider>,
   );
@@ -161,7 +162,7 @@ test("the person's initials open the user menu, where theme and density are save
   const user = userEvent.setup();
   initAppearance({ brand_color: null, theme: "system", density: "comfortable" });
   show();
-  const avatar = await screen.findByRole("button", { name: "Change appearance, Casey Example" });
+  const avatar = await screen.findByRole("button", { name: "Menu for Casey Example" });
   expect(avatar).toHaveTextContent("CE");
   await user.click(avatar);
   const dark = screen.getByRole("menuitemradio", { name: "Dark" });
@@ -169,7 +170,7 @@ test("the person's initials open the user menu, where theme and density are save
   await user.click(dark);
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   expect(window.localStorage.getItem("cockpit:theme")).toBe("dark");
-  await user.click(screen.getByRole("button", { name: "Change appearance, Casey Example" }));
+  await user.click(screen.getByRole("button", { name: "Menu for Casey Example" }));
   expect(screen.getByRole("menuitemradio", { name: "Dark" })).toBeChecked();
   await user.click(screen.getByRole("menuitemradio", { name: "Compact" }));
   expect(document.documentElement).toHaveAttribute("data-density", "compact");
@@ -178,7 +179,7 @@ test("the person's initials open the user menu, where theme and density are save
 
 test("until the workspace knows the person's name, the avatar uses the workspace's", async () => {
   show();
-  await waitFor(() => expect(screen.getByRole("button", { name: /^Change appearance, / })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole("button", { name: /^Menu for / })).toBeInTheDocument());
 });
 
 test("on a phone only the brand, the status chip and the user menu remain", async () => {
@@ -186,7 +187,7 @@ test("on a phone only the brand, the status chip and the user menu remain", asyn
   const header = screen.getByRole("banner");
   expect(within(header).getByRole("link", { name: /Go to Today/ })).toBeInTheDocument();
   expect(within(header).getByRole("button", { name: /^App status: / })).toBeInTheDocument();
-  expect(within(header).getByRole("button", { name: /^Change appearance, / })).toBeInTheDocument();
+  expect(within(header).getByRole("button", { name: /^Menu for / })).toBeInTheDocument();
   expect(within(header).queryByRole("button", { name: "Search or ask" })).toBeNull();
   expect(within(header).queryByRole("button", { name: "Hand something in" })).toBeNull();
   expect(within(header).queryByRole("button", { name: "Help" })).toBeNull();
@@ -241,20 +242,37 @@ test("the header has no Quick links button: the links are the first group of the
   const address = "https" + "://boards.example.org/plan";
   show({ links: [{ name: "Planning board", address }, { name: "Odd one", address: "not an address" }] });
   expect(screen.queryByRole("button", { name: "Quick links" })).toBeNull();
-  await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
+  await user.click(await screen.findByRole("button", { name: /^Menu for / }));
   const link = await screen.findByRole("menuitem", { name: "Planning board" });
   expect(link).toHaveAttribute("href", address);
   expect(link).toHaveAttribute("target", "_blank");
   expect(screen.queryByRole("menuitem", { name: "Odd one" })).toBeNull();
-  // The links come first, under their own title, then the appearance choices.
+  // The person and Settings lead, then the links under their own title, then the figures and the appearance choices.
   const groups = screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
-  expect(groups.slice(0, 3)).toEqual(["Quick links", "How Helper is doing", "Theme"]);
+  expect(groups.slice(0, 4)).toEqual(["Casey Example", "Quick links", "How Helper is doing", "Theme"]);
+});
+
+test("the person's menu leads with their name and Settings, and the button is named after them, not after what is in the menu", async () => {
+  const user = userEvent.setup();
+  const onOpenSettings = vi.fn();
+  show({ handlers: { onOpenSettings } });
+  const button = await screen.findByRole("button", { name: "Menu for Casey Example" });
+  expect(button).not.toHaveAccessibleName(/appearance/i);
+  await user.click(button);
+  const first = screen.getAllByRole("group")[0];
+  expect(first).toHaveAccessibleName("Casey Example");
+  expect(within(first).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Settings"]);
+  // The figures entry is a plain line: nothing in it looks like a chosen option.
+  const doing = screen.getByRole("menuitem", { name: "How Helper is doing" });
+  expect(doing.querySelector("svg")).toBeNull();
+  await user.click(within(first).getByRole("menuitem", { name: "Settings" }));
+  await waitFor(() => expect(onOpenSettings).toHaveBeenCalledTimes(1));
 });
 
 test("with no links the person's menu is only the appearance choices", async () => {
   const user = userEvent.setup();
   show({ links: [] });
-  await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
+  await user.click(await screen.findByRole("button", { name: /^Menu for / }));
   expect(screen.queryByRole("group", { name: "Quick links" })).toBeNull();
   expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
 });
@@ -263,7 +281,7 @@ test("the person's menu has How the assistant is doing, which opens the figures,
   const user = userEvent.setup();
   const onOpenQuality = vi.fn();
   show({ handlers: { onOpenQuality } });
-  await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
+  await user.click(await screen.findByRole("button", { name: /^Menu for / }));
   await user.click(screen.getByRole("menuitem", { name: "How Helper is doing" }));
   expect(onOpenQuality).toHaveBeenCalledTimes(1);
 });

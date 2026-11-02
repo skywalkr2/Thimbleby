@@ -201,9 +201,9 @@ describe("an add-on's own keys", () => {
     const user = userEvent.setup();
     renderApp(<Addons onBack={() => undefined} />);
     await user.click(screen.getByRole("tab", { name: "Installed" }));
-    const keyed = (await screen.findByText("keyed")).closest("li")!;
+    const keyed = (await screen.findByText("Keyed")).closest("li")!;
     expect(await within(keyed).findByLabelText("Api key")).toHaveAttribute("type", "password");
-    const plain = screen.getByText("plain").closest("li")!;
+    const plain = screen.getByText("Plain").closest("li")!;
     expect(within(plain).queryByRole("region", { name: "Keys this add-on needs" })).toBeNull();
   });
 });

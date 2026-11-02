@@ -1,6 +1,6 @@
 // The header (design 7.1): one row, 56px, at every width. Left to right: the brand (a link to Today), a Demo chip, the search
 // field (its last row asks the assistant), the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
-// Hand something in, Help and the person's initials, which open the user menu: the person's own pages, how the assistant is
+// Hand something in, Help and the person's initials, which open the user menu: their name and Settings, their own pages, how the assistant is
 // doing, then theme and density.
 // Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the search field shrinks; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
 // before the Ask field gives any up.
@@ -69,14 +69,15 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
   ];
 }
 
-/** The person's name for the avatar: their own, when the workspace knows it, else the workspace's. */
-/** The person's menu: their own pages first when they have any, how the assistant is doing, then this device's appearance. */
-export function useUserMenuGroups(onOpenQuality: () => void): MenuGroup[] {
+/** The person's menu: under their name, Settings; then their quick links when they have any, how the assistant is doing, and
+ * this device's appearance. */
+export function useUserMenuGroups(person: string, handlers: { onOpenSettings: () => void; onOpenQuality: () => void }): MenuGroup[] {
   const { t } = useWords();
   const pages = usePagesGroup();
   const appearance = useAppearanceGroups();
-  const doing: MenuGroup = { id: "doing", label: t("quality.open"), entries: [{ id: "quality", label: t("quality.open"), icon: "check", run: onOpenQuality }] };
-  return [...(pages ? [pages] : []), doing, ...appearance];
+  const me: MenuGroup = { id: "me", title: person, entries: [{ id: "settings", label: t("nav.settings"), icon: "gear", run: handlers.onOpenSettings }] };
+  const doing: MenuGroup = { id: "doing", label: t("quality.open"), entries: [{ id: "quality", label: t("quality.open"), run: handlers.onOpenQuality }] };
+  return [me, ...(pages ? [pages] : []), doing, ...appearance];
 }
 
 export function usePersonName(workspace: string): string {
@@ -98,11 +99,13 @@ export function Header(props: {
   onOpenGuide: (step?: string) => void;
   /** Opens the figures for how the assistant is doing. */
   onOpenQuality: () => void;
+  /** Opens Settings. */
+  onOpenSettings: () => void;
 }) {
   const { t } = useWords();
   const { rc } = props;
   const person = usePersonName(rc.workspace_name);
-  const userMenu = useUserMenuGroups(props.onOpenQuality);
+  const userMenu = useUserMenuGroups(person, { onOpenSettings: props.onOpenSettings, onOpenQuality: props.onOpenQuality });
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
   const tight = useMediaQuery("(max-width: 1439px)");

@@ -27,7 +27,7 @@ import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
 import { MissingAddon, addonOfConnector } from "./MissingAddon";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
-import { SignIns } from "./SignIns";
+import { SignIns, addonOfSignIn } from "./SignIns";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
@@ -297,6 +297,7 @@ export function Sources(props: {
                 alert={announce?.has(source.id) ?? false}
                 kinds={kinds.data}
                 kindsFailed={kinds.isError}
+                signedOutOf={signedOutOf(source.connector, signIns.data)}
                 onOpenAddons={props.onOpenAddons}
                 changing={form?.type === "change" && form.id === source.id}
                 onChange={() => setForm({ type: "change", id: source.id })}
@@ -310,11 +311,21 @@ export function Sources(props: {
   );
 }
 
+/** The label of the sign-in a source reads through when every sign-in of its add-on is signed out, else none. */
+export function signedOutOf(connector: string, signIns: S["SignInView"][] | undefined): string | null {
+  const addon = addonOfConnector(connector);
+  if (!addon || !signIns) return null;
+  const mine = signIns.filter((s) => addonOfSignIn(s.name) === addon);
+  return mine.length > 0 && mine.every((s) => s.status !== "signed_in") ? mine[0].label : null;
+}
+
 function SourceRow(props: {
   source: Source;
   alert: boolean;
   kinds: Kind[] | undefined;
   kindsFailed: boolean;
+  /** The service the person has signed out of that this source reads from, so it is not read until they sign in again. */
+  signedOutOf?: string | null;
   changing: boolean;
   onChange: () => void;
   onChanged: () => void;
@@ -389,8 +400,9 @@ function SourceRow(props: {
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
     ...(source.account ? [t("sources.reads_account", { account: source.account })] : []),
   ].filter(Boolean);
+  const stopped = source.enabled && props.signedOutOf ? props.signedOutOf : null;
   const schedule = [
-    source.enabled ? tn("sources.read_every", source.every_minutes) : "",
+    stopped ? t("sources.not_read_signed_out", { label: stopped }) : source.enabled ? tn("sources.read_every", source.every_minutes) : "",
     source.read_at ? t("sources.last_read", { when: lastWhen }) : "",
   ];
   const found = [

@@ -398,7 +398,7 @@ test("the words for a blocked copy, a blocked pop-up and the notification states
 
 test("the Quick links section is named, and Your pages is gone from the sheet", () => {
   expect(words["settings.section.links"]).toBe("Quick links");
-  expect(words["pages.intro"]).toBe("Sites you open every day, shown as buttons in the header. {assistant} doesn't read them.");
+  expect(words["pages.intro"]).toBe("Sites you open every day, shown in the menu under your initials at the top right. {assistant} doesn't read them.");
   expect(Object.values(words).filter((v) => /\byour pages\b/i.test(v))).toEqual([]);
 });
 

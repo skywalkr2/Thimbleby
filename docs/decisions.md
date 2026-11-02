@@ -4,6 +4,37 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Nine P1 findings of the UI/UX sweep built before its re-sweep (X31, X48, X50, X52, X53, X54, X62, X63, X65)
+
+**Decided:** (1) Follow-ups keeps the person's own section first in the list (design 7.5) but opens its pane on the first
+person with a message; the detail's top holds only its menu, so Mark sent is on the line and under the box, and beside
+the box after a refused copy; the empty state says what a follow-up is; "Add first name" puts the marker in, so nobody
+types it. (2) A theme or spacing saved in Settings is this device's choice at once, Settings shows what is in effect on
+the device, and the setting has one name in both places (Theme, Spacing); a new accent color shows when the saved
+settings are read again. (3) A reminder destination no account can carry is off with its reason and links, and one that
+waits for an account says nothing is saved. (4) An add-on has one name everywhere (the catalog's, else the wording
+sheet's, else its id made readable); an add-on that is signed in is not asked for its keys; Today says in one line when a
+connection can't be read because its add-on is off. (5) **Signing out asks first**, saying what stops. The UI rule is that
+a reversible action acts at once with an undo toast and only send, publish, post and spending confirm; signing out is the
+one exception to "act at once" because it can't be undone (the session and its keys are gone), so it follows the same
+reason as those four. A finished sign-in reads every list again and says so; a source says it is not read until the person
+signs in. (6) The quick links say they are in the menu under the initials, show the name's limit, get https:// added
+and give only the app's own messages. (7) The user menu's button is named for the person; its menu holds their name,
+Settings, links, quality and appearance; the phone's group for a person with only their own life is "Keeping track"
+(not "Your day", which read as Today, and not "Work", which that person never sees, design 7.1). (8) A page the address
+names that isn't there says so and links back; Handover says what it is for. (9) The since-yesterday Today line is in the
+Review group, and its words say "since you last looked".
+
+**Who:** the owner, 2026-11-02 ("every open P1 built before the reviewer's re-sweep"); the new names are the designer's.
+
+**Why:** the reviewer's sweep (`reviews/ui-ux-2026-10/sweep-04ffc21e`) found each of these on screen; none changes what
+the assistant does.
+
+**Impact:** no new config key and no API model. One Today line kind moves group (`since_yesterday`, risk to review), one
+web-only Today line (a connection whose add-on is off), new wording entries, and one shared helper for add-on names. Open:
+the Message style field still shows the marker text while it is edited (no field of name chips); the empty left edge of the
+since list is not measured; the Remove on an add-on exists only for ones the app installed. Change log: section 297.
+
 ## 2026-11-02: Days off and holidays for teams and people; every to-do gets a date; "Needs a date" (P112 item 4)
 
 **Decided:** (1) Days off are core records, not a pack's. A team has a holiday calendar (one of the shipped ones; none means

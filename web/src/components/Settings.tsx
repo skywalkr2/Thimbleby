@@ -22,7 +22,7 @@ import {
   type Refreshed,
 } from "../lib/refreshed";
 import {
-  addonLabel,
+  addonOf,
   fromDraft,
   groupLabel,
   isOff,
@@ -50,7 +50,9 @@ import {
   useAfterSave,
 } from "../lib/settings-save";
 import { handOffSearch, takeSearch } from "../lib/settings-search";
+import { useAddonName } from "../lib/addon-names";
 import { useSides } from "../lib/sides";
+import { applyAppearanceChanges, useAppearance } from "../lib/theme";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -99,10 +101,11 @@ export function SettingsNav(props: {
   current: SettingsSection | null;
   choose: (section: SettingsSection) => void;
 }) {
-  const { t, has } = useWords();
+  const { t } = useWords();
+  const addonName = useAddonName();
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
-      ? addonLabel(s.slice("addon/".length), t, has)
+      ? addonName(s.slice("addon/".length))
       : t(`settings.section.${s}`);
   const follow = (e: MouseEvent, run: () => void) => {
     // A plain click moves within the app; a modified one (a new tab) keeps its link.
@@ -163,9 +166,13 @@ export function useSettingsSections() {
   // With no side beside Personal, the settings that name which project is whose side are left out: nothing in them can be
   // changed to any use until there is one.
   // The words that mean each side are only to tell one side from another: with no side beside Personal there is nothing to tell.
-  const everything = (settings.data?.items ?? []).filter(
-    (i) => !(justMe && i.key.startsWith("workspace.project.")) && !(sides.length === 0 && i.key.startsWith("workspace.project.side_words.")),
-  );
+  // The theme and the spacing show what is in effect on this device: the menu under the initials sets the same two things.
+  const device = useAppearance();
+  const inEffect = (i: S["SettingItem"]) =>
+    i.key === "ui.theme" ? { ...i, value: device.theme } : i.key === "ui.density" ? { ...i, value: device.density } : i;
+  const everything = (settings.data?.items ?? [])
+    .filter((i) => !(justMe && i.key.startsWith("workspace.project.")) && !(sides.length === 0 && i.key.startsWith("workspace.project.side_words.")))
+    .map(inEffect);
   const listed = navSections(everything, {
     // Jobs and businesses are added here, so the page is there for a person with only their own life too.
     business: true,
@@ -291,9 +298,10 @@ export function Settings(props: {
   // the Lists page, when no list is left on it, opens the business page where the project lists are.
   const section: SettingsSection =
     !loaded || listed.includes(wanted) ? wanted : wanted === "lists" && sides.length > 0 ? "business" : "you";
+  const addonName = useAddonName();
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
-      ? addonLabel(s.slice("addon/".length), t, has)
+      ? addonName(s.slice("addon/".length))
       : t(`settings.section.${s}`);
 
   const choose = (next: SettingsSection) => {
@@ -445,6 +453,8 @@ export function Settings(props: {
     if (item.locked || !item.editable || item.type === "other") return;
     const parsed = fromDraft(item, draft);
     if (!parsed.ok) return;
+    // This device shows the choice at once, even when the workspace's saved value is already the same.
+    applyAppearanceChanges([{ key: item.key, after: parsed.value }]);
     enqueue(async () => {
       // What is saved now, so a repeat (Enter, then the cursor leaving) or an edit put back as it was sends nothing.
       const now =
@@ -542,7 +552,7 @@ export function Settings(props: {
         role="group"
         aria-labelledby={heading ? titleId : undefined}
       >
-        {heading && <h3 id={titleId}>{groupLabel(name, t, has)}</h3>}
+        {heading && <h3 id={titleId}>{addonOf(name) !== null ? addonName(addonOf(name) as string) : groupLabel(name, t, has)}</h3>}
         {rows(items)}
       </div>
     );
@@ -756,6 +766,11 @@ export function Settings(props: {
         ) : (
           <>
             <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
+            {loaded && wanted !== section && (
+              <p className="hint" role="status" data-not-available="">
+                {t("settings.not_available", { page: label(wanted), shown: label(section) })}
+              </p>
+            )}
             {body()}
           </>
         )}

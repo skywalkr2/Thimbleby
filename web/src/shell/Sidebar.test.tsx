@@ -192,7 +192,7 @@ test("with no side besides Personal the first group has no Work heading, and Sta
   ]);
   expect(within(nav()).queryByText("Work")).toBeNull();
   // The group is still one group for a screen reader, named without the word.
-  expect(within(nav()).getByRole("group", { name: "Your day" })).toBeInTheDocument();
+  expect(within(nav()).getByRole("group", { name: "Keeping track" })).toBeInTheDocument();
   // Personal is a page of its own: the Personal project's page.
   expect(screen.getByRole("link", { name: "Personal" })).toHaveAttribute("href", expect.stringMatching(new RegExp(`#records/project/${PERSONAL}$`)));
 });

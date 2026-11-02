@@ -5115,7 +5115,7 @@ the reason with the exact quote and who said it, whether the person has seen it 
 The person's own changes, held items and ops released from held are left out. Changes the rules make say so: a reply
 owed closed by the person's sent mail ("you replied on <day>", the change carries `by_rule`) and a promise whose date
 followed its meeting. The last look is one small `look` record for each person that only moves forward. One Today line,
-`Look over what changed since yesterday`, with the counts in plain words, sits in the risk group below promises, goes
+`Look over what changed since yesterday`, with the counts in plain words, sits in the review group with the other things to look over (it was in the risk group until change log 296), goes
 when the list is opened (`GET /api/since-yesterday`, then `POST /api/since-yesterday/seen` with the moment it was drawn,
 so a change that arrived meanwhile is not swallowed) and comes back with the next change. The "Since yesterday" screen
 (from the line and from What changed) has Open on each row and Undo in its menu. Built: `tests/test_since_yesterday.py`,

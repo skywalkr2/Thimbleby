@@ -22,7 +22,7 @@ type Which = S["HandoverChoice"]["which"];
 /** A time the server wrote on the person's own clock, as day and time. */
 const when = (iso: string) => `${day(iso)}, ${wallTime(iso)}`;
 
-export function Handover() {
+export function Handover(props: { onBack?: () => void }) {
   const { t } = useWords();
   const client = useQueryClient();
   const page = useQuery({ queryKey: ["sync", "handover"], queryFn: api.handover });
@@ -45,7 +45,18 @@ export function Handover() {
   const busy = choose.isPending || changeMind.isPending;
   return (
     <section className="panel-section" aria-labelledby="handover-title">
-      <PageHeader id="handover-title" title={t("handover.title")} />
+      <PageHeader
+        id="handover-title"
+        title={t("handover.title")}
+        subtitle={t("handover.intro")}
+        crumb={
+          props.onBack ? (
+            <Button size="sm" variant="quiet" onClick={props.onBack}>
+              {t("quality.back")}
+            </Button>
+          ) : undefined
+        }
+      />
       {page.isPending ? (
         <Skeleton />
       ) : page.isError || !view ? (

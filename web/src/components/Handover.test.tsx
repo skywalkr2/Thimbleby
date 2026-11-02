@@ -17,7 +17,7 @@ const view = (over: Partial<S["HandoverView"]> = {}): S["HandoverView"] => ({
   ...over,
 });
 
-function show(first: S["HandoverView"], routes: (set: (page: S["HandoverView"]) => S["HandoverView"]) => Routes = () => ({}), canRestart = true) {
+function show(first: S["HandoverView"], routes: (set: (page: S["HandoverView"]) => S["HandoverView"]) => Routes = () => ({}), canRestart = true, onBack?: () => void) {
   // What the server would answer next: a choice or taking it back changes it.
   let page = first;
   const set = (next: S["HandoverView"]) => (page = next);
@@ -29,7 +29,7 @@ function show(first: S["HandoverView"], routes: (set: (page: S["HandoverView"]) 
   });
   renderApp(
     <RestartProvider hellos={1}>
-      <Handover />
+      <Handover onBack={onBack} />
     </RestartProvider>,
   );
   return calls;
@@ -129,4 +129,14 @@ test("a side with no changes of its own says nothing about a count, never \"0 ch
   expect(await screen.findByRole("heading", { name: "Which copy to keep" })).toBeInTheDocument();
   expect(await screen.findByText(/7 changes the other copy doesn't have/)).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 changes?\b/);
+});
+
+test("the page says in one line what it is for, and has a way back, also when both copies match", async () => {
+  const user = userEvent.setup();
+  const back = vi.fn();
+  show(view({ state: "clear", here: null, folder: null }), () => ({}), true, back);
+  expect(await screen.findByText("Both copies match.")).toBeInTheDocument();
+  expect(screen.getByText(/Your work is kept on this computer and in the folder it syncs to/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Back to Today" }));
+  expect(back).toHaveBeenCalledTimes(1);
 });

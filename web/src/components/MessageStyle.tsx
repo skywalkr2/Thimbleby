@@ -1,7 +1,7 @@
 // Follow-ups, Message style (design 7.9): how the messages the person copies start and end. Each line shows a live
 // preview with a made-up name, and its pattern is behind "Edit the pattern", so the person reads what the message will say
 // and not the marker where the first name goes. Each is saved as it is changed, with the same read-back and Undo as on Settings.
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { Item } from "../lib/settings";
 import { useSettingEdits } from "../lib/use-setting-edits";
 import { useWords } from "../lib/wording";
@@ -33,6 +33,8 @@ function StyleLine(props: { item: Item; edit: ReturnType<typeof useSettingEdits>
   const { t } = useWords();
   const { item, edit } = props;
   const [editing, setEditing] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+  const group = useRef<HTMLDivElement>(null);
   const id = useId();
   const pattern = String(edit.draftOf(item));
   const sample = t("settings.owner_example_name").split(" ")[0];
@@ -60,26 +62,52 @@ function StyleLine(props: { item: Item; edit: ReturnType<typeof useSettingEdits>
           {preview}
         </p>
         {editing ? (
-          <input
-            id={id}
-            type="text"
-            autoFocus
-            value={pattern}
-            disabled={item.locked || !item.editable}
-            aria-label={t("followups.style.pattern_named", { label: t(`settings.key.${item.key}`) })}
-            aria-invalid={problem ? true : undefined}
-            onChange={(e) => edit.edit(item.key, e.target.value)}
+          // The field and its button are one group: moving from one to the other keeps editing, and leaving both saves the line.
+          <div
+            ref={group}
             onBlur={(e) => {
-              void edit.commit(item, e.target.value);
+              if (e.relatedTarget instanceof Node && group.current?.contains(e.relatedTarget)) return;
+              void edit.commit(item, pattern);
               setEditing(false);
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
-            }}
-          />
+          >
+            <input
+              id={id}
+              ref={field}
+              type="text"
+              autoFocus
+              value={pattern}
+              disabled={item.locked || !item.editable}
+              aria-label={t("followups.style.pattern_named", { label: t(`settings.key.${item.key}`) })}
+              aria-invalid={problem ? true : undefined}
+              onChange={(e) => edit.edit(item.key, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            {/* The marker for the first name is put in by a button, so nobody types it. It keeps the cursor in the field. */}
+            <div>
+              <Button
+                variant="quiet"
+                size="sm"
+                disabled={item.locked || !item.editable}
+                aria-label={t("followups.style.insert_name_named", { label: t(`settings.key.${item.key}`) })}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const box = field.current;
+                  const from = box?.selectionStart ?? pattern.length;
+                  const to = box?.selectionEnd ?? pattern.length;
+                  edit.edit(item.key, pattern.slice(0, from) + FIRST_NAME + pattern.slice(to));
+                  window.setTimeout(() => box?.setSelectionRange(from + FIRST_NAME.length, from + FIRST_NAME.length), 0);
+                }}
+              >
+                {t("followups.style.insert_name")}
+              </Button>
+            </div>
+          </div>
         ) : (
           <div>
             <Button variant="quiet" size="sm" disabled={item.locked || !item.editable} onClick={() => setEditing(true)}>

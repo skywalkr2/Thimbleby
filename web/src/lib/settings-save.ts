@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { api, type S } from "./api";
 import { useRestart } from "./restart";
 import { leaksInternals } from "./raw-data";
+import { applyAppearanceChanges } from "./theme";
 import { formatValue, labelForKey, undoBody } from "./settings";
 import { useToasts } from "./toasts";
 import { useWords } from "./wording";
@@ -32,6 +33,8 @@ export function useAfterSave() {
     (saved: S["SettingsSaved"], opts: { message?: string; quiet?: boolean } = {}): Promise<void> => {
       rememberFingerprint(client, saved.fingerprint);
       if (saved.needs_restart) restart.offer();
+      // A theme or spacing saved here shows at once on this device, as the menu under the initials does.
+      applyAppearanceChanges(saved.changes);
       const refreshed = client.invalidateQueries();
       // Removing a source or an account also removes the passwords and keys kept for it, once no Undo needs them.
       const going = saved.kept_secrets_going ?? 0;
@@ -64,6 +67,7 @@ export function useAfterSave() {
           const undone = await api.saveSettings(undoBody(saved.changes, knownFingerprint(client, saved.fingerprint) ?? saved.fingerprint));
           rememberFingerprint(client, undone.fingerprint);
           if (undone.needs_restart) restart.offer();
+          applyAppearanceChanges(undone.changes);
           await client.invalidateQueries();
         },
       });

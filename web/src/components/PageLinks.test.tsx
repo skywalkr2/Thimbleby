@@ -3,13 +3,14 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
-import { PageLinks } from "./PageLinks";
+import { PageLinks, webAddress } from "./PageLinks";
 
 // The list of the person's quick links, in Settings → Quick links (design 7.9): a name and a web address each, saved as it is
 // made with Undo. The header shows them (HeaderLinks.test.tsx).
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
+const PLAIN = "http" + "://";
 const board = { name: "Planning board", address: `${WEB}boards.example.org/plan` };
 const schedule = { name: "Team schedule", address: `${WEB}schedule.example.org/team` };
 
@@ -88,7 +89,7 @@ test("an address that is not a web address is told in plain words and nothing is
   await user.type(await screen.findByRole("textbox", { name: "Name" }), "Odd one");
   await user.type(screen.getByRole("textbox", { name: "Address" }), "javascript:alert(1)");
   await user.click(screen.getByRole("button", { name: "Add this link" }));
-  expect(await screen.findByText(/must start with http:\/\/ or https:\/\//)).toBeInTheDocument();
+  expect(await screen.findByText(/isn.t a web address/)).toBeInTheDocument();
   expect(sent(calls)).toEqual([]);
 });
 
@@ -110,4 +111,27 @@ test("a refusal from the server is shown by the form, with what was typed kept",
   await user.click(screen.getByRole("button", { name: "Add this link" }));
   expect(await screen.findByText(/The settings changed since you opened them/)).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("Planning board");
+});
+
+test("an address typed without https:// gets it, and one that is not a web address is left to be refused", () => {
+  expect(webAddress("example.org/bank")).toBe(`${WEB}example.org/bank`);
+  expect(webAddress("  example.org:8080/x ")).toBe(`${WEB}example.org:8080/x`);
+  expect(webAddress(`${PLAIN}example.org/a`)).toBe(`${PLAIN}example.org/a`);
+  expect(webAddress("javascript:alert(1)")).toBe("javascript:alert(1)");
+  expect(webAddress("mailto:me@example.org")).toBe("mailto:me@example.org");
+  expect(webAddress("not an address")).toBe("not an address");
+});
+
+test("the form adds https:// itself, says where the links appear, shows the name's limit, and the browser's own message never appears", async () => {
+  const user = userEvent.setup();
+  const calls = show([]);
+  expect(await screen.findByText(/shown in the menu under your initials/)).toBeInTheDocument();
+  const name = screen.getByRole("textbox", { name: "Name" });
+  expect(screen.getByText("0 of 40 characters.")).toBeInTheDocument();
+  await user.type(name, "My bank");
+  expect(screen.getByText("7 of 40 characters.")).toBeInTheDocument();
+  await user.type(screen.getByRole("textbox", { name: "Address" }), "example.org/bank");
+  expect(document.querySelector("form")).toHaveAttribute("novalidate");
+  await user.click(screen.getByRole("button", { name: "Add this link" }));
+  await waitFor(() => expect(sent(calls)).toEqual([{ "ui.links": [{ name: "My bank", address: `${WEB}example.org/bank` }] }]));
 });
