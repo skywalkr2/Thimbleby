@@ -554,6 +554,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no calendar entry {op.id}")
             elif (why := entry_problem(op.start or entry.data["start"], op.end or entry.data.get("end"))) is not None:
                 refuse(i, "targets", f"calendar entry {op.id}: {why}")
+        if isinstance(op, (FactOp, ActionAddOp, QuestionAddOp)) and (
+            why := series_module.item_problem(view, op.event, op.series)
+        ):
+            refuse(i, "targets", why)
         if isinstance(op, EventGuestsOp) and (why := event_guests_problem(view, ctx, op)) is not None:
             refuse(i, "targets", why)
         if isinstance(op, ActionTieOp):

@@ -242,7 +242,13 @@ def test_the_persons_own_setup_lines_are_never_held(env):
 
 
 def remind(store, cfg, when: datetime, text: str = "Call the printer") -> str:
-    data = {"text": text, "owners": [{"person": cfg.workspace.user.person}], "remind_at": when.isoformat()}
+    # The to-do has a date well after the reminder, so neither "Needs a date" nor a due line is among the lines.
+    data = {
+        "text": text,
+        "owners": [{"person": cfg.workspace.user.person}],
+        "due": (when + timedelta(days=60)).date().isoformat(),
+        "remind_at": when.isoformat(),
+    }
     with store.transaction() as tx:
         return tx.create("action", data, _TEST).id
 

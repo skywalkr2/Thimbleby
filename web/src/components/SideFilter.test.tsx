@@ -257,16 +257,18 @@ test("Follow-ups has the same filter: the person's own rows go by side, and some
   await user.click(screen.getByRole("radio", { name: "Personal" }));
   await waitFor(() => expect(screen.queryByText("Dana Sample")).toBeNull());
   expect(screen.getAllByText("Robin Sample")[0]).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: /^You/ }));
-  expect(await screen.findByText("Pick the family photo")).toBeInTheDocument();
+  // The person's own to-dos are one row that says how many there are on this side and opens To-dos and questions; they are not listed here.
+  const own = () => within(screen.getByRole("list", { name: "Your own to-dos" }));
+  expect(own().getByRole("link", { name: "Your own to-dos" })).toBeInTheDocument();
+  expect(own().getByText("1 decision")).toBeInTheDocument();
+  expect(screen.queryByText("Pick the family photo")).toBeNull();
   expect(screen.queryByText("Approve the invoice run")).toBeNull();
   // Robin's one message still covers both of the rows it was made from.
   expect(screen.getAllByRole("button", { name: "Copy message" }).length).toBeGreaterThan(0);
   await user.click(screen.getByRole("radio", { name: BUSINESS }));
   expect(await screen.findByText("Dana Sample")).toBeInTheDocument();
-  // The pane opens on a person's message, so the person's own section is opened to read its questions.
-  await user.click(screen.getByRole("button", { name: /^You/ }));
-  expect(await screen.findByText("Approve the invoice run")).toBeInTheDocument();
+  expect(own().getByText("1 decision")).toBeInTheDocument();
+  expect(screen.queryByText("Approve the invoice run")).toBeNull();
   expect(screen.queryByText("Pick the family photo")).toBeNull();
 });
 

@@ -42,7 +42,7 @@ def env(tmp_path):
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     cfg = ws.config(env={}, flags={"storage.backups.automatic": False})
     cfg.ai.prices["stub/default"] = Price(
-        input_per_million=5.0, output_per_million=5.0
+        input_per_million=2.0, output_per_million=2.0
     )  # well under the confirm amount
     store = Store(ws.db_path, cfg=cfg)
     yield ws, cfg, store
@@ -210,7 +210,7 @@ def test_the_go_route_starts_the_held_runs_and_today_has_one_line_for_them_and_t
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     cfg = ws.config(env={}, flags={"storage.backups.automatic": False})
     cfg.ai.prices["stub/default"] = Price(
-        input_per_million=5.0, output_per_million=5.0
+        input_per_million=2.0, output_per_million=2.0
     )  # well under the confirm amount
     application = create_app(ws, cfg, "catch-up-token", ui_dist=tmp_path / "no-ui", start_worker=False)
     with TestClient(application, headers={"Authorization": "Bearer catch-up-token"}) as client:

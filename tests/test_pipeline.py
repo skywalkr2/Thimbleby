@@ -414,7 +414,7 @@ def test_blocked_wording_warns_on_internal_items_and_holds_what_goes_to_others(e
 def test_a_blocked_word_in_the_quoted_evidence_costs_one_request_and_no_warning(env):
     _, cfg, store = env
     blocked = cfg.language.blocked_phrases[0]
-    pasted = f"Please {blocked} the print run with the printer before Friday."
+    pasted = f"Please {blocked} the print run with the printer."
     asked = answers(
         {
             "ops": [

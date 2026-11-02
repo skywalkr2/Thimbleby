@@ -38,7 +38,9 @@ test("the Help menu says the version and opens Write feedback, and focus comes b
   await user.click(screen.getByRole("menuitem", { name: "Write feedback" }));
   const dialog = screen.getByRole("dialog", { name: "Write feedback" });
   await user.type(screen.getByLabelText("What happened, or what would help?"), "Hello");
-  expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("Hello\n\nApp version: 9.8.7\nScreen: Today");
+  // The preview is plain words; the app's version is under "Details for the makers".
+  expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("Hello\n\nScreen: Today");
+  expect((screen.getByLabelText("Details for the makers") as HTMLTextAreaElement).value).toBe("App version: 9.8.7");
   await user.keyboard("{Escape}");
   await waitFor(() => expect(dialog).not.toBeInTheDocument());
   await waitFor(() => expect(help).toHaveFocus());

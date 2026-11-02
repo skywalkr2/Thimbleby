@@ -41,11 +41,11 @@ const people = [
 
 const section: S["FollowupSection"][] = [
   {
-    person: "PER-1",
+    person: "PER-4",
     name: "Lee Example",
-    is_pm: true,
+    is_pm: false,
     questions: [
-      { id: "Q-7", title: "Ship the proof now?", text: "", links: [], kind: "decision", status: "open", sent: null, waiting_days: null, about: null, options: [], chase_due: false, chases: 0, origin: { kind: "source", source: "SRC-3" } },
+      { id: "Q-7", title: "Ship the proof now?", text: "", links: [], kind: "decision", status: "sent", sent: "2026-10-08T09:00:00Z", waiting_days: 1, about: null, options: [], chase_due: false, chases: 0, origin: { kind: "source", source: "SRC-3" } },
     ],
     actions: [],
     message: "",
@@ -55,8 +55,9 @@ const section: S["FollowupSection"][] = [
 
 async function openSource(user: ReturnType<typeof userEvent.setup>) {
   renderApp(<FollowUps />);
-  const row = (await screen.findByText("Ship the proof now?")).closest("li") as HTMLElement;
-  await user.click(within(row).getByRole("button", { name: "Where it came from" }));
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  // Follow-ups lists other people: the question, asked of one of them, is among the ones waiting on them.
+  await user.click(await screen.findByRole("button", { name: "Where it came from" }));
   return screen.findByRole("dialog", { name: "Where it came from" });
 }
 
