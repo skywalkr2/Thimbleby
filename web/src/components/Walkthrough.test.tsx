@@ -2428,6 +2428,112 @@ describe("Mail and calendar", () => {
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
   });
 
+  /** Two sign-ins of one service, each with an inbox and a calendar, and a job and a business beside Personal. Ticks save
+   * through the settings route, which keeps the list of sources. */
+  function twoAccounts(accounts: string[] = ["sam@example.com", "pat@example.com"]) {
+    service("on", { signed: true });
+    const state = {
+      sources: accounts.flatMap((_, i) => [
+        { id: `i${i}`, connector: "mail-addon/mail", label: "Your inbox", settings: {} },
+        { id: `c${i}`, connector: "mail-addon/mail", label: "Your calendar", settings: {} },
+      ]) as Array<Record<string, unknown>>,
+    };
+    const calls = fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { installed_version: "1.0.0", enabled: true })],
+        installed: [installedPack("mail-addon", { enabled: true, state: "enabled" })],
+      }),
+      "GET sign-ins": () => [
+        signIn("mail-addon/account", {
+          status: "signed_in",
+          several: true,
+          account: accounts[0],
+          accounts: accounts.map((address, i) => ({ key: `k${i}`, address, status: "signed_in" as const, missing: [] as string[], acting: false })),
+        }),
+      ],
+      "GET watch": () =>
+        accounts.flatMap((address, i) => [
+          source(`i${i}`, "Your inbox", { account: address }),
+          source(`c${i}`, "Your calendar", { reads: ["calendar"], account: address }),
+        ]),
+      "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
+      "GET settings": () => ({
+        fingerprint: "fp-1",
+        items: [
+          ...SETTINGS,
+          { key: "watch.sources", file: "watch", group: "watch", description: "", type: "other", options: [], value: state.sources, default: [], source: "file", locked: false, basic: false, editable: false },
+        ],
+      }),
+      "POST settings": (body) => {
+        const before = state.sources;
+        state.sources = (body as { changes: { "watch.sources": Array<Record<string, unknown>> } }).changes["watch.sources"];
+        return { changes: [{ key: "watch.sources", before, after: state.sources, was_default: false, is_default: false }], fingerprint: "fp-2", needs_restart: false };
+      },
+    });
+    return { calls, state };
+  }
+
+  test("two accounts of one service: the sides question is one choice per account, named by its address, and a tick saves to that account's sources only", async () => {
+    const user = userEvent.setup();
+    const { calls, state } = twoAccounts();
+    open();
+    const sam = await screen.findByRole("group", { name: "Who is mail and calendar at sam@example.com for?" });
+    const pat = screen.getByRole("group", { name: "Who is mail and calendar at pat@example.com for?" });
+    // Two questions, not one per source.
+    expect(screen.getAllByRole("group")).toHaveLength(2);
+    expect(screen.queryByRole("group", { name: /^Your (inbox|calendar)/ })).toBeNull();
+    await user.click(within(sam).getByRole("checkbox", { name: EMPLOYER }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+    const saves = calls.filter((c) => c.route === "POST settings");
+    expect(saves).toHaveLength(1);
+    expect(state.sources.map((x) => [x.id, x.sides])).toEqual([
+      ["i0", ["PRJ-2"]],
+      ["c0", ["PRJ-2"]],
+      ["i1", undefined],
+      ["c1", undefined],
+    ]);
+    expect(within(pat).getAllByRole("checkbox").every((b) => !(b as HTMLInputElement).checked)).toBe(true);
+  });
+
+  test("two accounts: Set them separately opens the choices for that account's sources only", async () => {
+    const user = userEvent.setup();
+    twoAccounts();
+    open();
+    const sam = await screen.findByRole("group", { name: "Who is mail and calendar at sam@example.com for?" });
+    // One quiet button per account, each after its own question; the first account's follows its question.
+    const buttons = screen.getAllByRole("button", { name: "Set them separately" });
+    expect(buttons).toHaveLength(2);
+    expect(sam.compareDocumentPosition(buttons[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(buttons[0]);
+    expect(await screen.findByRole("group", { name: "Your inbox (sam@example.com): who is it for?" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Your calendar (sam@example.com): who is it for?" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /pat@example.com\): who is it for\?/ })).toBeNull();
+    // The other account is still asked as one.
+    expect(screen.getByRole("group", { name: "Who is mail and calendar at pat@example.com for?" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Who is mail and calendar at sam@example.com for?" })).toBeNull();
+  });
+
+  test("two accounts: the reading line names each source with its account's address", async () => {
+    twoAccounts();
+    open();
+    expect(
+      await screen.findByText(
+        "Helper is reading: Your inbox (sam@example.com), Your calendar (sam@example.com), Your inbox (pat@example.com), and Your calendar (pat@example.com).",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test("one account: the reading line and the sides question stay as they were, with no address added", async () => {
+    twoAccounts(["sam@example.com"]);
+    open();
+    expect(await screen.findByText("Helper is reading: Your inbox and Your calendar.")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Who are they for?" })).toBeInTheDocument();
+    expect(screen.queryByText(/sam@example.com\)/)).toBeNull();
+  });
+
   test("with no side of work, the mailboxes are not asked which they serve", async () => {
     service("on", { signed: true });
     open();

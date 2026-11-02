@@ -3526,6 +3526,8 @@
   "walkthrough.mail.sides.group.none_other": "They aren't marked for any of them.",
   "walkthrough.mail.sides.group.none_other_two": "They aren't marked for either.",
   "walkthrough.mail.sides.separately": "Set them separately",
+  "walkthrough.mail.sides.account.legend": "Who is {reads} at {account} for?",
+  "walkthrough.mail.source_with_account": "{source} ({account})",
   "walkthrough.mail.result.connected": "{service} is connected.",
   "walkthrough.mail.result.reading": "{assistant} is reading: {what}.",
   "walkthrough.mail.result.reading.unnamed": "Your assistant is reading: {what}.",
