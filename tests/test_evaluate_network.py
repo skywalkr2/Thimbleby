@@ -67,7 +67,8 @@ def env(tmp_path):
 def test_a_request_that_finds_no_network_is_looked_at_again_after_its_wait_and_uses_up_no_try(env):
     ws, cfg, store = env
     case = case_of(DEMO_B, "close-action")
-    provider = Offline(2, lambda task: json.dumps(case["stub_answer"]))
+    answered = []
+    provider = Offline(2, lambda task: answered.append(task) or json.dumps(case["stub_answer"]))
     set_responder(provider)
     handed = hand_in(ws, store, note="", pasted=case["pasted"], now=NOW)
     seen, pauses, lines = [], [], []
@@ -80,7 +81,8 @@ def test_a_request_that_finds_no_network_is_looked_at_again_after_its_wait_and_u
     done = process_through_outage(
         ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW, notice=lines.append, pause=pause
     )
-    assert done is not None and provider.calls == 3
+    # Two looks that found no network, then the answers: the first, and any return round a check asks for.
+    assert done is not None and answered and provider.calls == 2 + len(answered)
     wait = cfg.dispatch.offline_check_seconds
     assert pauses == [wait, wait]
     assert seen == [("queued", "offline", 0, 0)] * 2, "waiting, with no try used and no retry counted"
