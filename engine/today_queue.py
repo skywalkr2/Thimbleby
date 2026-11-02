@@ -720,14 +720,21 @@ def _everything(
     # Risk: an AI account paused until its usage limit resets, with the work waiting on it.
     from engine.ai.pauses import Pauses, pauses_path, waiting_text
 
+    sorter = _sorting_account(cfg)
     for account, until in sorted(Pauses(pauses_path(store), lambda: now).active().items(), key=lambda x: (x[1], x[0])):
         waiting = [
             r
             for r in requests.values()
             if r.data.get("state") == "queued"
             and not r.data.get("dismissed")
-            and (r.data.get("cause") or {}).get("kind") == "paused"
-            and (r.data.get("cause") or {}).get("account") == account
+            and (
+                (
+                    (r.data.get("cause") or {}).get("kind") == "paused"
+                    and (r.data.get("cause") or {}).get("account") == account
+                )
+                # Mail waiting for the assistant's sorting waits on the account the sorting runs on.
+                or (r.data.get("sort_pending") and account == sorter)
+            )
         ]
         if waiting:
             lines.append(
@@ -1935,3 +1942,15 @@ def shared_project(reader: Any, questions: list[str], actions: list[str]) -> str
 def _created(reader: Any, kind: str, record_id: str) -> str:
     entries = reader.ledger(kind=kind, record_id=record_id)
     return str(entries[0]["at"]) if entries else ""
+
+
+def _sorting_account(cfg: Any) -> str | None:
+    """The account the assistant's sorting of mail runs on first: its tier's main account."""
+    from engine.mail_sorting import KIND
+    from engine.tasks import settings, task_kind
+
+    try:
+        tier = cfg.ai.tiers.get(settings(cfg, task_kind(KIND)).tier)
+    except (KeyError, AttributeError):
+        return None
+    return tier.use.split("/", 1)[0] if tier is not None and tier.use else None

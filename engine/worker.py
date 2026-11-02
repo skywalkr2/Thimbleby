@@ -648,6 +648,8 @@ class Worker:
         """Process every queued request now. Returns how many were processed."""
         done = 0
         self.queue_catch_up_learning()
+        sorted_pending = False
+        waiting_for_sort: set[str] = set()
         while not self._stop.is_set():
             self._beat_of("requests")
             now = self.now()
@@ -656,6 +658,13 @@ class Worker:
                 for r in self.store.read().list("request")
                 if r.data["state"] == "queued" and not waits_for_its_time(r.data, now)
             ]
+            if not sorted_pending and any(r.data.get("sort_pending") for r in queued):
+                # Mail the sorting couldn't be run for is sorted, in one batch, before any other run of it.
+                sorted_pending = True
+                self.sort_pending_mail(now)
+                continue
+            # A request still waiting for its sorting is tried once, so any hold on it is shown, and never run.
+            queued = [r for r in queued if r.id not in waiting_for_sort]
             if not queued:
                 break
             if self._changed_since_start():
@@ -663,6 +672,9 @@ class Worker:
                 break
             try:
                 process(self.ws, self.store, self.cfg, self.router_factory(), queued[0].id, now=now)
+                if queued[0].data.get("sort_pending"):
+                    waiting_for_sort.add(queued[0].id)
+                    continue
             except StoreError as err:  # a write refused with a plain reason
                 log.warning("Request %s couldn't be processed: %s", queued[0].id, err)
                 needs_you(self.store, queued[0].id, f"This couldn't be processed: {str(err).rstrip('.')}.")
@@ -683,6 +695,21 @@ class Worker:
                 self.events.changed()
             self.remind_acts()
         return done
+
+    def sort_pending_mail(self, now: datetime) -> None:
+        """Run the assistant's sorting for every queued mail request still marked as waiting for it. A request it
+        sets aside is closed, one it answers loses the mark, and one it still can't be run for stays marked and
+        queued: the pause or budget that stops the sorting is already shown, so nothing new is said. A failure is
+        logged and never stops the worker."""
+        from engine import watch
+
+        try:
+            watch.sort_before_first_go(
+                self.ws, self.store, self.cfg, self.router_factory(), now, go=False, pending_only=True
+            )
+        except Exception:
+            log.exception("Sorting the mail that waited for it failed")
+            self._problem("sorting mail")
 
     def remind_acts(self) -> None:
         """Draft, keep true, approve under the person's standing yes and send the reminders that reach them while the

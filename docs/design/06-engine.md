@@ -340,9 +340,16 @@ It is sorted in this order, first match wins:
      It is estimated first and goes through the per-run limit, the first go, the amount to ask above and the day, month and
      per-kind budgets. It is made for no request, so its run record has no request (`Run.request` is none). When it can't be made (no
      account for the tier, a budget used up, the first go or the go above the configured amount not given, an account
-     paused or failing, a refusal) **the mail is handed in as work, never held back**, and the read says why in plain
-     words. The same cause stops the handed-in requests themselves on the paths that already show it (a request needing an
-     account or a budget waits for the person, an account at its limit is a paused line, the first go is its line);
+     paused or failing, a refusal) **the mail is handed in, never held back**, and the read says why in plain
+     words. Its request carries `sort_pending`: it waits for the sorting and **is sorted before any other run**, never
+     given the full run first. Before it runs a queued request so marked, the worker sorts every such request of a
+     source in one batch (the first go's sorting, with `sort_pending` as the filter): sales and notice answers close
+     the request as set aside with no run, a personal answer files it under the Personal project, and any answer
+     clears the mark. While the sorting still can't run, the request stays queued with no full run; the same cause
+     shows on the paths that already show it (a request needing an account or a budget waits for the person, an
+     account at its limit is a paused line, the first go is its line), so no new line is added. A run whose answer
+     fails its checks even on the stronger tier is the exception: that mail is handed in as work, since another run
+     would cost again;
    - **The first go covers it:** before the person's first go in a workspace the run isn't made, so the mail of the
      first read is handed in as work and waits with every other run. When the person gives the first go, the mail
      requests still waiting for it (or queued) whose message was never sorted go through the sorting run first, in

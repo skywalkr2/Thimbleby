@@ -1703,6 +1703,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `project` | str \| None | `None` | The project the person said a hand-in is about, if they did. |
 | `auto_closed` | dict[str, str] \| None | `None` | For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it. |
 | `set_aside` | dict[str, str \| None] \| None | `None` | For a watched mail item set aside as not work: {section, rule, reason}, and for one the person set aside after it was handed in, {from_state, from_waiting} to put it back. It is never queued for the assistant while this is set. This is work clears it. |
+| `sort_pending` | bool | `False` | For a watched mail message the assistant's sorting couldn't be run for when it was handed in: it waits for that sorting before any other run, and the sorting clears this when it answers. |
 | `folded_into` | str \| None | `None` | The newer request this one's change was folded into, so they are read in order, once. |
 | `intake` | str \| None | `None` | The id of the watched source this request was taken in from when the source was newly added (or looked at further back): its results are gathered into one line on Today and one list, not one line each. |
 | `intake_seen` | bool | `False` | For a request taken in from a new source: the person opened the list of what was found (or marked it seen), so its results show on Today one by one again if they still need a look. |

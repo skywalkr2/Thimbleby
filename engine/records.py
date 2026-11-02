@@ -1500,6 +1500,11 @@ class Request(Record):
         "set aside after it was handed in, {from_state, from_waiting} to put it back. It is never queued for the "
         "assistant while this is set. This is work clears it.",
     )
+    sort_pending: bool = Field(
+        False,
+        description="For a watched mail message the assistant's sorting couldn't be run for when it was handed in: "
+        "it waits for that sorting before any other run, and the sorting clears this when it answers.",
+    )
     folded_into: str | None = Field(
         None, description="The newer request this one's change was folded into, so they are read in order, once."
     )

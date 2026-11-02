@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 277. Mail the sorting couldn't run for waits for it, and "Email from someone" (2026-11-02; P105)
+
+| Where | Before | Now |
+|---|---|---|
+| When the sorting run can't be made (6.5, `engine/watch.py`; replaces section 32's "handed in as work") | The mail was handed in as work, so every newsletter got a full run once an account worked again | The mail is handed in marked `sort_pending`; the worker sorts it in one batch before any other run of it, and a run never starts while it waits. Mail whose answer failed the checks on both tiers is still handed in as work |
+| Today's paused line | Counted only requests paused on the account | Also counts mail waiting for a sorting that runs on that account, so an out-of-credit stop is never silent |
+| A mail item's title (`engine/titles.py`) | A sender matching a known person kept only the person's id, so the title could read "Email from someone" | The sender's name is kept beside the id |
+
 ## 276. An account out of credit pauses with no end, and its waiting work goes on by itself (2026-11-02; P104, P108)
 
 | Where | Before | Now |

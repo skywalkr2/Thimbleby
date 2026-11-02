@@ -482,7 +482,7 @@ def _compare(
         if handed and closed is None and not kept and before is None and item.message is not None:
             unplaced[item.key] = facts
         entries.append(_Entry(item, digest, before, details, change, old, closed, handed, replaces, personal))
-    marks, personal_keys, result.note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+    marks, personal_keys, result.note, unsorted_keys = _assistant_sorted(ws, store, cfg, source, router, unplaced)
     home = _personal_home(store, cfg)
     for entry in entries:
         item, before, closed = entry.item, entry.before, entry.closed or marks.get(entry.item.key)
@@ -508,6 +508,8 @@ def _compare(
                 version_choices.ask(tx, source.id, asking, *unclear)
             text = _input_text(source, item, entry.change, entry.old, entry.replaces)
             filed = {"project": home} if home and (entry.personal or item.key in personal_keys) else None
+            if item.key in unsorted_keys and not closed:
+                filed = {**(filed or {}), "sort_pending": True}
             request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed, extra=filed)
         (result.new if entry.change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
@@ -532,16 +534,17 @@ def _compare(
 
 def _assistant_sorted(
     ws: Any, store: Any, cfg: Any, source: Any, router: Any, unplaced: dict[str, dict[str, Any]], go: bool = False
-) -> tuple[dict[str, dict[str, str]], set[str], str | None]:
+) -> tuple[dict[str, dict[str, str]], set[str], str | None, set[str]]:
     """The assistant's sorting (design 6.5, step 3) of the mail the rules couldn't place, as {item key: facts}: one
     run per batch of headers, never the text. Returns, by item key, the set-aside match of each message it set aside,
-    the keys it answered personal (handed in and filed under the Personal project, never set aside), and a note when
-    some mail wasn't sorted by it (that mail is handed in as work)."""
+    the keys it answered personal (handed in and filed under the Personal project, never set aside), a note when
+    some mail wasn't sorted by it, and the keys of the mail the run couldn't be made for (handed in, waiting for the
+    sorting before any other run)."""
     from engine import mail_sorting
     from engine.set_aside import SECTION_WORDS
 
     if cfg.watch.sorting != "ai" or not unplaced:
-        return {}, set(), None
+        return {}, set(), None, set()
     sorted_ = mail_sorting.sort(
         ws,
         store,
@@ -560,7 +563,7 @@ def _assistant_sorted(
         }
         for key, section in sorted_.sections.items()
     }
-    return marks, sorted_.personal, sorted_.note
+    return marks, sorted_.personal, sorted_.note, sorted_.unsorted
 
 
 def _personal_home(store: Any, cfg: Any) -> str | None:
@@ -571,12 +574,13 @@ def _personal_home(store: Any, cfg: Any) -> str | None:
 
 
 def _awaiting_sorting(
-    ws: Any, store: Any, cfg: Any, only: str | None = None
+    ws: Any, store: Any, cfg: Any, only: str | None = None, pending_only: bool = False
 ) -> dict[str, list[tuple[Any, Any, SourceItem, dict[str, Any]]]]:
     """The mail the first go's sorting covers, by source id: each as (request, snapshot, item, facts). Mail handed in
     unsorted while the go was pending, still waiting for it or queued, whose message was never sorted. Mail the person
     pulled back as work, mail a rule now places or keeps, and changed messages are left out. Mail a new source's
-    intake holds for its own go is covered too; `only` limits it to one source."""
+    intake holds for its own go is covered too; `only` limits it to one source. `pending_only` keeps just the requests
+    still marked `sort_pending`: mail the sorting couldn't be run for when it was handed in."""
     from engine import source_intake
     from engine.connectors import EventDetails
     from engine.dispatcher import waits_on_first_go
@@ -593,6 +597,8 @@ def _awaiting_sorting(
         if data["task"] != "notes" or data["origin"] != "input" or not data.get("source") or req.id in pulled:
             continue
         if data.get("set_aside") or data.get("auto_closed") or data.get("folded_into") or data.get("dismissed"):
+            continue
+        if pending_only and not data.get("sort_pending"):
             continue
         if not (data["state"] == "queued" or waits_on_first_go(data) or source_intake.waits_on_go(data)):
             continue
@@ -657,6 +663,7 @@ def sort_before_first_go(
     now: datetime | None = None,
     only: str | None = None,
     go: bool = True,
+    pending_only: bool = False,
 ) -> int:
     """The person's first go covers the sorting of the mail that was handed in unsorted while it was pending: the
     mail requests still waiting for the go (or queued) whose message was never sorted go through the sorting run first,
@@ -664,20 +671,27 @@ def sort_before_first_go(
     rest are left for the go to start. Mail the person pulled back as work, mail a rule now places or keeps, and
     changed messages are left alone. Returns how many were set aside. Call it before the go is granted. `only`
     limits it to one source's mail (a new source's intake); `go` is False when nobody has given a go, so the
-    sorting keeps the checks that wait for one."""
-    waiting = _awaiting_sorting(ws, store, cfg, only)
+    sorting keeps the checks that wait for one. `pending_only` sorts just the mail whose requests are marked
+    `sort_pending` (the worker's sorting before any other run); every request the sorting answers loses the mark, and
+    one it couldn't be run for keeps it."""
+    waiting = _awaiting_sorting(ws, store, cfg, only, pending_only)
     sources = {s.id: s for s in cfg.watch.sources}
     set_aside = 0
+    still_waiting: set[str] = set()
     for source_id, found in waiting.items():
-        marks, personal_keys, _note = _assistant_sorted(
+        marks, personal_keys, _note, unsorted = _assistant_sorted(
             ws, store, cfg, sources[source_id], router, {item.key: facts for _, _, item, facts in found}, go=go
         )
         home = _personal_home(store, cfg)
         for req, snap, item, _facts in found:
+            if item.key in unsorted:
+                still_waiting.add(req.id)
+                continue  # the sorting couldn't be run for it: it stays marked and waits for it
             mark = marks.get(item.key)
             if mark is None:
-                if home and item.key in personal_keys:
-                    _file_under(store, req.id, home)
+                personal = home if home and item.key in personal_keys else None
+                if personal or req.data.get("sort_pending"):
+                    _file_under(store, req.id, personal)
                 continue
             try:
                 with store.transaction() as tx:
@@ -695,6 +709,7 @@ def sort_before_first_go(
                             "approval": None,
                             "estimate_usd": None,
                             "set_aside": _set_aside_of(mark),
+                            "sort_pending": False,
                         },
                         _SORTER,
                         read_version=current.version,
@@ -702,17 +717,31 @@ def sort_before_first_go(
                 set_aside += 1
             except StoreError:
                 continue  # it changed meanwhile (the worker took it, or the person acted); it stays as work
+    if pending_only and only is None:
+        # A marked request the sorting no longer covers (a rule places it now, the person pulled it back, or the
+        # sorting is off) has nothing to wait for.
+        for req in store.read().list("request"):
+            if req.data.get("sort_pending") and req.data["state"] == "queued" and req.id not in still_waiting:
+                _file_under(store, req.id, None)
     return set_aside
 
 
-def _file_under(store: Any, request_id: str, project: str) -> None:
-    """File a request that names no project under this one, as the sorting's personal answer does for mail handed in
-    before the first go. A request that changed meanwhile is left as it is."""
+def _file_under(store: Any, request_id: str, project: str | None) -> None:
+    """The sorting answered for a request it isn't setting aside: file it under this project when it names none, as
+    the sorting's personal answer does for mail handed in before the first go, and clear its `sort_pending` mark.
+    A request that changed meanwhile is left as it is."""
     try:
         with store.transaction() as tx:
             current = tx.get("request", request_id)
-            if current is not None and not current.data.get("project"):
-                tx.update("request", current.id, {"project": project}, _SORTER, read_version=current.version)
+            if current is None:
+                return
+            changes: dict[str, Any] = {}
+            if project and not current.data.get("project"):
+                changes["project"] = project
+            if current.data.get("sort_pending"):
+                changes["sort_pending"] = False
+            if changes:
+                tx.update("request", current.id, changes, _SORTER, read_version=current.version)
     except StoreError:
         pass
 
@@ -1237,14 +1266,16 @@ def _hand_in_window(
         if closed is None and not kept and item.message is not None:
             unplaced[item.key] = facts
         pending.append((snap, item, closed, personal))
-    marks, personal_keys, _note = (
-        _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, set(), None)
+    marks, personal_keys, _note, unsorted_keys = (
+        _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, set(), None, set())
     )
     home = _personal_home(store, cfg)
     made = []
     for snap, item, closed, by_rule in pending:
         sorted_aside = marks.get(item.key) if closed is None else None
         filed = {"project": home} if home and (by_rule or item.key in personal_keys) else None
+        if item.key in unsorted_keys and closed is None and not sorted_aside:
+            filed = {**(filed or {}), "sort_pending": True}
         with store.transaction() as tx:
             if sorted_aside:
                 tx.update(

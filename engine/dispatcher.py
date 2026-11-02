@@ -311,6 +311,18 @@ def process(
             waiting=f"{about(estimate, high, named)} Waiting for you to start it.",
         )
         return None
+    if req.data.get("sort_pending") and cfg.watch.sorting == "ai":
+        # Mail the sorting couldn't be run for waits for it, and never gets its full run first: the holds above (an
+        # account, a budget, a go) have said what they have to, and the worker sorts it before it tries this again.
+        _set(
+            store,
+            request_id,
+            state="queued",
+            waiting=req.data.get("waiting"),
+            cause=req.data.get("cause"),
+            attempts=attempts_before,
+        )
+        return None
     kind = store.plugins.task_kind(req.data["task"])
     draft = None
     if kind.output == "draft" and packet.about is not None:

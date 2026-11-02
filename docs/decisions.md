@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Mail the sorting couldn't run for waits for it (P105)
+
+**Decided:**
+- When the assistant's sorting of mail can't run (no account, a budget, a go, a paused account or one out of credit),
+  that mail is handed in marked as waiting for the sorting. It no longer goes in as work.
+- The worker sorts all such mail in one batch before any other run of it. What the sorting sets aside is closed with
+  no run.
+- Today's paused-account line counts this mail too.
+- Mail whose sorting answer failed its checks on both tiers is still handed in as work, since a second sort would cost
+  again.
+- Separately, a mail item's title keeps the sender's name beside a known person's id.
+
+**Decided by:** the owner's report that newsletters, receipts and webmaster mail reached the assistant on the evening
+the account ran out of credit; the mechanism is the main session's, built by a coding agent and reviewed.
+
+**Why:** the cheap sorting needs an account too. When it couldn't run, every newsletter was handed in as work, so each
+would get a full, costly run once an account worked again. That evening each one stopped as "Needs you" instead. Some
+titles read "Email from someone" because a sender whose name matched a person lost its name.
+
+**Impact:** design 6.5 (the sorting's fallback), the `request` record (`sort_pending`, optional), the worker, the
+dispatcher's holds and Today's paused line. The plugin guide is regenerated. No new setting. No change to scope.
+Change log: section 277.
+
 ## 2026-11-02: An account out of credit waits for the person, and its work goes on by itself after (P104, P108)
 
 **Decided:**

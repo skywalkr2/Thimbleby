@@ -9,7 +9,8 @@ filed under the Personal project.
 
 The run goes through the same estimate, configured amount, budgets and escalation rule as any other. When it can't
 run (no account for its tier, a budget used up, the person's go not given, an account paused or failing), or its answer
-fails the checks even on the stronger tier, the mail is handed in as work and the reason is returned for the person.
+fails the checks even on the stronger tier, the mail is handed in and the reason is returned for the person.
+Mail the run could not be made for is also returned by key, so its requests wait for the sorting before any other run.
 The run is made for no request, so its record carries none.
 """
 
@@ -71,11 +72,13 @@ class Header:
 class Sorted:
     """What sorting a read's unplaced mail came to: the messages the assistant set aside by key (to sales or
     notices), the keys it answered personal (handed in, filed under the Personal project), and, when some mail wasn't
-    sorted by the assistant, why, in plain words."""
+    sorted by the assistant, why, in plain words. `unsorted` holds the keys of the mail the run could not be made for
+    (so it still needs sorting), as against mail whose answer failed its checks, which is handed in as work."""
 
     sections: dict[str, str] = field(default_factory=dict)
     personal: set[str] = field(default_factory=set)
     note: str | None = None
+    unsorted: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -177,11 +180,14 @@ def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], leve
         batch = headers[start : start + size]
         if stopped:
             unsorted += len(batch)
+            out.unsorted.update(h.key for h in batch)
             continue
         tried = _sort_batch(ws, store, cfg, router, batch, level, go)
         if tried.answers is None:
             unsorted += len(batch)
             why, stopped = tried.why, tried.stop
+            if tried.stop:
+                out.unsorted.update(h.key for h in batch)
             continue
         for name, answer in tried.answers.items():
             key = batch[int(name[1:]) - 1].key
