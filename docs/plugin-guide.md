@@ -1566,6 +1566,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `promised_to` | list[Annotated[str, RefTo(kind='person', blocks_delete=True)]] | `[]` | For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33). |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said outright, or inferred by the assistant; never a confidence score. |
 | `said_by` | str \| None | `None` | The id of the person who said it, when the input names them. |
@@ -1609,6 +1610,7 @@ A question for a person; a decision is a question to the person. Added by `quest
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
 | `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `batch` | Literal['now', 'later'] | `'now'` | Whether it is ready to go out now or waits for a later batch. |
@@ -1759,6 +1761,7 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 | `key` | bool | `False` | True for the facts that matter most, which are always shown first. |
 | `as_of` | date \| None | `None` | The day the fact was true as of: the day the input it came from was received, unless a later input says otherwise. |
@@ -1898,6 +1901,7 @@ Something kept from an input that is not a fact, action or question. Added by `n
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 
 ### `lesson` (LES-n)
@@ -2772,6 +2776,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
 | `reply_owed` | bool | `False` | True for the one action that is the reply the person owes to a message that asks them something (owned by the person). The rules then read the message: automatic mail, mail the person sent and a message that says no reply is needed are refused. Leave it false for any other action. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
@@ -2970,6 +2975,7 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 | `key` | bool | `False` | True only for a fact that matters most to the project; it is shown first. |
@@ -3163,6 +3169,7 @@ Keep something from the input that isn't a fact, action or question. Creates a n
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `question` | str \| None | `None` | The id of the open question it adds to, when the input says more about one. |
 
 ### `person.add`
@@ -3253,6 +3260,7 @@ A question for a person, written for its reader. A decision is a question to who
 | `filed_by.by` | Literal['people', 'source', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
 | `filed_by.word` | str \| None | `None` | The word, domain or source that matched; none when people decided. |
 | `filed_by.project` | str | required | The id of the project it was filed under. |
+| `filed_by.unsure` | bool | `False` | True when the assistant left the project empty and this is only the rules' best guess (design 6.32); false when the person's own settled choice or a fixed reading decided. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `asks_about` | Literal['date', 'decision', 'design', 'mistake', 'other'] | `'other'` | What the question asks about: date (chasing when something will be done, or a promise), decision, design (how they do their own work, or its detail), mistake (an apparent contradiction with a recorded decision or fact: link both sides), or other. |

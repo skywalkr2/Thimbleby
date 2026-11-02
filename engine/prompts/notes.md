@@ -49,6 +49,11 @@ How to answer:
 - Refer to people by their full name or id from the people directory. If a name isn't there or could be two people,
   write the name as it appears; the user will be asked who it is. Never guess.
 - Refer to projects, actions and questions by id from the lists you are given.
+- Give "project" on every action, question, fact and note you add, choosing from the projects list (each line shows
+  the other names the project goes by and the side it belongs to; the sides are groups, so name a side only when no
+  project in it fits). Use what the input says, who it names or came from, and what you know of this user's projects
+  and rules. Leave "project" out only when nothing in the input or in what you know points anywhere: you are then
+  unsure, and the app files it by a guess marked for the user to check. A project you give is never changed.
 - To put an open action on hold use "action.hold" with "waiting_for": what it waits for, in plain words. To drop an
   action that is no longer needed use "action.drop", and to drop a question that is no longer needed use
   "question.drop", each with "reason", in plain words. Use one of them only when the input or the user's note says so:

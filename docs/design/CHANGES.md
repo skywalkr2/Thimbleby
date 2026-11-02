@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 291. The assistant files its own items; the rules' filing is a marked guess put to it once (2026-11-02; P110 J10)
+
+| Where | Before | Now |
+|---|---|---|
+| Notes packet and prompt (6.6, `engine/packet.py`, `engine/prompts/notes.md`) | The projects list gave ids, names, links and the person's part; the prompt did not ask for a project on every item | **Built** (`tests/test_project_unfiled.py`): each project line also shows the other names it goes by and its side; the prompt asks for `project` on every action, question, fact and note, empty only when nothing points anywhere |
+| Filing by signals (6.32, `engine/sides.py::file_by_people`) | An item with no project was filed silently by the ranked signals, shown only by its `filed_by` line | **Built** (`tests/test_project_unfiled.py`, `tests/test_filing_signals.py`): a project the assistant gave is never changed; the signals' filing is a guess, stored with `filed_by.unsure: true` (`FiledBy.unsure`); the person's own settled project is not a guess |
+| Checks (6.7, `engine/applier.py::_project_unfiled`, `config/checks.yaml`) | | **Built** (`tests/test_project_unfiled.py`): the judgment lint `project-unfiled` (default `return`, put once, the answer stands, no stronger tier) returns the answer with the rules' guess as a hint; a project still empty gets the guess, marked unsure |
+| Filing review (6.32, `engine/filing.py`) | Items under Personal that no signal decided | Also the items the rules guessed under Personal (`filed_by.unsure`) |
+
 ## 290. The assistant's sorting says what kind of mail it is; the word lists only hint (2026-11-02; P110 J13)
 
 | Where | Before | Now |

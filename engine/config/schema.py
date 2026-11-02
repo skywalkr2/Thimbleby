@@ -1541,6 +1541,7 @@ def _default_lints() -> dict[str, Severity]:
         "ending-reading": "return",
         "reply-not-needed": "return",
         "fact-from-notice": "return",
+        "project-unfiled": "return",
         "evidence-fit": "return",
         "already-known": "return",
         "near-duplicate-question": "warn",

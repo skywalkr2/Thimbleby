@@ -570,7 +570,8 @@ def test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks
     unclear = sum(m["side"] == "unclear" for m in week)
     assert unclear == 5 and before == 0 and unfiled(store.read()) == []
     asked = filing.summary(store.read(), cfg, NOW)  # one batched question, never one line per message
-    assert asked is not None and asked.count == unclear
+    # The stub left every project empty, so what the rules placed under Personal is a guess too (`filed_by.unsure`).
+    assert asked is not None and asked.count == unclear + sum(m["side"] == "personal" for m in week)
     assert asked.subject == fixture_records(DEMO_B, "project")[0]["name"]  # the business, named from its record
     sheet = json.loads((DEMO_B.parents[1] / "web" / "src" / "wording" / "en.json").read_text(encoding="utf-8"))
     assert "{business}" in sheet["queue.sides.one"] and "{business}" in sheet["queue.sides.other"]

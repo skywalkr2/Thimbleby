@@ -1110,8 +1110,15 @@ def _projects(store: Store, cfg: Config, pm: str | None = None, reach: frozenset
         links = "; ".join(f"{link['label']}: {link['url']}" for link in d.get("links", []))
         role = role_of(view, p.id, pm)
         part = f" | the person's part: {role}" + (" (record facts only)" if role == "watch" else "")
+        # What the assistant files by: the other names the project goes by and the side it belongs to.
+        also = ", ".join(d.get("aliases") or [])
+        side = sides.side_of_project(view, cfg, p.id)
         lines.append(
-            f"- {p.id} | {d['name']}" + (f" | links: {links}" if links else "") + (part if role != DEFAULT_ROLE else "")
+            f"- {p.id} | {d['name']}"
+            + (f" | also called: {also}" if also else "")
+            + (f" | side: {groups[side]}" if side in groups else "")
+            + (f" | links: {links}" if links else "")
+            + (part if role != DEFAULT_ROLE else "")
         )
     shown = "\n".join(lines) or "(none)"
     kept = [f"- {i} | {name}" for i, name in groups.items() if reach is None or i in reach]

@@ -271,14 +271,14 @@ def test_filed_by_is_written_with_the_item_and_survives_export_and_import(env, t
     (personal_action, business_action) = [
         a for a in view.list("action") if a.data["text"].startswith(("Check", "About"))
     ]
-    assert personal_action.data["filed_by"] == {"by": "people", "word": None, "project": PERSONAL_ID}
-    assert business_action.data["filed_by"] == {"by": "people", "word": None, "project": BUSINESS_ID}
+    assert personal_action.data["filed_by"] == {"by": "people", "word": None, "project": PERSONAL_ID, "unsure": True}
+    assert business_action.data["filed_by"] == {"by": "people", "word": None, "project": BUSINESS_ID, "unsure": True}
     (question,) = [q for q in view.list("question") if q.data["title"] == f"About {BUSINESS_WORD}?"]
     assert question.data["projects"] == [BUSINESS_ID] and question.data["filed_by"]["project"] == BUSINESS_ID
     (fact,) = [f for f in view.list("fact") if f.data["text"].startswith(BUSINESS_WORD)]
-    assert fact.data["filed_by"] == {"by": "word", "word": BUSINESS_WORD, "project": BUSINESS_ID}
+    assert fact.data["filed_by"] == {"by": "word", "word": BUSINESS_WORD, "project": BUSINESS_ID, "unsure": True}
     (note,) = [n for n in view.list("note") if n.data["text"].startswith("About")]
-    assert note.data["filed_by"] == {"by": "word", "word": BUSINESS_WORD, "project": BUSINESS_ID}
+    assert note.data["filed_by"] == {"by": "word", "word": BUSINESS_WORD, "project": BUSINESS_ID, "unsure": True}
     set_aliases(env, BUSINESS_ID, [BUSINESS_CODE])
     assert round_trip(store, cfg, tmp_path / "round-trip")["differences"] == []
     exported = tmp_path / "round-trip" / "export-1"

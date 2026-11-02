@@ -13,8 +13,10 @@ narrow every later rank to them), the sender's mail domain when the sender is no
 names of projects that count by themselves (two or more words, or one that is no everyday word), then the configured
 `project.side_words` (the personal words, and the business words while there is exactly one other side); the item's text
 and quote are matched as whole words whatever their case. Whatever files an item is kept on it (`filed_by`) so the item
-can say why. An item no rank decides waits under Personal, the more private level, with no reason kept (`engine.filing`
-asks once a side a day whether to move it). Reads only, except `make_personal` and `set_business`, which write the
+can say why; it is a guess, marked unsure, and the assistant is asked once (the `project-unfiled` lint) before it
+stands. A project the assistant gave is never changed. An item no rank decides waits under Personal, the more private
+level, with no reason kept (`engine.filing` asks once a side a day whether to move it). Reads only, except
+`make_personal` and `set_business`, which write the
 project each side needs.
 """
 
@@ -508,8 +510,8 @@ class Filing:
     by: Literal["people", "source", "domain", "alias", "name", "word"]
     word: str | None = None
 
-    def stamp(self) -> FiledBy:
-        return FiledBy(by=self.by, word=self.word, project=self.project)
+    def stamp(self, *, unsure: bool = False) -> FiledBy:
+        return FiledBy(by=self.by, word=self.word, project=self.project, unsure=unsure)
 
 
 def file_by_words(
@@ -618,8 +620,10 @@ def file_by_people(
     mail_kind: str | None = None,
 ) -> list[Any]:
     """The ops with every new action, question, fact or note that names no project filed under a project, each keeping
-    why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to two
-    or more sides decides nothing and the next is read:
+    why it was (`filed_by`, marked `unsure` when it is the rules' guess). This is only reached for an item the assistant
+    gave no project: the assistant files its own items, and a project it gave is never changed here. The signals are
+    read in order and the first that decides, decides; one that points to two or more sides decides nothing and the
+    next is read:
     00. the project the person settled for the hand-in (the request's own project), when it has one;
     0. mail the assistant's sorting named a bill, an order or a delivery (`mail_kind`, from `engine/mail_sorting.py`;
        with no sorting run for it, the word lists of `engine/mail_kinds.py` stand in): the personal project, whoever
@@ -689,7 +693,10 @@ def file_by_people(
             else:
                 filing = file_by_words(op, view, cfg, words, allowed)
         if filing is not None:
-            out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}))
+            # Every signal read here is a guess: the assistant was asked for the project and left it empty (the
+            # `project-unfiled` lint puts the question once, with this guess as the hint). Only the person's own
+            # settled project (above) is the person's own signal and files without the question or the mark.
+            out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp(unsure=True)}))
         else:
             # Unsure between Personal and a side: the item waits under Personal, the more private level, and the
             # grouped question of `engine.filing` offers moving it. No reason is kept: no signal decided.

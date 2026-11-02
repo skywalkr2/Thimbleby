@@ -9,7 +9,8 @@ for a set of sides, until each of them has been answered. Nothing here decides a
 click moves.
 
 An item counts as waiting under Personal on a guess when it sits directly under the personal project, the assistant
-made it after the side existed, and no signal stamped a reason on it (`filed_by` is empty). Move is the person's own
+made it after the side existed, and either no signal stamped a reason on it (`filed_by` is empty) or the reason is only
+the rules' guess for a project the assistant left empty (`filed_by.unsure`). Move is the person's own
 change (`record.edit` of the item's project, in one changeset with Undo, recorded as a correction like any edit of
 something the assistant set). Keep and Move each leave a signal (`suggestion_dismissed`, `suggestion_chosen`) whose note
 names the side, so a kept item is never asked about again and a side is asked about once a day. Moving the same sender's
@@ -171,7 +172,7 @@ def waiting(view: Any, cfg: Any) -> list[Waiting]:
             if (
                 who == PERSON
                 or record.id in kept
-                or data.get("filed_by")
+                or (data.get("filed_by") and not data["filed_by"].get("unsure"))
                 or _projects(kind, data) != [personal]
                 or (open_statuses and data.get("status") not in open_statuses)
                 or (kind == "fact" and record.id in replaced)

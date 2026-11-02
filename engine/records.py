@@ -230,6 +230,11 @@ class FiledBy(BaseModel):
     by: Literal["people", "source", "domain", "alias", "name", "word"] = Field(description="The signal that decided.")
     word: str | None = Field(None, description="The word, domain or source that matched; none when people decided.")
     project: str = Field(description="The id of the project it was filed under.")
+    unsure: bool = Field(
+        False,
+        description="True when the assistant left the project empty and this is only the rules' best guess (design "
+        "6.32); false when the person's own settled choice or a fixed reading decided.",
+    )
 
 
 class LogEntry(BaseModel):

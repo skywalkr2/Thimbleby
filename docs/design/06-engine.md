@@ -4144,9 +4144,20 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   code, a ticket-key prefix; any alias counts, even one word); then **project names**; last, the configured **side words**
   (`workspace.project.side_words`). Words are matched as whole words in any case. A project's name counts on its own only
   when it has two or more words or is no everyday word (`language.everyday_words`, from a shipped list for the default
-  language); "Launch" counts only through an alias such as "Spring launch" or a code. Words **propose, never file
-  silently**: every item filed this way keeps why (`filed_by`: the signal, the word or domain that matched, the project;
-  written by the applier with the op, and cleared if the assistant writes one), and what changed's line for a new action
+  language); "Launch" counts only through an alias such as "Spring launch" or a code. **The assistant files its own
+  items** (P110 J10; change log 291; `tests/test_project_unfiled.py`): the notes packet lists each project with the other
+  names it goes by and its side, and the notes prompt asks for a `project` on every action, question, fact and note,
+  leaving it empty only when nothing points anywhere. A project it gives is never changed by a rule. When it leaves one
+  empty and the signals above would file the item, the judgment lint `project-unfiled` (default `return`, put once, the
+  answer stands) sends the answer back with the rules' best guess as a hint ("You left the project empty for '<text>'.
+  The signals point to <project> (<reason>). File it there, or under another project, or leave it empty if you can't
+  tell."); if it is still empty the guess is applied and marked unsure (`filed_by.unsure`), which is what makes the items
+  guessed under Personal count as waiting in the filing review below. The person's own settled project for the hand-in
+  is the one signal that is theirs: it files with no question and no mark; a standing filing rule the person kept is
+  prose the assistant reads in its knowledge, so it reaches the filing through the assistant's own answer. Words
+  **propose, never file silently**: every item filed this way keeps why (`filed_by`: the signal, the word or domain that
+  matched, the project, and whether it is only a guess; written by the applier with the op, and cleared if the assistant
+  writes one), and what changed's line for a new action
   and the item's page say it in words when anything but its people filed it ("Filed under <project>: it names <word>", or
   "it's from <domain>") with **Move to <the other side>**, one step through the person's own change of the item's project
   with Undo; the change is the `edited` correction every change of a field the assistant set already records
@@ -4554,7 +4565,8 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
   `tests/test_filing_api.py`, `web/src/components/TodaySides.test.tsx`): an item no rank decides is filed under the personal
   project with no reason kept (`filed_by` empty: no core record gained a field, since the plugin API is on hold); it stays
   unfiled only when there is no personal project. It counts as waiting on a guess while it sits directly under Personal,
-  the assistant made it after the side existed, it has no `filed_by` and the person hasn't kept it. `GET
+  the assistant made it after the side existed, it has no `filed_by` (or only the rules' guess, `filed_by.unsure`, for a
+  project the assistant left empty, change log 291) and the person hasn't kept it. `GET
   /api/filing/questions` gives each waiting item in exactly one question: items that could be the same sides' are one question
   with the list of those sides (the choice starts on the first, which is the one side the items' source serves when it serves
   one; the Move names what it changes, and every other way of moving something to a side's work, an item's page, a project's

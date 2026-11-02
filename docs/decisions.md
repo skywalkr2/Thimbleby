@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The assistant files its own items; the rules only offer a guess, put to it once (P110, J10)
+
+**Decided:** The notes packet lists each project with the other names it goes by and the side it belongs to, and the notes
+prompt asks for a `project` on every action, question, fact and note the assistant adds, empty only when nothing points
+anywhere. A project it gives is never changed by a rule. When it leaves one empty and the filing signals (people, source,
+sender domain, aliases, names, side words) would file the item, the judgment lint `project-unfiled` (default `return`) sends
+the answer back once with the best guess as a hint; the second answer stands, with no stronger tier. A project still empty
+gets the guess, marked unsure (`filed_by.unsure`), and the items guessed under Personal join the filing review ("Move these
+items?"). The person's own settled project for the hand-in is the only signal that is theirs: it files with no question and
+no mark. A standing filing rule the person kept is prose in the assistant's knowledge, so it reaches the filing through the
+assistant's answer, never through a code path.
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's); the audit's row J10.
+
+**Why:** A function that fills a project from word lists and domains decided where the person's work belongs; the assistant
+reads the whole input and knows the person's projects. A function may narrow what it looks at, never decide for it.
+
+**Impact:** design 6.32 (`06-engine.md`, filing) and 6.7 (`04-configuration.md`, the lint); `engine/sides.py`,
+`engine/applier.py` (`_project_unfiled`, `JUDGMENT_LINTS`), `engine/records.py` (`FiledBy.unsure`, so core records and the
+generated plugin guide gain one optional field), `engine/filing.py`, `engine/packet.py`, `engine/prompts/notes.md`, the
+`project-unfiled` severity in the schema and both workspaces' `checks.yaml`. Filed items from a stub that never gives a
+project are now all guesses (the week-of-mail test counts the personal ones in the filing review too). Change log: section 291.
+
 ## 2026-11-02: The assistant's sorting says what kind of mail it is; the word lists only hint (P110, J13)
 
 **Decided:** The low-cost sorting run (headers only) also answers a `kind` for each message: bill, order, delivery or none,

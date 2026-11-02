@@ -304,6 +304,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _due_move_missed(cs, ctx)
     problems += _due_reading_differs(cs, ctx)
     problems += _project_start_as_fact(cs, ctx)
+    problems += _project_unfiled(cs, ctx)
     problems += _decision_from_list(cs, ctx)
     problems += _decided_as_fact(cs, ctx)
     problems += _claim_asked_of_the_person(cs, ctx)
@@ -2315,7 +2316,14 @@ WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
 #: are put once: whatever the assistant answers on the return round stands, and never costs another round or a stronger
 #: tier.
 JUDGMENT_LINTS = frozenset(
-    {"near-duplicate-promise", "due-reading-differs", "ending-reading", "reply-not-needed", "fact-from-notice"}
+    {
+        "near-duplicate-promise",
+        "due-reading-differs",
+        "ending-reading",
+        "reply-not-needed",
+        "fact-from-notice",
+        "project-unfiled",
+    }
 )
 #: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
 OWNER_WORDING_LINTS = frozenset({"action-stands-alone", "reasoning-in-title"})
@@ -2993,6 +3001,49 @@ def _due_reading_differs(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     quote,
                 )
             )
+    return problems
+
+
+#: How each filing signal reads in the hint the assistant is given when it left a project empty.
+_FILING_REASONS = {
+    "people": "the people it names or the sender",
+    "source": "it came from {word}",
+    "domain": "the sender's mail domain {word}",
+    "alias": "it names {word}",
+    "name": "it names {word}",
+    "word": "the words {word!r}",
+}
+
+
+def _project_unfiled(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """An action, question, fact or note the assistant gave no project, which the rules' signals would file anyway
+    (`sides.file_by_people`, which has already stamped its guess as unsure), goes back once with that guess as a
+    hint: the assistant files its own items. Its second answer stands; if it still gives no project the guess is
+    applied and stays marked unsure, for the person's review. The person's own settled project is not a guess and
+    never comes here."""
+    name = "project-unfiled"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    view = ctx.store.read()
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        found = getattr(op, "filed_by", None)
+        if found is None or not found.unsure or not op.project:
+            continue
+        project = view.get("project", found.project)
+        reason = _FILING_REASONS[found.by].format(word=found.word or "")
+        text = (getattr(op, "title", None) or op.text or "").strip()
+        problems.append(
+            Problem(
+                name,
+                level,
+                i,
+                f"You left the project empty for {text!r}. The signals point to "
+                f"{project.data['name'] if project is not None else found.project} ({reason}). File it there, or "
+                "under another project, or leave it empty if you can't tell.",
+            )
+        )
     return problems
 
 
