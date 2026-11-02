@@ -116,17 +116,17 @@ def test_mail_the_sort_answered_at_intake_has_no_sort_pending(tmp_path, account)
         store.close()
 
 
-def test_mail_waiting_for_the_first_go_is_marked_and_the_worker_still_shows_the_first_go_hold_and_runs_nothing(
-    tmp_path, account
-):
+def test_mail_held_for_the_persons_go_is_not_marked_so_it_never_waits_for_a_sort_nobody_can_start(tmp_path, account):
+    """A stop that waits for the person (the first go, an amount to ask above) is theirs to lift: the mail is handed
+    in as work under the same hold, and the first go's own sorting covers it. Only a stop on the accounts marks it."""
     ws, cfg, store = make(tmp_path, [unplaced(0)], ai=[("first_go: false", "first_go: true")])
     try:
         read(ws, store)
         (req,) = store.read().list("request")
-        assert req.data["sort_pending"]
+        assert not req.data["sort_pending"]
         worker_of(ws, cfg, store).run_pending()
         held = store.read().get("request", req.id).data
-        assert held["state"] == "needs_you" and held["approval"] == "required" and held["sort_pending"]
+        assert held["state"] == "needs_you" and held["approval"] == "required"
         assert account.kinds == []
     finally:
         store.close()

@@ -86,6 +86,10 @@ class _Try:
     answers: dict[str, str] | None = None  # id to answer, when the answer passed its checks
     why: str | None = None
     stop: bool = False  # the reason holds for every batch of this read, so none is tried
+    # The run couldn't be made because of the AI accounts (paused, out of credit, none for the tier, a budget used
+    # up): the mail waits for the sorting. A stop that waits for the person's go or an amount they set is not this:
+    # that mail is handed in as work, where the same holds ask the person.
+    on_accounts: bool = False
 
 
 def _clip(text: Any, limit: int = HEADER_CHARS) -> str:
@@ -175,18 +179,20 @@ def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], leve
     size = cfg.watch.sorting_batch
     unsorted = 0
     stopped = False
+    waits = False
     why = None
     for start in range(0, len(headers), size):
         batch = headers[start : start + size]
         if stopped:
             unsorted += len(batch)
-            out.unsorted.update(h.key for h in batch)
+            if waits:
+                out.unsorted.update(h.key for h in batch)
             continue
         tried = _sort_batch(ws, store, cfg, router, batch, level, go)
         if tried.answers is None:
             unsorted += len(batch)
-            why, stopped = tried.why, tried.stop
-            if tried.stop:
+            why, stopped, waits = tried.why, tried.stop, tried.on_accounts
+            if tried.stop and tried.on_accounts:
                 out.unsorted.update(h.key for h in batch)
             continue
         for name, answer in tried.answers.items():
@@ -281,9 +287,9 @@ def _rounds(cfg: Any, router: Any, task: AiTask, ids: dict[str, str], tier: str,
         try:
             result, _choice, _run = router.call(current, request_id=None, tier=tier, data_level=level)
         except (AccountPaused, BudgetReached, NoProvider) as err:
-            return _Try(why=str(err).rstrip("."), stop=True)
+            return _Try(why=str(err).rstrip("."), stop=True, on_accounts=True)
         except AiError as err:
-            return _Try(why=failure_in_words(err), stop=True)
+            return _Try(why=failure_in_words(err), stop=True, on_accounts=True)
         if result.refused:
             return _Try(why="the AI account refused it", stop=True)
         answers, problems = read_answers(result.text, set(ids), result.truncated)

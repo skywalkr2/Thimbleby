@@ -341,8 +341,11 @@ It is sorted in this order, first match wins:
      per-kind budgets. It is made for no request, so its run record has no request (`Run.request` is none). When it can't be made (no
      account for the tier, a budget used up, the first go or the go above the configured amount not given, an account
      paused or failing, a refusal) **the mail is handed in, never held back**, and the read says why in plain
-     words. Its request carries `sort_pending`: it waits for the sorting and **is sorted before any other run**, never
-     given the full run first. Before it runs a queued request so marked, the worker sorts every such request of a
+     words. When the stop is on the AI accounts (paused, out of credit, failing, none for the tier, a budget used up),
+     its request carries `sort_pending`: it waits for the sorting and **is sorted before any other run**, never given
+     the full run first. A stop that waits for the person (the first go, an unpriced run, the amount to ask above, the
+     per-run limit) marks nothing: the mail is handed in as work under the same hold, and the first go's sorting covers
+     it, so no mail ever waits for a sorting nobody can start (change log 277). Before it runs a queued request so marked, the worker sorts every such request of a
      source in one batch (the first go's sorting, with `sort_pending` as the filter): sales and notice answers close
      the request as set aside with no run, a personal answer files it under the Personal project, and any answer
      clears the mark. While the sorting still can't run, the request stays queued with no full run; the same cause

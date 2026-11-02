@@ -1040,7 +1040,7 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| When the sorting run can't be made (6.5, `engine/watch.py`; replaces section 32's "handed in as work") | The mail was handed in as work, so every newsletter got a full run once an account worked again | The mail is handed in marked `sort_pending`; the worker sorts it in one batch before any other run of it, and a run never starts while it waits. Mail whose answer failed the checks on both tiers is still handed in as work |
+| When the sorting run can't be made (6.5, `engine/watch.py`; replaces section 32's "handed in as work") | The mail was handed in as work, so every newsletter got a full run once an account worked again | When the stop is on the AI accounts, the mail is handed in marked `sort_pending`; the worker sorts it in one batch before any other run of it, and a run never starts while it waits. A stop that waits for the person's go marks nothing. Mail whose answer failed the checks on both tiers is still handed in as work |
 | Today's paused line | Counted only requests paused on the account | Also counts mail waiting for a sorting that runs on that account, so an out-of-credit stop is never silent |
 | A mail item's title (`engine/titles.py`) | A sender matching a known person kept only the person's id, so the title could read "Email from someone" | The sender's name is kept beside the id |
 
