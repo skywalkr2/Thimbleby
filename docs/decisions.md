@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: The visible rename comes forward, and every button is a pill (P102, P101)
+
+**Decided:**
+- The visible part of the rename to Thimbleby happens now, before the installers. That covers the window title, the
+  app's name on screen, and the default backup and workspace folder names. The app offers once to rename an old-name
+  folder it finds, and never moves files unasked. The command line and code names stay with phase I.
+- Every button takes the brand's pill shape, as the UI/UX reviewer proposed (VP16), scheduled after the owner's other
+  findings.
+
+**Decided by:** the owner, 2026-11-02 ("Yes, rename now"; "Pills everywhere").
+
+**Why:** the owner's install still showed the old name, and setup offered a backup folder named after it in the
+person's own cloud drive. The pill shape is the brand's.
+
+**Impact:** phase I's rename is split: the visible part now, the command and code later. The design text changes with
+each build. No change to scope. Change log: none.
+
 ## 2026-11-02: The app ships published prices for services whose model list has none (P97)
 
 **Decided:**
