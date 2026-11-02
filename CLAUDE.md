@@ -129,6 +129,7 @@ time. These rules hold for the main session and every subagent.
   meaningful piece of scope (a phase step, or about half a day of work, typically six to ten commits), then push the
   batch. Run sooner only before the owner tests. Locally the Python suite runs on one version (CI runs every supported
   one); the browser tests run when the batch touches `web/` or `api/`.
+- **Deliver the batch, then test it once, then fix in one pass** (owner, 2026-11-02): merge each reviewed piece with only its own tests and the self-check; when the batch is complete, run the full suites once, collect every failure, and fix them together before the push. No extra full or cross-cutting runs between merges.
 - **Targeted runs stay narrow**: while iterating, run only the test files for the code just changed (one or two, not a
   dozen); the full run catches the rest.
 - **The browser tests run only in that one full run**, never two runs at once. If anything else might be using the
