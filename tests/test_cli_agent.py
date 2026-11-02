@@ -173,6 +173,11 @@ def test_a_missing_program_and_a_slow_one_are_classified(agent_script):
         ("Error: You have exceeded your monthly quota (Request ID: 0000:1111)", "quota"),
         ("Usage limit reached for this plan.", "quota"),
         ("429 Too Many Requests", "rate_limited"),
+        # An account added before the catalog named this program's refusal of a personal account.
+        (
+            "Warning: 256-color support not detected.\nIneligibleTierError: this account tier is not eligible",
+            "unsupported",
+        ),
     ],
 )
 def test_an_agent_with_no_error_patterns_of_its_own_still_reads_a_usage_limit(agent_script, stream, kind):

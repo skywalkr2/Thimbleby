@@ -238,7 +238,13 @@ PROBLEMS = {
     "no_work": "It started but did nothing; it may be signed out",
     "refused": "It refused the request",
     "model_retired": "The model is no longer offered by this service",
+    "no_allowed_model": "The service's privacy or guardrail settings for this account allow no model to answer",
 }
+#: Failures whose plain words say it all: the service's own words (often a whole error body, or a program's terminal
+#: warnings) are not shown beside them.
+PLAIN_ONLY = frozenset({"unsupported", "no_allowed_model", "quota"})
+#: What to do about them.
+NO_ALLOWED_MODEL_ADVICE = "Change those settings at the service, or pick another model"
 
 
 def tier_summary(results: list[SmokeResult]) -> tuple[list[str], bool]:
@@ -307,7 +313,7 @@ def _problem(err: AiError, where: str = "local", model: str = "", tier: str = ""
     where the account lives (`where_of`), so a hosted service never gets the advice for a local one."""
     if err.kind == "model_retired":
         return f"{RETIRED_PLAIN.format(work=work_in_words(tier))}."
-    reason = "" if err.kind in TRANSPORT_KINDS else provider_reason(err.detail)
+    reason = "" if err.kind in TRANSPORT_KINDS or err.kind in PLAIN_ONLY else provider_reason(err.detail)
     if model and reason:
         # The service's own words may name the model, which the person is never shown.
         reason = reason.replace(model, "the model")
@@ -316,6 +322,8 @@ def _problem(err: AiError, where: str = "local", model: str = "", tier: str = ""
     hint = err.hint or (
         UNSUPPORTED_ADVICE
         if err.kind == "unsupported"
+        else NO_ALLOWED_MODEL_ADVICE
+        if err.kind == "no_allowed_model"
         else TRANSPORT_HINTS.get(where, TRANSPORT_HINTS["local"]).get(err.kind)
     )
     return f"{detail}. {hint.rstrip('.')}." if hint else f"{detail}."

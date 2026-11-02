@@ -678,6 +678,8 @@ LIST_PROBLEMS = {
     "no_key": "This service needs a key.",
     "unsupported": f"{UNSUPPORTED_PLAIN}. {UNSUPPORTED_ADVICE}.",
     "quota": "The service says the account has no credit or has reached its limit.",
+    "no_allowed_model": "The service's privacy or guardrail settings for this account allow no model to answer. "
+    "Change those settings at the service, or pick another model.",
     "rate_limited": "The service asked to wait a moment. Try again shortly.",
     "timeout": "The service didn't answer in time. Try again.",
     "provider_down": "The service couldn't be reached. Check the address, or start it if it runs on this computer.",

@@ -178,3 +178,31 @@ def test_classify_error_reads_an_account_out_of_credit_in_both_adapters_and_neve
     assert classify_common(response(429, "You exceeded your current quota.", code="insufficient_quota")).kind == "quota"
     # A plain request to slow down is still a rate limit, not an empty balance.
     assert classify_common(response(429, "Slow down.")).kind == "rate_limited"
+
+
+def test_a_service_whose_privacy_settings_allow_no_model_is_said_in_plain_words_without_its_raw_body():
+    """The person's path: an account check showed a whole error body ("0 endpoints out of 8 requested are available
+    matching your guardrail restrictions and data policy")."""
+    from engine.ai.smoke import _problem
+
+    said = (
+        "No endpoints available: 0 endpoints out of 8 requested are available matching your guardrail restrictions "
+        "and data policy"
+    )
+    err = classify_common(response(404, said))
+    assert err.kind == "no_allowed_model"
+    words = _problem(err, "hosted")
+    assert "privacy or guardrail settings" in words and "pick another model" in words
+    assert "endpoints" not in words and "{" not in words
+
+
+def test_a_refusal_whose_plain_words_say_it_all_shows_no_raw_text():
+    from engine.ai.smoke import _problem
+    from engine.ai.task import AiError
+    from engine.dispatcher import failure_in_words
+
+    noisy = "Warning: 256-color support not detected. IneligibleTierError: not eligible"
+    for err in (AiError("unsupported", noisy), AiError("quota", '{"error": {"message": "credit balance is too low"}}')):
+        for words in (_problem(err, "program"), failure_in_words(err)):
+            assert "256-color" not in words and "IneligibleTierError" not in words and "{" not in words
+            assert "credit balance" not in words

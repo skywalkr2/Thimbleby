@@ -12,6 +12,7 @@ ErrorKind = Literal[
     "auth",
     "unsupported",  # the service no longer lets this program be used with this kind of account
     "model_retired",  # the service says the model asked for is no longer offered
+    "no_allowed_model",  # the account's own privacy or guardrail settings at the service leave no model to answer
     "no_key",
     "timeout",
     "invalid_output",
@@ -58,6 +59,18 @@ def says_retired(message: str, markers: Any = None) -> bool:
     """Whether a service's error words say the model is retired. Only a classifier calls this."""
     text = " ".join(str(message).lower().split())
     return any(m.lower() in text for m in (markers or RETIRED_MARKERS))
+
+
+#: Words a service's error uses when the account's own privacy or guardrail settings leave no model that may answer.
+#: Only a classifier reads them.
+NO_ALLOWED_MODEL_MARKERS = ("guardrail restrictions", "data policy", "no endpoints found matching")
+
+
+def says_no_allowed_model(message: str, markers: Any = None) -> bool:
+    """Whether a service's error words say its settings for the account leave no model to answer. Only a classifier
+    calls this."""
+    text = " ".join(str(message).lower().split())
+    return any(m.lower() in text for m in (markers or NO_ALLOWED_MODEL_MARKERS))
 
 
 #: Words a service's error uses when the account has no credit left. Only a classifier reads them.

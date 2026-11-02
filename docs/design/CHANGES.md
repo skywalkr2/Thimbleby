@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 278. Account checks in plain words (2026-11-02; P108 b and c)
+
+| Where | Before | Now |
+|---|---|---|
+| A service whose privacy or guardrail settings leave no model (`classify_error`) | "other", with the service's whole error body on screen | `no_allowed_model`: "The service's privacy or guardrail settings for this account allow no model to answer. Change those settings at the service, or pick another model." Another account in line takes the work |
+| Failures whose plain words say it all (no credit, a program refusing the kind of account, the above) | The service's raw words (or a program's terminal warnings) in brackets after them | Plain words and what to do only |
+| A command-line agent refusing a personal account | Read only by the catalog's pattern, so an account added earlier got "other" | Also among the common patterns every agent account reads |
+| An agent that can't say which account it runs as | "Can't tell which sign-in it uses: the account's settings don't say how to ask this program which sign-in it uses" | "It works, but it doesn't say which account it's signed in to (this program has no way to say). Open the program and check it uses the account you mean." |
+
 ## 277. Mail the sorting couldn't run for waits for it, and "Email from someone" (2026-11-02; P105)
 
 | Where | Before | Now |

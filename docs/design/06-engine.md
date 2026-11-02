@@ -2420,7 +2420,12 @@ includes the adapter's `sign_in_hint()` (its own login command or page), and nev
 no longer lets a program be used with the person's kind of account (`unsupported`, matched by the account's `errors.unsupported`
 patterns) is a failure of the account, not of the work: it is never retried, falls to the next account in the chain like a
 refused key, shows the account as failing, and says "pick another account, or use a key instead" in place of a sign-in hint,
-since signing in again does not help.
+since signing in again does not help. The common patterns every agent account reads include such a refusal, so an
+account added before its catalog entry named one still gets it (change log 278). A service whose privacy or guardrail
+settings for the account leave no model to answer is `no_allowed_model` (read from its words in `classify_error`): it
+falls to the next account and says to change those settings or pick another model. For these and for no credit the
+screen shows only the plain words and what to do, never the service's raw text or a program's terminal warnings
+(`tests/test_retired_model.py::test_a_refusal_whose_plain_words_say_it_all_shows_no_raw_text`).
 
 **Exit 0 with no answer is a failure** (built: `tests/test_silent_stops.py::test_a_program_that_exits_cleanly_with_nothing_on_its_output_is_no_output_never_an_empty_answer`,
 `test_an_empty_answer_file_and_a_missing_one_are_both_no_output`,

@@ -26,6 +26,7 @@ FALLBACK_ON = {
     "quota",
     "auth",
     "unsupported",
+    "no_allowed_model",
     "no_key",
     "provider_down",
     "timeout",

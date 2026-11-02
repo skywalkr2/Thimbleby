@@ -62,6 +62,7 @@ class LockdownCheck:
 
 #: Error wording common to command-line agents, read after an account's own patterns.
 COMMON_ERRORS: dict[str, tuple[str, ...]] = {
+    "unsupported": (r"ineligible ?tier", r"unsupported_client", r"no longer supported for"),
     "quota": (
         r"exceeded (?:your|the) (?:\w+ )?quota",
         r"quota (?:exceeded|reached)",
@@ -305,7 +306,7 @@ class CliAgentAdapter:
         allowlisted environment as a run."""
         agent = self.agent
         if not agent.identity_command:
-            return IdentityUnknown("the account's settings don't say how to ask this program which sign-in it uses")
+            return IdentityUnknown("this program has no way to say")
         shown = " ".join(agent.identity_command)
         with _scratch() as scratch:
             try:
@@ -332,7 +333,7 @@ class CliAgentAdapter:
             return IdentityUnknown(f"asking the program stopped with exit code {done.returncode}{tail}")
         out = (done.stdout or "").strip()
         if not out:
-            return IdentityUnknown("the program answered with nothing")
+            return IdentityUnknown("it answered with nothing when asked")
         if agent.identity_field:
             try:
                 data = json.loads(out)

@@ -1332,7 +1332,7 @@
   "ai_accounts.state.checked": "Checked for {work} · {date}",
   "ai_accounts.state.untested": "Not tested yet",
   "ai_accounts.identity.runs_as": "Runs as {account}",
-  "ai_accounts.identity.unknown": "Can't tell which sign-in it uses: {reason}",
+  "ai_accounts.identity.unknown": "It works, but it doesn't say which account it's signed in to ({reason}). Open the program and check it uses the account you mean.",
   "ai_accounts.identity.changed": "Now runs as {account}; answer on Today",
   "ai_accounts.state.no_key": "No access key yet",
   "ai_accounts.state.paused_credit": "Out of credit or at its plan's limit. Add credit, then check it again",

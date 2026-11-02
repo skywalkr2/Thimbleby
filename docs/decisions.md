@@ -4,6 +4,25 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Account checks say what is wrong in plain words (P108 b and c)
+
+**Decided:**
+- A service whose privacy or guardrail settings for the account leave no model to answer gets its own error kind. It
+  is read in `classify_error` from the service's words. Its plain words say what to change, and another account in
+  line takes the work.
+- For no credit, a program refusing the kind of account, and the case above, the screen shows only the plain words and
+  what to do, never the service's raw text or a program's terminal warnings.
+- A command-line agent's refusal of a personal account is among the patterns every agent account reads.
+- An agent that can't say which account it runs as says so plainly and tells the person to check in the program.
+
+**Decided by:** the owner's screenshots of the AI accounts screen; the wording is the main session's.
+
+**Why:** the checks showed a whole error body and a terminal's color warning, and a message about how settings ask a
+program for its sign-in.
+
+**Impact:** design 6.16 (error kinds), `classify_error` in two adapters, the account check's and the dispatcher's
+words, and one wording key. No new setting. No change to scope. Change log: section 278.
+
 ## 2026-11-02: Mail the sorting couldn't run for waits for it (P105)
 
 **Decided:**

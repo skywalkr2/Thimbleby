@@ -133,7 +133,7 @@ def test_no_command_in_the_settings_is_unknown_not_a_guess_from_the_run_command(
         agent=AgentSettings(command=[sys.executable, script, "answer"]),
     )
     found = CliAgentAdapter(plain).identity()
-    assert isinstance(found, IdentityUnknown) and "how" in found.reason
+    assert isinstance(found, IdentityUnknown) and "no way to say" in found.reason
 
 
 def test_a_command_that_is_too_slow_is_unknown(agent):

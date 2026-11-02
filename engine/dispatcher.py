@@ -1240,12 +1240,15 @@ _PLAIN_FAILURE = {
     "invalid_output": "The AI account's answer couldn't be read",
     "no_output": "The AI account finished without giving an answer",
     "no_work": NO_WORK,
+    "no_allowed_model": "The AI service's privacy or guardrail settings for this account allow no model to answer",
 }
+#: Failures whose plain words say it all: the service's raw words are not added to them.
+_PLAIN_ONLY = frozenset({"no_work", "quota", "unsupported", "no_allowed_model"})
 
 
 def failure_in_words(err: AiError) -> str:
     """A failed call in a few plain words: what happened and the provider's own reason, if it gave one."""
-    reason = "" if err.kind == "no_work" else provider_reason(err.detail)  # a banner is never the reason given
+    reason = "" if err.kind in _PLAIN_ONLY else provider_reason(err.detail)  # a banner is never the reason given
     return _PLAIN_FAILURE.get(err.kind, "The AI call failed") + (f" ({reason})" if reason else "")
 
 

@@ -60,6 +60,11 @@ _KEYED = {
         "That account has no credit left. Add credit on the service's billing page, then paste the key again.",
     ),
     "rate_limited": ("wait", "The service asked to wait a moment. Try again shortly."),
+    "no_allowed_model": (
+        "failed",
+        "The service's privacy or guardrail settings for this account allow no model to answer. Change those "
+        "settings at the service, or pick another model.",
+    ),
 }
 #: What it means when the service can't be reached, by where the account lives.
 _UNREACHABLE = {

@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from engine.ai.task import AiError, AiResult, AiTask, ModelInfo, says_no_credit, says_retired
+from engine.ai.task import AiError, AiResult, AiTask, ModelInfo, says_no_allowed_model, says_no_credit, says_retired
 
 
 class OpenAICompatibleAdapter:
@@ -296,6 +296,8 @@ def classify_http_error(response: httpx.Response, settings: Any = None, *, listi
             return AiError("auth", detail)
         if status == 400 and _key_refused_by_reason(response, getattr(settings, "auth_reasons", [])):
             return AiError("auth", detail)
+    if status in (400, 403, 404) and says_no_allowed_model(_error_message(response)):
+        return AiError("no_allowed_model", detail)
     if status in (400, 404, 410) and says_retired(_error_message(response)):
         return AiError("model_retired", detail)
     if status == 402:
