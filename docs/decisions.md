@@ -4,6 +4,39 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: Mail leaving a folder is not news, only a reply is a non-answer, "before" a date is the day before, a vague question is returned (P108e, P109c, P109e)
+
+**Decided:** Four fixes from the owner's install, each by the rule that rules handle the mechanical and the assistant
+judges the person's work.
+1. A message that leaves its watched folder (filed, archived, deleted) is marked gone and never handed in as a change,
+   whatever `report_removed` says; the setting covers other items (a page, a file, a feed entry). The owner saw "the inbox
+   no longer shows the upcoming scheduled payment" become news on a promise. Calendar entries keep their handling.
+2. `action.news` gets `reply` (default false), the assistant's call: true only for a reply from the person the to-do waits
+   on that doesn't answer it. Only then is the news entry a `non_answer`, which restarts the chase clock; a notice or a
+   status change no longer does. Before, every news op was a non-answer.
+3. "Before <month>" is the last day of the month before ("before November" is October 31) and "before <month> <day>" is the
+   day before; "by" and "in" keep their readings. The rules had no reading for "before <month>" (it was left as a condition
+   with no date), so the Nov 1 on the owner's to-do was the assistant's own; the reader now has the right day, so
+   `due-reading-differs` sends such an answer back once, and the notes prompt says it plainly.
+4. A question that asks something wide open ("… notice: what should have happened?"), quotes nothing the assistant saw and
+   offers no choices goes back once (`vague-question`, a judgment lint, default `return`; the second answer stands). A plain
+   function only finds the plainest case from two language lists (`open_question_phrases`, `choice_words`); the assistant
+   rewrites it.
+
+**Which kind of rule each is:** 1 a concept of the core (what counts as a change); 2 the assistant's judgment, an op field;
+3 a fact of the date reader plus prompt guidance, the existing language word list `due_before_words`; 4 a judgment lint
+with two settings (language word lists, demo values in both workspaces).
+
+**Who:** the owner, 2026-11-02 (P109c, P109e, P108e).
+
+**Why:** news for something routine trains the person to ignore the line; marking every news a non-answer silenced or
+restarted the chase for the wrong reasons; a date one day off is a missed deadline; a question with no content gives the
+reader nothing to answer.
+
+**Impact:** `engine/watch.py`, `engine/ops.py` (`action.news` gains `reply`; the plugin guide is regenerated),
+`engine/applier.py`, `engine/due_phrases.py`, the notes prompt, two language settings and one lint default, two golden
+cases and the `reply` key of an expected `action.news`. No change to scope. Change log: section 293.
+
 ## 2026-11-02: Views: one project can show under two roles in the same side (P112, item 3)
 
 **Decided:** A *view* is a named list of projects inside one side ("Manager's portfolio", "My projects"). A project can be in

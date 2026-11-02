@@ -4,12 +4,19 @@ words the date reader uses are the language's settings. Cases, ids and quotes co
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from importlib import resources
 
 import pytest
 import yaml
 
-from engine.due_phrases import DEFAULT_CONDITION_WORDS, DEFAULT_LEAD_WORDS, DEFAULT_ORDINAL_SUFFIXES, is_condition
+from engine.due_phrases import (
+    DEFAULT_CONDITION_WORDS,
+    DEFAULT_LEAD_WORDS,
+    DEFAULT_ORDINAL_SUFFIXES,
+    is_condition,
+    resolve,
+)
 from engine.evaluate import load_cases
 from engine.names import People
 from engine.packet import _open_actions
@@ -33,8 +40,14 @@ def _promise_ops(case):
     return [o for o in _ideal(case) if o["op"] == "action.add" and o.get("due_words")]
 
 
+_SOMEDAY = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
 CONDITION_CASES = _case_ids(
-    DEMO_B, lambda c: any(is_condition(o["due_words"], DEFAULT_CONDITION_WORDS) for o in _promise_ops(c))
+    DEMO_B,
+    lambda c: any(
+        is_condition(o["due_words"], DEFAULT_CONDITION_WORDS)
+        and resolve(o["due_words"], _SOMEDAY, UTC).start is None  # words the reader gives a day for aren't one
+        for o in _promise_ops(c)
+    ),
 )
 NON_ANSWER_CASES = _case_ids(
     DEMO_B, lambda c: any(e.get("op") == "action.news" for e in c.get("expect", [])) and "no-answer" in c["id"]

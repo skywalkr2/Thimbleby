@@ -44,6 +44,7 @@ pasted: |-
 expect:
 - op: action.news
   id: ACT-101
+  reply: true
 forbid:
 - op: action.close
   id: ACT-101
@@ -55,6 +56,7 @@ stub_answer:
   ops:
   - op: action.news
     id: ACT-101
+    reply: true
     text: Bram wrote about the materials but did not send the warranty terms
     evidence:
       quote: We use excellent materials

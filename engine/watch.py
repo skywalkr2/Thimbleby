@@ -522,11 +522,10 @@ def _compare(
         snapshot = seen[key]
         with store.transaction() as tx:
             tx.update("snapshot", snapshot.id, {"gone": True}, _WATCHER, read_version=snapshot.version)
-            if baseline or not source.report_removed:
+            if baseline or not source.report_removed or snapshot.data.get("message") is not None:
+                # a message leaving its folder (filed, archived, deleted) is routine, never a change to hand in
                 continue
-            gone = SourceItem(
-                key, snapshot.data["title"], "", author=None, message=_message_of(snapshot.data.get("message"))
-            )
+            gone = SourceItem(key, snapshot.data["title"], "", author=None)
             text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
             facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
             closed = classify(store, cfg, facts)[0]

@@ -30,6 +30,7 @@ pasted: |-
 expect:
 - op: action.news
   id: ACT-101
+  reply: true
 forbid:
 - op: action.close
   id: ACT-101
@@ -43,6 +44,7 @@ stub_answer:
   ops:
   - op: action.news
     id: ACT-101
+    reply: true
     text: "Lena reports the heater is working and asks about the room schedule, but does not send the receipt"
     evidence:
       quote: "The heater is working again, thankfully"

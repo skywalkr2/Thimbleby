@@ -9,10 +9,18 @@ fixtures."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 
 from engine.ai.adapters.stub import set_responder
-from engine.due_phrases import DEFAULT_BEFORE_WORDS, DEFAULT_CONDITION_WORDS, DEFAULT_HOLD_WORDS, is_condition
+from engine.due_phrases import (
+    DEFAULT_BEFORE_WORDS,
+    DEFAULT_CONDITION_WORDS,
+    DEFAULT_HOLD_WORDS,
+    is_condition,
+    resolve,
+)
 from engine.storage import Store
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B
@@ -189,6 +197,8 @@ def test_the_settings_have_descriptions_defaults_and_demo_values():
 
 # ---- the evaluation cases that carry conditions ------------------------------------------------
 
+_SOMEDAY = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
+
 
 def _condition_case_ids():
     from engine.evaluate import load_cases
@@ -198,7 +208,10 @@ def _condition_case_ids():
         c["id"]
         for c in load_cases(DEMO_B)
         if any(
-            o["op"] == "action.add" and o.get("due_words") and is_condition(o["due_words"], DEFAULT_CONDITION_WORDS)
+            o["op"] == "action.add"
+            and o.get("due_words")
+            and is_condition(o["due_words"], DEFAULT_CONDITION_WORDS)
+            and resolve(o["due_words"], _SOMEDAY, UTC).start is None  # words the reader gives a day for aren't one
             for o in c.get("stub_answer", {}).get("ops", [])
         )
     ]

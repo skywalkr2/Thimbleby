@@ -96,8 +96,9 @@ How to answer:
   - "due_words": the exact words the date comes from ("by Friday", "due Oct 22", "on the 3rd", "by the 25th", "early
     next week"), copied from the input with any leading "by", "on" or "due". Give "due" as the day you read from them,
     from when the input was received; the rules read the words too and send your answer back once if their day
-    differs, so check which is right. Never turn a vague time into a date, and give "due" for words the rules can't
-    read only when the input states that day. When the date is a calendar entry's ("by Thursday's meeting"), give that
+    differs, so check which is right. "Before" a date is the day before it, never the date itself: "before November"
+    is the last day of October, "before November 5" is November 4, while "by November 5" is November 5. Never turn a
+    vague time into a date, and give "due" for words the rules can't read only when the input states that day. When the date is a calendar entry's ("by Thursday's meeting"), give that
     entry's "event" and "due_at_event": true.
   - A condition with no date is the due. When the promise holds only once something happens and names no day for it
     ("once the keys arrive", "after the workshop", "when the measurements arrive", "as soon as I've spoken to the
@@ -144,8 +145,11 @@ How to answer:
     when a message comes where an open promise was made (the same thread, or from the person who owes it or is owed
     it) and all it does about the promise's subject is acknowledge it, thank, praise, defer ("I'll get back to you"),
     ask to wait or turn to another subject, and it doesn't deliver, move, part-deliver, drop or close it, record one
-    "action.news" on that open action, quoting those words. Add no fact, no second action and no ending for it, and
-    close no question with it.
+    "action.news" on that open action, quoting those words, with "reply" true. Add no fact, no second action and no
+    ending for it, and close no question with it. "reply" is true only for that: a reply from the person the to-do
+    waits on that doesn't answer it. News that is not such a reply (a notice, a status change, an update, a condition
+    now met, an item still owed after a part answer) leaves "reply" false, because a reply that didn't answer restarts
+    the wait and other news does not.
   Each of these except "action.news" waits for the user to keep it when it comes from an input, so propose it whenever
   the words support it.
 - An input changes only the items its words name. Another open action about the same thing keeps its date and its state

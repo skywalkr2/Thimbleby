@@ -49,6 +49,32 @@ DEFAULT_NUMBER_WORDS: dict[str, int] = shipped("due_number_words")
 #: Time zone abbreviations and plain names to the zone they name, for a time like "5pm ET" or "5pm Central".
 DEFAULT_TIME_ZONES: dict[str, str] = shipped("time_zone_abbreviations")
 HOLIDAYS_FILE = Path(__file__).parent / "defaults" / "holidays.yaml"
+#: The written months a date can name, whole and in their three-letter and "sept" short forms.
+MONTH_NUMBERS: dict[str, int] = {
+    **{
+        name: number
+        for number, name in enumerate(
+            (
+                "january",
+                "february",
+                "march",
+                "april",
+                "may",
+                "june",
+                "july",
+                "august",
+                "september",
+                "october",
+                "november",
+                "december",
+            ),
+            start=1,
+        )
+    },
+    "sept": 9,
+}
+MONTH_NUMBERS.update({name[:3]: number for name, number in list(MONTH_NUMBERS.items()) if len(name) > 4})
+_MONTH_WORD = re.compile(r"\b(?:" + "|".join(sorted(MONTH_NUMBERS, key=len, reverse=True)) + r")\b")
 
 
 @dataclass(frozen=True)
@@ -174,6 +200,7 @@ def resolve(
     locale: str = "en_US",
     end_of_day: time = time(17),
     lead_words: Sequence[str] = DEFAULT_LEAD_WORDS,
+    before_words: Sequence[str] = DEFAULT_BEFORE_WORDS,
     ordinal_suffixes: Sequence[str] = DEFAULT_ORDINAL_SUFFIXES,
     phrase_words: Mapping[str, Sequence[str]] | None = None,
     number_words: Mapping[str, int] | None = None,
@@ -232,6 +259,7 @@ def resolve(
             locale=locale,
             end_of_day=end_of_day,
             lead_words=lead_words,
+            before_words=before_words,
             ordinal_suffixes=ordinal_suffixes,
             phrase_words=phrase_words,
             number_words=number_words,
@@ -295,6 +323,42 @@ def resolve(
                     )
                 return single(candidate, note)
         return unknown("No representable future occurrence exists.")
+
+    # "Before" a calendar date is the day before it: "before November" is the last day of October, "before
+    # November 5" is November 4. Only a written date is read so; "before the print sync" is left to the entry's name.
+    markers = sorted({_plain(w) for w in before_words if w.strip()}, key=len, reverse=True)
+    lead_before = next((w for w in markers if value.startswith(w + " ")), None)
+    named_date = value[len(lead_before) :].lstrip() if lead_before else ""
+    if lead_before and _MONTH_WORD.search(named_date):
+        if match := re.fullmatch(r"(?:the )?([a-z]+)\.?(?: (\d{4}))?", named_date):
+            month = MONTH_NUMBERS.get(match[1])
+            if month is not None:
+                if match[2]:
+                    return single(date(int(match[2]), month, 1) - timedelta(days=1), "The day before the month named.")
+                first = date(today.year, month, 1)
+                if first - timedelta(days=1) < today:
+                    first = date(today.year + 1, month, 1)
+                    return single(
+                        first - timedelta(days=1),
+                        "The day before the month named, read as its next occurrence; the month has begun or "
+                        "passed, so it may mean a date already past.",
+                        exact=False,
+                    )
+                if (first - today).days > 180:
+                    return single(
+                        first - timedelta(days=1),
+                        "The day before the month named. It is far ahead, so it may mean a date already past.",
+                        exact=False,
+                    )
+                return single(first - timedelta(days=1), "The day before the month named.")
+        elif (inner := sub(named_date)).start is not None and inner.start == inner.end:
+            return Due(
+                inner.start - timedelta(days=1),
+                inner.start - timedelta(days=1),
+                None,
+                inner.exact,
+                "The day before the date named. " + inner.note,
+            )
 
     noon = "|".join(re.escape(w) for w in sorted(words["noon"], key=len, reverse=True)) or "(?!)"
     midnight = "|".join(re.escape(w) for w in sorted(words["midnight"], key=len, reverse=True)) or "(?!)"
@@ -594,22 +658,7 @@ def resolve(
             first, second = match.groups()
             month, day = (int(first), int(second)) if locale == "en_US" else (int(second), int(first))
             return next_occurrence(month, day)
-        months = {
-            "january": 1,
-            "february": 2,
-            "march": 3,
-            "april": 4,
-            "may": 5,
-            "june": 6,
-            "july": 7,
-            "august": 8,
-            "september": 9,
-            "october": 10,
-            "november": 11,
-            "december": 12,
-        }
-        months.update({name[:3]: number for name, number in list(months.items())})
-        months["sept"] = 9
+        months = MONTH_NUMBERS
         optional_ending = f"(?:{suffixes})?"
         if match := re.fullmatch(rf"([a-z]+)\.? (\d{{1,2}}){optional_ending}(?:,? (\d{{4}}))?", explicit):
             month_name, day, year = match.groups()

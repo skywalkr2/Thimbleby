@@ -893,6 +893,48 @@ def test_words_around_a_holiday_that_say_more_than_its_day_give_no_date(phrase):
     assert resolve(phrase, RECEIVED, ZONE).start is None
 
 
+# ---- "before" a written date is the day before it --------------------------------------------------------------------
+
+IN_OCTOBER = datetime(2026, 10, 14, 9, 0, tzinfo=ZONE)
+
+
+@pytest.mark.parametrize(
+    ("phrase", "day"),
+    [
+        ("before November", date(2026, 10, 31)),
+        ("Before Nov", date(2026, 10, 31)),
+        ("due before November", date(2026, 10, 31)),
+        ("before November 2027", date(2027, 10, 31)),
+        ("before November 1", date(2026, 10, 31)),
+        ("before November 5", date(2026, 11, 4)),
+        ("before Nov 5th", date(2026, 11, 4)),
+        ("before the 5th of November", date(2026, 11, 4)),
+        ("before January 1, 2027", date(2026, 12, 31)),
+    ],
+)
+def test_before_a_month_is_the_last_day_of_the_month_before_and_before_a_day_is_the_day_before(phrase, day):
+    result = resolve(phrase, IN_OCTOBER, ZONE)
+    assert result.start == result.end == day and result.exact
+
+
+def test_before_a_month_that_has_begun_is_read_to_its_next_year_and_checked():
+    result = resolve("before October", IN_OCTOBER, ZONE)
+    assert result.start == date(2027, 9, 30) and not result.exact
+
+
+def test_by_and_in_a_month_keep_their_readings_and_before_something_else_is_not_read_as_a_day():
+    for phrase in ("by November", "in November", "November", "before the print sync", "before Friday"):
+        assert resolve(phrase, IN_OCTOBER, ZONE).start is None
+    assert resolve("by November 5", IN_OCTOBER, ZONE).start == date(2026, 11, 5)
+
+
+def test_the_words_that_mean_before_come_from_the_language_settings():
+    assert resolve("ahead of November", IN_OCTOBER, ZONE).start is None
+    result = resolve("ahead of November", IN_OCTOBER, ZONE, before_words=["ahead of"])
+    assert result.start == date(2026, 10, 31)
+    assert resolve("before November", IN_OCTOBER, ZONE, before_words=["ahead of"]).start is None
+
+
 # ---- the words are settings of the language --------------------------------------------------------------------------
 
 

@@ -40,6 +40,11 @@ internal_terms: [changeset, ledger, applier, the assistant noticed, the assistan
 # Words that mark the assistant's reasoning, which belongs in a change's summary, not in a title.
 reasoning_phrases: [no recorded fact, no fact gives, nothing recorded, not recorded, couldn't find, could not find,
   not stated, not mentioned, I assume, I think]
+# Words that open a question asking something wide open, which says nothing of what was seen.
+open_question_phrases: [what should, what do you want, what would you like, what happened, what now, what next,
+  how should, what to do]
+# Words that offer alternatives to pick from in a question.
+choice_words: [or, either]
 # Words that blame someone for a miss.
 singling_out_phrases: [missed, forgot, forgotten, dropped the ball, failed to, didn't send, did not send, never sent,
   hasn't sent, still hasn't, was late, is late, your fault, their fault, to blame]

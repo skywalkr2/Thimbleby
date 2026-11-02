@@ -1564,6 +1564,7 @@ def _default_lints() -> dict[str, Severity]:
         "action-stands-alone": "return",
         "reasoning-in-title": "return",
         "question-is-statement": "return",
+        "vague-question": "return",
         "thread-promise-unanswered": "return",
         "own-request-not-promise": "return",
         "own-promise-missed": "return",
@@ -1997,6 +1998,15 @@ class LanguageFile(FileModel):
         "holds one is returned: a title says what to do or ask, and the reasoning belongs in the change's summary. "
         "Matched as whole words, ignoring case; words quoted from the input don't count."
     )
+    open_question_phrases: list[str] | None = word_list(
+        "Words and phrases a question's title holds when it asks something wide open (\"what should have "
+        'happened?"). Such a question that quotes nothing the assistant saw and offers no choices is returned once, '
+        "to say what was seen and offer the choices. Matched as whole words, ignoring case."
+    )
+    choice_words: list[str] | None = word_list(
+        'Words that offer alternatives to pick from in a question ("or", "either"). A question that holds one '
+        "is not returned for being open. Matched as whole words, ignoring case."
+    )
     singling_out_phrases: list[str] | None = word_list(
         "Words and phrases that blame someone for a miss. A draft to several people that holds one in a "
         "sentence naming one of them is returned: a discrepancy in one person's work is asked of that person alone, in "
@@ -2152,7 +2162,9 @@ class LanguageFile(FileModel):
     due_before_words: list[str] | None = word_list(
         'The condition words after which a calendar entry may be named ("before the print sync"). When the '
         "words that follow name one entry that is still ahead, the promise is due at that entry and moves with it; "
-        "when they name none, or more than one, it has no date and keeps its words. Case is ignored."
+        "when they name none, or more than one, it has no date and keeps its words. Followed by a written date, "
+        'one of these words means the day before it ("before November" is the last day of October, "before '
+        'November 5" is November 4). Case is ignored.'
     )
     due_phrase_words: dict[str, list[str]] | None = word_list(
         "The words of the day-and-time phrases the date reader knows, by what they mean: "
@@ -3059,7 +3071,11 @@ class WatchSource(ConfigModel):
         description="With first_run intake, for mail: how many days back the first read looks. Older mail isn't "
         "read, and Today says so. Any other kind of source is taken in whole.",
     )
-    report_removed: bool = Field(True, description="Hand in an item that disappeared from the source.")
+    report_removed: bool = Field(
+        True,
+        description="Hand in an item that disappeared from the source. Mail is never handed in for leaving a folder "
+        "(filed, archived or deleted is routine); this covers other items, such as a page, a file or a feed entry.",
+    )
     data_level: Literal["open", "internal", "restricted"] | None = Field(
         None,
         description="How sensitive what this source holds is: its items go only to AI accounts allowed this level. "

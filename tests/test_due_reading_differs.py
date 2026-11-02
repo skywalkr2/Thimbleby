@@ -95,6 +95,15 @@ def test_a_date_the_rules_read_differently_goes_back_once_with_both_readings_and
     assert (made["due"], made["due_words"], made["due_check"]) == ("2026-10-30", "by the 25th", True)
 
 
+def test_before_a_month_read_as_that_months_first_day_goes_back_with_the_day_before_it(env):
+    seen, _, made = applied(env, promise("before November", due="2026-11-01"))
+    said = returned(seen)[0]
+    assert "before November" in said and "read as 2026-10-31" in said and "you gave 2026-11-01" in said
+    assert (made["due"], made["due_check"]) == ("2026-11-01", True), "its own date stands, marked to check"
+    seen, _, made = applied(env, promise("before November", due="2026-10-31"))
+    assert not returned(seen) and made["due_check"] is False
+
+
 def test_the_assistant_may_take_the_rules_day_on_the_second_answer_and_nothing_is_left_to_check(env):
     seen, _, made = applied(env, promise("by the 25th", due="2026-10-30"), promise("by the 25th", due="2026-10-25"))
     assert len(returned(seen)) == 1

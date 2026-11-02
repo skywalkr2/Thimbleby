@@ -326,8 +326,8 @@ class ActionNews(BaseModel):
     non_answer: bool = Field(
         False,
         description="It records a reply that didn't answer (an acknowledgement, thanks, a deferral or a change of "
-        "subject), written by the news op. A non-answer restarts the chase clock once; a second brings the line back "
-        "with the news shown. Other news (a part delivered, a call-off) has none.",
+        "subject), set when the news op says it is a reply. A non-answer restarts the chase clock once; a second "
+        "brings the line back with the news shown. Other news (a part delivered, a call-off, a notice) has none.",
     )
 
 

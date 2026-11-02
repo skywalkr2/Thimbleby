@@ -27,6 +27,7 @@ pasted: |-
 expect:
 - op: action.news
   id: ACT-101
+  reply: true
 forbid:
 - op: action.close
   id: ACT-101
@@ -40,6 +41,7 @@ stub_answer:
   ops:
   - op: action.news
     id: ACT-101
+    reply: true
     text: "The reply thanks Oren and comments on the measurements, but does not provide the room sketch"
     evidence:
       quote: "Thanks for the reminder, and for sending the measurements"

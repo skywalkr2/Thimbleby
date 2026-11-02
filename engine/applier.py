@@ -817,6 +817,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     f"the text holds {minimum} or more numbered questions; ask each as its own question, so each has "
                     "its own answer and follow-through",
                 )
+            _vague_question(i, op, ctx, lint, _quotes_in(op, ctx))
             if not to_pm and not (op.matters_for or "").strip():
                 lint(
                     i,
@@ -1248,6 +1249,28 @@ def _item_text(i: int, title: str, ctx: Context, lint: Any, quotes: list[str], *
             "question-is-statement",
             "the question's title is a statement: ask it as a question, and move what it states into the text",
         )
+
+
+def _vague_question(i: int, op: QuestionAddOp, ctx: Context, lint: Any, quotes: list[str]) -> None:
+    """A question that asks something wide open ("what should have happened?") with none of what the assistant saw
+    quoted and no choices offered goes back once (`vague-question`, a judgment lint): a question says what was seen
+    and offers the choices. Only the plainest case is found: a title that holds one of the language's open-question
+    phrases, a text with no passage of the input in quotation marks, and no word that offers alternatives. A question
+    that asks what a word means (`term`) is written by the app and never vague."""
+    if op.term:
+        return
+    settings = ctx.cfg.language
+    if not any(p.strip() and scope.has_word(op.title, p) for p in language_words(settings, "open_question_phrases")):
+        return
+    asked = f"{op.title} {op.text}"
+    if quotes or any(w.strip() and scope.has_word(asked, w) for w in language_words(settings, "choice_words")):
+        return
+    lint(
+        i,
+        "vague-question",
+        "the question asks something open and says neither what was seen nor what the choices are: quote the words "
+        "that were seen, say what is unclear about them, and offer the choices to pick from",
+    )
 
 
 def _asked_as_question(title: str, ctx: Context) -> bool:
@@ -2323,6 +2346,7 @@ JUDGMENT_LINTS = frozenset(
         "reply-not-needed",
         "fact-from-notice",
         "project-unfiled",
+        "vague-question",
     }
 )
 #: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
@@ -4086,7 +4110,7 @@ def _apply_op(
             "quote": quote,
             "source": source,
             "delivered": isinstance(op, ActionPartOp),
-            "non_answer": isinstance(op, ActionNewsOp),
+            "non_answer": isinstance(op, ActionNewsOp) and op.reply,
         }
         changes: dict[str, Any] = {"news": [*cur.data.get("news", []), entry]}
         if isinstance(op, ActionPartOp):
@@ -4238,6 +4262,7 @@ def _read_due(tx: Tx, ctx: Context, source: str | None, words: str | None) -> Du
         where,
         locale=locale,
         lead_words=language_words(settings, "due_lead_words"),
+        before_words=language_words(settings, "due_before_words"),
         ordinal_suffixes=language_words(settings, "due_ordinal_suffixes"),
         phrase_words=language_words(settings, "due_phrase_words"),
         number_words=language_words(settings, "due_number_words"),

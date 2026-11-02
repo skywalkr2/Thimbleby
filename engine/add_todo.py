@@ -50,6 +50,7 @@ def read_day(store: Any, cfg: Any, words: str | None) -> DayReading:
         where,
         locale="en_US" if language.lower().startswith("en-us") else "en_GB",
         lead_words=language_words(settings, "due_lead_words"),
+        before_words=language_words(settings, "due_before_words"),
         ordinal_suffixes=language_words(settings, "due_ordinal_suffixes"),
         phrase_words=language_words(settings, "due_phrase_words"),
         number_words=language_words(settings, "due_number_words"),

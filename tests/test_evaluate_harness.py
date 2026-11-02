@@ -312,6 +312,27 @@ def test_an_ending_that_waits_for_the_persons_keep_is_matched_on_the_action_and_
         assert run_edited(monkeypatch, DEMO_B, case["id"], expect=has).passed
 
 
+def test_before_a_month_is_the_last_day_of_the_month_before_in_the_golden_set(monkeypatch):
+    case = case_of(DEMO_B, "before-a-month-is-the-day-before")
+    (ideal,) = case["stub_answer"]["ops"]
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
+    first_of_month = {**case["stub_answer"], "ops": [{**ideal, "due": "2026-11-01"}]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=first_of_month)
+    assert not result.passed and any("due" in m for m in result.missing)
+
+
+def test_news_is_matched_on_whether_it_is_a_reply_that_didnt_answer(monkeypatch):
+    case = promise_case("action.news")
+    (ideal,) = case["stub_answer"]["ops"]
+    assert ideal["reply"] is True and case["expect"][0]["reply"] is True
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
+    plain = {**case["stub_answer"], "ops": [{k: v for k, v in ideal.items() if k != "reply"}]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=plain)
+    assert not result.passed and result.missing
+    notice = [{**case["expect"][0], "reply": False}]
+    assert run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=plain, expect=notice).passed
+
+
 def test_a_forbidden_ending_is_caught_while_it_waits_for_the_persons_keep(monkeypatch):
     case = promise_case("action.news")
     target = case["stub_answer"]["ops"][0]["id"]

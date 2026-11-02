@@ -757,3 +757,25 @@ def test_a_source_not_read_successfully_within_the_stale_hours_is_named_by_when_
         assert stale_since(store, cfg, by_id["read"], after) is None, "a good read ends it"
     finally:
         store.close()
+
+
+def test_a_message_leaving_its_folder_is_never_handed_in_but_another_item_leaving_is(tmp_path):
+    from engine.watch import refresh
+
+    mail = {
+        "key": "m1",
+        "title": "Upcoming payment",
+        "text": "A payment is scheduled.",
+        "message": {"sender": "Billing Desk", "received": "2030-03-04T08:00:00Z"},
+    }
+    page = {"key": "p1", "title": "Plan page", "text": "The plan."}
+    ws, cfg, store = make(tmp_path, [fake([mail, page])])
+    try:
+        assert len(refresh(ws, store, cfg, "s", NOW).new) == 2
+        cfg, store, gone = reread(tmp_path, ws, store, [])
+        assert gone.outcome == "ok" and len(gone.removed) == 1, "only the page's removal is handed in"
+        snapshots = {s.data["key"]: s for s in store.read().find("snapshot", {"source": "s"})}
+        assert snapshots["m1"].data["gone"] and snapshots["p1"].data["gone"], "both are marked gone"
+        assert "Plan page is no longer in Board" in source_text(ws, store, gone.removed[0])[1]
+    finally:
+        store.close()

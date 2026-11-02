@@ -27,6 +27,7 @@ pasted: |-
 expect:
 - op: action.news
   id: ACT-101
+  reply: true
 forbid:
 - op: action.close
   id: ACT-101
@@ -40,6 +41,7 @@ stub_answer:
   ops:
   - op: action.news
     id: ACT-101
+    reply: true
     text: "Jori says the samples will be reviewed but does not say the kitchen layout is sent"
     evidence:
       quote: "I’ll look at the tile samples tonight and get back to you"

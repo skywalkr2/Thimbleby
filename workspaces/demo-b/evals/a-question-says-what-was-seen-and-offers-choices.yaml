@@ -1,0 +1,26 @@
+id: a-question-says-what-was-seen-and-offers-choices
+title: A question quotes what the assistant saw and offers the choices; "what should have happened?" is never asked
+skills: [structured-answers]
+received: '2026-10-09'
+# A notice that leaves the next step open. The question to the person quotes the notice and lists what they can pick.
+# The vague version ("Order notice: what should have happened?", no quote, no choices) is returned once by the
+# `vague-question` lint (tests/test_vague_question.py).
+pasted: 'From: Maya Lindqvist (Corner Lamp Books)
+
+
+  Notice: your order of 200 paperbacks is paused until the order is changed.'
+expect:
+- op: question.add
+  text_has: [paused]
+forbid:
+- op: event.add
+stub_answer:
+  summary: The order is paused and the notice doesn't say what to do next.
+  ops:
+  - op: question.add
+    to: Avery Lane
+    title: 'The paperback order is paused: ship what is in stock, wait for all 200, or cancel it?'
+    text: 'The notice says "your order of 200 paperbacks is paused until the order is changed", so pick one: ship what is in stock now, wait for all 200, or cancel the order'
+    project: PRJ-1
+    asks_about: decision
+    kind: decision

@@ -19,7 +19,8 @@ for a promise (design 6.33), `promised_to` (the people it is owed to), `due_word
 `on_hold` (true when it starts on hold, waiting for those words, as a condition that waits for something does; false
 when it doesn't).
 An expected `action.move`, `action.part` or `action.news` names the action's `id`, and may name `due_words` (a move) or
-`text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title), and
+`text_has` (words in the op's own fields), an expected `action.news` may name `reply` (true when the news is a reply
+that didn't answer, false when it isn't), and an expected `question.add` may name `text_has` (words in its title), and
 an expected `fact` may name `as_of`, or `on` and `on_kind` (the day of a dated fact and what kind of day it is); an
 ending or a repeat that waits only for the person's Keep counts as made, for what a case expects and for what it
 forbids. An expected `event.add` may name `delivery` (`order`, `tracking`, `carrier`, `status` and `dated`, as stored
@@ -766,6 +767,7 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             o["op"]["id"] == e["id"]
             and ("due_words" not in e or _due_words(o["op"].get("due_words")) == _due_words(e["due_words"]))
             and ("text_has" not in e or _has_words(own, e["text_has"]))
+            and ("reply" not in e or bool(o["op"].get("reply")) == bool(e["reply"]))
         )
     if op == "record.set":
         same_field = o["op"]["id"] == e["id"] and o["op"]["field"] == e["field"]

@@ -235,7 +235,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   - `first_run_hours` (24, 1 to 336): how many hours around the first read count as recent;
   - `first_run_days` (14, 1 to 365): with `intake`, for mail, how many days back the first read looks; older mail isn't
     read and Today says "Mail from before <date> has not been read yet". Any other kind of source is taken in whole;
-  - `report_removed` (true): hand in an item that disappeared from a complete listing;
+  - `report_removed` (true): hand in an item that disappeared from a complete listing. Mail is never handed in for leaving
+    a folder (filed, archived and deleted are routine); this covers other items, such as a page, a file or a feed entry;
   - `account` (empty): for a source of an add-on that signs in as the person, which signed-in account it reads, by its
     address (6.27). Empty reads the only account signed in; with several signed in, a source says which. The source form shows
     it as a list of the accounts signed in;
@@ -358,7 +359,9 @@ Built keys:
   "when", "until", "as soon as", "soon"). Whole words, ignoring case; demo values in both fictional workspaces.
 - `due_hold_words` and `due_before_words`: which of those condition words wait for something to happen, so a promise is on hold
   from the start waiting for them ("once", "after", "when", "until", "as soon as", "of receiving", …), and which let a
-  calendar entry be named, so the promise is due at it ("before the print sync"); the rest only leave the date open. (6.33.)
+  calendar entry be named, so the promise is due at it ("before the print sync"); the rest only leave the date open. A
+  `due_before_words` word followed by a written month or day also reads as the day before it ("before November" is the last
+  day of October). (6.33.)
 - `delivery_words`, `called_off_words` and `closed_words`: how an ending is read from the words it quotes (6.33). They only
   tell the assistant what the words suggest, once, through the `ending-reading` lint (default `return`, a judgment lint that is
   put once, so the answer stands): call-off words ("moot", "covered by", "no longer needed", "we'll get it in", "will cover")
@@ -389,6 +392,9 @@ Built keys:
   look-ahead; a to-do above `allowed_data` goes out as the plain "A reminder from" line with only the time. The choice is
   made in Settings (it shows the exact reminder first), `where`, `where_account` and `allowed_data` are never offered to
   an ask, and demo values are in both fictional workspaces.
+- `open_question_phrases` and `choice_words`: what the `vague-question` lint reads (6.7): the phrases a question's title holds
+  when it asks something wide open ("what should", "what happened"), and the words that offer alternatives ("or", "either").
+  A question with an open phrase, no quoted passage of the input and no choice word goes back once;
 - `reasoning_phrases` and `question_marks`: what the `reasoning-in-title` and `question-is-statement` lints read (6.7): the
   words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
   ("?", "？", "؟").

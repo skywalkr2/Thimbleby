@@ -687,13 +687,20 @@ class ActionPartOp(OpModel):
 
 
 class ActionNewsOp(OpModel):
-    """News about an open action that doesn't end it or change its date, such as a reply that didn't answer: it stays
-    open and says why. Refused if the action doesn't exist or isn't open; evidence is required."""
+    """News about an open action that doesn't end it or change its date, such as a reply that didn't answer or a
+    notice: it stays open and says what was heard. Refused if the action doesn't exist or isn't open; evidence is
+    required."""
 
     op: Literal["action.news"] = "action.news"
     id: str = Field(description="The id of the open action the news is about.")
     text: str = Field(min_length=1, max_length=300, description="What was heard, in plain words.")
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
+    reply: bool = Field(
+        False,
+        description="True only when this is a reply from the person the to-do waits on that doesn't answer it: an "
+        "acknowledgement, thanks, a deferral or a change of subject. A notice, a status change or an update from "
+        "anyone else is news with this false.",
+    )
 
     def describe(self, view: Any = None) -> str | None:
         return f"Add news to {named(view, 'action', self.id)}"

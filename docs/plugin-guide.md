@@ -1584,7 +1584,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `news[].quote` | str \| None | `None` | The exact words it came from, when an input said it. |
 | `news[].source` | str \| None | `None` | The id of the source it came from, if any. |
 | `news[].delivered` | bool | `False` | It records a part that was delivered, credited to the owners. |
-| `news[].non_answer` | bool | `False` | It records a reply that didn't answer (an acknowledgement, thanks, a deferral or a change of subject), written by the news op. A non-answer restarts the chase clock once; a second brings the line back with the news shown. Other news (a part delivered, a call-off) has none. |
+| `news[].non_answer` | bool | `False` | It records a reply that didn't answer (an acknowledgement, thanks, a deferral or a change of subject), set when the news op says it is a reply. A non-answer restarts the chase clock once; a second brings the line back with the news shown. Other news (a part delivered, a call-off, a notice) has none. |
 | `repeat` | Repeat \| None | see below | How it repeats, when it does (design 6.32): each occurrence is its own action, and the next one is made when this one ends. Set and stopped by `action.repeat`. |
 | `repeat.rule` | str | required | The repeat rule (an iCalendar RRULE value) the phrase was read as. |
 | `repeat.phrase` | str | required | The words the person typed, kept as they were written. |
@@ -2838,7 +2838,7 @@ The input says an open action's date changed: give the new date's exact words, o
 
 ### `action.news`
 
-News about an open action that doesn't end it or change its date, such as a reply that didn't answer: it stays open and says why. Refused if the action doesn't exist or isn't open; evidence is required.
+News about an open action that doesn't end it or change its date, such as a reply that didn't answer or a notice: it stays open and says what was heard. Refused if the action doesn't exist or isn't open; evidence is required.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -2847,6 +2847,7 @@ News about an open action that doesn't end it or change its date, such as a repl
 | `text` | str | required | What was heard, in plain words. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
+| `reply` | bool | `False` | True only when this is a reply from the person the to-do waits on that doesn't answer it: an acknowledgement, thanks, a deferral or a change of subject. A notice, a status change or an update from anyone else is news with this false. |
 
 ### `action.part`
 

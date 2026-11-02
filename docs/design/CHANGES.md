@@ -1035,6 +1035,18 @@ yet follow, that it is *designed*, with its phase.
 | Filter (6.32, 7.1) | The side filter offers All and each side | Designed: the filter also offers the person's views; a view's choice shows what is under its projects, plus what is on no project |
 | Today (7.7) | One list, filtered by side | Designed: still one list; a line under a project in a view carries the view's label as a tag, both labels when in two |
 
+## 293. Mail leaving a folder is not news; only a reply is a non-answer; "before" a date is the day before; a vague question is returned (2026-11-02; P108e, P109c, P109e)
+
+| Where | Before | Now |
+|---|---|---|
+| Watchers (6.4, 4.5) | A message that left a complete listing was handed in as "removed" unless `report_removed` was off | Built: a message leaving its folder is marked gone and never handed in; `report_removed` covers other items. `tests/test_watch.py::test_a_message_leaving_its_folder_is_never_handed_in_but_another_item_leaving_is` |
+| Promises (6.33) | Every `action.news` was recorded as a non-answer and restarted the chase clock | Built: `action.news` has `reply` (default false); only `reply: true` is a non-answer. `tests/test_news_reply_flag.py::test_news_marked_as_a_reply_is_a_non_answer`, `tests/test_news_reply_flag.py::test_news_that_is_not_a_reply_is_not_a_non_answer`, `tests/test_news_reply_flag.py::test_a_reply_that_didnt_answer_restarts_the_chase_once`, `tests/test_news_reply_flag.py::test_news_that_is_not_a_reply_does_not_restart_the_chase` |
+| Evaluation (6.16) | An expected `action.news` named the action and words only; the no-answer cases didn't say reply | Built: an expected `action.news` may name `reply`; the thirteen no-answer cases say `reply: true`. `tests/test_evaluate_harness.py::test_news_is_matched_on_whether_it_is_a_reply_that_didnt_answer` |
+| Dates (6.33) | "Before November" had no reading from the rules (a condition with no date); the assistant's own day, November 1, stood | Built: "before <month>" is the last day of the month before, "before <month> <day>" the day before; "by" and "in" keep their readings; `due_before_words` is passed to the reader. `tests/test_due_phrases.py::test_before_a_month_is_the_last_day_of_the_month_before_and_before_a_day_is_the_day_before`, `tests/test_due_reading_differs.py::test_before_a_month_read_as_that_months_first_day_goes_back_with_the_day_before_it` |
+| Notes prompt (6.5) | Said nothing about "before" | Built: "before a date is the day before it". Golden case `before-a-month-is-the-day-before`: `tests/test_evaluate_harness.py::test_before_a_month_is_the_last_day_of_the_month_before_in_the_golden_set` |
+| Lints (6.7) | A vague question was asked as written | Built: `vague-question` (judgment lint, default `return`, put once) reads `language.open_question_phrases` and `language.choice_words`. `tests/test_vague_question.py::test_an_open_question_that_quotes_nothing_and_offers_no_choice_is_returned`, `tests/test_vague_question.py::test_the_golden_case_asks_with_the_quote_and_the_choices_and_passes_the_lint` |
+| Settings (4.0) | | Built: `language.open_question_phrases`, `language.choice_words` (description, shipped default, demo values in both workspaces); the lint's default in `checks.lints`; the `report_removed` and `due_before_words` descriptions say the new rules. `tests/test_vague_question.py::test_the_lint_is_a_judgment_lint_that_returns_by_default_in_both_fictional_workspaces` |
+
 ## 292. A kind put off enough times asks whether to quiet it; it is never quieted by a count (2026-11-02; P110 J17)
 
 | Where | Before | Now |

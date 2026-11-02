@@ -6,6 +6,10 @@ unanchored_words: [it, this, that, them, these, those, him, her, the above, the 
 unanchored_lead_words: [up, "on", to, with, about, for, back, out, "off", over, at]
 # Words that mark the assistant's reasoning, which a to-do's or a question's title never holds (it belongs in the change's summary), and the characters that end a question.
 reasoning_phrases: [no recorded fact, no fact gives, nothing recorded, not recorded, "couldn't find", could not find, not stated, not mentioned, I assume, I think]
+# Words that open a question asking something wide open: one that quotes nothing seen and offers no choices is returned once.
+open_question_phrases: [what should, what do you want, what would you like, what happened, what now, what next, how should, what to do]
+# Words that offer alternatives to pick from in a question.
+choice_words: [or, either]
 # Words that blame someone for a miss: a draft to several people that holds one in a sentence naming one of them is returned.
 singling_out_phrases: [missed, forgot, forgotten, dropped the ball, failed to, "didn't send", did not send, never sent, "hasn't sent", still hasn't, was late, is late, your fault, their fault, to blame]
 question_marks: ["?", "\uff1f", "\u061f"]

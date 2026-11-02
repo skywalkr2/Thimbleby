@@ -1,0 +1,35 @@
+id: before-a-month-is-the-day-before
+title: '"Before November" is the last day of October, never November 1'
+skills: [dates]
+received: '2026-10-16'
+pasted: 'From: Theo Brandt
+
+  Subject: Spine
+
+
+  I''ll send the corrected spine file to you before November.
+
+
+  Theo'
+expect:
+- op: action.add
+  owners:
+  - PER-3
+  text_has:
+  - spine
+  due: '2026-10-31'
+  due_words: before November
+forbid:
+- op: event.add
+stub_answer:
+  summary: Theo will send the corrected spine file before November.
+  ops:
+  - op: action.add
+    text: Send the corrected spine file
+    owners:
+    - Theo Brandt
+    due: '2026-10-31'
+    due_words: before November
+    project: PRJ-1
+    evidence:
+      quote: I'll send the corrected spine file to you before November

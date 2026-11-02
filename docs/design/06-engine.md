@@ -216,7 +216,10 @@ settings. A read lists what the source holds now. The core keeps a snapshot per 
 with the structured fields of 6.2) and compares:
 - a **new** item is handed in with its text, a **changed** one with a readable diff and its text now, and one **gone** from a
   complete listing as gone (a connector that cannot list everything may name the keys that were removed; a source can turn
-  reporting removals off with `report_removed`);
+  reporting removals off with `report_removed`). **A message leaving its folder is never news:** mail that is filed,
+  archived or deleted is routine, so its snapshot is marked gone and nothing is handed in, whatever `report_removed` says;
+  `report_removed` covers the other kinds of item (a page, a file, a feed entry), and a calendar entry keeps its own
+  handling (`tests/test_watch.py::test_a_message_leaving_its_folder_is_never_handed_in_but_another_item_leaving_is`);
 - each is saved as an untrusted `source` and queued as a `request` for the assistant (5.5), unless a triage rule closes it
   first (6.5);
 - a change only in what an item is (a message was opened, so `unread` turned false) updates what Today shows and hands in
@@ -1158,6 +1161,12 @@ is marked *designed*, with the phase.
   words that wait for something or sit before a calendar entry) go back once with both readings
   (`due-reading-differs`, *built*, a judgment lint: the second answer stands, never held, never escalated; section
   6.33 "Dates"). `tests/test_due_reading_differs.py`.
+- A question that asks something wide open ("… notice: what should have happened?") with none of what the assistant saw
+  quoted and no choices offered goes back once (`vague-question`, *built*, a judgment lint: the second answer stands).
+  The plain function finds only the plainest case: a title holding a phrase of `language.open_question_phrases`, no
+  passage of the input in quotation marks, and no word of `language.choice_words`; the assistant rewrites it to say
+  what it saw and offer the choices. `tests/test_vague_question.py`, the golden case
+  `a-question-says-what-was-seen-and-offers-choices`.
 - A new day on an action that is no longer open is refused: the date goes on the open action the words are about.
 - The person's own action for something another person has ("return Edda's book"), owed to nobody, goes back once
   naming that person for "promised_to" (`owed-to-missing`, *built*). A bare first name only one person has counts
@@ -4643,6 +4652,15 @@ again; keep yours if you are sure"). The second answer stands whoever the item r
 from the rules' reading is kept with `due_check`, so the person sees "check this date". With the lint off, the same
 date stands and is marked. Anything vague stays "no date". A date tied to a known calendar entry is due at it
 (`due_at_event`, below). A due date with no words behind it is kept as given only when the person wrote it.
+**"Before" a date is the day before it** (P109e): "before November" is the last day of October, "before November 5" is
+November 4, and "by November 5" stays November 5; the reader gives the day before for a "before" word
+(`language.due_before_words`) followed by a written month or day, read to the next year and marked to check when that
+month has begun, and reads other "before" words (a calendar entry's name, a holiday, a weekday) as before. Bare "by
+November" and "in November" stay unread. The notes prompt says it plainly, so the assistant's "due" is the day before,
+and `due-reading-differs` sends back a first day of the month it gave
+(`tests/test_due_phrases.py::test_before_a_month_is_the_last_day_of_the_month_before_and_before_a_day_is_the_day_before`,
+`tests/test_due_reading_differs.py::test_before_a_month_read_as_that_months_first_day_goes_back_with_the_day_before_it`,
+the golden case `before-a-month-is-the-day-before`).
 *The reader and what it can't read (batch B-7).* The reader steps past a leading lead word (`language.due_lead_words`:
 "by", "on", "due", "due by", "no later than") and reads an ordinal day ("the 25th", "by the 30th", "on the 3rd"; the
 endings are `language.due_ordinal_suffixes`) as the next day of the month with that number, marked to check when it is
@@ -4685,8 +4703,9 @@ configuration, beside `language.due_condition_words`: `language.due_hold_words` 
 - called off: `action.drop` with the reason;
 - partly delivered: `action.part`: what was delivered goes into its news, credited, and the text becomes what is left,
   which stays open;
-- answered without an answer: `action.news`: the waiting-on stays open and says why. A reply that doesn't answer is news,
-  never "nothing to record": a message where the promise was made (its thread, or from whoever owes or is owed it) that only
+- answered without an answer: `action.news`: the waiting-on stays open and says why. Whether the news is a reply that
+  didn't answer is the assistant's call, the op's `reply` field (default false): a notice or a status change is news
+  with `reply` false. A reply that doesn't answer is news, never "nothing to record": a message where the promise was made (its thread, or from whoever owes or is owed it) that only
   acknowledges, thanks, praises, defers, asks to wait or turns to another subject, and doesn't deliver, move, part-deliver,
   drop or close it, is one `action.news` on the open action, with no fact, no second action and no ending. The prompt
   gives the mechanics and the core playbook the practice. *Built so far (batch B-7):* the eight golden `no-answer`
@@ -4781,8 +4800,9 @@ is due a follow-up from `ui.followups.action_due_within_days` (7) before the dat
 `ui.followups.undated_after_days` (14) with no news since it was made or since its last news (it joins the person's follow-up line,
 "no date, nothing heard for 14 days" in its row). One chased lately waits as long again. Never while it is on hold.
 **News mustn't silence the chase clock** (the functional designer's F22, 2026-10-20; batch B-7). A reply that doesn't answer
-is news (`action.news`, which records it as `non_answer` on the news entry; a part delivered and a call-off carry none, and
-an entry written before this had none either, so it keeps the rule it had). The first non-answer since the promise's line
+is news (`action.news` with `reply` true, which records it as `non_answer` on the news entry; news with `reply` false, a
+part delivered and a call-off carry none, and an entry written before this had none either, so it keeps the rule it had;
+`tests/test_news_reply_flag.py`). The first non-answer since the promise's line
 began restarts the clock **once**: for a dated promise the line is quiet for `ui.followups.action_due_within_days` (7) from that
 reply, for an undated one for its `undated_after_days` (14); a **second** brings the line back at once with the news shown
 ("Robin replied twice without a date: ask again?"; `replies` on the line, on the promise's own line and on the person's

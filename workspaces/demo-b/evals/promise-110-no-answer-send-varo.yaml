@@ -22,6 +22,7 @@ pasted: |-
 expect:
 - op: action.news
   id: ACT-101
+  reply: true
 forbid:
 - op: action.close
   id: ACT-101
@@ -32,6 +33,7 @@ stub_answer:
   ops:
   - op: action.news
     id: ACT-101
+    reply: true
     text: Avery thanked Varo for being patient but has not sent the budget
     evidence:
       quote: Varo, thanks for being patient.
