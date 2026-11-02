@@ -21,6 +21,7 @@ import {
   type MailActsSeen,
   type Requests,
   type SignInSeen,
+  FIRST_SCREEN,
 } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_MAIL_FAKE_PORT", 8792);
@@ -49,7 +50,7 @@ test.describe.serial("journey: mail", () => {
 
     // A new workspace with the mail add-on on: the walkthrough opens by itself.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await visit(page);
     await pressStart(page);
 

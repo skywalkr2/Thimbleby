@@ -3,6 +3,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Locator, type Page } from "@playwright/test";
 
 /** Where the fake services answer over plain HTTP (the config sets the ports; the mail and new-start journeys have their own). */
+/** How long the first screen after a fresh sign-in may take to show: it loads the setup screens' code, which takes
+ * longer while the whole browser suite runs in parallel. */
+export const FIRST_SCREEN = { timeout: 15_000 };
+
 export const fakeAddress = (
   variable: "JOURNEY_FAKE_PORT" | "JOURNEY_MAIL_FAKE_PORT" | "JOURNEY_NEW_START_FAKE_PORT"
     | "JOURNEY_EVENING_FAKE_PORT",

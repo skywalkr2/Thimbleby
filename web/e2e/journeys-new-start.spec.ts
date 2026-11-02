@@ -21,6 +21,7 @@ import {
   type Info,
   type Requests,
   type SignInSeen,
+  FIRST_SCREEN,
 } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_NEW_START_FAKE_PORT", 8794);
@@ -54,7 +55,7 @@ test.describe.serial("journey: new start", () => {
 
     // 1. I open the link the start command printed. The walkthrough opens by itself and says nothing is spent yet.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await expect(page.getByText("About 10–20 minutes. You can stop and come back.")).toBeVisible();
     await visit(page);
     await pressStart(page);
@@ -140,7 +141,7 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     // A page opened fresh after the restart resumes at this screen.
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await visit(page);
     // Signed in once, nothing was asked of the assistant. A page opened fresh folds the list again.

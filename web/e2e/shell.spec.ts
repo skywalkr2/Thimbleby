@@ -3,7 +3,7 @@
 // the offline state, and the phone's bottom bar. Screenshots go to the folder named by E2E_SHOTS, when it is set.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { pressStart, showSteps } from "./journey-helpers";
+import { pressStart, showSteps, FIRST_SCREEN } from "./journey-helpers";
 
 /** The assistant's configured name, as the app reports it. */
 async function assistantName(page: Page): Promise<string> {
@@ -102,7 +102,7 @@ test.describe("the visual system", () => {
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: HEIGHT });
         await signIn(page, "setup");
-        await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
         // A fresh start opens on Welcome, which has no step list; it passes the checks too, then Start goes on.
         await expectNoViolations(page);
         await pressStart(page);
@@ -292,7 +292,7 @@ test.describe("screen use and the shell", () => {
         });
       });
       await signIn(page, "setup");
-      await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
       await pressStart(page);
       await showSteps(page);
       await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^(Done|Where things stand)/ }).click();
@@ -347,7 +347,7 @@ test.describe("screen use and the shell", () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page, "setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await pressStart(page);
     // The shared workspace resumes at the first screen not done, so the You screen is opened from the step list.
     const steps = page.getByRole("button", { name: "Steps", exact: true });
@@ -377,7 +377,7 @@ test.describe("screen use and the shell", () => {
     }) => {
       await page.setViewportSize({ width, height });
       await signIn(page, "setup");
-      await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
       // The walkthrough resumes at the first screen not done, which depends on what the workspace already has (the AI
       // account's own screen may be the one it opens at, and an opening screen takes the cursor before this test moves it).
       // So the screen under test is always opened by moving to it from another one, which is what puts the cursor in it.
@@ -674,7 +674,7 @@ test.describe("screen use and the shell", () => {
     await page.goto("#addons");
     await expect(page.getByRole("heading", { level: 2, name: "Add-ons" })).toBeVisible();
     await page.goto("#setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
   });
 
   test("changing view moves focus to the new view's heading", async ({ page }) => {

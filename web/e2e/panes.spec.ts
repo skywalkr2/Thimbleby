@@ -1,7 +1,7 @@
 // The panes the shell opens beside or over a screen (design 7.1, 7.13): Hand something in as a drawer, Ask as a pane on a
 // wide screen and a dialog below it, the stages board, and the phone's review mode.
 import { expect, test, type Page } from "@playwright/test";
-import { pressStart } from "./journey-helpers";
+import { pressStart, FIRST_SCREEN } from "./journey-helpers";
 
 /** Opens Ask the way a person does: whatever is open (Ask from an earlier width) is closed first, then the header's search
  * field (on a phone, the bar's Search button first) and its Ask row. */
@@ -287,7 +287,7 @@ test.describe("the walkthrough's look", () => {
   }) => {
     await page.setViewportSize({ width: 1920, height: 1000 });
     await signIn(page, "setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await pressStart(page);
     const steps = page.getByRole("navigation", { name: "Setup steps" });
     await steps.getByRole("button", { name: /^Mail and calendar/ }).click();

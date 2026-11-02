@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Locator } from "@playwright/test";
-import { collectProblems, expectQueueShows, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests } from "./journey-helpers";
+import { collectProblems, expectQueueShows, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests, FIRST_SCREEN } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
@@ -33,7 +33,7 @@ test.describe.serial("journeys", () => {
     // I open the link the start command printed. The walkthrough opens by itself, full screen, and says nothing is
     // spent until I press Go at the end. Nothing else is on the page: no header, no sidebar.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await expect(page.getByText("About 10–20 minutes. You can stop and come back.")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Views" })).toHaveCount(0);
     // It opens on Welcome: what the app does, what I'll need, and Start. It is no step, so there is no list of steps yet.

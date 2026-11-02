@@ -13,7 +13,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, fakeAddress, openView, pressStart, startOnToday, visit, widerThanWindow, type Info, type Requests, type SignInSeen } from "./journey-helpers";
+import { collectProblems, fakeAddress, openView, pressStart, startOnToday, visit, widerThanWindow, type Info, type Requests, type SignInSeen, FIRST_SCREEN } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_EVENING_FAKE_PORT", 8761);
 const RETIRED = "fake-retired-text";
@@ -45,7 +45,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     const [me, friend] = info.people;
 
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await pressStart(page);
     const main = page.locator("main#main");
 

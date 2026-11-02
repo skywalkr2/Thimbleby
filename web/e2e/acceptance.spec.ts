@@ -2,7 +2,7 @@
 // Names come from the fixture's cases and people, never written out here.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { expectQueueShows, pressStart, showSteps, widerThanWindow } from "./journey-helpers";
+import { expectQueueShows, pressStart, showSteps, widerThanWindow, FIRST_SCREEN } from "./journey-helpers";
 
 interface Case {
   id: string;
@@ -303,7 +303,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.evaluate(() => {
       window.location.hash = "setup";
     });
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await pressStart(page);
     await showSteps(page);
     await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^People/ }).click();
@@ -414,7 +414,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("button", { name: "Open the setup guide" })).toHaveCount(0);
     await sections.getByRole("link", { name: "You", exact: true }).click();
     await page.getByRole("button", { name: "Open the setup guide" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
     await pressStart(page);
     const screens = page.getByRole("navigation", { name: "Setup steps" });
     await screens.getByRole("button", { name: /^Your AI account/ }).click();
