@@ -21,6 +21,23 @@ person's own cloud drive. The pill shape is the brand's.
 **Impact:** phase I's rename is split: the visible part now, the command and code later. The design text changes with
 each build. No change to scope. Change log: none.
 
+## 2026-11-02: Rules take the easy cases; judgment about the person's work is the assistant's (P110)
+
+**Decided:**
+- Plain functions handle the easy, mechanical cases, money, safety and the person's own rules.
+- Any judgment about the person's work belongs to the assistant, made with its glossary, knowledge and learnings. That
+  covers what matters, what to ask, what a promise or a date means, and what to set aside when it isn't clear.
+- A plain function may narrow what the assistant looks at. It never decides in its place.
+- The whole system is audited against this rule. Each place is listed, with a recommendation, before anything moves.
+
+**Decided by:** the owner ("I understand taking easy stuff local but we can't gimp the promise of the system").
+
+**Why:** the new-word questions were decided by a plain function with none of the assistant's knowledge, and the owner
+sees the same loss elsewhere.
+
+**Impact:** design 8 (a product rule) and CLAUDE.md. The new-word questions change first (P106), then whatever the
+audit's list shows, each with the owner's go. No change to scope. Change log: none.
+
 ## 2026-11-02: Setup's People step suggests only people, and adds the ticked ones in one choice (P103)
 
 **Decided:**

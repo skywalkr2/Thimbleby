@@ -273,6 +273,10 @@ because one of them "handles it". Remove a line in the change that builds it.
 - Ids never repeat. A rename is one op that updates every reference. The product never changes its own code: a request no op can do becomes a
   report the PM sends to the maintainers (design 6.13). Developing the product happens in this repository, outside any install.
 - Rules before AI; never let two versions of a change race; saves merge, never clobber; recover after sleep and outages.
+- Rules handle the easy, the mechanical, money, safety and the person's own rules; any judgment about the person's work
+  (what matters, what to ask, what a promise or date means, what to set aside when unsure) is the assistant's, made with
+  its knowledge and learnings. A plain function may narrow what the assistant looks at, never decide for it (owner,
+  2026-11-02: "we can't gimp the promise of the system").
 - No silent stops: anything that stops the assistant's work (a restart waiting, a provider paused, a run that keeps failing)
   is a Today line, not only a status chip.
 - Today shows only what the person does, each line starting with the verb. Status and progress never go there.
