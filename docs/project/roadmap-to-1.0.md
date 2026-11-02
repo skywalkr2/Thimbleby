@@ -151,6 +151,10 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
     - *Also covers:* the first public alpha (P113): a tagged release in the public repository with its installers and release notes.
     - *Exit:* the first content brief is sent; a small invited group can install and connect mail, and the website says what to expect.
 
+17b. **E-1 Economy pass (after the first public alpha, before beta)** (owner, 2026-11-02: "after alpha and before beta we will need to run an economy pass on the software and remove anything that is unneccessary"; size: set when reached)
+    - *Covers:* what each AI run carries (the standing instructions, the op reference and the packet sections, measured in characters and cost per run, which grew about 15% on 2026-11-02), and anything the alpha shows is unused: code paths, settings, wording keys, ops and record fields with no caller, screens and options nobody reaches, dependencies, the web bundle's size, and slow or duplicate tests. Each removal keeps the design text, the decisions and the plugin guide in step, and nothing a decision or the owner asked for goes without the owner's word.
+    - *Exit:* a list of what was removed or trimmed with what each saved (characters per run, cost per run, lines, bundle size, test time), the full suites green, and the owner's yes on anything removed that a person could see.
+
 18. **Tester weeks (testers)** (no items; size: two calendar weeks)
     - *Covers:* the invited group uses the app on personal mail (or work mail with the employer's OK, risk R14) for two weeks, each tester bringing back what was missed through "Missed one". The testers are held to the thresholds the gate week set for missed out of present, silent closes and wrong endings; counts that depend on how much mail a person gets are reported, not gated.
     - *Exit:* the testers' "Missed one" counts fall from week one to week two, and the inherited thresholds hold.
