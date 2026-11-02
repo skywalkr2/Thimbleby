@@ -166,12 +166,52 @@ test("the words are the heading and not a detail again, and each fact is one row
   expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Owner", "Due", "Project"]);
 });
 
-test("a draft nobody has written is one line with a way to write it, and no help text over an empty box", async () => {
+const SECTION = { name: "Draft" } as const;
+
+test("a to-do nobody asked a draft for has no Draft section", async () => {
   serve("open");
   renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
   await screen.findByRole("heading", { level: 1, name: WORDS });
-  const draft = await screen.findByRole("region", { name: "Draft" });
-  expect(within(draft).getByRole("button", { name: "Write it" })).toBeInTheDocument();
-  expect(within(draft).queryByText("No text yet.")).toBeNull();
-  expect(within(draft).queryByText(/waits for your review/)).toBeNull();
+  await within(await screen.findByRole("region", { name: "Details" })).findByText("Harbor");
+  expect(screen.queryByRole("region", SECTION)).toBeNull();
+  expect(screen.queryByText("No text yet.")).toBeNull();
+  expect(screen.queryByText(/waits for your review/)).toBeNull();
+});
+
+test("a to-do with drafted text shows its Draft section", async () => {
+  serve("open", {}, { text: "Here is the drafted reply.", versions: [] });
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  const draft = await screen.findByRole("region", SECTION);
+  expect(within(draft).getByText("Here is the drafted reply.")).toBeInTheDocument();
+});
+
+test("a to-do with a draft waiting for review shows its Draft section", async () => {
+  const waiting = { id: "V-2", number: 1, version: 2, status: "pending", source: "draft", words: 4, base: null, note: null, created_at: "2026-10-30T09:00:00Z", questions: [], unmapped: [] };
+  serve("open", {}, { text: "", versions: [waiting] });
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  expect(await screen.findByRole("region", SECTION)).toBeInTheDocument();
+});
+
+test("a list of records in a field is never joined into the details: only the page's own section shows it", async () => {
+  const news = [
+    { on: "2026-10-31", text: "Upcoming scheduled payment", quote: "", source: "SRC-1", delivered: false, non_answer: true },
+    { on: "2026-11-01", text: "Second note about it", quote: "", source: "SRC-2", delivered: true, non_answer: false },
+  ];
+  serve("open", {
+    "GET record?kind=action&id=ACT-2": () => ({ kind: "action", id: "ACT-2", version: 3, fields: { id: "ACT-2", text: WORDS, status: "open", owners: [{ person: "PER-1" }], project: "PRJ-1", news }, long_text: [] }),
+    "GET promises/ACT-2": () => ({
+      action: "ACT-2", version: 3, text: WORDS, status: "open", quote: "", owners: [{ id: "PER-1", name: "Robin Sample" }], mine: false, promised_to: [],
+      due: null, due_words: null, due_check: false, basis: "said", said_by: "Robin Sample", origin: null, news,
+    }),
+  });
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  await within(details).findByText("Harbor");
+  expect(within(details).queryByText(/Upcoming scheduled payment/)).toBeNull();
+  expect(within(details).queryByText("Second note about it")).toBeNull();
+  expect(within(details).queryByText(/^(Yes|No)$/)).toBeNull();
+  expect(within(details).queryByText(/^News$/)).toBeNull();
+  // The page's own section still says what was heard.
+  expect(await screen.findByRole("heading", { name: "What was heard since" })).toBeInTheDocument();
+  expect(screen.getByText(/Upcoming scheduled payment/)).toBeInTheDocument();
 });

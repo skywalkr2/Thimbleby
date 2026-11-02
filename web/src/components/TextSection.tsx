@@ -28,7 +28,8 @@ export function authorshipCounts(spans: S["AuthorSpan"][]) {
   return counts;
 }
 
-export function TextSection(props: { kind: string; id: string; field: string; help?: string; onReview: Review }) {
+/** `quiet` keeps a section nobody asked for off the page until it has text or a draft waiting for review. */
+export function TextSection(props: { kind: string; id: string; field: string; help?: string; quiet?: boolean; onReview: Review }) {
   const { t, tn } = useWords();
   const labelOf = useFieldLabel();
   const act = useAct();
@@ -75,6 +76,8 @@ export function TextSection(props: { kind: string; id: string; field: string; he
   const blank = !!data && !editing && !data.text.trim() && data.versions.length === 0;
   const counts = data ? authorshipCounts(data.authorship) : null;
   const pending = (data?.versions ?? []).filter((v) => v.status === "pending");
+
+  if (props.quiet && !editing && !text.isError && (text.isPending || (!data?.text.trim() && pending.length === 0))) return null;
 
   return (
     <section className="text-section" aria-labelledby={titleId}>
