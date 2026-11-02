@@ -214,7 +214,7 @@ test.describe("the calendar page", () => {
     await expect(page.getByText(/hold Shift to move a week/).first()).toBeHidden();
     // The keys are in the shortcuts list.
     await page.locator("body").press("?");
-    await expect(page.getByRole("dialog").getByText("Pick Day, Work week, Week or Month")).toBeVisible();
+    await expect(page.getByRole("dialog").getByText("Pick Day, Work week, Week, Month or Timeline")).toBeVisible();
   });
 
   test("the month's cells are white and today is a filled circle", async ({ page }) => {
