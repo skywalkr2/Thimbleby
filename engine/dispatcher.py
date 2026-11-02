@@ -76,14 +76,26 @@ def _json_object(text: str) -> object:
     fence = re.search(r"```(?:json)?\s*(.*?)```", body, re.S)
     if fence:
         body = fence.group(1).strip()
-    start, end = body.find("{"), body.rfind("}")
-    if start == -1 or end <= start:
+    start = body.find("{")
+    if start == -1 or body.rfind("}") <= start:
         raise Unreadable("the answer has no JSON object in it")
-    body = re.sub(r",\s*([}\]])", r"\1", body[start : end + 1])
+    body = re.sub(r",\s*([}\]])", r"\1", body[start:])
+    decoder = json.JSONDecoder()
     try:
-        return json.loads(body)
+        data, end = decoder.raw_decode(body)
     except json.JSONDecodeError as err:
         raise Unreadable(f"the JSON is broken ({err.msg} at character {err.pos})") from None
+    # Text after the object (a remark, a brace in it) is left out; a second object is refused, never dropped, since
+    # it may hold ops the answer meant.
+    rest = body[end:]
+    for at in (index for index, char in enumerate(rest) if char == "{"):
+        try:
+            second, _ = decoder.raw_decode(rest[at:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(second, dict):
+            raise Unreadable("the answer has more than one JSON object; put every op in one object")
+    return data
 
 
 def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
@@ -125,7 +137,23 @@ def _describe_error(error: dict, data: object, models: dict) -> str:
             if model is not None and key in op and key not in model.model_fields:
                 fields = ", ".join(name for name in model.model_fields if name != "group")
                 return f"op {index} ({op['op']}) has a field {key!r} it doesn't take; it takes: {fields}"
-    return error_problem(error) or f"{where}: {error['msg'].removeprefix('Value error, ')}"
+    message = error["msg"].removeprefix("Value error, ")
+    if error["loc"] and error["loc"][0] == "ops" and not (len(error["loc"]) > 1 and isinstance(error["loc"][1], int)):
+        # The op union reports no index, so the op it means is found by checking each op on its own.
+        ops = data.get("ops", []) if isinstance(data, dict) else []
+        for index, op in enumerate(ops):
+            model = models.get(op.get("op")) if isinstance(op, dict) else None
+            if model is None:
+                continue
+            try:
+                model.model_validate(op)
+            except ValidationError as own:
+                if any(e["msg"] == error["msg"] for e in own.errors()):
+                    rest = ".".join(map(str, error["loc"][1:]))
+                    return error_problem(error, f"op {index} ({op['op']})") or (
+                        f"op {index} ({op['op']}){': ' + rest if rest else ''}: {message}"
+                    )
+    return error_problem(error) or f"{where}: {message}"
 
 
 def hidden_words(cfg: Config) -> list[str]:

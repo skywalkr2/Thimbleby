@@ -12,7 +12,7 @@ import pytest
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.applier import pick_owner, release
-from engine.dispatcher import UNREADABLE, looks_good, parse, process, send_back, undo_changeset
+from engine.dispatcher import UNREADABLE, Unreadable, looks_good, parse, process, send_back, undo_changeset
 from engine.intake import hand_in
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
@@ -629,6 +629,27 @@ def test_untrusted_input_is_marked_and_the_note_is_not(env):
 def test_parse_repairs_fences_prose_and_trailing_commas():
     text = 'Here you go:\n```json\n{"summary": "x", "ops": [{"op": "note", "text": "a",},],}\n```\nDone.'
     assert parse(text).ops[0].text == "a"
+
+
+def test_parse_leaves_out_remarks_after_the_object_even_with_braces_in_them():
+    assert parse('{"summary": "x", "ops": [{"op": "note", "text": "abc"}]}\n\nNote: kept {as is}.').ops[0].text == "abc"
+
+
+def test_parse_refuses_a_second_object_rather_than_dropping_its_ops():
+    with pytest.raises(Unreadable, match="more than one JSON object"):
+        parse('{"summary": "x", "ops": []}\n{"summary": "y", "ops": [{"op": "note", "text": "abc"}]}')
+
+
+def test_an_op_that_fails_its_own_check_is_named_with_its_place_in_the_list():
+    answer = {
+        "summary": "x",
+        "ops": [
+            {"op": "note", "text": "abc"},
+            {"op": "event.add", "title": "Renewal", "end": "2026-11-30", "evidence": {"quote": "renews on"}},
+        ],
+    }
+    with pytest.raises(Unreadable, match=r"op 1 \(event\.add\).*give the day it starts"):
+        parse(json.dumps(answer))
 
 
 def test_unreadable_answers_go_back_then_need_the_pm(env):

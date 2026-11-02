@@ -220,7 +220,7 @@ class EventAddOp(OpModel):
     title: str = Field(min_length=1, description="What happens on that date, in a few words.")
     start: str | None = Field(
         None,
-        description="The day it starts, written YYYY-MM-DD, or "
+        description="The day it starts (for a deadline or any one day, that day), written YYYY-MM-DD, or "
         + _YEARLESS
         + ", or a date-time with its offset when the input gives a time. Leave out only for a delivery whose input "
         "gives no date yet.",

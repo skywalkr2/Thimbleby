@@ -2926,7 +2926,7 @@ A date or a range of dates the input gives for something (a delivery window, a d
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `title` | str | required | What happens on that date, in a few words. |
-| `start` | str \| None | `None` | The day it starts, written YYYY-MM-DD, or --MM-DD when the input gives the month and day with no year (the app works out the year; never guess it), or a date-time with its offset when the input gives a time. Leave out only for a delivery whose input gives no date yet. |
+| `start` | str \| None | `None` | The day it starts (for a deadline or any one day, that day), written YYYY-MM-DD, or --MM-DD when the input gives the month and day with no year (the app works out the year; never guess it), or a date-time with its offset when the input gives a time. Leave out only for a delivery whose input gives no date yet. |
 | `end` | str \| None | `None` | The last day of a range (or the end time), in the same form as start; leave out for one day. |
 | `past` | bool | `False` | True only when the input says the date already happened, so a day with no year takes the latest such day before the input came, not the next one. |
 | `delivery` | DeliveryIn \| None | see below | For a parcel or order on its way (shipped, out for delivery, delivered); leave out otherwise. |
