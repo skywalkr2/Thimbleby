@@ -635,7 +635,7 @@ class Action(Record):
     due_event: Annotated[str | None, RefTo("event")] = Field(
         None, description="The calendar entry it is due at: its date follows the entry's when the entry moves."
     )
-    proposed_event: Annotated[str | None, RefTo("event")] = Field(
+    proposed_event: Annotated[str | None, RefTo("event", blocks_delete=False)] = Field(
         None,
         description="A calendar entry on its day whose title and its words contain one another, proposed for the "
         "person to tie it to; nothing follows the entry until they say yes, which sets `due_event`.",
@@ -2831,6 +2831,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("said_by", "person"),
         ("asker", "person"),
         ("due_event", "event"),
+        ("proposed_event", "event"),
         ("occurrence_of", "action"),
         ("on_hold.on", "person"),
         ("on_hold.on", "action"),
