@@ -14,7 +14,9 @@
 @media (max-width: 1279px) { .table { --cols: var(--cols-mid); } }
 @media (max-width: 1023px) { .table { --cols: var(--cols-small); } }
 .cellBox { max-width: min(16rem, calc(100cqw / var(--cols) - 2 * var(--space-3) - 1px)); overflow: hidden; text-overflow: ellipsis; }
-.nameBox { max-width: min(24rem, calc(200cqw / var(--cols) - 2 * var(--space-3) - 1px)); overflow: hidden; text-overflow: ellipsis; }
+/* The name is the column that gives way: its box adds nothing to the column's own width (the column keeps its share of the table's
+   width, 30%, and shrinks to its header when the others, whose headers stay on one line in any font, need the room). */
+.nameBox { width: 0; min-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .table thead th { white-space: nowrap; background: var(--surface-sunk); color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--border); }
 .row { border-bottom: 1px solid var(--border); background: var(--surface); }
 .row:last-child { border-bottom: 0; }
@@ -47,5 +49,6 @@
 :global([data-narrow]) .acts, :global([data-narrow]) .name { width: auto; }
 :global([data-narrow]) .actsInner { justify-content: flex-start; }
 :global([data-narrow]) .row td:empty, :global([data-narrow]) .row td:has(> .cellBox:empty) { display: none; }
-:global([data-narrow]) .cellBox, :global([data-narrow]) .nameBox { max-width: none; }
+:global([data-narrow]) .cellBox { max-width: none; }
+:global([data-narrow]) .nameBox { width: auto; }
 :global([data-narrow]) .table td:not(.name) { white-space: normal; }

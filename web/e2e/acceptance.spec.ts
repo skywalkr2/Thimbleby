@@ -167,9 +167,13 @@ async function go(page: Page, label: string) {
   if (await link.count()) {
     // The address changes, then the view with it: wait for the entry to say it is the current one. A heavy view (Settings)
     // can take longer to load while the server is busy with what earlier tests handed in, and a click made before the
-    // menu is ready is lost, so the click is made again until the entry is current.
+    // menu is ready is lost, so the click is made again when the entry has not become current. The first click is always
+    // made, as a person's is: it is a mouse action, and the screen's own first focus after it is then not a keyboard one.
+    await link.click();
+    let again = false;
     await expect(async () => {
-      if ((await link.getAttribute("aria-current")) !== "page") await link.click();
+      if (again) await link.click();
+      again = true;
       await expect(link).toHaveAttribute("aria-current", "page", { timeout: 5_000 });
     }).toPass({ timeout: 30_000 });
     return;
