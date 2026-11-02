@@ -99,3 +99,8 @@ Known selectors that work (from earlier walks; the UI may have changed slightly)
    - Keep it factual and concrete. No praise padding.
 2. Your final message: a short summary with the counts by severity, the top 10 findings in one line each, and the path to
    findings.md. Don't message other sessions, and don't touch the repository.
+   findings.md. Don't message other sessions, and don't touch the repository.
+
+## Surviving a restart (the container can restart at any time)
+- **Write your findings to a file as you go.** Append each verified row verdict and each finding to `OUT/../notes.md` with Bash (`cat >> … <<'EOF'`) as soon as you've verified it. Don't wait for the end. If the session restarts, that file is all that survives.
+- **If your folder already holds `scripts/`, `out/` or `notes.md` from an earlier, interrupted attempt,** read `notes.md` first, then reuse the scripts and screenshots. Re-check anything not yet in `notes.md`. Servers don't survive a restart, and the app clears its state folder on start, so start the servers again and redo the setup your area needs (the old scripts make it quick).
