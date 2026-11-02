@@ -18,7 +18,7 @@
   /* side colours: muted, distinct from state colours, readable as 8px dots and 3px edges */
   --side-1: #4f6d8f; --side-2: #2f7d72; --side-3: #8a5a8c; --side-4: #7a7a3a; --side-5: #a0703a;
   --cal-1: #4f6d8f; --cal-2: #2f7d72; --cal-3: #8a5a8c;
-  --content-max: 1120px; --rail-w: 320px; --nav-w: 248px;
+  --content-max: 1120px; --rail-w: 320px; --nav-w: 264px;
   --row-h: 56px; --row-h-tall: 72px;
   --r-field: 8px; --r-card: 12px; --r-dialog: 16px; --r-pill: 999px;
   --shadow-pop: 0 12px 32px rgba(23, 23, 23, .12), 0 2px 6px rgba(23, 23, 23, .06);
@@ -213,7 +213,7 @@ dl.dl dt { color: var(--text-muted); } dl.dl dd { margin: 0; min-width: 0; overf
 .top .iconbtn.s { display: none; }
 @media (max-width: 600px) { .top .iconbtn.s { display: grid; } }
 /* in-between widths (VP12): the rail drops under the main column below 1100px */
-@media (max-width: 1100px) and (min-width: 601px) { .layout { grid-template-columns: 1fr; } .rail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } .rail .card + .card { margin-top: 0; } :root { --nav-w: 220px; } }
+@media (max-width: 1100px) and (min-width: 601px) { .layout { grid-template-columns: 1fr; } .rail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } .rail .card + .card { margin-top: 0; } }
 
 /* a quiet closing line inside a panel */
 .closing { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted); background: var(--surface-sunk); }
@@ -286,3 +286,57 @@ h2.sec { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; }
 .calev.clash b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .calev.clash span { display: none; }
 @media (max-width: 600px) { .ph { flex-wrap: wrap; align-items: flex-start; } .ph .spacer { display: none; } .part > span.pm { display: none; } .part { grid-template-columns: 24px minmax(0,1fr) 32px; } }
+
+/* ---------- second pass ---------- */
+.status { white-space: nowrap; }
+.status.warnpill { color: var(--danger); border-color: var(--danger); }
+@media (max-width: 1100px) { .status .sl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } .status { padding: 0 10px; } }
+.state svg { width: 15px; height: 15px; }
+.banner .bi { color: var(--danger); display: grid; place-items: center; }
+.banner:not(.danger) .bi { color: var(--warn); }
+.fold svg.up { transform: rotate(-90deg); }
+.wrap { white-space: normal !important; word-break: break-all; }
+dl.dl { grid-template-columns: 96px minmax(0,1fr); }
+/* counts: one style everywhere (nav, section, tab) */
+.nav .count:not(:empty), .tabs a .n { font-size: 12px; font-weight: 600; color: var(--text); background: var(--surface-sunk); border-radius: var(--r-pill); padding: 1px 8px; margin-left: 6px; }
+.nav .item.on .count { background: var(--surface); color: var(--accent-text); }
+/* calendar legend as toggles */
+.chip.toggle { gap: 8px; }
+.chip.toggle .tick { width: 16px; height: 16px; border-radius: 4px; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+/* one clash card that spans both meetings */
+.calclash { position: absolute; left: 2px; right: 2px; z-index: 2; border-radius: 8px; background: var(--danger-soft); border: 1.5px solid var(--danger); padding: 6px 8px; font-size: 12.5px; line-height: 17px; overflow: hidden; }
+.calclash .ch { display: flex; gap: 6px; align-items: center; font-weight: 700; color: var(--danger); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calclash .cr { display: flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal .grid { grid-template-columns: 64px repeat(7, minmax(0, 1fr)); }
+.show-phone { display: none; }
+/* quality tiles and weekly table */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 24px; }
+@media (max-width: 1100px) { .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); } .part { grid-template-columns: 24px minmax(0,1fr) 110px 32px; } .part .pv { display: none; } .part .pv2 { display: inline !important; } }
+.part .pv2 { display: none; }
+@media (max-width: 600px) {
+  .show-phone { display: block; }
+  .hide-phone { display: none !important; }
+  .tiles { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile { padding: 14px; } .tile .spark { display: none; }
+  table.wk, table.wk tbody, table.wk tr, table.wk td { display: block; } table.wk tr:first-child { display: none; }
+  table.wk tr { display: grid; grid-template-columns: 1fr 1fr; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  table.wk td { border: 0; padding: 2px 0; text-align: left !important; font-size: 13px; }
+  table.wk td:first-child { grid-column: 1 / -1; font-weight: 600; font-size: 14px; }
+  table.wk td:nth-child(2)::before { content: "Found "; color: var(--text-muted); } table.wk td:nth-child(3)::before { content: "On time "; color: var(--text-muted); }
+  table.wk td:nth-child(4)::before { content: "False alerts "; color: var(--text-muted); } table.wk td:nth-child(5)::before { content: "Looking over "; color: var(--text-muted); }
+  /* rows: the ⋯ always sits top right on the title row; meta lines never end in a dot */
+  .row { padding-right: 52px; }
+  .row .acts .more { position: absolute; top: 8px; right: 8px; }
+  .row .m .sep { display: none; } .row .m { gap: 2px 12px; }
+  .acct .hd { position: relative; padding-right: 52px; } .acct .hd .acts .more { position: absolute; top: 12px; right: 8px; }
+  .ph { position: relative; } .ph > .more { position: absolute; top: 0; right: 0; }
+  .part .pv2 { display: inline !important; }
+  .tabbar .plus { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--border); }
+  .closing { flex-wrap: wrap; }
+}
+.calclash .ch, .calclash .cr { white-space: normal; align-items: flex-start; }
+.calclash .cr .dot, .calclash .ch svg { margin-top: 4px; }
+.calev span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+@media (max-width: 1100px) { .cal .grid { grid-template-columns: 64px repeat(5, minmax(0, 1fr)); } .cal .day.we { display: none; } }
+@media (max-width: 1100px) { .set { grid-template-columns: 1fr; } .setnav { display: none; } }
+@media (max-width: 600px) { .row[data-state=danger] { background: var(--danger-soft); } .row[data-state=warn] { background: var(--warn-soft); } .row[data-state=decide] { background: var(--accent-soft); } }

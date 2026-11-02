@@ -6,7 +6,7 @@ const { chromium } = require("playwright");
 const M = process.env.M; const pages = process.env.PAGES.split(",");
 const b = await chromium.launch(); let n = 0;
 for (const p of pages) for (const [scheme, w] of [["light", 1440], ["dark", 1440], ["light", 1024], ["light", 390], ["dark", 390]]) {
-  if (p.endsWith("-states") && w !== 1440) continue;
+  if (p.endsWith("-states") && w === 1024) continue;
   const ctx = await b.newContext({ viewport: { width: w, height: w === 390 ? 844 : 900 }, colorScheme: scheme });
   const pg = await ctx.newPage(); await pg.goto(`file://${M}/${p}.html`); await pg.waitForTimeout(400);
   if (w === 390) await pg.screenshot({ path: `${M}/png/${p}-${scheme === "light" ? "day" : "night"}-390-screen.png` });

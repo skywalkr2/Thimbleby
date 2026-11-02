@@ -31,3 +31,8 @@
 - **The cause isn't proven:** either the app shares one status across the service, or the fake fails more than the one account. The host should check with `tests/test_fake_accounts.py`. Either way, the screen can't tell the person which account to fix.
 
 ## S5 P1-5 (the same invitation twice): CONFIRMED (ev-q1.txt and ev-q2.txt each list "Quarterly review" three times in the week; two panes show different sides)
+
+## S4 F1 (X01 remaining loss window): REPORTED, NOT RE-RUN by the reviewer
+- The S4 servers had stopped, so the reviewer couldn't re-run it.
+- The sweep's scripts (x01.mjs to x01f.mjs) ran it six ways with timings: with a 12s wait all three edits were kept; a reload 3s after the last edit lost it.
+- **The host should reproduce it in a browser test** that reloads 3s after the third edit.
