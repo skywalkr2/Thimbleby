@@ -3311,7 +3311,7 @@ A question for a person, written for its reader. A decision is a question to who
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `to` | str | required | The person, by name or id. |
-| `title` | str | required | The question in one line. |
+| `title` | str | `''` | The question in one line. Leave it out when `term` is set: the app writes it. |
 | `text` | str | `''` | The detail the reader needs to answer. |
 | `links` | list[LinkIn] | `[]` | Pages the reader can open to see what it is about. |
 | `links[].label` | str | required | What the link is, in words for the reader. |

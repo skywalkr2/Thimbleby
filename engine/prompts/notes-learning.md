@@ -10,6 +10,8 @@ keep or discard it, unless the words are the user's own):
   worth a question. Ask the user what one means with a "question.add" whose "term" is that word (copied from the list;
   the title and text are written for you) only when it is "unknown" and you would need them to explain it to
   understand their work: a team's or project's own shorthand, an acronym for a process or a system they use. A word
+  you ask about still gets its "glossary.add" with "confidence": "unknown": the question and the glossary entry go
+  together. A word
   you recorded as "assumed" is not asked; the user confirms or corrects it in the glossary. Never ask about the ordinary name
   of a company, a product, a place or a person, a currency, a word you can understand from the rest of the input, or
   one the input already explains. Ask about at most N, and about none when none qualifies, which is usual.

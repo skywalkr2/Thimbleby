@@ -746,7 +746,7 @@ class QuestionAddOp(OpModel):
 
     op: Literal["question.add"]
     to: str = Field(description="The person, by name or id.")
-    title: str = Field(min_length=1, description="The question in one line.")
+    title: str = Field("", description="The question in one line. Leave it out when `term` is set: the app writes it.")
     text: str = Field("", description="The detail the reader needs to answer.")
     links: list[LinkIn] = Field(default_factory=list, description="Pages the reader can open to see what it is about.")
     project: str | None = Field(None, description="Project id, if the question is about one.")
@@ -785,6 +785,13 @@ class QuestionAddOp(OpModel):
         '"unknown_words" block of the request. The title and text are then written for you and the question goes '
         "to the user. Leave it out for every other question.",
     )
+
+    @model_validator(mode="after")
+    def _a_title_unless_a_term(self) -> QuestionAddOp:
+        """Every question has a title, except one asking what a word means, whose title the app writes."""
+        if not self.term and not self.title.strip():
+            raise ValueError("title: give the question in one line")
+        return self
 
 
 class QuestionUpdateOp(OpModel):
