@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-02: An ending's words and a "no need to reply" phrase are put to the assistant, never acted on by a rule (P110, J5, J7)
+
+**Decided:** The rules no longer rewrite an ending or write a question about one. A close whose quote reads as no longer
+needed is not turned into a drop; a bare "closed", or a done that would credit someone else with no word of delivery, no
+longer becomes the rule-written question "Done by <owner>, or no longer needed?"; a call-off that names a known meeting is
+not put on its agenda by a rule. The words are still read, and the lint `ending-reading` (default `return`) tells the
+assistant what they suggest (drop instead of close, say which, ask with `question.add`, give the drop the meeting's
+`event` or `series`). Likewise a "no need to reply" phrase no longer refuses a reply owed: the lint `reply-not-needed`
+(default `return`) says "The ask says '<phrase>': if no reply is needed, leave the reply owed out." Both are in
+`JUDGMENT_LINTS`: put once, the assistant's second answer stands, no further return and no stronger tier. Refusing a reply
+owed for automatic mail and for mail the person sent stays (mechanical, from headers).
+
+**Decided by:** the owner's rule of 2026-11-02 (judgment about the person's work is the assistant's); the audit's rows J5
+and J7.
+
+**Why:** A word list decided what an ending meant (a credit for work nobody did, or a promise dropped that was done) and
+whether a message needed a reply, before the assistant, which has the whole message and what it has learned, could say.
+
+**Impact:** design 4.6, 6.33, 6.35 and 7; `engine/endings.py` (`read_endings` and `asks` gone, `suggestion` added),
+`engine/reply_lines.py`, `engine/replies_owed.py`, `engine/applier.py`, the two lints' defaults and both demo workspaces'
+`checks.yaml`. A choice held by an earlier version still settles through its two buttons. No new setting beyond the two
+lint severities; no change to scope. Change log: section 288.
+
 ## 2026-11-02: A promise that looks like an open one is flagged for the assistant, never merged by a rule (P110, J4)
 
 **Decided:** When the assistant adds a promise that looks like an open one (the same one owner and people, words alike

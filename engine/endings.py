@@ -1,11 +1,12 @@
 """How an action's ending is read from the words it quotes (design 6.33, endings).
 
-The assistant proposes how something ended; the engine reads the exact words it quotes and decides whether that ending
-stands. Done stands only with delivery words ("sent", "finished", "it's in"). Words about learning it elsewhere, moving
-it to a meeting or it no longer mattering call the action off, with the person's words as the reason and nobody
-credited. A bare "close" with neither is not an ending at all: it is one choice for the person, "Done by <owner>, or no
-longer needed?", whoever's words they are. The three lists of words are language settings. The person's own act on a
-screen is never read for words: they said what they meant by pressing the button.
+The assistant proposes how something ended and decides whether the words it quotes say so. The rules only read the
+words, by three language settings (delivery, call-off and closed words), and tell the assistant what they suggest, once,
+through the `ending-reading` judgment lint (`suggestion`): a close whose words read as no longer needed, a "closed" that
+doesn't say which, a done that would credit someone else with no word of delivery, a call-off that names a meeting. The
+assistant's answer to it stands; nothing is rewritten and no question is written by a rule. The person's own act on a
+screen is never read for words: they said what they meant by pressing the button. `answer` still settles a choice an
+earlier change held.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from engine.storage import StoreError
 Reading = Literal["done", "called_off", "choice"]
 Answer = Literal["done", "called_off"]
 
-#: The name of the check that holds a bare close, so a screen can tell the choice from any other hold.
+#: The name of the check that held a bare close in earlier changes, so a screen can tell the choice from any other hold.
 CHOICE_CHECK = "ending-choice"
 CHOICE_WAITS = "Done by the owner, or no longer needed? Say which."
 #: What each answer is recorded as, for the assistant that learns from it.
@@ -76,24 +77,56 @@ def _quote(op: Any) -> str | None:
     return evidence.quote if evidence is not None else None
 
 
-def _credits_someone_else(op: Any, ctx: Any) -> bool:
-    """Whether a done would credit someone other than the person: the action has an owner who isn't them."""
+def _other_owners(op: Any, ctx: Any) -> list[str]:
+    """The names of the people other than the person who own the action an op closes."""
     found = ctx.store.read().get("action", op.id)
     owners = [o.get("person") for o in (found.data.get("owners") or [])] if found is not None else []
-    return any(person and person != ctx.people.pm for person in owners)
+    return [ctx.people.name(person) for person in owners if person and person != ctx.people.pm]
 
 
-def asks(op: Any, ctx: Any) -> bool:
-    """Whether the ending the assistant proposed is one choice for the person: a done or a drop whose words are
-    "closed" with neither kind, or both kinds; and a done that would credit someone else whose words say nothing of
-    delivery, since crediting a person for work nobody did is the costly mistake."""
+def suggestion(op: Any, ctx: Any) -> str | None:
+    """What the words an ending quotes suggest, as the message of the `ending-reading` lint, or None when they suggest
+    nothing: a done whose words read as no longer needed; a done or a drop whose words say "closed" without saying
+    which (or say both); a done that would credit someone else when the words say nothing of delivery; a call-off
+    that names a meeting the workspace knows. It never changes the op: the assistant decides what the ending was."""
     quote = _quote(op)
     if not isinstance(op, (ActionCloseOp, ActionDropOp)) or not quote or not _read_here(ctx):
-        return False
+        return None
+    said = _reason(quote)
     found = reading(quote, ctx.cfg.language)
-    if found == "choice":
-        return True
-    return found is None and isinstance(op, ActionCloseOp) and _credits_someone_else(op, ctx)
+    notes: list[str] = []
+    if found == "called_off":
+        closing = isinstance(op, ActionCloseOp)
+        if closing:
+            notes.append(
+                f"The quote '{said}' reads as no longer needed rather than done: if so, answer with action.drop and "
+                "the reason; if it was done, keep the close."
+            )
+        meeting = (
+            moved_into(quote, ctx)
+            if getattr(op, "event", None) is None and getattr(op, "series", None) is None
+            else None
+        )
+        if meeting is not None:
+            kind, ident = next(iter(meeting.items()))
+            record = ctx.store.read().get("event" if kind == "event" else "series", ident)
+            title = record.data["title"] if record is not None else ident
+            notes.append(
+                f'This call-off names the meeting {title}: if it belongs on its agenda, give the drop "{kind}" {ident}.'
+            )
+    elif found == "choice":
+        notes.append(
+            f"The quote '{said}' doesn't say whether it was done or no longer needed: say which (action.close if it "
+            "was done, action.drop with the reason if it wasn't needed), or ask the person with question.add if you "
+            "can't tell."
+        )
+    elif found is None and isinstance(op, ActionCloseOp) and (others := _other_owners(op, ctx)):
+        notes.append(
+            f"Closing {op.id} credits {', '.join(others)} with the work, but the quote '{said}' says nothing of it "
+            "being delivered: if it was done, keep the close; if it was no longer needed, answer with action.drop and "
+            "the reason; if you can't tell, ask the person with question.add."
+        )
+    return " ".join(notes) or None
 
 
 def _today(ctx: Any) -> date:
@@ -122,26 +155,6 @@ def moved_into(quote: str, ctx: Any) -> dict[str, str] | None:
         return None
     found = named_meeting(ctx.store.read(), quote, _today(ctx))
     return {"series" if found[0] == "series" else "event": found[1]} if found is not None else None
-
-
-def read_endings(cs: Any, ctx: Any) -> Any:
-    """A done whose words only call it off becomes a drop with those words as the reason; a call-off whose words move
-    it into a meeting the workspace knows names that meeting, so the action goes on its agenda. The same changeset
-    always gives the same result, so a check and the apply that follows see the same ops."""
-    if not _read_here(ctx):
-        return cs
-    ops = list(cs.ops)
-    for i, op in enumerate(ops):
-        quote = _quote(op)
-        if not quote or reading(quote, ctx.cfg.language) != "called_off":
-            continue
-        if isinstance(op, ActionCloseOp):
-            op = ops[i] = ActionDropOp(id=op.id, reason=_reason(quote), evidence=op.evidence, group=op.group)
-        if isinstance(op, ActionDropOp) and op.event is None and op.series is None:
-            meeting = moved_into(quote, ctx)
-            if meeting is not None:
-                ops[i] = op.model_copy(update=meeting)
-    return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
 
 
 def told_people(view: Any, cfg: Any, pm: str | None, action: Any) -> list[str]:

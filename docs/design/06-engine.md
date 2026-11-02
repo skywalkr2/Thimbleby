@@ -4632,21 +4632,27 @@ configuration, beside `language.due_condition_words`: `language.due_hold_words` 
   cases, each checked to fail on a close and on an empty answer: `tests/test_learning_run_b7.py::test_a_reply_that_does_not_answer_is_news_never_an_ending_and_never_nothing`.
 
 **Done needs delivery in the words** (the owner's lesson from running, 2026-10-20: "Mark this closed" isn't "done"). The
-engine, not the model, reads the exact words an ending quotes (`engine/endings.py`), by three language settings
-(`language.delivery_words`, `language.called_off_words`, `language.closed_words`; 4.6):
-- *delivery words alone* ("sent", "finished", "it's in", "she did it") leave `action.close` as proposed: the owners are
-  credited, and who reported it;
-- *call-off words alone* ("moot", "covered by", "no longer needed", "we'll get it in the discussion", "will cover") make a
-  proposed close an `action.drop` with the person's words as its reason: never done, nobody credited, nothing on the
-  history others read;
-- *"close" or "closed" with neither* (or delivery and call-off words together) is neither: the ending is held as **one
-  choice on the item**, "Done by Ana, or no longer needed?", even when the note is the person's own. Done by the owner
-  closes it and credits them; No longer needed drops it with the quoted words as the reason; each applies at once with
-  Undo and records an `answered_assistant` signal, so the assistant learns what that person means by "closed". The person's
-  own button on a screen is never read for words;
-- words that say nothing about an ending leave a done for the person's own action as it was, but a done that would
-  credit someone else is held as the same one choice: crediting a person for work nobody did is the costly mistake
-  (`tests/test_endings_need_delivery.py::test_a_done_that_would_credit_someone_else_with_no_word_of_delivery_asks_and_the_persons_own_does_not`).
+engine reads the exact words an ending quotes (`engine/endings.py`), by three language settings
+(`language.delivery_words`, `language.called_off_words`, `language.closed_words`; 4.6), and **only tells the assistant what
+they suggest** (P110 J5, 2026-11-02): no rule rewrites the op or writes a question. The lint `ending-reading` (default
+`return`; a judgment lint, so it is put once, the assistant's second answer stands, and it never costs a further return or
+a stronger tier) says, for the op it is about:
+- a close whose words are call-off words alone: "The quote '<words>' reads as no longer needed rather than done: if so,
+  answer with action.drop and the reason; if it was done, keep the close." Kept, it is a close that credits the owners,
+  and who reported it; switched, it is a drop with nobody credited and nothing on the history others read;
+- a close or a drop whose words are "close" or "closed" with neither kind, or both kinds together: "The quote '<words>'
+  doesn't say whether it was done or no longer needed: say which, or ask the person with question.add if you can't tell."
+  The assistant asks when it is unsure, in its own question; no rule writes "Done by Ana, or no longer needed?" any more;
+- a close that would credit someone else when the words say nothing of delivery: crediting a person for work nobody did is
+  the costly mistake, so the finding says who would be credited and offers the same three ways out;
+- a call-off whose words hold one of `language.meeting_words` ("will cover", "in the planning sessions", "take it up") and
+  name a meeting the workspace knows (below): "This call-off names the meeting <title>: if it belongs on its agenda, give
+  the drop "event" <id>.".
+The person's own button on a screen is never read for words. With the lint `off` the assistant's first answer applies
+as given. A choice a change held in an earlier version ("Done by Ana, or no longer needed?") still shows on its item with its
+two answers and records an `answered_assistant` signal, so the assistant learns what that person means by "closed".
+Built: `tests/test_endings_need_delivery.py` (each finding's message, the assistant's kept close and its switch to a drop
+each applying as given after exactly two asks, and the lint off).
 - **Already told** (owner, 2026-10-28; **built**): a drop of an action that reached people has one path, **Drop it and
   tell them**. The person's drop (the held line, the row's Drop, "No longer needed", a project ending, removing a business)
   drafts a note to each person told or chased, one note per person listing every dropped to-do they were told about, each
@@ -4658,22 +4664,22 @@ engine, not the model, reads the exact words an ending quotes (`engine/endings.p
   `action-notice`, which old records keep). A drop of a told action from anywhere else is held for the person first
   (`reached-confirm`), so it reaches these buttons (`tests/test_drop_and_draft_note.py`, `tests/test_held_ask.py`,
   `tests/test_project_ending.py`, `tests/test_remove_side.py`).
-- **Moved into a meeting** (**built**): a call-off whose words hold one of `language.meeting_words` ("will cover", "in the
-  planning sessions", "take it up") and name a meeting the workspace knows puts the action on that meeting's agenda,
-  linked to it, in the same drop. The meeting is a calendar entry still ahead whose whole title the words hold (a title that
-  is part of a longer matching one is the same meeting named less fully; the soonest of several with one title; one called
-  off or already passed is never named), else a series whose title they hold; none or several means none, and the
-  action is only called off, its words saying where it went. The engine names it on the drop (`action.drop`'s `event` or
-  `series`), read from the words the same way for a close the engine turned into a drop and for a drop the assistant
-  proposed, so a check and the apply that follows agree (the day is the day the input was received). Applying the drop,
-  at once from the person's own note or on their keep from an input, adds the item (`agenda.add`'s item, by the person
-  when the person's own words or keep, else by the assistant), and Undo of the drop takes both back. Built:
+- **Moved into a meeting** (**built**): a drop whose `event` or `series` names a meeting the workspace knows puts the
+  action on that meeting's agenda, linked to it, in the same drop. The assistant names it: the `ending-reading` lint tells
+  it when a call-off's words hold one of `language.meeting_words` and name a meeting the workspace knows, and no rule
+  names it or turns a close into a drop. The meeting is a calendar entry still ahead whose whole title the words hold (a
+  title that is part of a longer matching one is the same meeting named less fully; the soonest of several with one
+  title; one called off or already passed is never named), else a series whose title they hold; none or several means
+  the finding names none (the day is the day the input was received, so a check names the same meeting every time).
+  Applying the drop, at once from the person's own note or on their keep from an input, adds the item (`agenda.add`'s
+  item, by the person when the person's own words or keep, else by the assistant), and Undo of the drop takes both back.
+  Built:
   `tests/test_agenda.py::test_called_off_into_a_meeting_it_is_dropped_and_put_on_that_meetings_agenda_and_undo_takes_both_back`,
-  `::test_a_drop_the_assistant_proposed_with_such_words_is_put_on_the_agenda_too_and_waits_with_it_from_an_input`,
-  `::test_a_series_the_words_name_gets_the_item_when_no_entry_is_ahead_and_the_next_meeting_gets_it_when_one_is`,
-  `::test_words_that_move_it_to_no_known_meeting_only_call_it_off`,
+  `::test_a_close_with_such_words_is_not_turned_into_a_drop_and_the_meeting_is_named_in_the_finding`,
+  `::test_a_drop_the_assistant_proposed_with_such_words_waits_with_its_agenda_item_from_an_input`,
+  `::test_the_finding_names_the_series_when_no_entry_is_ahead_and_the_next_meeting_when_one_is`,
+  `::test_words_that_move_it_to_no_known_meeting_name_no_meeting_in_the_finding`,
   `::test_a_meeting_that_passed_or_was_called_off_or_is_named_twice_is_not_the_one_meant`,
-  `::test_the_same_changeset_gives_the_same_ops_for_the_check_and_the_apply`,
   `::test_the_meeting_words_have_a_description_a_default_and_demo_values_in_both_workspaces`.
 - The notes prompt says a closing note proposes `action.drop` unless the words say it was delivered, and the core
   playbook carries the practice ("done needs delivery; closed isn't done"). The endings' learning pairs are
@@ -4924,9 +4930,11 @@ each question keeping its id (`engine/followups.py`); holding a message for a la
 
 *Built so far (S1-2, replies owed):* `action.add` takes `reply_owed`, and the applier stores `reply_owed`, `replies_to`
 (the input's source) and `asker` (the person its sender is, when known) on the action; before it does, the rules in
-`engine/replies_owed.py` read the message's headers and new text, and automatic mail, mail the person sent and a message
-that says no reply is needed are refused (`reply-not-owed`, a refusal rather than a return: the rules are certain
-there, and a message whose headers can't be read is left to the model's reading). Each open reply owed is one Today line
+`engine/replies_owed.py` read the message's headers, and automatic mail and mail the person sent are refused
+(`reply-not-owed`, a refusal rather than a return: the rules are certain there, and a message whose headers can't be read
+is left to the model's reading). A "no need to reply" phrase in the new text refuses nothing (P110 J7): the judgment lint
+`reply-not-needed` (default `return`, put once, the answer stands) tells the assistant "The ask says '<phrase>': if no reply
+is needed, leave the reply owed out." (`tests/test_reply_lines.py::test_a_message_that_says_no_reply_is_needed_is_put_to_the_assistant_once_and_its_answer_stands`). Each open reply owed is one Today line
 in "Send and follow up", oldest message first, `Reply to {name}: {subject}`, with the draft under it marked as a draft
 until the person has copied, edited or written it: Copy reply (which approves it as it is) is the one button, and the
 menu has No reply needed (a drop with the reason, recorded as the `no_reply_needed` signal the learning loop reads),

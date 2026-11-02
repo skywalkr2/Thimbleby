@@ -287,7 +287,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
 
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    cs = endings.wind_down(endings.read_endings(restatements(with_years(cs, ctx), ctx), ctx), ctx)
+    cs = endings.wind_down(restatements(with_years(cs, ctx), ctx), ctx)
     problems, cs, made = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
@@ -578,9 +578,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 # A repeat read from an input waits for the person's yes, like an ending read from one.
                 said = f' The words: "{" ".join(op.words.split())}".' if op.words else ""
                 problems.append(Problem("repeat-confirm", "hold", i, REPEAT_WAITS + said))
-        if endings.asks(op, ctx):
-            # Closed with no delivery words or call-off words (or both) is one choice, even in the person's own note.
-            problems.append(Problem(endings.CHOICE_CHECK, "hold", i, endings.CHOICE_WAITS))
+        if (suggested := endings.suggestion(op, ctx)) is not None:
+            # What the quoted words suggest about how it ended is put to the assistant once; it decides (design 6.33).
+            lint(i, "ending-reading", suggested)
         if (
             endings.ends_project(view, op)
             or (isinstance(op, (ActionDropOp, QuestionDropOp)) and op.reason == endings.PROJECT_ENDED)
@@ -845,6 +845,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", "a date at a calendar entry needs the entry: give its event or series")
             if op.reply_owed and (why := _reply_owed_problem(view, ctx, op)) is not None:
                 refuse(i, "reply-not-owed", why)
+            elif (
+                op.reply_owed
+                and ctx.actor != "pm"
+                and not ctx.confirmed_by_pm
+                and (said := reply_lines.waiver(ctx.inputs.raw_input)) is not None
+            ):
+                lint(i, "reply-not-needed", f"The ask says '{said}': if no reply is needed, leave the reply owed out.")
             if (level := _team_word_one_owner_level(op, ctx)) != "off":
                 problems.append(
                     Problem(
@@ -1520,9 +1527,9 @@ def _looks_like_promise(existing: Any, ctx: Context) -> str:
 
 def _reply_owed_problem(view: Any, ctx: Context, op: ActionAddOp) -> str | None:
     """Why an action marked as a reply owed can't be one, or None: it is the person's own to do, the rules (design 6.35)
-    find no reply owed for the message it answers (automatic mail, mail the person sent, a message that says none is
-    needed; a message whose headers can't be read is the model's reading), and no open reply owed already answers that
-    message."""
+    find no reply owed for the message it answers (automatic mail, mail the person sent; a message whose headers can't
+    be read is the model's reading, and so is a message that says no reply is needed: the `reply-not-needed` lint), and
+    no open reply owed already answers that message."""
     for name in op.owners:
         found = ctx.people.resolve(name)
         if found.status == "ok" and found.person != ctx.people.pm:
@@ -2053,7 +2060,7 @@ def apply_changeset(
     fails on any op, none is grouped."""
     now = now or datetime.now(UTC)
     ctx.run = run
-    cs = endings.wind_down(endings.read_endings(restatements(with_years(cs, ctx, now), ctx), ctx), ctx)
+    cs = endings.wind_down(restatements(with_years(cs, ctx, now), ctx), ctx)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
     today = now.date()
@@ -2274,7 +2281,7 @@ WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
 #: Lints that ask the assistant to decide something only it can (is this the same promise, which reading is right). They
 #: are put once: whatever the assistant answers on the return round stands, and never costs another round or a stronger
 #: tier.
-JUDGMENT_LINTS = frozenset({"near-duplicate-promise", "due-reading-differs"})
+JUDGMENT_LINTS = frozenset({"near-duplicate-promise", "due-reading-differs", "ending-reading", "reply-not-needed"})
 #: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
 OWNER_WORDING_LINTS = frozenset({"action-stands-alone", "reasoning-in-title"})
 #: Lints that hold a to-do after the return round when someone else owns it; on one the person owns they only warn.

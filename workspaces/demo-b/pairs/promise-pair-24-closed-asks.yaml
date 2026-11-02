@@ -37,7 +37,7 @@ first:
       evidence:
         quote: Please mark the display boards closed
   correction:
-    kind: declined  # the engine held it as one choice; declining takes no words, so the lesson rests on the mail
+    kind: declined  # a close read from the mail waits for the person; declining takes no words, so the lesson rests on the mail
     note: 'Nobody finished the boards. Closed isn''t done: ask whether it was done or isn''t needed any more.'
   expect_proposal:
   - op: lesson.add

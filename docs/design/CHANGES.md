@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 288. An ending's words and a "no need to reply" phrase are put to the assistant, never acted on by a rule (2026-11-02; P110 J5, J7)
+
+| Where | Before | Now |
+|---|---|---|
+| Endings (6.33, `engine/endings.py`) | A close whose quote held call-off words became a drop; a bare "closed", or a done crediting someone else with no delivery word, became the rule-written question "Done by <owner>, or no longer needed?"; a call-off naming one known meeting was put on its agenda by the rule | **Built** (`tests/test_endings_need_delivery.py`, `tests/test_agenda.py`): nothing is rewritten and no question is written. The new judgment lint `ending-reading` (default `return`) tells the assistant what the words suggest, once; its second answer stands with no further return and no stronger tier |
+| Replies owed (6.35, `engine/reply_lines.py`) | A "no need to reply" phrase refused the assistant's reply owed (`reply-not-owed`) | **Built** (`tests/test_reply_lines.py`): the phrase is the judgment lint `reply-not-needed` (default `return`); automatic mail and mail the person sent are still refused from the headers |
+| Settings (4.17) | | Two lint severities in `checks.lints`, in both demo workspaces' `checks.yaml`; a choice held by an earlier version still settles through its two buttons |
+
 ## 287. A new promise like an open one is flagged, never turned into a move or merged by a rule (2026-11-02; P110 J4)
 
 | Where | Before | Now |

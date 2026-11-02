@@ -7,6 +7,19 @@ from datetime import UTC, datetime, timedelta
 
 #: Wording that asks for something even without a question mark.
 _REQUEST = r"\b(?:please|let me know|tell me|confirm|could you|can you|would you|need your|still need|send me)\b"
+#: Wording that says no reply is needed.
+_WAIVER = re.compile(
+    r"\b(?:no need to (?:reply|respond|answer)|"
+    r"no (?:reply|response|answer) (?:is )?(?:needed|required)|do not reply|don't reply)\b",
+    re.IGNORECASE,
+)
+
+
+def waiver_phrase(text: str) -> str | None:
+    """The words in a message's new text that say no reply is needed, as written, or None. Only a reading aid: whether
+    the message needs a reply is the assistant's to say."""
+    found = _WAIVER.search(text)
+    return found.group(0) if found else None
 
 
 @dataclass(frozen=True)
@@ -115,12 +128,7 @@ def reply_owed(
                 "only_copied",
             )
         questions = _questions(message.new_text)
-        if re.search(
-            r"\b(?:no need to (?:reply|respond|answer)|"
-            r"no (?:reply|response|answer) (?:is )?(?:needed|required)|do not reply|don't reply)\b",
-            message.new_text,
-            re.IGNORECASE,
-        ):
+        if _WAIVER.search(message.new_text):
             # A waiver beside a question or request may cover only one topic: leave it for the reading step.
             if questions or re.search(_REQUEST, message.new_text, re.IGNORECASE):
                 return ReplyOwed(

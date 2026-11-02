@@ -1538,6 +1538,8 @@ def _default_lints() -> dict[str, Severity]:
         "run-on-list": "return",
         "near-duplicate-action": "warn",
         "near-duplicate-promise": "return",
+        "ending-reading": "return",
+        "reply-not-needed": "return",
         "evidence-fit": "return",
         "already-known": "return",
         "near-duplicate-question": "warn",

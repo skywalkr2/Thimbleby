@@ -358,11 +358,12 @@ Built keys:
 - `due_hold_words` and `due_before_words`: which of those condition words wait for something to happen, so a promise is on hold
   from the start waiting for them ("once", "after", "when", "until", "as soon as", "of receiving", …), and which let a
   calendar entry be named, so the promise is due at it ("before the print sync"); the rest only leave the date open. (6.33.)
-- `delivery_words`, `called_off_words` and `closed_words`: how an ending is read from the words it quotes (6.33). Delivery
-  words ("sent", "finished", "it's in", "did it", "done") alone leave a close as done and credit its owners; call-off words
-  ("moot", "covered by", "no longer needed", "we'll get it in", "will cover") alone make it a drop with the person's words as the
-  reason; "closed" ("close", "closed", "close out") with neither, or both kinds together, asks "Done by <owner>, or no longer
-  needed?". Whole words, ignoring case; demo values in both fictional workspaces. `messages.called_off_notice` is the line
+- `delivery_words`, `called_off_words` and `closed_words`: how an ending is read from the words it quotes (6.33). They only
+  tell the assistant what the words suggest, once, through the `ending-reading` lint (default `return`, a judgment lint that is
+  put once, so the answer stands): call-off words ("moot", "covered by", "no longer needed", "we'll get it in", "will cover")
+  on a close read as no longer needed; "closed" ("close", "closed", "close out") with neither, or both kinds together, doesn't
+  say which; delivery words ("sent", "finished", "it's in", "did it", "done") are what a done that credits someone else needs.
+  No rule rewrites a close or writes a question from them. Whole words, ignoring case; demo values in both fictional workspaces. `messages.called_off_notice` is the line
   for each dropped action in the note drafted to someone who was already told about it ("Drop it and tell them", 6.33).
 - `language.messages.source_by_person`, `source_input`, `source_recorded` and `source_date_format`: how a history row's source is
   worded for readers (6.7): the one known person and the day, an input's title and day, or "recorded <day>"; `withheld_where`
@@ -886,6 +887,8 @@ lints:                           # severities: refuse, return, warn, off
   run-on-list: return
   near-duplicate-action: warn
   near-duplicate-promise: return
+  ending-reading: return
+  reply-not-needed: return
   evidence-fit: return
 projects:                        # severities for one project's work only, over the ones above
   PRJ-3: {run-on-list: off}
@@ -908,7 +911,9 @@ overrides are unchanged. **Built:** `near_duplicate_action.similarity`, a number
 0.85 does not hold). `near-duplicate-action` compares a new action's text with open and done actions and fires at or above
 that similarity, and a message says which kind it matched. `near-duplicate-promise` (default `return`) uses the same
 similarity to flag a new promise that looks like an open one of the same owner and people, and names that promise so the
-assistant answers with a move or news on it, or keeps the add (6.33); it never rewrites the answer. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
+assistant answers with a move or news on it, or keeps the add (6.33); it never rewrites the answer. `ending-reading` and
+`reply-not-needed` (default `return`) are judgment lints of the same kind (6.33, 6.35): the words an ending quotes, or a "no need to
+reply" in the message, are put to the assistant once and its answer stands. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
 values, and not below), `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too` and `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one` (the range and the default). `near-duplicate-question` (designed, phase L) gets its
 entry beside it, with `similarity` and `days` (default 14).
 

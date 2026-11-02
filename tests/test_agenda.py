@@ -1,8 +1,9 @@
 """A meeting holds agenda items, linked to what they came from (design 5.x calendar entries and series, 6.33 endings):
 `agenda.add` lists an action, a question or a note on a calendar entry or a series with who put it there, when and the
 words, changing nothing else; from an input it waits for the person; Undo takes it off. An action called off because its
-words move it into a meeting the workspace knows is put on that meeting's agenda by the same drop, so it isn't lost.
-Names and ids come from the fixtures."""
+words move it into a meeting the workspace knows is put on that meeting's agenda by the same drop, so it isn't lost: the
+assistant names the meeting on its drop, told so by the `ending-reading` lint, and no rule names it. Names and ids come
+from the fixtures."""
 
 from __future__ import annotations
 
@@ -11,7 +12,6 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from engine import endings
 from engine.ai.adapters.stub import set_responder
 from engine.applier import Context, Inputs, apply_changeset, check, release, undo
 from engine.language_words import shipped
@@ -242,10 +242,28 @@ def test_the_meeting_words_have_a_description_a_default_and_demo_values_in_both_
         assert language["meeting_words"] == shipped("meeting_words")
 
 
+def moved(store, action_id, **meeting):
+    """The drop of an action the assistant proposed with these words, naming the meeting it moved into."""
+    return {**drop_op(action_id, SAID, reason=SAID), **meeting}
+
+
+def flags(store, cfg, op):
+    """The `ending-reading` findings the check makes for an op read from an input."""
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(store.plugins.ops),
+        Inputs(request(store, "input"), None, SAID, "", "untrusted"),
+    )
+    return [p.message for p in check(cs, ctx) if p.check == "ending-reading"]
+
+
 def test_called_off_into_a_meeting_it_is_dropped_and_put_on_that_meetings_agenda_and_undo_takes_both_back(env):
     _, cfg, store = env
     target, meeting = someone_elses(cfg), entry(store)
-    cs_id, result = own_note(store, cfg, close_op(target["id"], SAID))
+    cs_id, result = own_note(store, cfg, moved(store, target["id"], event=meeting))
     assert result == ["applied"]
     gone = data(store, "action", target["id"])
     assert (gone["status"], gone["dropped_reason"]) == ("dropped", SAID)  # called off, nobody credited
@@ -259,10 +277,23 @@ def test_called_off_into_a_meeting_it_is_dropped_and_put_on_that_meetings_agenda
     assert data(store, "event", meeting).get("agenda", []) == []
 
 
-def test_a_drop_the_assistant_proposed_with_such_words_is_put_on_the_agenda_too_and_waits_with_it_from_an_input(env):
+def test_a_close_with_such_words_is_not_turned_into_a_drop_and_the_meeting_is_named_in_the_finding(env):
     _, cfg, store = env
     target, meeting = someone_elses(cfg), entry(store)
-    cs_id, result = from_input(store, cfg, drop_op(target["id"], SAID))
+    (said,) = flags(store, cfg, close_op(target["id"], SAID))
+    assert (
+        f'This call-off names the meeting {MEETING}: if it belongs on its agenda, give the drop "event" {meeting}.'
+        in said
+    )
+    cs_id, result = own_note(store, cfg, close_op(target["id"], SAID))  # the assistant keeps the close: it stands
+    assert result == ["applied"] and data(store, "action", target["id"])["status"] == "done"
+    assert data(store, "event", meeting).get("agenda", []) == []
+
+
+def test_a_drop_the_assistant_proposed_with_such_words_waits_with_its_agenda_item_from_an_input(env):
+    _, cfg, store = env
+    target, meeting = someone_elses(cfg), entry(store)
+    cs_id, result = from_input(store, cfg, moved(store, target["id"], event=meeting))
     assert result == ["held"]  # how a promise ends is the person's to keep when it came in
     assert data(store, "event", meeting).get("agenda", []) == []
     release(store, cfg, cs_id, 0)
@@ -270,15 +301,19 @@ def test_a_drop_the_assistant_proposed_with_such_words_is_put_on_the_agenda_too_
     assert [i["action"] for i in data(store, "event", meeting)["agenda"]] == [target["id"]]
 
 
-def test_a_series_the_words_name_gets_the_item_when_no_entry_is_ahead_and_the_next_meeting_gets_it_when_one_is(env):
+def test_the_finding_names_the_series_when_no_entry_is_ahead_and_the_next_meeting_when_one_is(env):
     _, cfg, store = env
     series, _ = make_series(store, PAST)  # every instance has passed
     target = someone_elses(cfg)
-    own_note(store, cfg, close_op(target["id"], SAID))
+    (said,) = flags(store, cfg, close_op(target["id"], SAID))
+    assert f'give the drop "series" {series}.' in said
+    own_note(store, cfg, moved(store, target["id"], series=series))
     assert [i["action"] for i in data(store, "series", series)["agenda"]] == [target["id"]]
     other = next(a for a in fixture_records(DEMO_B, "action") if a.get("owners") and a["id"] != target["id"])
     coming = entry(store, SOON, series=series)
-    own_note(store, cfg, close_op(other["id"], SAID))
+    (said,) = flags(store, cfg, close_op(other["id"], SAID))
+    assert f'give the drop "event" {coming}.' in said  # the next meeting of the series, not the series
+    own_note(store, cfg, moved(store, other["id"], event=coming))
     assert [i["action"] for i in data(store, "event", coming)["agenda"]] == [other["id"]]
 
 
@@ -290,44 +325,24 @@ def test_a_series_the_words_name_gets_the_item_when_no_entry_is_ahead_and_the_ne
         "The sessions will cover it",  # not the meeting's whole name
     ],
 )
-def test_words_that_move_it_to_no_known_meeting_only_call_it_off(env, words):
+def test_words_that_move_it_to_no_known_meeting_name_no_meeting_in_the_finding(env, words):
     _, cfg, store = env
-    meeting, target = entry(store), someone_elses(cfg)
-    cs_id, result = own_note(store, cfg, close_op(target["id"], words))
-    assert result == ["applied"] and data(store, "action", target["id"])["status"] == "dropped"
-    assert data(store, "event", meeting).get("agenda", []) == []
-    assert "event" not in store.read().get("changeset", cs_id).data["ops"][0]["op"]
+    entry(store)
+    target = someone_elses(cfg)
+    (said,) = flags(store, cfg, close_op(target["id"], words))
+    assert "names the meeting" not in said
+    assert flags(store, cfg, drop_op(target["id"], words)) == []  # a drop that names none has nothing to add
 
 
 def test_a_meeting_that_passed_or_was_called_off_or_is_named_twice_is_not_the_one_meant(env):
     _, cfg, store = env
     people = [a for a in fixture_records(DEMO_B, "action") if a.get("owners")]
-    passed = entry(store, PAST)
-    off = entry(store, SOON, cancelled=True)
-    for record in (passed, off):
-        assert store.read().get("event", record)
+    entry(store, PAST)
+    entry(store, SOON, cancelled=True)
     first = people[0]
-    own_note(store, cfg, close_op(first["id"], SAID))
-    assert data(store, "event", passed).get("agenda", []) == [] and data(store, "event", off).get("agenda", []) == []
-    # A second, different meeting named in the same words makes it ambiguous: none is chosen.
+    assert "names the meeting" not in flags(store, cfg, close_op(first["id"], SAID))[0]
+    # A second, different meeting named in the same words makes it ambiguous: none is named.
     entry(store, SOON, title="Planning")
     entry(store, LATER, title="Sessions")
     second = people[1]
-    cs_id, _ = own_note(store, cfg, close_op(second["id"], f"{SAID} and the planning and the sessions"))
-    assert "event" not in store.read().get("changeset", cs_id).data["ops"][0]["op"]
-
-
-def test_the_same_changeset_gives_the_same_ops_for_the_check_and_the_apply(env):
-    _, cfg, store = env
-    entry(store)
-    target = someone_elses(cfg)
-    cs = CHANGESET.validate_python({"ops": [close_op(target["id"], SAID)]}, context={"op_models": store.plugins.ops})
-    ctx = Context(
-        store,
-        cfg,
-        People(store, cfg),
-        tuple(store.plugins.ops),
-        Inputs(request(store, "input"), None, "", SAID, "untrusted"),
-    )
-    once = endings.read_endings(cs, ctx)
-    assert endings.read_endings(once, ctx).ops == once.ops and once.ops[0].event is not None
+    assert flags(store, cfg, drop_op(second["id"], f"{SAID} and the planning and the sessions")) == []

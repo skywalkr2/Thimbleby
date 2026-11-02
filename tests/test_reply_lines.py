@@ -158,18 +158,9 @@ def test_an_action_the_model_does_not_mark_has_none_of_those_fields(env):
     [
         ("automatic mail", "Automatic reply: " + SUBJECT, ASK, True, "automatic mail"),
         ("mail the person sent", SUBJECT, ASK, False, "you sent this message"),
-        (
-            "a message that says no reply is needed",
-            SUBJECT,
-            "Thanks, that settles it. No need to reply.",
-            True,
-            "not needed",
-        ),
     ],
 )
-def test_automatic_mail_mail_the_person_sent_and_no_reply_needed_are_not_replies_owed(
-    env, what, subject, body, from_asker, why
-):
+def test_automatic_mail_and_mail_the_person_sent_are_not_replies_owed(env, what, subject, body, from_asker, why):
     ws, cfg, store = env
     sender = named(ASKER, address_of(ASKER)) if from_asker else ("The person", MY_ADDRESS)
     quote = body.splitlines()[0]
@@ -178,6 +169,74 @@ def test_automatic_mail_mail_the_person_sent_and_no_reply_needed_are_not_replies
     assert [p["check"] for p in outcome["problems"] if p["severity"] == "refuse"] == ["reply-not-owed"]
     assert outcome["reason"].startswith("no reply is owed") and why in outcome["reason"] and owed(store) == []
     assert quote  # the quote was in the input: the refusal is the rules', not an evidence problem
+
+
+WAIVER = "Thanks, that settles it. No need to reply."
+
+
+def ask_in_turn(env, answers: list[list[dict]], *, body=WAIVER):
+    """Hand in a message that says no reply is needed; the model answers with these ops in turn (the last repeats).
+    Returns the outcomes of the changeset's ops and what the model was asked."""
+    ws, cfg, store = env
+    text = mail(named(ASKER, address_of(ASKER)), [("The person", MY_ADDRESS)], SUBJECT, body)
+    queue = [json.dumps({"summary": "A reply is owed.", "ops": ops}) for ops in answers]
+    tasks: list = []
+
+    def responder(task):
+        tasks.append(task)
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    set_responder(responder)
+    handed = hand_in(ws, store, pasted=text, now=NOW)
+    cs_id = process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
+    return store.read().get("changeset", cs_id).data["ops"], tasks
+
+
+def reply_op(cfg, quote=WAIVER) -> dict:
+    return {
+        "op": "action.add",
+        "text": "Tell the shop when the interior proofs ship",
+        "reply": DRAFT,
+        "reply_owed": True,
+        "owners": [me(cfg)],
+        "evidence": {"quote": quote},
+    }
+
+
+def plain_op(cfg, quote=WAIVER) -> dict:
+    return {
+        "op": "action.add",
+        "text": "Check the interior proofs",
+        "owners": [me(cfg)],
+        "evidence": {"quote": quote},
+    }
+
+
+def test_a_message_that_says_no_reply_is_needed_is_put_to_the_assistant_once_and_its_answer_stands(env):
+    _, cfg, store = env
+    outcomes, tasks = ask_in_turn(env, [[reply_op(cfg)]])
+    # Asked twice and no more: the finding went back once with the quoted phrase, and keeping the reply owed stands.
+    assert len(tasks) == 2
+    assert "The ask says 'No need to reply': if no reply is needed, leave the reply owed out." in tasks[1].request
+    assert [o["status"] for o in outcomes] == ["applied"]
+    assert [p for p in outcomes[0]["problems"] if p["severity"] == "refuse"] == []
+    assert len(owed(store)) == 1
+
+
+def test_when_the_assistant_leaves_the_reply_owed_out_after_the_phrase_it_is_not_made(env):
+    _, cfg, store = env
+    outcomes, tasks = ask_in_turn(env, [[reply_op(cfg)], [plain_op(cfg)]])
+    assert len(tasks) == 2
+    assert [o["status"] for o in outcomes] == ["applied"] and owed(store) == []
+    assert [a.data["text"] for a in store.read().list("action") if a.data["text"] == "Check the interior proofs"]
+
+
+def test_with_the_lint_off_the_assistants_first_answer_applies_with_no_return(env):
+    _, cfg, store = env
+    cfg.checks.lints["reply-not-needed"] = "off"
+    outcomes, tasks = ask_in_turn(env, [[reply_op(cfg)]])
+    assert len(tasks) == 1 and [o["status"] for o in outcomes] == ["applied"]
+    assert outcomes[0]["problems"] == [] and len(owed(store)) == 1
 
 
 def test_a_message_whose_headers_cannot_be_read_is_not_refused(env):

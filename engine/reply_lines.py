@@ -21,12 +21,13 @@ from engine.blocked import standing_hold
 from engine.mail_threads import ThreadCandidate, normalize_subject, thread_key
 from engine.names import People
 from engine.own_accounts import own_names
-from engine.replies_owed import Address, Message, reply_owed
+from engine.replies_owed import Address, Message, reply_owed, waiver_phrase
 from engine.reply_split import split_message
 
-#: What the rules say that means no reply is owed. Anything else (a question for someone else, a request phrased
-#: without a question, a waiting period) is left to the reading step, never refused here.
-NO_REPLY = ("automatic", "sent_by_you", "no_reply_needed")
+#: What the rules say that means no reply is owed, because it is mechanical. Anything else (a question for someone
+#: else, a request phrased without a question, a waiting period, a message that says no reply is needed) is left to the
+#: reading step, never refused here.
+NO_REPLY = ("automatic", "sent_by_you")
 #: What the change that ends a reply owed records as the rule that made it, so a list of what was done without the
 #: person can say a rule did it.
 ANSWERED_RULE = "reply_answered"
@@ -159,8 +160,8 @@ def _message(read: Read, bulk: bool, subject: str) -> Message | None:
 
 def refusal(view: Any, cfg: Any, text: str, received: datetime | None, bulk: bool = False) -> str | None:
     """Why no reply is owed for the message in `text`, in plain words, when the rules say so for certain: automatic
-    mail, mail the person sent, or a message that says no reply is needed. None when a reply may be owed, and when the
-    headers can't be read (the model's reading stands)."""
+    mail or mail the person sent. None when a reply may be owed, and when the headers can't be read (the model's
+    reading stands)."""
     read = read_message(text, received)
     mine = my_addresses(view, cfg)
     if read is None or not mine:
@@ -174,6 +175,13 @@ def refusal(view: Any, cfg: Any, text: str, received: datetime | None, bulk: boo
         if found.code in NO_REPLY
         else None
     )
+
+
+def waiver(text: str) -> str | None:
+    """The words of the message in `text` that say no reply is needed, when it reads as a message; None otherwise. The
+    assistant is asked about them (the `reply-not-needed` lint); they refuse nothing."""
+    read = read_message(text)
+    return waiver_phrase(read.new_text) if read is not None else None
 
 
 def asker_of(people: Any, text: str) -> str | None:

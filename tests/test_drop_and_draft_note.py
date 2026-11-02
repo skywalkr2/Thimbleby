@@ -19,7 +19,7 @@ from engine.intake import hand_in
 from engine.storage import WriteContext
 from tests.conftest import DEMO_B
 from tests.test_act_draft_api import client  # noqa: F401  (the API fixture with a mailbox account that can act)
-from tests.test_endings_need_delivery import CLOSED, close_op, own_note
+from tests.test_endings_need_delivery import CLOSED, close_op, held_choice
 from tests.test_gate_measures import from_input
 from tests.test_hold_drop_fold import OPEN, drop_op
 from tests.test_knowledge_records import apply, source
@@ -157,7 +157,7 @@ def test_the_row_menus_drop_of_a_to_do_nobody_was_told_about_drafts_nothing(clie
 
 def test_no_longer_needed_for_a_told_to_do_drafts_the_note_and_undo_takes_everything_back(client):  # noqa: F811
     action = told_action(client)
-    cs_id, statuses = own_note(client.store, client.cfg, close_op(action, CLOSED))
+    cs_id, statuses = held_choice(client.store, client.cfg, close_op(action, CLOSED))
     assert statuses == ["held"]
     done = client.post(f"/api/changesets/{cs_id}/ops/0/ending", json={"ending": "called_off"})
     assert done.status_code == 200, done.text
@@ -173,7 +173,7 @@ def test_no_longer_needed_for_a_told_to_do_drafts_the_note_and_undo_takes_everyt
 
 def test_done_by_the_owner_drafts_no_note(client):  # noqa: F811
     action = told_action(client)
-    cs_id, _ = own_note(client.store, client.cfg, close_op(action, CLOSED))
+    cs_id, _ = held_choice(client.store, client.cfg, close_op(action, CLOSED))
     body = client.post(f"/api/changesets/{cs_id}/ops/0/ending", json={"ending": "done"}).json()
     assert body["drafts"] == [] and body["acts"] == []
     assert client.store.read().get("action", action).data["status"] == "done"
