@@ -55,6 +55,7 @@ import { SentActs } from "./SentActs";
 import { FollowUpsByProject } from "./FollowUpsByProject";
 import { ReviewMode } from "./ReviewMode";
 import { CurrentCopy } from "./SameDocument";
+import { SendFrom } from "./SendFrom";
 import { plainTitle } from "../lib/title-dates";
 import { Pill } from "../ui/Pill";
 
@@ -790,6 +791,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                     {s.withheld}
                   </p>
                 )}
+                <SendFrom section={s} />
                 <label className="hint" htmlFor={`msg-${s.person}`}>
                   {t("followups.message_label", { name: s.name })}
                 </label>
@@ -1060,6 +1062,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
             {nudge.withheld}
           </p>
         )}
+        <SendFrom section={s} />
         <label className="hint" htmlFor={`nudge-msg-${s.person}`}>
           {t("followups.message_label", { name: s.name })}
         </label>

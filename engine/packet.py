@@ -196,6 +196,12 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         )
         if off:
             request_parts.append(off)
+    if kind.name == "notes" and saved is not None and not own_words:
+        from engine import sides
+
+        served = sides.served_sides_text(store.read(), cfg, saved.id)
+        if served:
+            request_parts.append(served)
     if kind.name == "notes" and req.data.get("may_answer"):
         owed = reply_lines.packet_section(ws, store, cfg, req.data)
         if owed:

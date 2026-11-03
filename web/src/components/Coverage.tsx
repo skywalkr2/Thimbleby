@@ -2,7 +2,7 @@
 // never mistaken for "couldn't check". Read sources are said in the quiet style; a source that couldn't be read is said
 // in its own words and style, never as "nothing new".
 import type { ReactNode } from "react";
-import { useCoverage, whenWords, type Coverage } from "../lib/coverage";
+import { useCoverage, whenWords, type Coverage, type Unread } from "../lib/coverage";
 import { day, todayOn } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { EmptyState } from "../ui/EmptyState";
@@ -29,8 +29,33 @@ function useParts(found: Coverage): Part[] {
   for (const from of new Set(found.read.map((source) => source.looked_back_to).filter(Boolean))) {
     parts.push({ kind: "looked", key: `looked:${from}`, text: t("coverage.not_looked_at", { date: day(from as string) }) });
   }
+  // The sources of one account that couldn't be read are one part naming the account, not one part for each of them.
+  const byAccount = new Map<string, Unread[]>();
+  for (const unread of found.unread) {
+    if (unread.source.account && unread.kind !== "offline") byAccount.set(unread.source.account, [...(byAccount.get(unread.source.account) ?? []), unread]);
+  }
+  const grouped = new Set<string>();
   for (const { source, kind } of found.unread) {
     const label = source.label;
+    const mine = source.account ? byAccount.get(source.account) : undefined;
+    if (mine) {
+      if (grouped.has(source.account!)) continue;
+      grouped.add(source.account!);
+      // An account that is signed out says so; one that failed says since when its sources were last read (the earliest).
+      const reads = mine.flatMap((u) => (u.source.read_at ? [u.source.read_at] : []));
+      const since = mine.every((u) => u.source.read_at) ? reads.sort()[0] : null;
+      const text = mine.every((u) => u.kind === "signed_out")
+        ? t("coverage.account.signed_out", { account: source.account! })
+        : since
+          ? t("coverage.account.failed_since", { account: source.account!, when: whenWords(since, now, t) })
+          : t("coverage.account.failed_never", { account: source.account! });
+      parts.push({ kind: "unread", key: `unread:${source.account}`, text });
+      continue;
+    }
+    if (kind === "signed_out") {
+      parts.push({ kind: "unread", key: `unread:${source.id}`, text: t("coverage.signed_out", { label }) });
+      continue;
+    }
     const text = source.read_at
       ? t(`coverage.${kind}.since`, { label, when: whenWords(source.read_at, now, t) })
       : t(`coverage.${kind}.never`, { label });

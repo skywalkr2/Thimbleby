@@ -214,6 +214,23 @@ def _start_sources(
     only = signed[0] if len(signed) == 1 else None
     taken = {s["id"] for s in sources}
     added = []
+    # With more than one account signed in, a source is named by its account, so two inboxes (or calendars) can be told
+    # apart wherever a source is named; a name the person gave one stands as they gave it.
+    template = sides.word(current, "source.label_with_account")
+    declared = {(w["connector"], w["label"]) for w in sign_in.sources}
+
+    def named_by(label: str, account: str | None) -> str:
+        return template.format(label=label, account=account) if len(named) > 1 and account else label
+
+    if len(named) > 1:
+        for source in sources:
+            if (
+                source["connector"].split("/", 1)[0] == sign_in.plugin
+                and source.get("account")
+                and (source["connector"], source.get("label")) in declared
+            ):
+                source["label"] = named_by(source["label"], source["account"])
+                changed = True
 
     def add(wanted: dict[str, Any], address: str | None, settings: dict[str, Any], **more: Any) -> None:
         base = re.sub(r"[^a-z0-9]+", "-", wanted["label"].lower()).strip("-")[:40] or "source"
@@ -226,7 +243,7 @@ def _start_sources(
             {
                 "id": source_id,
                 "connector": wanted["connector"],
-                "label": wanted["label"],
+                "label": named_by(wanted["label"], address),
                 "every_minutes": wanted["every_minutes"],
                 # The first read is taken in quietly (one total, one go, one list to look over), not item by item.
                 "first_run": "intake",
@@ -296,4 +313,55 @@ def start_signed_in(ws: Any, cfg: Any, store: Any) -> list[str]:
             ]
             if fresh:
                 added += start_sources(ws, cfg, store, sign_in, accounts=fresh)
+            elif len(list_accounts(keys, sign_in)) > 1:
+                # Sources made before a second account joined are named by their account now (nothing is added).
+                start_sources(ws, cfg, store, sign_in, accounts=[])
     return added
+
+
+def account_state(ws: Any, store: Any, source: Any, refused: bool = False) -> str | None:
+    """Where the sign-in a watched source reads through stands for the account it reads as: `signed_in`, `expired` (it
+    can't be renewed, or the service refused it, `refused`: the source's last read failed with its sign-in), or
+    `signed_out` (the account was signed out, or never signed in). None for a source that signs in to nothing (a
+    folder, a web address, a mailbox with its own password). A source that names no account reads the only one signed
+    in."""
+    from engine import sign_in as flow
+
+    plugin = source.connector.split("/", 1)[0] if "/" in source.connector else None
+    if plugin is None:
+        return None
+    own = [
+        s
+        for s in store.plugins.sign_ins().values()
+        if s.plugin == plugin and any(d.get("connector") == source.connector for d in s.sources)
+    ]
+    if not own:
+        return None
+    sign_in = own[0]
+    keys = _keys(ws, sign_in)
+    if sign_in.account is None:
+        found = flow.status(keys, sign_in)
+        state = "signed_in" if found == "signed_in" else found
+    else:
+        accounts = flow.list_accounts(keys, sign_in)
+        chosen = None
+        if source.account:
+            wanted = flow.account_key(source.account)
+            chosen = next((a for a in accounts if a.address and flow.account_key(a.address) == wanted), None)
+        elif len(accounts) == 1:
+            chosen = accounts[0]
+        state = "signed_out" if chosen is None else flow.account_status(chosen)
+    return "expired" if state == "signed_in" and refused else state
+
+
+def refused_accounts(store: Any, cfg: Any) -> set[str]:
+    """The sources (by id) whose last read failed because the service refused the sign-in (`auth`), whatever the
+    sign-in's own tokens say: the person has to sign in again to read them."""
+    from engine import watch
+
+    found = set()
+    for source in cfg.watch.sources:
+        last = watch.last_run(store, source.id) if source.enabled else None
+        if last is not None and last.data.get("outcome") == "failed" and last.data.get("error_kind") == "auth":
+            found.add(source.id)
+    return found

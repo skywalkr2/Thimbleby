@@ -685,7 +685,15 @@ def account_messages(state: State, number: int) -> list[dict]:
         copy = message(
             f"a{number}-thread", (name, address), subject, timedelta(hours=6), True, "Please sign the renewal.", now=now
         )
-        out.append({**copy, "thread": key, "to": [account_address(0), account_address(1)]})
+        out.append(
+            {
+                **copy,
+                "thread": key,
+                # The message's own Message-ID header: every mailbox holding a copy has the same one.
+                "message_id": f"<{key}@property.example.com>",
+                "to": [account_address(0), account_address(1)],
+            }
+        )
         supplier = message(
             f"a{number}-supplier",
             SUPPLIER,
@@ -988,6 +996,17 @@ def helper_routes(state: State, base: str) -> list[Route]:
             }
         )
 
+    async def set_failing(request: Request) -> JSONResponse:
+        """Make the numbered account (from 1; 0 for none) fail from now on, in the given way: a journey signs every
+        account in while all are well, then has one fail."""
+        body = await request.json()
+        number = int(body.get("account", 0))
+        how = str(body.get("how", "expired"))
+        if not 0 <= number <= max(state.accounts, 1) or how not in ("expired", "retrying"):
+            return JSONResponse({"error": "no such account or way to fail"}, status_code=400)
+        state.failing_account, state.failing_how = number, how
+        return JSONResponse({"account": number, "how": how})
+
     async def accounts(_request: Request) -> JSONResponse:
         count = max(state.accounts, 1)
         return JSONResponse(
@@ -1060,6 +1079,7 @@ def helper_routes(state: State, base: str) -> list[Route]:
         Route("/__e2e/ai-requests", requests),
         Route("/__e2e/sign-in", sign_in),
         Route("/__e2e/accounts", accounts),
+        Route("/__e2e/failing", set_failing, methods=["POST"]),
         Route("/__e2e/source-file", put_source_file, methods=["POST"]),
         Route("/__e2e/mail-later", mail_later, methods=["POST"]),
         Route("/__e2e/mail-acts", mail_acts),

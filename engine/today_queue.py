@@ -295,6 +295,9 @@ class Line:
     other_entry: str | None = None
     #: The side the line is on when its own fields don't say (a clash: the side its meetings are on; design 6.32).
     side: str | None = None
+    #: Every side the line is on, for one about entries on more than one (a clash between two calendars that serve
+    #: different sides): the side filter shows it under each. Empty for a line on one side or none.
+    sides: list[str] = field(default_factory=list)
     #: For a travel clash line, the travel time asked for between the two places (`travel_minutes`) and where each
     #: meeting is (`place`, `other_place`).
     travel_minutes: int | None = None
@@ -698,23 +701,33 @@ def _everything(
             )
         )
 
+    # One account's sources that fail the same way are one line, naming the account, not one line for each of them.
+    grouped: dict[tuple[str, str], list[Any]] = {}
     for watched_source in cfg.watch.sources:
         found = unread.get(watched_source.id)
         if found is None:
             continue
+        grouped.setdefault((watched_source.account or watched_source.id, found.kind), []).append(watched_source)
+    for (_, _), members in grouped.items():
+        watched_source = members[0]
+        found = unread[watched_source.id]
         # A source that can't be read is never a silent stop or a clean "nothing needs you":
-        # the line says which, and since when.
+        # the line says which, and since when (the earliest of the group's).
+        since = min(unread[m.id].since for m in members)
         lines.append(
             Line(
                 key=f"source_unread:{watched_source.id}",
                 group="risk",
                 kind="source_unread",
                 source=watched_source.id,
-                subject=watched_source.label or watched_source.id,
+                subject=(watched_source.account if len(members) > 1 else None)
+                or watched_source.label
+                or watched_source.id,
                 problem_kind=found.kind,
                 text=found.problem,
-                waiting_since=found.since,
-                since=found.since,
+                waiting_since=since,
+                since=since,
+                count=len(members),
             )
         )
 
@@ -1762,6 +1775,7 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
                 other_ends=clash.second.end.astimezone(here).isoformat(),
                 since=clash.at.isoformat(),
                 side=sides.side_of_entries(store.read(), cfg, [clash.first.item, clash.second.item]),
+                sides=sides.sides_of_entries(store.read(), cfg, [clash.first.item, clash.second.item]),
             )
         )
     return lines

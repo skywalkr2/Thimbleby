@@ -1318,3 +1318,91 @@ test("a source reads through its add-on's sign-in: signed out of every one of th
   expect(signedOutOf("other/inbox", [signIn("pack/account", "signed_out")])).toBeNull();
   expect(signedOutOf("pack/inbox", undefined)).toBeNull();
 });
+
+describe("several accounts", () => {
+  const ALEX = "alex@example.com";
+  const BLAKE = "blake@example.com";
+  const CASEY = "casey@example.com";
+  const mailSource = (id: string, account: string, extra: Partial<Source> = {}) =>
+    source(id, { label: `Inbox, ${account}`, connector: "pack/inbox", connector_label: "Mail", account, account_state: "signed_in", reads: ["mail"], ...extra });
+  const signIn = (accounts: Array<{ address: string; status: "signed_in" | "expired" }>): S["SignInView"] =>
+    ({
+      name: "pack/account",
+      label: "Pack mail",
+      status: "signed_in",
+      ready: true,
+      several: true,
+      accounts: accounts.map((a, n) => ({ key: `k${n}`, address: a.address, status: a.status, missing: [], acting: false })),
+      callback: "http://127.0.0.1/api/sign-ins/callback",
+      allows: [],
+    }) as unknown as S["SignInView"];
+  const openAccounts = (sources: Source[]) =>
+    open(sources, { "GET sign-ins": () => [signIn([{ address: ALEX, status: "signed_in" }, { address: BLAKE, status: "expired" }, { address: CASEY, status: "signed_in" }])] });
+
+  test("one account that has to sign in is one line naming it with Sign in again, and its rows say so, not Failed or Read", async () => {
+    const refused = run({ outcome: "failed", error_kind: "auth", started_at: "2026-03-04T11:00:00+00:00" });
+    openAccounts([
+      mailSource("a", ALEX),
+      mailSource("b1", BLAKE, { last: refused, account_state: "expired", problem: "The service asked to sign in again." }),
+      mailSource("b2", BLAKE, { label: `Calendar, ${BLAKE}`, last: refused, account_state: "expired", problem: "The service asked to sign in again." }),
+      mailSource("b3", BLAKE, { label: `Sent mail, ${BLAKE}`, last: run(), account_state: "expired" }),
+      mailSource("c", CASEY),
+    ]);
+    const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
+    // One line for Blake, not one for each of the three rows, and none for the others.
+    expect(within(needs).getAllByRole("listitem")).toHaveLength(1);
+    expect(needs).toHaveTextContent(`${BLAKE}: sign in again to read its 3 connections.`);
+    expect(within(needs).getByRole("button", { name: `Sign in again as ${BLAKE}` })).toBeInTheDocument();
+    // The rows of that account say what they need, never a green Read (the third's own last read was fine) and never a wall of problems.
+    for (const label of [`Inbox, ${BLAKE}`, `Calendar, ${BLAKE}`, `Sent mail, ${BLAKE}`]) {
+      const item = await row(label);
+      expect(within(item).getByText("Sign in again")).toBeInTheDocument();
+      expect(within(item).queryByText("Read")).toBeNull();
+      expect(within(item).queryByText("Failed")).toBeNull();
+      expect(item.querySelector(".problem-note")).toBeNull();
+    }
+    // The healthy accounts are read, and each row names its own account.
+    expect(within(await row(`Inbox, ${ALEX}`)).getByText("Read")).toBeInTheDocument();
+    expect(within(await row(`Inbox, ${CASEY}`)).getByText("Read")).toBeInTheDocument();
+  });
+
+  test("an account that is signed out says it is not being read, and nothing says Read for it", async () => {
+    openAccounts([mailSource("a", ALEX, { account_state: "signed_out" }), mailSource("c", CASEY)]);
+    const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
+    expect(needs).toHaveTextContent(`${ALEX} is signed out: its connection isn't being read.`);
+    const item = await row(`Inbox, ${ALEX}`);
+    expect(within(item).getByText("Signed out")).toBeInTheDocument();
+    expect(within(item).queryByText("Read")).toBeNull();
+    expect(item).toHaveTextContent(`Not read until you sign in to ${ALEX}`);
+  });
+
+  test("with every account signed in there is no line asking for a sign-in", async () => {
+    openAccounts([mailSource("a", ALEX), mailSource("c", CASEY)]);
+    await row(`Inbox, ${ALEX}`);
+    expect(screen.queryByRole("list", { name: "Accounts that need you to sign in" })).toBeNull();
+  });
+
+  test("a connection's change form lists the sides it serves, and a tick is saved at once as its sides", async () => {
+    const user = userEvent.setup();
+    const sides = [{ project: "PRJ-2", kind: "business", name: "Harborview Community Support Partnership Incorporated" }];
+    const saved: unknown[] = [];
+    const item = mailSource("a", ALEX, { connector: "demo/mailbox" });
+    open(
+      [item],
+      {
+        "GET setup/business": () => ({ business: true, name: sides[0].name, personal: "PRJ-1", sides, chosen: null }),
+        "GET settings": () => ({ fingerprint: "fp-1", items: [field("watch.sources", "other", { value: [{ id: "a", settings: {}, sides: [] }], editable: false, default: [] })] }),
+        "POST settings": (body) => {
+          saved.push(body);
+          return { changes: [], fingerprint: "fp-2", needs_restart: false };
+        },
+      },
+    );
+    await choose(user, `Inbox, ${ALEX}`, "Change");
+    const group = await screen.findByRole("group", { name: `Inbox, ${ALEX}: who is it for?` });
+    expect(within(group).getByRole("checkbox", { name: "Personal" })).not.toBeChecked();
+    await user.click(within(group).getByRole("checkbox", { name: sides[0].name }));
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect((saved[0] as { changes: Record<string, Array<{ sides: string[] }>> }).changes["watch.sources"][0].sides).toEqual(["PRJ-2"]);
+  });
+});

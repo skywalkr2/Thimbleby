@@ -1233,6 +1233,17 @@ class FollowupSection(BaseModel):
         "none when nothing is to send.",
     )
     nudge: NudgeView | None = Field(None, description="The follow-up message to draft, when anything is due one.")
+    send_from: list[str] = Field(
+        default_factory=list,
+        description="The mailboxes (addresses) the message could go out from: those of the mail sources the assistant "
+        "reads, each once. The message is copied and sent from the person's mail program, so this only says which "
+        "mailbox to use.",
+    )
+    send_from_default: str | None = Field(
+        None,
+        description="The one of `send_from` to start on: the mailbox the person's own conversation with them came "
+        "through (the latest mail from them was read there), else the first. None when no mail source is read.",
+    )
 
 
 class SentCounts(BaseModel):
@@ -2818,6 +2829,11 @@ class AgendaItemView(BaseModel):
         description="The ids of the views its project is in (design 6.32); empty when its project is in none. A view "
         "only changes what a screen shows.",
     )
+    also_in: list[str] = Field(
+        default_factory=list,
+        description="The ids of the other watched sources that hold the same invitation (the same identity and start): "
+        "it is listed once, under `source`, and these are the other accounts' calendars that hold it too.",
+    )
 
 
 class ScheduleEntryView(AgendaItemView):
@@ -3007,6 +3023,16 @@ class ArrivedView(BaseModel):
     saved: str | None = Field(
         None,
         description="The id of the saved copy of the message, when it was handed in; its page is where a row opens.",
+    )
+    also_in: list[str] = Field(
+        default_factory=list,
+        description="The ids of the other watched sources that hold a copy of the same message or thread (they share a "
+        "message id): it is listed once, under `source`, and these are the other mailboxes that hold it too.",
+    )
+    sides: list[str] = Field(
+        default_factory=list,
+        description="The ids of the sides (top projects) its source serves. The screen's side filter shows a message "
+        "under each of them, and under every choice when the source serves none.",
     )
 
 
@@ -3531,6 +3557,12 @@ class QueueLineView(BaseModel):
         description="Which side the line is on, from its project: the id of that side's top project (the "
         "personal project's or another side's), or none for neither (the screen's side filter shows such lines "
         "under every choice).",
+    )
+    sides: list[str] = Field(
+        default_factory=list,
+        description="For a line about entries or messages on more than one side (a clash between two calendars that "
+        "serve different sides): the ids of every side it is on. The screen's side filter shows it under each of them. "
+        "Empty for a line that is on one side or none, which `side` says.",
     )
     views: list[str] = Field(
         default_factory=list,
@@ -5363,8 +5395,25 @@ class WatchSourceView(BaseModel):
     account: str | None = Field(
         None, description="For a source of an add-on that signs in as you: the account it reads, by its address."
     )
+    account_state: Literal["signed_in", "expired", "signed_out"] | None = Field(
+        None,
+        description="For a source that reads through a sign-in: where that sign-in stands for the account it reads "
+        "(signed in; expired, which includes the service having refused it at the last read; or signed out). None "
+        "for a source that signs in to nothing. Only a source whose account is signed in is being read: the screens "
+        "never say Read for another.",
+    )
+    sides: list[str] = Field(
+        default_factory=list,
+        description="The sides (top projects) it serves, in the order they are kept; empty when it names none.",
+    )
     color: CalendarColor | None = Field(
         None, description="For a calendar: the color of its mark on the schedule, from a short named list."
+    )
+    shown_color: CalendarColor | None = Field(
+        None,
+        description="For a calendar: the color its mark has on the schedule: the one the person picked, else one the "
+        "app gave it by its place among the calendars, so no two of the first eight share one. None for a source "
+        "that isn't a calendar.",
     )
     capture: bool | None = Field(
         None,
@@ -6562,6 +6611,11 @@ class WatchSourceChange(BaseModel):
     )
     color: CalendarColor | None = Field(
         None, description="For a calendar: the color of its mark on the schedule; null, when sent, clears it."
+    )
+    sides: list[str] | None = Field(
+        None,
+        description="The sides (top projects, from GET /api/business) the source serves; sent, it replaces the list, "
+        "and an empty list says none is named. A side that isn't one is refused.",
     )
     capture: bool | None = Field(
         None,

@@ -53,7 +53,9 @@ function Entry(props: { entry: NavEntry; current: View; rail: boolean; sub?: boo
       data-view={entry.view}
     >
       {entry.icon ? <Icon name={entry.icon} /> : <span className={styles.glyph} aria-hidden="true">{entry.glyph}</span>}
-      <span className={styles.label}>{entry.label}</span>
+      <span className={styles.label} title={props.rail ? undefined : entry.label}>
+        {entry.label}
+      </span>
       <NavCount entry={entry} className={styles.count} />
     </Link>
   );

@@ -25,9 +25,9 @@ import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
 import { useSourceSave } from "./Sources";
 import { ReadToken } from "./ReadToken";
 import { FormBlock } from "../ui/FormBlock";
-import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
+import { SOURCES, SourceSides, listOf } from "./SourceSides";
 import { Row } from "../ui/Row";
 
 type Pack = S["PackView"];
@@ -145,146 +145,9 @@ function SortingSwitch() {
   );
 }
 
-const SOURCES = "watch.sources";
-
-const listOf = (names: string[]) => new Intl.ListFormat(undefined, { style: "long", type: "conjunction" }).format(names);
-
-/** Which sides of the person's life a mailbox or calendar serves, as tick boxes: Personal and each side. Each tick is saved at
- * once as the source's `sides`, through the settings save (the whole list of sources, read fresh). A tick made while an
- * earlier one is still being saved is queued and saved after it, and the boxes and the line under them show the choices as made,
- * so the last words always match the boxes. The step raises no message for a tick: a tick is undone by unticking it, and one
- * that couldn't be saved names its box and offers Try again. Nothing ticked is allowed: it means not said. With several sources
- * (`group`), one set of boxes is saved to every one of them in the same save, and a box shows ticked when all of them hold it. */
-function SourceSides(props: { sources: Source[]; group?: boolean; what?: string; account?: string; label?: string; personal: string | null; sides: S["SideView"][] }) {
-  const { t } = useWords();
-  const client = useQueryClient();
-  const afterSave = useAfterSave();
-  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
-  type Tick = { side: string; on: boolean };
-  // What the person ticked that isn't settled yet (shown as made), the ticks waiting their turn, and what couldn't be saved.
-  const [wanted, setWanted] = useState<Record<string, boolean>>({});
-  const [failed, setFailed] = useState<Array<Tick & { detail: string }>>([]);
-  const [touched, setTouched] = useState(false);
-  const waiting = useRef<Tick[]>([]);
-  const running = useRef(false);
-  const options = [
-    ...(props.personal ? [{ id: props.personal, name: t("sides.filter.personal") }] : []),
-    ...props.sides.map((s) => ({ id: s.project, name: s.name })),
-  ];
-  const stored = (settings.data?.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<{ id: string; sides?: string[] }>;
-  const heldBy = (id: string) => new Set(stored.find((s) => s.id === id)?.sides ?? []);
-  const ticked = (side: string) => wanted[side] ?? props.sources.every((src) => heldBy(src.id).has(side));
-  const mine = props.sources.map((src) => src.id);
-  const label = props.label ?? props.sources[0]?.label ?? "";
-  const many = props.sources.length > 1;
-  // For one account's sources among several: the kinds it reads, named in the question with its address.
-  const kinds = [...new Set(props.sources.flatMap((src) => src.reads ?? []))].map((kind) => t(`walkthrough.mail.reads.${kind}`)).join(t("walkthrough.mail.reads_join"));
-
-  const save = async ({ side, on }: Tick) => {
-    // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
-    const current = await freshSettings(client);
-    const list = (current.items.find((i) => i.key === SOURCES)?.value ?? []) as Array<Record<string, unknown> & { id: string; sides?: string[] }>;
-    const withTick = (had: string[] | undefined): string[] => {
-      const now = new Set(had ?? []);
-      if (on) now.add(side);
-      else now.delete(side);
-      // In the order of the choices, then any side the source names that isn't offered, which a tick leaves as it was.
-      return [...options.map((o) => o.id).filter((id) => now.has(id)), ...[...now].filter((id) => !options.some((o) => o.id === id))];
-    };
-    const changes = { [SOURCES]: list.map((s) => (mine.includes(s.id) ? { ...s, sides: withTick(s.sides) } : s)) };
-    const saved = await api.saveSettings({ changes, reset: [], fingerprint: current.fingerprint });
-    await afterSave(saved, { quiet: true });
-  };
-
-  // One save at a time, in the order the ticks were made.
-  const drain = async () => {
-    if (running.current) return;
-    running.current = true;
-    const missed: Array<Tick & { detail: string }> = [];
-    try {
-      while (waiting.current.length > 0) {
-        const tick = waiting.current.shift() as Tick;
-        try {
-          await save(tick);
-        } catch (err) {
-          if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
-          missed.push({ ...tick, detail: err instanceof ApiError && err.detail && err.status < 500 ? err.detail : "" });
-          // The box goes back to what is stored.
-          setWanted((now) => Object.fromEntries(Object.entries(now).filter(([side]) => side !== tick.side)));
-        }
-      }
-    } finally {
-      running.current = false;
-    }
-    if (missed.length > 0) setFailed(missed);
-    // Every tick is saved now: the boxes read from the settings again, unless another tick has been made since.
-    await freshSettings(client).catch(() => undefined);
-    if (!running.current && waiting.current.length === 0) setWanted({});
-  };
-
-  const change = (side: string, on: boolean) => {
-    setFailed([]);
-    setTouched(true);
-    setWanted((now) => ({ ...now, [side]: on }));
-    waiting.current.push({ side, on });
-    void drain();
-  };
-  const retry = () => {
-    const again = failed;
-    setFailed([]);
-    setWanted((now) => ({ ...now, ...Object.fromEntries(again.map((x) => [x.side, x.on])) }));
-    waiting.current.push(...again.map(({ side, on }) => ({ side, on })));
-    void drain();
-  };
-
-  const id = `source-sides-${mine.join("-").replace(/[^A-Za-z0-9_-]/g, "-")}`;
-  const list = listOf;
-  const count = many ? "other" : "one";
-  const serving = options.filter((o) => ticked(o.id)).map((o) => o.name);
-  const nameOf = (side: string) => options.find((o) => o.id === side)?.name ?? side;
-  return (
-    <CheckboxGroup legend={props.group ? (props.account ? t("walkthrough.mail.sides.account.legend", { reads: kinds, account: props.account }) : t(`walkthrough.mail.sides.group.legend_${count}`)) : t("walkthrough.mail.sides.legend", { label: label })} data-source-sides={props.group ? undefined : mine[0]} data-sign-in-sides={props.group ? "" : undefined} aria-describedby={`${id}-hint`}>
-      {options.map((o) => (
-        <label key={o.id} className="check-line">
-          <input type="checkbox" checked={ticked(o.id)} disabled={settings.isPending} onChange={(e) => change(o.id, e.target.checked)} />
-          <span>{o.name}</span>
-        </label>
-      ))}
-      <p className="hint" id={`${id}-hint`}>
-        {t("walkthrough.mail.sides.hint")}
-      </p>
-      {(serving.length > 0 || touched) && (
-        <p className="hint" role="status" data-sides-state="">
-          {props.group
-            ? serving.length > 0
-              ? t(`walkthrough.mail.sides.group.state_${count}`, { sides: list(serving) })
-              : t(`walkthrough.mail.sides.group.none_${count}${options.length === 2 ? "_two" : ""}`)
-            : serving.length > 0
-              ? t("walkthrough.mail.sides.state", { label, sides: list(serving) })
-              : t(options.length === 2 ? "walkthrough.mail.sides.none_two" : "walkthrough.mail.sides.none", { label })}
-        </p>
-      )}
-      {failed.length > 0 && (
-        <div className="problem-note" role="alert">
-          <p>
-            {t("walkthrough.mail.sides.failed", {
-              sides: list([...new Set(failed.map((x) => nameOf(x.side)))]),
-              label: props.group ? (props.what ?? "") : label,
-            })}
-            {failed[0].detail ? ` ${failed[0].detail}` : ""}
-          </p>
-          <Button onClick={retry}>
-            {t("action.try_again")}
-          </Button>
-        </div>
-      )}
-    </CheckboxGroup>
-  );
-}
-
 /** The sides question for what one sign-in (or, with several accounts of a service, one account) reads: one set of boxes for all
  * of its sources, with a quiet way to set them separately. Where the sources already serve different sides, each is asked on its own, and once asked that way it stays so. */
-function SignInSides(props: { sources: Source[]; what: string; account?: string; labelOf: (source: Source) => string; personal: string | null; sides: S["SideView"][] }) {
+function SignInSides(props: { sources: Source[]; what: string; account?: string; labelOf: (source: Source) => string; personal: string | null; sides: S["SideView"][]; compact?: boolean; hintId?: string }) {
   const { t } = useWords();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const [apart, setApart] = useState(false);
@@ -296,14 +159,14 @@ function SignInSides(props: { sources: Source[]; what: string; account?: string;
     return (
       <>
         {props.sources.map((source) => (
-          <SourceSides key={source.id} sources={[source]} label={props.labelOf(source)} personal={props.personal} sides={props.sides} />
+          <SourceSides key={source.id} sources={[source]} label={props.labelOf(source)} personal={props.personal} sides={props.sides} compact={props.compact} hintId={props.hintId} />
         ))}
       </>
     );
   }
   return (
     <>
-      <SourceSides sources={props.sources} group what={props.what} account={props.account} personal={props.personal} sides={props.sides} />
+      <SourceSides sources={props.sources} group what={props.what} account={props.account} personal={props.personal} sides={props.sides} compact={props.compact} hintId={props.hintId} />
       {props.sources.length > 1 && (
         <div>
           <Button variant="quiet" onClick={() => setApart(true)}>
@@ -380,9 +243,11 @@ export function WalkthroughMail(props: {
   // A service with more than one account: each source's label is followed by its account, so two inboxes can be told apart.
   const accountsOf = (addon: string | null) => [...new Set(read.filter((s) => addonOfSignIn(s.connector) === addon).flatMap((s) => (s.account ? [s.account] : [])))];
   const labelOf = (source: Source) =>
-    source.account && accountsOf(addonOfSignIn(source.connector)).length > 1
+    source.account && accountsOf(addonOfSignIn(source.connector)).length > 1 && !source.label.includes(source.account)
       ? t("walkthrough.mail.source_with_account", { source: source.label, account: source.account })
       : source.label;
+  // A source's name without its account, for the row of that account: the app names a source of several accounts by its account.
+  const shortOf = (source: Source) => (source.account && source.label.endsWith(`, ${source.account}`) ? source.label.slice(0, -(source.account.length + 2)) : source.label);
   const covered = new Set(connected.flatMap((c) => c.reads.map((s) => s.id)));
   const others = read.filter((s) => !covered.has(s.id));
   const hasResult = connected.length > 0;
@@ -414,15 +279,51 @@ export function WalkthroughMail(props: {
           {connected.map(({ service, title, reads }) => {
             const what = listOf(reads.map(labelOf));
             // With several accounts the question is asked of each account's sources, in the order the accounts first appear.
-            const groups = accountsOf(service.id).length > 1 ? [...new Set(reads.map((s) => s.account ?? ""))] : [null];
+            const several = accountsOf(service.id).length > 1;
+            const groups = several ? [...new Set(reads.map((s) => s.account ?? ""))] : [null];
+            const hintId = `sides-hint-${service.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
             return (
               <FormBlock as="section" key={service.id}  data-reading="" data-connected={service.id}>
                 <p className="what">
                   <strong>{t("walkthrough.mail.result.connected", { service: title })}</strong>
-                  {reads.length > 0 && <> {t("walkthrough.mail.result.reading", { what })}</>}
+                  {reads.length > 0 && <> {several ? t("walkthrough.mail.result.accounts", { n: groups.length }) : t("walkthrough.mail.result.reading", { what })}</>}
                 </p>
                 {reads.length > 0 && <p className="hint">{t("walkthrough.mail.first_go")}</p>}
-                {reads.length > 0 && hasSides &&
+                {reads.length > 0 && hasSides && several && (
+                  <p className="hint" id={hintId}>
+                    {t("walkthrough.mail.sides.hint")}
+                  </p>
+                )}
+                {several ? (
+                  // One compact row for each account: its address, what is read there, and who it is for.
+                  <ul className="account-rows" aria-label={t("walkthrough.mail.accounts_label")} data-account-rows="">
+                    {groups.map((account) => {
+                      const mine = reads.filter((s) => (s.account ?? "") === account);
+                      return (
+                        <li key={account ?? ""} className="account-row" data-account-row={account ?? ""}>
+                          <span className="account-name">
+                            <strong title={account || undefined}>{account || title}</strong>
+                            <span className="hint">{listOf(mine.map(shortOf))}</span>
+                          </span>
+                          {hasSides && (
+                            <SignInSides
+                              sources={mine}
+                              what={listOf(mine.map(labelOf))}
+                              account={account || undefined}
+                              labelOf={labelOf}
+                              personal={business.data?.personal ?? null}
+                              sides={business.data?.sides ?? []}
+                              compact
+                              hintId={hintId}
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  reads.length > 0 &&
+                  hasSides &&
                   groups.map((account) => {
                     const mine = account === null ? reads : reads.filter((s) => (s.account ?? "") === account);
                     return (
@@ -436,7 +337,8 @@ export function WalkthroughMail(props: {
                         sides={business.data?.sides ?? []}
                       />
                     );
-                  })}
+                  })
+                )}
               </FormBlock>
             );
           })}

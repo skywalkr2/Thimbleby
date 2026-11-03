@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.94 adds
+
+Manifests stay `'>=0.3,<0.4'`. Additive only: nothing a 0.3.93 plugin relies on changes. A person with several accounts of
+one service holds the same invitation, and copies of the same message, in more than one of them; a connector can now say
+which items are the same, so the screens list each once. The generated guide has the exact fields.
+
+- **An invitation's identity:** `EventDetails.uid`, the invitation's iCalendar UID, which every calendar that holds it gives
+  it the same (each calendar's own id for it differs). Two sources that hold items with the same `uid` and the same start
+  are one agenda item, listed under the first with the others named in its `also_in`. Left out (None), an item is never
+  taken for another.
+- **A message's identity:** `MessageDetails.message_id`, the message's own `Message-ID` header, and
+  `MessageDetails.references`, the ids of the messages it follows in its thread. A message of another source that names a
+  message id an earlier row already names is that row (Today's Came in lists the thread once, naming the other
+  mailboxes in `also_in`). Left out, a message is never taken for another. Items of one source are never joined.
+
 ## What 0.3.93 changes
 
 Manifests stay `'>=0.3,<0.4'`. Two things a plugin that reads people or calendar entries may notice; the generated guide has

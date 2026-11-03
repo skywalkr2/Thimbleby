@@ -34,7 +34,9 @@ export function SegmentedControl<T extends string>(props: {
     >
       {props.options.map((o) => (
         <ToggleButton key={o.value} id={o.value} className={styles.segment} aria-label={o.count ? `${o.label}, ${o.countWords ?? o.count}` : undefined}>
-          {o.label}
+          <span className={styles.label} title={o.label}>
+            {o.label}
+          </span>
           {o.count ? (
             <span className={styles.count} aria-hidden="true">
               {o.count}

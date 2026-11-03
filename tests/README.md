@@ -15,7 +15,7 @@ Flags of `tests.fake_services`:
 | `--failing-account K` | Account K (from 1) signs in and answers `/me`, but its mail and calendar reads fail beside the healthy ones. |
 | `--failing-how expired\|retrying` | `expired` (default): 401 `InvalidAuthenticationToken` and renewal refused. `retrying`: 503 with `Retry-After`. |
 
-`GET /__e2e/accounts` on the plain-HTTP port lists each address and whether it fails (and how).
+`GET /__e2e/accounts` on the plain-HTTP port lists each address and whether it fails (and how). `POST /__e2e/failing` with `{"account": N, "how": "expired"|"retrying"}` makes account N fail from then on (0 for none), so a journey can sign every account in while all are well and then have one fail.
 
 Flag of `tests.e2e_server`:
 

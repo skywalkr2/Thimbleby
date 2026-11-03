@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "./api";
 import { addDays, day, dayAndTime, todayOn, time, wallTime } from "./dates";
+import { signInNeed } from "./connections";
 import { latestRead } from "./sources";
 
 type Source = S["WatchSourceView"];
@@ -11,8 +12,9 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 
 export interface Unread {
   source: Source;
-  /** failed: the service refused or failed; offline: there was no network. */
-  kind: "failed" | "offline";
+  /** failed: the service refused or failed; offline: there was no network; signed_out: the account it reads as is signed out
+   * or needs signing in again, so it is not being read whatever its last try said. */
+  kind: "failed" | "offline" | "signed_out";
 }
 
 export interface Coverage {
@@ -41,6 +43,7 @@ export function coverage(sources: Source[]): Coverage {
   for (const source of on) {
     const outcome = source.last?.outcome;
     if (outcome === "failed" || outcome === "offline") unread.push({ source, kind: outcome });
+    else if (signInNeed(source)) unread.push({ source, kind: "signed_out" });
     else if (source.read_at && source.stale) stale.push(source);
     else if (source.read_at) read.push(source);
     else pending.push(source);

@@ -139,6 +139,30 @@ class Unread:
     problem: str
 
 
+#: The colors a calendar's mark can have, in the order the app gives them to calendars the person gave none.
+CALENDAR_COLORS = ("blue", "teal", "green", "orange", "red", "pink", "purple", "gray")
+
+
+def calendar_colors(cfg: Any, declared: Any) -> dict[str, str]:
+    """The color of each calendar source's mark on the schedule, by source id: the one the person picked, else the first
+    color of the list no calendar holds yet, so the first eight calendars never share one (after that the list starts
+    over). A source that isn't a calendar has none."""
+    from engine.connectors import reads
+
+    calendars = [s for s in cfg.watch.sources if "calendar" in reads(s.connector, declared)]
+    taken = [s.color for s in calendars if s.color]
+    out: dict[str, str] = {}
+    spare = [c for c in CALENDAR_COLORS if c not in taken]
+    given = 0
+    for source in calendars:
+        if source.color:
+            out[source.id] = source.color
+            continue
+        out[source.id] = spare[given] if given < len(spare) else CALENDAR_COLORS[given % len(CALENDAR_COLORS)]
+        given += 1
+    return out
+
+
 def unread(store: Any, cfg: Any, source: Any, now: datetime) -> Unread | None:
     """Whether a source that is on has been failing for longer than `watch.unread_gap_factor` times its own read
     interval, counted from its last good read (its first try when it never had one). A read that found no network or was
@@ -780,7 +804,12 @@ def _message_dict(message: Any) -> dict[str, Any] | None:
 
     if message is None:
         return None
-    return {**asdict(message), "categories": list(message.categories), "participants": list(message.participants)}
+    return {
+        **asdict(message),
+        "categories": list(message.categories),
+        "participants": list(message.participants),
+        "references": list(message.references),
+    }
 
 
 def _set_aside_of(closed: dict[str, str] | None) -> dict[str, str] | None:
@@ -1060,6 +1089,7 @@ def advice_sentence(key: str) -> str:
 def _problem(what: str, advice: str) -> str:
     """What went wrong and what to do, as sentences (no second full stop when the words already end one)."""
     what = what if what.endswith((".", "!", "?")) else what + "."
+    what = what[:1].upper() + what[1:]  # a service's own words begin lower case; a sentence begins with a capital
     return f"{what} {advice}".strip()
 
 

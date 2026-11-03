@@ -189,3 +189,57 @@ test("the organization is kept unless it is ticked", async () => {
   await user.click(within(ask).getByRole("button", { name: "End them with it" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-shop/remove")?.body).toEqual({ where: "end", organization: "keep" }));
 });
+
+test("adding a business with mailboxes and calendars already connected asks which of them serve it, each tick saved at once", async () => {
+  const user = userEvent.setup();
+  const item = (id: string, label: string): S["WatchSourceView"] => ({ id, label, connector: "k", connector_label: "Mail", enabled: true, every_minutes: 15, items: 1, last: null, read_at: null, failures: 0, problem: null, reads: ["mail"] });
+  const saved: Array<{ changes: Record<string, Array<{ id: string; sides?: string[] }>> }> = [];
+  const held = [
+    { id: "inbox-a", settings: {}, sides: ["PRJ-personal"] },
+    { id: "inbox-b", settings: {}, sides: [] },
+  ];
+  const calls = fakeApi({
+    "GET setup/business": () => ({ business: false, name: "", personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+    "GET watch": () => [item("inbox-a", "Inbox, alex@example.com"), item("inbox-b", "Inbox, blake@example.com"), { ...item("old", "Switched off"), enabled: false }, { ...item("docs", "Docs"), reads: [] }],
+    "GET settings": () => ({ fingerprint: "fp-1", items: [{ key: "watch.sources", file: "watch", group: "", description: "", type: "other", options: [], value: held, default: [], source: "file", locked: false, basic: false, editable: false }] }),
+    "POST settings": (body) => {
+      saved.push(body as (typeof saved)[number]);
+      return { changes: [], fingerprint: "fp-2", needs_restart: false };
+    },
+    "POST setup/business": () => ({ project: "PRJ-new", name: "Quarry Studio", kind: "business", created: true, changeset: "CS-20" }),
+  });
+  renderApp(<BusinessSides />);
+  await user.click(await screen.findByRole("button", { name: "Add a business" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a business" });
+  await user.type(within(dialog).getByRole("textbox", { name: /^Business name/ }), "Quarry Studio");
+  await user.click(within(dialog).getByRole("button", { name: "Add the business" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST setup/business")).toBe(true));
+  // The same drawer now asks which connections serve it: only the ones that are on and read mail or a calendar.
+  const next = await screen.findByRole("dialog", { name: "Which of your connections serve Quarry Studio?" });
+  const group = within(next).getByRole("group", { name: "Serve Quarry Studio" });
+  expect(within(group).getAllByRole("checkbox").map((c) => c.getAttribute("aria-label") ?? c.parentElement?.textContent)).toEqual(["Inbox, alex@example.com", "Inbox, blake@example.com"]);
+  await user.click(within(group).getByRole("checkbox", { name: "Inbox, blake@example.com" }));
+  await waitFor(() => expect(saved).toHaveLength(1));
+  expect(saved[0].changes["watch.sources"].find((s) => s.id === "inbox-b")?.sides).toEqual(["PRJ-new"]);
+  expect(saved[0].changes["watch.sources"].find((s) => s.id === "inbox-a")?.sides).toEqual(["PRJ-personal"]);
+  await user.click(within(next).getByRole("button", { name: "Done" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+test("adding a business with nothing connected closes at once and asks nothing more", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET setup/business": () => ({ business: false, name: "", personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+    "GET watch": () => [],
+    "POST setup/business": () => ({ project: "PRJ-new", name: "Quarry Studio", kind: "business", created: true, changeset: "CS-20" }),
+  });
+  renderApp(<BusinessSides />);
+  await user.click(await screen.findByRole("button", { name: "Add a business" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a business" });
+  await user.type(within(dialog).getByRole("textbox", { name: /^Business name/ }), "Quarry Studio");
+  await user.click(within(dialog).getByRole("button", { name: "Add the business" }));
+  expect(await screen.findByText("Added Quarry Studio.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});

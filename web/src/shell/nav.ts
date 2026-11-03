@@ -10,6 +10,7 @@ import { useWords } from "../lib/wording";
 import { useTodayCount } from "../lib/today";
 import { useWaiting } from "../lib/waiting";
 import { useSides } from "../lib/sides";
+import { distinctMarks } from "./status";
 import { recordView } from "../lib/views";
 import type { IconName } from "../ui/Icon";
 
@@ -54,10 +55,10 @@ export function useNav(): NavModel {
   // Personal and each side by its own name, each a link to that top project's page; a person with nothing beside Personal
   // has Personal alone, where Projects would be. With a side, the projects live inside each side's page. Anyone else (a
   // workspace with projects and no side) keeps Projects.
-  const sideEntries: NavEntry[] = [
-    ...(personal ? [{ view: recordView("project", personal), label: t("nav.personal"), icon: "grid" as const }] : []),
-    ...sides.map((s) => ({ view: recordView("project", s.project), label: s.name, icon: "grid" as const })),
-  ];
+  // Each by its own mark (initials, never two the same), so the icon rail tells five sides apart, not five identical icons.
+  const named = [...(personal ? [{ view: recordView("project", personal), label: t("nav.personal") }] : []), ...sides.map((s) => ({ view: recordView("project", s.project), label: s.name }))];
+  const marks = distinctMarks(named.map((n) => n.label));
+  const sideEntries: NavEntry[] = named.map((n, i) => ({ ...n, glyph: marks[i] }));
   const projects: NavEntry[] = justMe || sides.length > 0 ? sideEntries : [{ view: "records/projects", label: t("nav.projects"), icon: "grid" }];
   const wait: NavEntry[] = justMe
     ? []

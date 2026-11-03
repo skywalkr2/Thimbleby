@@ -79,3 +79,21 @@ def test_the_follow_up_message_opens_with_it_and_the_workspace_can_change_it(env
     assert first_line == sides.word(cfg, "greeting.relation.sister").format(first_name=FIRST_NAME)
     cfg.ui.wording["greeting.relation.sister"] = "Hi sis, {first_name}!"
     assert compose(section, cfg, People(store, cfg)).splitlines()[0] == f"Hi sis, {FIRST_NAME}!"
+
+
+def test_a_message_style_the_person_set_opens_every_message_and_the_shipped_one_leaves_it_to_the_relation(env):
+    _, cfg, store = env
+    personal = cfg.workspace.project.personal
+    friend = person(store, f"{FIRST_NAME} Marlowe", sides=[personal], relation="my friend from school")
+    people = People(store, cfg)
+    assert greetings.own_style_set(cfg) is False
+    assert greetings.opening(cfg, people, friend) == sides.word(cfg, "greeting.relation.friend").format(
+        first_name=FIRST_NAME
+    )
+    # The person writes their own opening: the draft to a friend follows it, so the style they see is the one used.
+    cfg.language.messages.greeting = "Dear {first_name},"
+    assert greetings.own_style_set(cfg) is True
+    assert greetings.opening(cfg, people, friend) == f"Dear {FIRST_NAME},"
+    section = Section(friend, f"{FIRST_NAME} Marlowe", False)
+    section.questions = [{"status": "open", "title": "Which week suits the dentist?", "text": "", "links": []}]
+    assert compose(section, cfg, people).splitlines()[0] == f"Dear {FIRST_NAME},"

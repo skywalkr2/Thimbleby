@@ -354,3 +354,38 @@ test("the popover holds what was checked: how many connections were read and whe
   await waitFor(() => expect(within(dialog).getByText(/Checked 1 connection/)).toBeInTheDocument());
   expect(within(dialog).getByText(/Mail from before .* has not been read yet/)).toBeInTheDocument();
 });
+
+// With several accounts one failing account must not make the others look broken, nor be told once for each of its sources.
+const account = (id: string, address: string, over: Partial<S["WatchSourceView"]> = {}) =>
+  source({ id, label: `Inbox, ${address}`, account: address, account_state: "signed_in", last: tried("ok"), read_at: "2026-10-13T10:00:00Z", ...over });
+
+test("one failing account is one line naming its address in the popover, and the chip says a connection failed", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [
+      account("a", "alex@example.com"),
+      account("b1", "blake@example.com", { last: tried("failed"), read_at: "2026-10-13T08:00:00Z", account_state: "expired" }),
+      account("b2", "blake@example.com", { label: "Calendar, blake@example.com", last: tried("failed"), read_at: "2026-10-13T08:00:00Z", account_state: "expired" }),
+      account("b3", "blake@example.com", { label: "Sent mail, blake@example.com", account_state: "expired" }),
+      account("c", "casey@example.com"),
+    ],
+  });
+  await chipIs("connection_failed");
+  await chipText("Connection failed");
+  const dialog = await open(user);
+  const lines = dialog.querySelectorAll("[data-coverage='unread']");
+  expect(lines).toHaveLength(1);
+  expect(lines[0]).toHaveTextContent(/^blake@example\.com couldn't be read since /);
+  expect(dialog).not.toHaveTextContent("alex@example.com couldn't");
+});
+
+test("an account that is signed out is not read, so the chip is not all good and the popover says it is signed out", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [account("a", "alex@example.com", { account_state: "signed_out" }), account("c", "casey@example.com")],
+  });
+  await chipIs("connection_failed");
+  expect(chipNow()).not.toHaveTextContent("All good");
+  const dialog = await open(user);
+  expect(within(dialog).getByText("alex@example.com is signed out, so it isn't being read")).toBeInTheDocument();
+});

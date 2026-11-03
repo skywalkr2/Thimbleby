@@ -74,6 +74,11 @@ export function onSide(side: Side | null | undefined, choice: SideChoice, views?
   return views.includes(view) || (!inProject && views.length === 0);
 }
 
+/** Whether a line or row on several sides shows under a choice: under every choice when it names none, else under each of
+ * the sides it is on (and, for a view, under the view when one of those sides is the view's). */
+export const onAnySide = (held: readonly Side[] | null | undefined, choice: SideChoice, views?: readonly string[] | null): boolean =>
+  choice === "all" || !held || held.length === 0 || held.some((side) => onSide(side, choice, views));
+
 /** The same for a record that names the sides it is on (a person): under every choice when it names none. */
 export const onSides = (held: readonly Side[] | null | undefined, choice: SideChoice): boolean =>
   choice === "all" || !held || held.length === 0 || held.includes(choice);

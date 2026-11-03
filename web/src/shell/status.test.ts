@@ -1,5 +1,5 @@
 import type { S } from "../lib/api";
-import { aliveState, connectionState, initials, isWarn, toneOf, worstState } from "./status";
+import { aliveState, connectionState, distinctMarks, initials, isWarn, toneOf, worstState } from "./status";
 
 const status = (over: Partial<S["Status"]> = {}, backup: Partial<S["BackupStatus"]> = {}, spend: Partial<S["SpendStatus"]> = {}): S["Status"] => ({
   backup: { configured: true, last_success: null, age_hours: 1, needs_attention: false, last_error: null, encrypted: false, ...backup },
@@ -118,4 +118,15 @@ test("the connections' state: a failed read is failed; no network, or too long s
   expect(connectionState({ enabled: 1, read: [], last: null, unread: [{ source: src({ last: outcome("offline") }), kind: "offline" }], pending: [], stale: [], complete: false } as never)).toBe("retrying");
   expect(connectionState({ enabled: 1, read: [], last: null, unread: [], pending: [], stale: [src({ read_at: at, stale: true })], complete: false } as never)).toBe("retrying");
   expect(connectionState({ enabled: 1, read: [], last: null, unread: [], pending: [src({})], stale: [], complete: false } as never)).toBe("ok");
+});
+
+test("each side gets a mark of its own, never two the same, even when the names begin alike", () => {
+  const names = ["Personal", "Harborview Community Support Partnership Incorporated", "Hearthside Candle Works", "Harbor View Cafe", "Lantern Row Studio", "Lakeside Row Supplies"];
+  const marks = distinctMarks(names);
+  expect(new Set(marks).size).toBe(names.length);
+  expect(marks[0]).toBe("P");
+  expect(marks.every((m) => m.length >= 1 && m.length <= 3)).toBe(true);
+  // The same names give the same marks every time, and a name of one letter or none still gets one.
+  expect(distinctMarks(names)).toEqual(marks);
+  expect(new Set(distinctMarks(["A", "A", "", ""])).size).toBe(4);
 });

@@ -15,6 +15,7 @@ import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { addonLabel, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { signInGroups, signInNeed, sourceState, type SignInGroup } from "../lib/connections";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { settingsView, viewHref } from "../lib/views";
@@ -28,6 +29,8 @@ import { MissingAddon, addonOfConnector } from "./MissingAddon";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns, addonOfSignIn } from "./SignIns";
+import { SourceSides } from "./SourceSides";
+import { useSignInWindow } from "../lib/sign-in-window";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
@@ -276,6 +279,7 @@ export function Sources(props: {
           />
         )}
       </Drawer>
+      {sources.data && <SignInNeeds groups={signInGroups(sources.data)} signIns={signIns.data} />}
       {sources.isPending ? (
         <Skeleton />
       ) : sources.isError ? (
@@ -319,6 +323,50 @@ export function Sources(props: {
   );
 }
 
+/** The accounts that have to sign in for their connections to be read, one line each with Sign in again, however many
+ * connections each holds: a signed-out or refused account is told once, not once for each of its rows. */
+function SignInNeeds(props: { groups: SignInGroup[]; signIns: S["SignInView"][] | undefined }) {
+  const { t } = useWords();
+  if (props.groups.length === 0) return null;
+  return (
+    <ul className="plain-list sign-in-needs" aria-label={t("sources.needs.label")} data-sign-in-needs="">
+      {props.groups.map((group) => (
+        <SignInNeedRow key={group.account ?? group.sources[0].id} group={group} signIns={props.signIns} />
+      ))}
+    </ul>
+  );
+}
+
+function SignInNeedRow(props: { group: SignInGroup; signIns: S["SignInView"][] | undefined }) {
+  const { t, tn } = useWords();
+  const client = useQueryClient();
+  const { push } = useToasts();
+  const { group } = props;
+  const first = group.sources[0];
+  const addon = addonOfConnector(first.connector);
+  const item = (props.signIns ?? []).find((s) => addonOfSignIn(s.name) === addon);
+  const { start, phase, busy } = useSignInWindow(item?.name ?? "");
+  // The window that was opened says how it went: every list is read again and the person is told.
+  useEffect(() => {
+    if (phase !== "done" || !item) return;
+    void client.invalidateQueries();
+    push({ message: t("sign_in.return.done", { label: item.label }) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+  const who = group.account ?? first.label;
+  const text = tn(group.need === "signed_out" ? "sources.needs.signed_out" : "sources.needs.again", group.sources.length, { account: who });
+  return (
+    <li className="problem-note sign-in-need" data-sign-in-need={group.account ?? ""} data-need={group.need}>
+      <span>{text}</span>
+      {item && (
+        <Button size="sm" variant="primary" disabled={busy || !item.ready} aria-label={t("sign_in.sign_in_again_account", { account: who })} onClick={() => void start()}>
+          {t("sign_in.sign_in_again")}
+        </Button>
+      )}
+    </li>
+  );
+}
+
 /** The label of the sign-in a source reads through when every sign-in of its add-on is signed out, else none. */
 export function signedOutOf(connector: string, signIns: S["SignInView"][] | undefined): string | null {
   const addon = addonOfConnector(connector);
@@ -348,19 +396,28 @@ function SourceRow(props: {
   const { source } = props;
   const titleId = `source-${source.id}`;
   const menuId = `${titleId}-menu`;
-  const problem = problemOf(source, t, has);
+  // An account that has to sign in is told once for the account, above the list, and not as a problem under each of its rows.
+  const problem = signInNeed(source) ? null : problemOf(source, t, has);
   const lastWhen = source.read_at ? when(source.read_at) : "";
   const lastWords = lastReadText(source, t);
+  // Told from this connection's own state and its account's: a row that is not being read (its account is signed out, or
+  // has to sign in again) never says Read, whatever its last read said.
+  const need = signInNeed(source);
+  const state = sourceState(source);
   const status =
-    !source.enabled
+    state === "off"
       ? { text: t("sources.off"), tone: "neutral" }
-      : source.last?.outcome === "failed"
-        ? { text: t("sources.status.failed"), tone: "danger" }
-        : source.last?.outcome === "offline" || source.last?.outcome === "throttled"
-          ? { text: t(source.last.outcome === "offline" ? "sources.status.offline" : "sources.status.waiting"), tone: "warn" }
-          : source.last
-            ? { text: t("sources.status.read"), tone: "ok" }
-            : { text: t("sources.never"), tone: "neutral" };
+      : state === "sign_in"
+        ? need === "signed_out"
+          ? { text: t("sources.status.signed_out"), tone: "warn" }
+          : { text: t("sources.status.sign_in"), tone: "danger" }
+        : state === "failed"
+          ? { text: t("sources.status.failed"), tone: "danger" }
+          : state === "offline" || state === "waiting"
+            ? { text: t(state === "offline" ? "sources.status.offline" : "sources.status.waiting"), tone: "warn" }
+            : state === "read"
+              ? { text: t("sources.status.read"), tone: "ok" }
+              : { text: t("sources.never"), tone: "neutral" };
 
   const readNow = async () => {
     setBusy(true);
@@ -408,7 +465,7 @@ function SourceRow(props: {
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
     ...(source.account ? [t("sources.reads_account", { account: source.account })] : []),
   ].filter(Boolean);
-  const stopped = source.enabled && props.signedOutOf ? props.signedOutOf : null;
+  const stopped = !source.enabled ? null : (props.signedOutOf ?? (signInNeed(source) === "signed_out" ? (source.account ?? source.connector_label) : null)) || null;
   const schedule = [
     stopped ? t("sources.not_read_signed_out", { label: stopped }) : source.enabled ? tn("sources.read_every", source.every_minutes) : "",
     source.read_at ? t("sources.last_read", { when: lastWhen }) : "",
@@ -565,7 +622,7 @@ function SourceForm(props: {
   const choosingKind = props.twoStep && adding && !given && step === "kind";
   const showingDetails = !props.twoStep || !adding || !!given || step === "details";
   // With nothing beside Personal the places a connection can be filed are areas of the person's life.
-  const { justMe } = useSides();
+  const { justMe, personal: personalSide, sides: sideList } = useSides();
 
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: !adding });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects, enabled: adding });
@@ -938,6 +995,10 @@ function SourceForm(props: {
                 problems={fieldProblems}
               />
             </CheckboxGroup>
+          )}
+          {source && !justMe && (
+            // Which sides this serves, changed here after setup as it was chosen there: each tick is saved at once.
+            <SourceSides key={source.id} sources={[source]} label={source.label} personal={personalSide} sides={sideList} />
           )}
           <details className="more-options" data-more="">
             <summary>{t("sources.more")}</summary>

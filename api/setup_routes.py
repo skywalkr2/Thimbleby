@@ -835,6 +835,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail="Choose a person or a team from the list.")
         return author
 
+    def checked_sides(wanted: list[str]) -> list[str]:
+        """The sides a source serves, from the sides that exist (Personal and each job or business), in their order."""
+        known = sides.side_ids(store.read(), current())
+        unknown = [w for w in wanted if w not in known]
+        if unknown:
+            raise HTTPException(status_code=400, detail="Choose a side from the list.")
+        return [k for k in known if k in set(wanted)]
+
     def checked_capture(connector: str, capture: bool | None, address: str | None) -> dict[str, Any]:
         """What a mail source holds of the person's own capture: whether everything in it is, and an address mail to
         which is. Only a source that reads mail takes either; the address must be one (a name, an @ and a domain)."""
@@ -1419,6 +1427,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found["account"] = checked_account(found["connector"], body.account)
         if "color" in body.model_fields_set:
             found["color"] = body.color
+        if "sides" in body.model_fields_set:
+            found["sides"] = checked_sides(body.sides or [])
         if "capture" in body.model_fields_set or "capture_address" in body.model_fields_set:
             asked = checked_capture(
                 found["connector"],

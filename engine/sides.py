@@ -272,6 +272,15 @@ def watch_source_side(view: Any, cfg: Any, source_id: str | None) -> Side | None
     return served[0] if len(served) == 1 else None
 
 
+def watch_source_sides(view: Any, cfg: Any, source_id: str | None) -> list[Side]:
+    """Every side a watched source serves (the sides that exist, in the sides' order); empty when it serves none."""
+    source = next((s for s in cfg.watch.sources if s.id == source_id), None)
+    if source is None:
+        return []
+    named = set(source.sides)
+    return [i for i in side_ids(view, cfg) if i in named]
+
+
 def resolve_side(view: Any, cfg: Any, choice: str | None) -> Side | None:
     """A side id from what a caller names: the id itself, or the older words (`personal`: the personal project,
     `business`: the first other side); none for anything else."""
@@ -321,6 +330,23 @@ def side_of_entries(view: Any, cfg: Any, items: Any) -> Side | None:
     choice of the side filter."""
     found = {side for item in items if (side := side_of_agenda_item(view, cfg, item))}
     return next(iter(found)) if len(found) == 1 else None
+
+
+def sides_of_entries(view: Any, cfg: Any, items: Any) -> list[Side]:
+    """Every side the entries of a line are on, in the sides' order, when they are on more than one (a clash between
+    two calendars that serve different sides is on both, so each side's filter shows it); empty when they are on one
+    side or none, which `side_of_entries` says. An entry is on the side of the entry the app keeps for it, else on every
+    side its watched source serves."""
+    found: set[Side] = set()
+    for item in items:
+        kept = item.snapshot if item.own else item.entry
+        record = view.get("event", kept) if kept else None
+        if record is not None and (side := side_of_item(view, cfg, record)):
+            found.add(side)
+        elif item.source:
+            found.update(watch_source_sides(view, cfg, item.source))
+    ordered = [i for i in side_ids(view, cfg) if i in found]
+    return ordered if len(ordered) > 1 else []
 
 
 def side_of_record(view: Any, cfg: Any, kind: str, record_id: str | None) -> Side | None:
@@ -609,6 +635,22 @@ def source_sides(view: Any, cfg: Any, source: str | None) -> tuple[list[str], st
     return [], ""
 
 
+def served_sides_text(view: Any, cfg: Any, source: str | None) -> str:
+    """For a notes packet: which sides the watched source an input came from serves, so the assistant, which files its
+    own items, files them under a project of those sides. The rules only narrow; they place nothing here. Empty when the
+    input wasn't read from a watched source or the source names no side that exists."""
+    served, label = source_sides(view, cfg, source)
+    if not served:
+        return ""
+    names = side_names(view, cfg)
+    listed = ", ".join(names.get(i, i) for i in served)
+    return (
+        f"This input was read from {label}, which serves: {listed}. What it hands in belongs to one of those sides: "
+        "file each action, question, fact and note under a project of the side it is about, and under no side that "
+        "isn't listed. Leave the project empty when you can't tell which."
+    )
+
+
 def file_by_people(
     ops: list[Any],
     view: Any,
@@ -640,7 +682,9 @@ def file_by_people(
     With no other side an unplaced item goes to the personal project when that is the only top-level project (a
     workspace tracking other work without naming a side keeps its unfiled items for the person to place); with one,
     an item no signal places is filed under Personal (the more private level) and stays there until the person moves
-    it (`engine.filing`; unfiled only when there is no personal project). A changeset that also proposes a new project
+    it (`engine.filing`; unfiled only when there is no personal project, or when the watched source serves sides and
+    Personal is not one of them: a bill, an order or a delivery from such a source is read by the other signals first,
+    narrowed to its sides, and stays unfiled when none decides). A changeset that also proposes a new project
     is left as it is: adding that project files what the same input made with no project under it. Whatever the
     assistant wrote in `filed_by` is cleared: only this function sets it. The same ops always give the same result."""
     ops = without_filed_by(ops)
@@ -653,6 +697,9 @@ def file_by_people(
     domain = sender_domain(people, raw_input) if others else None
     by_domain = domain_side(view, people, cfg, domain) if domain else None
     served, served_name = source_sides(view, cfg, source) if others else ([], "")
+    # A source that serves sides, none of them the person's own life, never files to Personal for want of a signal: what
+    # no signal places stays unfiled for the person's question, with the choice narrowed to the sides it serves.
+    leaves_personal = bool(served) and personal not in served
     only_personal = not others and personal is not None and _only_top(view, personal)
     # The kind the assistant's sorting gave the mail decides ("none" included). Only when no sorting gave one (sorting
     # is off, or its run could not be made) do the word lists stand in for it.
@@ -668,7 +715,7 @@ def file_by_people(
             # The person settled which project the hand-in is about (Treat as personal, say): that decides.
             out.append(op.model_copy(update={"project": settled}))
             continue
-        if kind and personal:
+        if kind and personal and not leaves_personal:
             # A bill, an order or a delivery is the person's own life, whoever sent it: the Personal project. Once the
             # person has another side, a sender whose relation is to it (a known person on that side, or an
             # organization whose people are all on it) is read first, so a supplier's invoice goes to work.
@@ -701,7 +748,7 @@ def file_by_people(
         else:
             # Unsure between Personal and a side: the item waits under Personal, the more private level, and the
             # grouped question of `engine.filing` offers moving it. No reason is kept: no signal decided.
-            out.append(op.model_copy(update={"project": personal}) if personal else op)
+            out.append(op.model_copy(update={"project": personal}) if personal and not leaves_personal else op)
     return out
 
 

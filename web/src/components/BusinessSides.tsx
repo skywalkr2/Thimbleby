@@ -10,6 +10,7 @@ import { useToasts } from "../lib/toasts";
 import { insideLines } from "../lib/work-lines";
 import { useWords } from "../lib/wording";
 import { SavedSide } from "./WalkthroughWork";
+import { SideServedBy, useReadingSources } from "./SideServedBy";
 import { Actions } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -77,6 +78,9 @@ function AddSide(props: { kind: Kind; onClose: () => void }) {
   const [about, setAbout] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  // Once added, the mailboxes and calendars already connected are asked about: which of them serve it.
+  const [added, setAdded] = useState<{ id: string; name: string } | null>(null);
+  const reading = useReadingSources();
   const business = props.kind === "business";
   const save = async () => {
     const wanted = name.trim();
@@ -100,6 +104,11 @@ function AddSide(props: { kind: Kind; onClose: () => void }) {
           await client.invalidateQueries();
         },
       });
+      if (reading.length > 0) {
+        setAdded({ id: made.project, name: wanted });
+        setBusy(false);
+        return;
+      }
       props.onClose();
     } catch (err) {
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
@@ -107,6 +116,23 @@ function AddSide(props: { kind: Kind; onClose: () => void }) {
     }
   };
   const form = `${id}-form`;
+  if (added) {
+    return (
+      <Drawer
+        open
+        title={t("settings.business.served_title", { name: added.name })}
+        onClose={props.onClose}
+        footer={
+          <Button variant="primary" onClick={props.onClose}>
+            {t("settings.business.served_done")}
+          </Button>
+        }
+      >
+        <p className="hint">{t("settings.business.served_intro", { name: added.name })}</p>
+        <SideServedBy side={added} />
+      </Drawer>
+    );
+  }
   return (
     <Drawer
       open

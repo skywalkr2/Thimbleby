@@ -1068,6 +1068,7 @@ class SnapshotEvent(BaseModel):
     notes: list[str] = Field(default_factory=list)
     entries: bool = False
     described: bool | None = None
+    uid: str | None = None
 
 
 class SnapshotMessage(BaseModel):
@@ -1081,6 +1082,8 @@ class SnapshotMessage(BaseModel):
     bulk: bool | None = None
     categories: list[str] = Field(default_factory=list)
     participants: list[str] = Field(default_factory=list)
+    message_id: str | None = None
+    references: list[str] = Field(default_factory=list)
 
 
 class Snapshot(Record):

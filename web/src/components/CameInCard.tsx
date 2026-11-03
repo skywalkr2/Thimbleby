@@ -6,9 +6,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { listOf } from "../lib/packs";
 import { clockDay, clockTime, todayOn, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
-import { useSides } from "../lib/sides";
+import { onAnySide, useSideFilter, useSides } from "../lib/sides";
 import { anyReading } from "../lib/sources";
 import { recordView, viewHref } from "../lib/views";
 import { Button } from "../ui/Button";
@@ -83,7 +84,9 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const handledToday = handled.data?.today ?? 0;
   const now = useNow();
   const today = todayOn(now);
-  const items = arrived.data?.items ?? [];
+  const filter = useSideFilter();
+  // The side filter narrows what came in by the sides its mailbox serves; mail from one that serves none shows under every choice.
+  const items = (arrived.data?.items ?? []).filter((m) => onAnySide(m.sides, filter.picked));
   const { setAside: moveToFolder, isPersonal, isSideCorrection } = useSetAside();
   const { justMe, personal, sides } = useSides();
   // Treat as: brought in under a side by name, as Handled for you offers it for mail read with nothing to do. With only
@@ -97,7 +100,7 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
       ? asSides.map((side) => ({ id: `side-${side.id}`, label: t("setaside.treat_as", { side: side.name }), run: () => void isSideCorrection(side)(mail) }))
       : [{ id: "personal", label: t("setaside.personal"), run: () => void isPersonal(mail) }];
   };
-  const sourceName = useSourceNames(items.map((m) => m.source));
+  const sourceName = useSourceNames(items.flatMap((m) => [m.source, ...(m.also_in ?? [])]));
   const received = (iso: string) => (clockDay(iso) === today ? clockTime(iso) : weekday(clockDay(iso)));
   const settled = !arrived.isPending && !watch.isPending;
   // A source that reads mail is connected: the card is there to read it now, even when nothing came in.
@@ -143,7 +146,9 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
       ) : (
         <ul className="tb-list">
           {items.map((message, i) => {
-            const meta = [message.sender, sourceName(message.source)].filter(Boolean).join(" · ");
+            // A thread held by two mailboxes is one row, naming the others that hold it.
+            const also = (message.also_in ?? []).map(sourceName).filter(Boolean);
+            const meta = [message.sender, sourceName(message.source), also.length > 0 ? t("today.arrived.also_in", { names: listOf(also) }) : ""].filter(Boolean).join(" · ");
             return (
               <li key={`${message.snapshot}:${i}`} className={message.unread ? "tb-row unread" : "tb-row"}>
                 <div className="tb-what">

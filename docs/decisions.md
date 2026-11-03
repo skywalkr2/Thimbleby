@@ -4,6 +4,44 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Several accounts and sides: each connection told from its own account, one row for the same invitation and thread, accounts named, calendars with a color and a legend, every Today line on its side, sides served changeable, long names that hold (X77 to X85, X45)
+
+**Decided:** The re-sweep's several-accounts items (the owner has several mail accounts and sides and wants all of them fixed
+before their gate week). (1) X77: a connection says Read only while it is on and its own account is signed in
+(`WatchSourceView.account_state`); an account that is signed out or has to sign in again is one line naming its address with
+Sign in again (Connections, Today, the header popover), not a red line under each row, and the header chip is never "All
+good" while a connection is not being read. (2) X78: an invitation (`EventDetails.uid`, same start) and a thread
+(`MessageDetails.message_id` and `references`) that two accounts hold is one row, naming the others (`also_in`); only items of
+different sources are joined, and only on an identity the connector gave (plugin API 0.3.94). (3) X79: with more than one
+account a source is named by its account ("Your inbox, <address>"; a name the person gave stands); each calendar has a color
+(the person's, else one by its place) and the Schedule a legend with a show or hide button for each; clash lines name the
+calendars. (4) X80: a Today line carries every side it is on (a clash between two sides is on both), and what came in
+follows the sides its mailbox serves. (5) X81: a watched source that serves sides and not Personal never files to Personal
+for want of a signal: the bill, order or delivery rank is skipped, the other ranks are narrowed to its sides, what none
+places stays unfiled for the person's question, and the notes packet tells the assistant which sides the source serves. (6)
+X82: a connection's change form has the sides it serves; adding a business or a job asks which connected mailboxes and
+calendars serve it. (7) X83: the side filter is a list on the phone layout and cut chips elsewhere, the menu cuts long names
+with the full name on hover and never scrolls sideways, and each side has a mark of its own. (8) X84: setup's mail step with
+several accounts is one compact row for each. (9) X85: a follow-up draft names the mailbox it is sent from (a list when
+several can send), and the message style the person set opens every message; while it is the shipped one, someone only on the
+own life is opened by their relation, and the style panel says so. (10) X45's several-calendars evidence is (3) and (2).
+
+**Decided by:** the owner, 2026-11-03 (open-promises P116: everything in the re-sweep's list, before the gate week).
+
+**Why:** one failing account made nine rows look failed and said nothing to do; the same invitation and thread showed twice;
+three inboxes were all "Your inbox"; a Personal clash and every Came-in item showed under a business filter; mail for two
+businesses was filed under Personal, where the person never looks for it; the sides a mailbox serves could not be changed
+after setup; long names broke the strip and the menu; and a draft's greeting contradicted the style panel.
+
+**Impact:** design 3.3 (`03-plugins.md`), 6.4 and 6.32 (`06-engine.md`), 7.15 (`07-ui.md`, "Several accounts and sides").
+Plugin API 0.3.94 (`EventDetails.uid`, `MessageDetails.message_id` and `references`; `docs/plugin-guide.md` regenerated). API:
+`WatchSourceView.account_state`, `sides` and `shown_color`; `WatchSourceChange.sides`; `AgendaItemView.also_in`;
+`ArrivedView.also_in` and `sides`; `QueueLineView.sides`; `FollowupSection.send_from` and `send_from_default`; a sign-in
+account's `status` is `expired` while the service refuses its sources. One wording key in the engine's and the screens'
+sheets (`source.label_with_account`); no new setting. Not built: What changed still lists each source's own record of an
+invitation or thread held twice; adding a business in setup (before any mailbox is connected) asks nothing, the mail step asks
+per account; the Schedule's entries of a source serving two sides still show under every side's filter. Change log: section 308.
+
 ## 2026-11-03: The re-sweep's data-and-trust items: Edit details is the short editor, quick edits are never lost, times are on one clock, no ids or code on screen, a re-run adds nothing twice, removing the account asks, no vendor's name (X71, X01, X75, X16, X73, X37, X38, X72, X74, X76; section 307)
 
 **Decided:** (1) X71: a to-do's Edit details is the short editor its row has (what, the day, how long, who, the side or project by name,

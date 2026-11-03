@@ -12,7 +12,7 @@ import { Definition, DefinitionList } from "../ui/DefinitionList";
 import { useEventActs } from "./EventActs";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
-import { entryHref, fullWhen, type Calendars, type Entry } from "./ScheduleEntry";
+import { alsoIn, entryHref, fullWhen, type Calendars, type Entry } from "./ScheduleEntry";
 import styles from "./Schedule.module.css";
 
 /** Moving and cancelling an entry that has a record of its own: the app's own entry, or a connected event the app keeps one for. */
@@ -46,6 +46,7 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
         {calendar}
       </>,
     ],
+    ...(alsoIn(entry, props.calendars).length > 0 ? [[t("schedule.pane.also_in"), alsoIn(entry, props.calendars).join(", ")] as [string, React.ReactNode]] : []),
     ...(props.sideName ? [[t("schedule.pane.side"), props.sideName] as [string, React.ReactNode]] : []),
     ...(entry.kind === "due" && props.date ? [[t("schedule.pane.due"), day(props.date)] as [string, React.ReactNode]] : []),
     ...(entry.delivery ? [[t("schedule.pane.delivery"), [range, ...delivery].filter(Boolean).join(" · ")] as [string, React.ReactNode]] : []),

@@ -214,3 +214,16 @@ def test_the_command_line_flags_set_the_state():
 def test_an_account_number_beyond_the_accounts_is_refused_at_start():
     with pytest.raises(SystemExit):
         fake_services.configure(["--port", "1", "--state", "/tmp/x", "--accounts", "2", "--failing-account", "3"])
+
+
+def test_the_failing_helper_makes_one_account_fail_from_then_on_and_refuses_what_it_cannot(tmp_path):
+    state = State(tmp_path)
+    state.accounts = 3
+    helper = TestClient(build_app(state, 0))
+    assert [a["failing"] for a in helper.get("/__e2e/accounts").json()["accounts"]] == [None, None, None]
+    assert helper.post("/__e2e/failing", json={"account": 2, "how": "retrying"}).status_code == 200
+    assert [a["failing"] for a in helper.get("/__e2e/accounts").json()["accounts"]] == [None, "retrying", None]
+    assert helper.post("/__e2e/failing", json={"account": 0}).status_code == 200
+    assert [a["failing"] for a in helper.get("/__e2e/accounts").json()["accounts"]] == [None, None, None]
+    assert helper.post("/__e2e/failing", json={"account": 4}).status_code == 400
+    assert helper.post("/__e2e/failing", json={"account": 1, "how": "sideways"}).status_code == 400

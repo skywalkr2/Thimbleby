@@ -23,10 +23,11 @@ export type StatusKind =
 export type StatusTone = "ok" | "warn" | "danger";
 
 /** How the connections stand: one that failed to be read is failed; one that found no network, or was not read within the
- * configured hours, is retrying; read ones, and ones not tried yet, are fine. */
+ * configured hours, is retrying; read ones, and ones not tried yet, are fine. A source whose account is signed out, or has to
+ * sign in again, is not being read: that is failed too, never fine. */
 export function connectionState(found: Coverage | null): "ok" | "retrying" | "failed" {
   if (!found) return "ok";
-  if (found.unread.some((u) => u.kind === "failed")) return "failed";
+  if (found.unread.some((u) => u.kind === "failed" || u.kind === "signed_out")) return "failed";
   if (found.unread.length > 0 || found.stale.length > 0) return "retrying";
   return "ok";
 }
@@ -100,4 +101,21 @@ export function initials(name: string): string {
     .map((w) => ([...w].find((c) => /\p{L}/u.test(c)) ?? "").toUpperCase())
     .join("")
     .slice(0, 2);
+}
+
+/** A mark for each name in a list, no two the same: the two initials, else the first two letters of the first word, else that
+ * with a number after it. So five sides in a narrow menu are told apart by their marks, not only by a tooltip. */
+export function distinctMarks(names: string[]): string[] {
+  const taken = new Set<string>();
+  return names.map((name) => {
+    const first = [...name.trim().split(/[\s·,-]+/).find((w) => /\p{L}/u.test(w)) ?? ""].filter((c) => /\p{L}/u.test(c));
+    const tries = [initials(name), first.slice(0, 2).join("").toUpperCase(), first.slice(0, 3).join("").toUpperCase()].filter(Boolean);
+    let mark = tries.find((m) => !taken.has(m));
+    for (let n = 2; !mark; n++) {
+      const numbered = `${tries[0] ?? "?"}${n}`;
+      if (!taken.has(numbered)) mark = numbered;
+    }
+    taken.add(mark);
+    return mark;
+  });
 }

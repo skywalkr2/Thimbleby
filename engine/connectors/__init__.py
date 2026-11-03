@@ -67,7 +67,10 @@ class EventDetails:
     that wasn't understood, a time zone that was guessed). `entries`: ask the core to keep each date as a calendar
     entry of its own (with its attendees), so a promise can be due at it and move with it. `described`: whether the
     event has a description; None when the connector can't say, which the core counts as described. An entry with
-    nobody else invited and `described` False is a plain one: the rules file it without the assistant reading it."""
+    nobody else invited and `described` False is a plain one: the rules file it without the assistant reading it.
+    `uid`: the invitation's own identity, its iCalendar UID, which every calendar that holds the same invitation
+    gives it the same (each calendar's own id for it differs). Two accounts that hold one invitation then show it once.
+    Left out, an item is never taken for the same as another."""
 
     start: str
     end: str | None = None
@@ -82,6 +85,7 @@ class EventDetails:
     notes: tuple[str, ...] = ()
     entries: bool = False
     described: bool | None = None
+    uid: str | None = None
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> EventDetails:
@@ -108,7 +112,11 @@ class MessageDetails:
     lower case (promotions, social, say); empty when it has none or doesn't say. `participants`: everyone else on the
     message (the people it was sent to, and those copied), each as the service names them, with the address in angle
     brackets when it has one; empty when there are none or the service doesn't say. A first name in the text means
-    the person of that name who is on the message."""
+    the person of that name who is on the message. `message_id`: the message's own `Message-ID` header, which every
+    mailbox that holds a copy of it has the same (each mailbox's own id for it differs). `references`: the `Message-ID`s
+    of the messages it follows in its thread, as its `References` and `In-Reply-To` headers give them. Two mailboxes
+    that hold messages of one thread (they share a `message_id` or a reference) show that thread once. Left out, a
+    message is never taken for the same as another."""
 
     sender: str | None = None
     received: str | None = None
@@ -116,6 +124,8 @@ class MessageDetails:
     bulk: bool | None = None
     categories: tuple[str, ...] = ()
     participants: tuple[str, ...] = ()
+    message_id: str | None = None
+    references: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -524,6 +534,7 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
                         **message,
                         "categories": tuple(message.get("categories", ())),
                         "participants": tuple(message.get("participants", ())),
+                        "references": tuple(message.get("references", ())),
                     }
                 )
                 if message

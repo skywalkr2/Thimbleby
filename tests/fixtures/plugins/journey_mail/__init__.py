@@ -83,6 +83,8 @@ def poll_inbox(settings: InboxSettings, state: dict, context) -> Poll:
                     unread=message["unread"],
                     bulk=message.get("bulk"),
                     categories=tuple(message.get("categories", ())),
+                    message_id=message.get("message_id"),
+                    references=tuple(message.get("references", ())),
                 ),
             )
         )
@@ -108,6 +110,7 @@ def poll_calendar(settings: CalendarSettings, state: dict, context) -> Poll:
                     where=event["where"],
                     cancelled=event["cancelled"],
                     all_day=event.get("all_day", False),
+                    uid=event.get("uid"),
                 ),
             )
         )

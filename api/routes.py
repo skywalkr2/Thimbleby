@@ -716,7 +716,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         inbox = today.arrived(store, cfg, worker.now())
         return InboxView(
-            items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out, set_aside=inbox.set_aside
+            items=[_arrived_view(store, cfg, a) for a in inbox.items],
+            left_out=inbox.left_out,
+            set_aside=inbox.set_aside,
         )
 
     @r.post("/today/arrived/check")
@@ -758,7 +760,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             worker.poke()
         inbox = today.arrived(store, cfg, worker.now())
         return InboxCheckView(
-            items=[ArrivedView(**vars(a)) for a in inbox.items],
+            items=[_arrived_view(store, cfg, a) for a in inbox.items],
             left_out=inbox.left_out,
             set_aside=inbox.set_aside,
             new_items=handed,
@@ -2814,6 +2816,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     return r
 
 
+def _arrived_view(store: Store, cfg: Config, arrived: Any) -> ArrivedView:
+    """A message of Today's Came in with the sides its source serves."""
+    from engine import sides
+
+    return ArrivedView(**vars(arrived), sides=sides.watch_source_sides(store.read(), cfg, arrived.source))
+
+
 def _added_text(before: Any, after: Any) -> str:
     """What an edit added to a text: the part after the old text when the edit kept it, else the whole new text."""
     old = str(before or "").strip()
@@ -3108,11 +3117,15 @@ def _told_names(store: Any, cfg: Any, people: People, action_id: str) -> list[st
 def _section(
     s: Any, people: People, action_origin: dict[str, Any], question_origin: dict[str, Any], store: Any, cfg: Any
 ) -> FollowupSection:
+    from engine import send_accounts
     from engine.followups import message_where
     from engine.outward import outgoing_problem
 
     where = message_where(cfg, s.name)
     held = None if s.is_pm else outgoing_problem(store.read(), cfg, {where: s.message})
+    person = store.read().get("person", s.person)
+    mailboxes = send_accounts.sending_accounts(store, cfg)
+    came_through = send_accounts.conversation_account(store, cfg, person.data) if person is not None else None
     nudge_held = None if s.is_pm or s.nudge is None else outgoing_problem(store.read(), cfg, {where: s.nudge.text})
 
     def question_views(rows: list[dict[str, Any]]) -> list[FollowupQuestion]:
@@ -3172,6 +3185,8 @@ def _section(
         to_send=s.to_send,
         ready_since=s.ready_since,
         nudge=_nudge_view(s.nudge, nudge_held) if s.nudge is not None else None,
+        send_from=mailboxes,
+        send_from_default=came_through or (mailboxes[0] if mailboxes else None),
     )
 
 

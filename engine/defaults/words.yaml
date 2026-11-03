@@ -59,3 +59,6 @@ terms.came_up_in.mail_unknown: "It came up in a mail: {line}"
 terms.came_up_in.calendar: "It came up in your calendar: {line}"
 terms.came_up_in.file: "It came up in a file you handed in: {line}"
 terms.came_up_in.source: "It came up in {source}: {line}"
+
+# What a source of a service with several accounts is called: the name the add-on gave it, then the account it reads.
+source.label_with_account: "{label}, {account}"

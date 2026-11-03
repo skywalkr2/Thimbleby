@@ -17,6 +17,16 @@ export type T = ReturnType<typeof useWords>["t"];
 export interface Calendars {
   name: (id: string) => string | undefined;
   color: (id: string) => string | undefined;
+  /** The calendars the person reads, each with its name and mark, for the legend; left out where there is no legend. */
+  list?: Array<{ id: string; name: string; color: string | null }>;
+}
+
+/** The names of the other calendars that hold the same entry (the same invitation in two accounts), none when it is in one. */
+export function alsoIn(entry: Entry, calendars: Calendars): string[] {
+  return (entry.also_in ?? []).flatMap((id) => {
+    const name = calendars.name(id);
+    return name ? [name] : [];
+  });
 }
 
 /** Which entry, on which day (an entry that goes on over several days is one on each). */
@@ -43,6 +53,8 @@ export function fromWords(entry: Entry, calendars: Calendars, t: T): string {
   if (entry.kind === "due") return t("schedule.from_due");
   if (entry.own) return t("schedule.from_own");
   const name = calendars.name(entry.source);
+  const also = alsoIn(entry, calendars);
+  if (name && also.length > 0) return t("schedule.from_source_also", { source: name, others: also.join(", ") });
   return name ? t("schedule.from_source", { source: name }) : t("schedule.from_source_unknown");
 }
 
@@ -82,6 +94,7 @@ export function EntryButton(props: {
       className={[styles.chip, entry.own || entry.kind === "due" ? styles.own : "", props.selected ? styles.selected : ""].filter(Boolean).join(" ")}
       data-entry-key={entryKey(entry, props.date)}
       data-kind={entry.kind}
+      data-color={color}
       data-source={entry.own ? "own" : entry.source}
       data-selected={props.selected ? "" : undefined}
       onClick={() => props.onOpen(entry, props.date)}

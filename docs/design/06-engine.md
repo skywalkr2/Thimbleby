@@ -268,6 +268,15 @@ other keeps a note of it and never hands it in); removing a source says what sta
 change, asked of the owner), and merging items made twice before this rule. *Built:* `tests/test_source_folders_once.py`,
 `web/e2e/journeys-mail.spec.ts` (J2c).
 
+**The same thing in two accounts is listed once** (re-sweep X78; change log 307; `engine/today.py`,
+`tests/test_several_accounts.py`). A person with several accounts of one service holds the same invitation, and copies of
+the same message, in more than one. A calendar item that names its invitation (`EventDetails.uid`) and starts at the same
+moment as an item of another source with the same `uid` is one agenda item, listed under the first with the other
+calendars named in `also_in`; a message that names a message id (`MessageDetails.message_id`, `references`) that a row of
+another source already names is that row, and the other mailboxes are named in `also_in`. Items with no identity, and items
+of one source, are never joined, so nothing is hidden on a guess. Clashes are read from the same agenda, so one invitation
+never clashes with itself. What changed still lists each source's own record of it.
+
 ## 6.5 Triage
 
 Applies triage rules in order before queueing, using registered matchers. The rules live in `watch.yaml`, beside the sources
@@ -4275,6 +4284,12 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   projects under it); a workspace that tracks other work at the top without naming a business keeps such items unfiled
   for the person to file, as before, a computer joining a synced folder makes no Personal of its own, and an answer that proposes a new project leaves its items for that project, which Add files under it. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an
   organization.
+  **A source that serves sides and not Personal never files to Personal for want of a signal** (re-sweep X81; change log
+  307; `tests/test_several_accounts.py`): the rank that sends a bill, an order or a delivery to Personal is skipped, the
+  other ranks are read narrowed to the sides it serves, and an item none of them places stays unfiled for the person's
+  question, never under Personal (a source that serves Personal among its sides keeps that default). The rules only narrow:
+  the notes packet says which sides the source serves (`engine.sides.served_sides_text`) so the assistant, which files its
+  own items, files them within those sides.
 - **Areas and projects under it** (`Project.parent`): an **area** is ongoing and never finishes (health, money, home,
   family, a car, pets) and has no end date, so it is never behind; a **project** has a goal and an end (moving house, a
   renovation, a tax return) and is followed like any other. A project may sit under an area.

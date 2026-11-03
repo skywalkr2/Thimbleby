@@ -2708,6 +2708,14 @@
             "title": "All Day",
             "type": "boolean"
           },
+          "also_in": {
+            "description": "The ids of the other watched sources that hold the same invitation (the same identity and start): it is listed once, under `source`, and these are the other accounts' calendars that hold it too.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Also In",
+            "type": "array"
+          },
           "cancelled": {
             "description": "The organizer called it off.",
             "title": "Cancelled",
@@ -5496,6 +5504,14 @@
       "ArrivedView": {
         "description": "A message from a watched mailbox, received within the configured hours.",
         "properties": {
+          "also_in": {
+            "description": "The ids of the other watched sources that hold a copy of the same message or thread (they share a message id): it is listed once, under `source`, and these are the other mailboxes that hold it too.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Also In",
+            "type": "array"
+          },
           "link": {
             "anyOf": [
               {
@@ -5547,6 +5563,14 @@
             ],
             "description": "The sender's bare address when `sender` is shown as a name; for a tooltip.",
             "title": "Sender Address"
+          },
+          "sides": {
+            "description": "The ids of the sides (top projects) its source serves. The screen's side filter shows a message under each of them, and under every choice when the source serves none.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sides",
+            "type": "array"
           },
           "snapshot": {
             "title": "Snapshot",
@@ -12094,6 +12118,26 @@
             ],
             "description": "The day the oldest of what is to send became ready to send (a date), so a stale batch shows; none when nothing is to send.",
             "title": "Ready Since"
+          },
+          "send_from": {
+            "description": "The mailboxes (addresses) the message could go out from: those of the mail sources the assistant reads, each once. The message is copied and sent from the person's mail program, so this only says which mailbox to use.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Send From",
+            "type": "array"
+          },
+          "send_from_default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one of `send_from` to start on: the mailbox the person's own conversation with them came through (the latest mail from them was read there), else the first. None when no mail source is read.",
+            "title": "Send From Default"
           },
           "to_send": {
             "title": "To Send",
@@ -24884,6 +24928,14 @@
             "description": "The side it is filed on directly, when it is in a side and in no project of it; its project name is then empty.",
             "title": "Side Name"
           },
+          "sides": {
+            "description": "For a line about entries or messages on more than one side (a clash between two calendars that serve different sides): the ids of every side it is on. The screen's side filter shows it under each of them. Empty for a line that is on one side or none, which `side` says.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sides",
+            "type": "array"
+          },
           "snooze_days": {
             "description": "For a quiet_promise line: the days it can be snoozed for, each with the day it comes back (POST /api/quiet-promises/{id}/snooze, taken back by POST /api/suggestions/not-now/{signal}/undo).",
             "items": {
@@ -26854,6 +26906,14 @@
           "all_day": {
             "title": "All Day",
             "type": "boolean"
+          },
+          "also_in": {
+            "description": "The ids of the other watched sources that hold the same invitation (the same identity and start): it is listed once, under `source`, and these are the other accounts' calendars that hold it too.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Also In",
+            "type": "array"
           },
           "begins": {
             "anyOf": [
@@ -33440,6 +33500,21 @@
               }
             ],
             "title": "Settings"
+          },
+          "sides": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sides (top projects, from GET /api/business) the source serves; sent, it replaces the list, and an empty list says none is named. A side that isn't one is refused.",
+            "title": "Sides"
           }
         },
         "required": [
@@ -33600,6 +33675,23 @@
             ],
             "description": "For a source of an add-on that signs in as you: the account it reads, by its address.",
             "title": "Account"
+          },
+          "account_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "signed_in",
+                  "expired",
+                  "signed_out"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a source that reads through a sign-in: where that sign-in stands for the account it reads (signed in; expired, which includes the service having refused it at the last read; or signed out). None for a source that signs in to nothing. Only a source whose account is signed in is being read: the screens never say Read for another.",
+            "title": "Account State"
           },
           "author": {
             "anyOf": [
@@ -33857,6 +33949,36 @@
               "$ref": "#/components/schemas/SourceSecretView"
             },
             "title": "Secrets",
+            "type": "array"
+          },
+          "shown_color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "blue",
+                  "teal",
+                  "green",
+                  "orange",
+                  "red",
+                  "pink",
+                  "purple",
+                  "gray"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a calendar: the color its mark has on the schedule: the one the person picked, else one the app gave it by its place among the calendars, so no two of the first eight share one. None for a source that isn't a calendar.",
+            "title": "Shown Color"
+          },
+          "sides": {
+            "description": "The sides (top projects) it serves, in the order they are kept; empty when it names none.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sides",
             "type": "array"
           },
           "stale": {

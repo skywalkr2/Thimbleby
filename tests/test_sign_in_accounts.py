@@ -247,7 +247,7 @@ def test_a_second_sign_in_starts_sources_for_the_new_account_and_pins_the_old_on
     assert seen(ws) == [f"tok-alice {ALICE}"]  # the only account, and context.account says so
     sign_in(c, api, "bob")
     by_account = inboxes(ws)
-    assert by_account[ALICE]["id"] == "mine" and by_account[BOB]["label"] == "Your inbox"
+    assert by_account[ALICE]["id"] == "mine" and by_account[BOB]["label"] == f"Your inbox, {BOB}"
     assert len([s for s in sources(ws) if s["connector"] == "p18/inbox"]) == 2
 
 

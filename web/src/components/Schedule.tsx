@@ -25,6 +25,7 @@ import { useNow } from "./RailSources";
 import { AddMeeting } from "./ScheduleCard";
 import { NewEvent } from "./NewEvent";
 import { EntryButton, entryKey, entryTitle, type Calendars, type Entry } from "./ScheduleEntry";
+import { ScheduleLegend, useHiddenCalendars } from "./ScheduleLegend";
 import { EntryDetails } from "./ScheduleEntryPane";
 import { TimeGrid, type DayEntries } from "./ScheduleGrid";
 import { MonthGrid } from "./ScheduleMonth";
@@ -97,19 +98,25 @@ export function Schedule() {
   }, [data, tl]);
 
   const calendars: Calendars = useMemo(() => {
-    const names = new Map((watch.data ?? []).map((s) => [s.id, s.label]));
-    const colors = new Map((watch.data ?? []).flatMap((s) => (s.color ? [[s.id, s.color] as const] : [])));
-    return { name: (id) => names.get(id), color: (id) => colors.get(id) };
+    const found = watch.data ?? [];
+    const names = new Map(found.map((s) => [s.id, s.label]));
+    // Each calendar has a color: the one the person picked, else one the app gave it, so two calendars are told apart.
+    const colors = new Map(found.flatMap((s) => (s.shown_color || s.color ? [[s.id, (s.shown_color ?? s.color) as string] as const] : [])));
+    const list = found.filter((s) => s.enabled && (s.reads ?? []).includes("calendar")).map((s) => ({ id: s.id, name: s.label, color: s.shown_color ?? s.color ?? null }));
+    return { name: (id) => names.get(id), color: (id) => colors.get(id), list };
   }, [watch.data]);
+  // The calendars the person hid with the legend: an entry shows unless every calendar that holds it is hidden.
+  const [hidden, toggleCalendar] = useHiddenCalendars();
+  const visible = (e: Entry) => e.own || e.kind === "due" || !hidden.has(e.source) || ((e.also_in ?? []).length > 0 && (e.also_in ?? []).some((id) => !hidden.has(id)));
 
   // What each shown day holds under the side filter: an entry on no side shows under every choice.
   const days: DayEntries[] = useMemo(() => {
     const byDate = new Map((data?.days ?? []).map((d) => [d.date, d]));
     return range.shown.map((d) => {
       const found = byDate.get(d);
-      return { date: d, all_day: (found?.all_day ?? []).filter((e) => filter.shows(e.side, e.views)), timed: (found?.timed ?? []).filter((e) => filter.shows(e.side, e.views)) };
+      return { date: d, all_day: (found?.all_day ?? []).filter((e) => filter.shows(e.side, e.views) && visible(e)), timed: (found?.timed ?? []).filter((e) => filter.shows(e.side, e.views) && visible(e)) };
     });
-  }, [data, range, filter.picked]);
+  }, [data, range, filter.picked, hidden]);
   const onItsWay = useMemo(() => (data?.on_its_way ?? []).filter((e) => filter.shows(e.side, e.views)), [data, filter.picked]);
 
   // What the Timeline holds under the side filter: a lane shows under the side it is on and the views of its project.
@@ -251,6 +258,7 @@ export function Schedule() {
           {isTimeline && <SegmentedControl<TimelineRange> label={t("schedule.timeline.range")} value={tl?.range ?? rangeName} onChange={chooseRange} options={rangeOptions} className={styles.views} />}
           <SideFilter />
         </div>
+        <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
       </div>
       <ListDetail
         title={found ? entryTitle(found.entry, t) : ""}

@@ -60,6 +60,10 @@ const firstDay = { port: 8764 + offset };
 // screen's own race and never another scenario writing Settings at the same moment.
 const quickEdits = { port: 8766 + offset };
 
+// And a person with several businesses whose names are long: Personal beside a job and three businesses (the many-sides seed),
+// read at a phone, a tablet and a desktop width.
+const manySides = { port: 8771 + offset };
+
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
 // outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
 // journeys that share a workspace (a new workspace, a folder, an add-on installed from the list), and one for the
@@ -76,12 +80,16 @@ const journeys = pair(8783, 8790, 8791);
 const mail = pair(8784, 8792, 8793);
 const newStart = pair(8785, 8794, 8795);
 const evening = pair(8760, 8761, 8762);
+// A person with three accounts of one mail and calendar service: the app with the mail add-on on, beside fake services that play
+// three people (`--accounts 3`), signed in one after the other through the service's own page.
+const accounts = pair(8768, 8769, 8770);
 
 // The browser tests ask the fake services for what they were asked; they read where from here.
 process.env.JOURNEY_FAKE_PORT = String(journeys.fakePort);
 process.env.JOURNEY_MAIL_FAKE_PORT = String(mail.fakePort);
 process.env.JOURNEY_NEW_START_FAKE_PORT = String(newStart.fakePort);
 process.env.JOURNEY_EVENING_FAKE_PORT = String(evening.fakePort);
+process.env.JOURNEY_ACCOUNTS_FAKE_PORT = String(accounts.fakePort);
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
 
@@ -167,6 +175,12 @@ export default defineConfig({
       name: "journeys-new-start",
       testMatch: /journeys-new-start\.spec\.ts/,
       use: { baseURL: `http://127.0.0.1:${newStart.port}/`, ignoreHTTPSErrors: true },
+    },
+    { name: "long-names", testMatch: /long-names\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${manySides.port}/` } },
+    {
+      name: "accounts",
+      testMatch: /accounts\.spec\.ts/,
+      use: { baseURL: `http://127.0.0.1:${accounts.port}/`, ignoreHTTPSErrors: true },
     },
     {
       name: "journeys-owner-evening",
@@ -280,6 +294,15 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
     },
+    {
+      command: `uv run python -m tests.e2e_server --port ${manySides.port} --base-path / --many-sides --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${manySides.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    freshServer(accounts, "--mail --no-sent-mail"),
+    fakeServices(accounts, "--accounts 3"),
     freshServer(journeys, "--add-ons"),
     fakeServices(journeys),
     freshServer(mail, "--mail --no-sent-mail"),

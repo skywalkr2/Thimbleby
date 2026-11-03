@@ -1513,3 +1513,33 @@ test("by project, what is due soon on another tab opens the project's detail, wi
   await screen.findByRole("heading", { name: "Book", level: 2 });
   expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
 });
+
+test("each draft says which mailbox it is sent from: a list to pick from when several can send, starting on the conversation's own", async () => {
+  const user = userEvent.setup();
+  const several = sections.map((s) => (s.person === "PER-2" ? { ...s, send_from: ["alex@example.com", "blake@example.com", "casey@example.com"], send_from_default: "blake@example.com" } : s.person === "PER-9" ? { ...s, send_from: ["alex@example.com"], send_from_default: "alex@example.com" } : s));
+  fakeApi({ "GET followups": () => several, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Robin Sample" }));
+  const pane = await findPane();
+  const pick = within(pane).getByRole("combobox", { name: "Send to Robin Sample from" });
+  expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["alex@example.com", "blake@example.com", "casey@example.com"]);
+  expect(pick).toHaveValue("blake@example.com");
+  // The pick is remembered for that person on this browser.
+  await user.selectOptions(pick, "casey@example.com");
+  expect(window.localStorage.getItem("cockpit:followups:send-from:PER-2")).toBe("casey@example.com");
+  // Where one mailbox can send it is named, with nothing to pick.
+  await user.click(screen.getByRole("button", { name: "Tess Example" }));
+  const second = await findPane();
+  expect(within(second).queryByRole("combobox", { name: /Send to/ })).toBeNull();
+  expect(within(second).getByText("Send it from alex@example.com.")).toBeInTheDocument();
+});
+
+test("a draft with no mailbox to name says nothing about one", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => sections, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Robin Sample" }));
+  const pane = await findPane();
+  expect(within(pane).queryByText(/Send it from/)).toBeNull();
+  expect(within(pane).queryByRole("combobox", { name: /Send to/ })).toBeNull();
+});

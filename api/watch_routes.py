@@ -46,7 +46,7 @@ from api.schemas import (
     WatchRunView,
     WatchSourceView,
 )
-from engine import closes, handled, set_aside, setup, sides, source_intake, version_choices, watch
+from engine import closes, handled, set_aside, setup, sides, sign_in_sources, source_intake, version_choices, watch
 from engine import settings as settings_screens
 from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
@@ -97,6 +97,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         problem = watch.problem_text(store, source.id)
         back_to = source_intake.back_to_of(store.read(), source.id)
         now_cfg = current()
+        colors = watch.calendar_colors(now_cfg, declared_reads(known))
         level, level_from, level_sides = watch.data_level_source(now_cfg, source)
         side_level = watch.side_data_level(now_cfg, source)
         held = store.read()
@@ -116,7 +117,15 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             author=source.author,
             author_name=author_names().get(source.author or ""),
             account=source.account,
+            account_state=sign_in_sources.account_state(
+                ws,
+                store,
+                source,
+                refused=bool(last and last.data.get("error_kind") == "auth" and last.data.get("outcome") == "failed"),
+            ),
+            sides=list(source.sides),
             color=source.color,
+            shown_color=colors.get(source.id),
             capture=source.capture,
             capture_address=source.capture_address,
             items=len(items),

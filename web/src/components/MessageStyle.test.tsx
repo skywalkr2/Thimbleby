@@ -120,3 +120,23 @@ test("the closing changed while the greeting is still being saved is saved too, 
   await waitFor(() => expect(state.map((i) => i.value)).toEqual(["Hello {first_name},", "Cheers"]), { timeout: 3000 });
   expect(screen.queryByRole("alert")).toBeNull();
 });
+
+test("the style says what someone only on the own life is opened with while it is the shipped one, and that it opens everyone once it is the person's own", async () => {
+  fakeSettings(items());
+  renderApp(<MessageStyle />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("How your messages start and end"));
+  // Shipped: the friend's opening, from the wording sheet, is the example, so the style shown is never contradicted by a draft.
+  const note = document.querySelector("[data-own-life-opening]")!;
+  expect(note).toHaveTextContent("People who are only on your own life get an opening that fits how they relate to you, such as: Hey Ada, hope you're doing well.");
+  expect(note).toHaveTextContent("Change this line to open every message the same way.");
+});
+
+test("once the person set their own opening, the note says it opens every message", async () => {
+  fakeSettings([settingItem(GREETING, { value: "Dear {first_name},", default: "Hi {first_name}," }), settingItem(CLOSING, { value: "Thanks!", default: "Thanks!" })]);
+  renderApp(<MessageStyle />);
+  await userEvent.setup().click(await screen.findByText("How your messages start and end"));
+  const note = document.querySelector("[data-own-life-opening]")!;
+  expect(note).toHaveTextContent("This line opens every message you copy, to people at work and to people on your own life alike.");
+  expect(note).not.toHaveTextContent("such as");
+});

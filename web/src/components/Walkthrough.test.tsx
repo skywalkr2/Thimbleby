@@ -2589,14 +2589,34 @@ describe("Mail and calendar", () => {
     expect(screen.queryByRole("group", { name: "Who is mail and calendar at sam@example.com for?" })).toBeNull();
   });
 
-  test("two accounts: the reading line names each source with its account's address", async () => {
+  test("two accounts: the reading is one compact row per account, with its address, what is read there and who it is for, not one run-on of every source", async () => {
     twoAccounts();
     open();
-    expect(
-      await screen.findByText(
-        "Helper is reading: Your inbox (sam@example.com), Your calendar (sam@example.com), Your inbox (pat@example.com), and Your calendar (pat@example.com).",
-      ),
-    ).toBeInTheDocument();
+    const rows = await screen.findByRole("list", { name: "The accounts being read" });
+    expect(screen.getByText("Helper is reading 2 accounts, one row each.")).toBeInTheDocument();
+    expect(screen.queryByText(/Helper is reading: /)).toBeNull();
+    const [sam, pat] = within(rows).getAllByRole("listitem");
+    expect(sam).toHaveTextContent("sam@example.com");
+    expect(sam).toHaveTextContent("Your inbox and Your calendar");
+    expect(pat).toHaveTextContent("pat@example.com");
+    // Each row carries its own question for who the account is for, and the hint under the sides is said once, not per row.
+    expect(within(sam).getByRole("group", { name: "Who is mail and calendar at sam@example.com for?" })).toBeInTheDocument();
+    expect(within(pat).getByRole("group", { name: "Who is mail and calendar at pat@example.com for?" })).toBeInTheDocument();
+    expect(screen.getAllByText("Tick every one it serves. You can leave them all empty if you'd rather not say.")).toHaveLength(1);
+  });
+
+  test("three accounts are three rows, each address cut with the full address on hover, and the sides are ticked in the row", async () => {
+    twoAccounts(["avery.lane@example.com", "avery.lane.home@example.com", "avery.lane.studio@example.com"]);
+    open();
+    const rows = await screen.findByRole("list", { name: "The accounts being read" });
+    const items = within(rows).getAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    for (const item of items) {
+      expect(item.querySelectorAll("strong")).toHaveLength(1);
+      expect(within(item).getAllByRole("checkbox").length).toBeGreaterThan(0);
+    }
+    expect(within(items[2]).getByText("avery.lane.studio@example.com")).toHaveAttribute("title", "avery.lane.studio@example.com");
+    expect(screen.getAllByRole("group")).toHaveLength(3);
   });
 
   test("one account: the reading line and the sides question stay as they were, with no address added", async () => {

@@ -124,6 +124,12 @@ function StyleLine(props: { item: Item; edit: ReturnType<typeof useSettingEdits>
       </div>
       <div className="setting-help" data-help>
         <p className="hint">{t(`followups.style.hint.${item.key === GREETING ? "greeting" : "closing"}`)}</p>
+        {item.key === GREETING && (
+          // What a message to someone on the own life opens with, said here so the style shown is never contradicted by a draft.
+          <p className="hint" data-own-life-opening="">
+            {changed ? t("followups.style.own_life_set") : t("followups.style.own_life_default", { example: t("greeting.relation.friend", { first_name: sample }) })}
+          </p>
+        )}
       </div>
     </div>
   );

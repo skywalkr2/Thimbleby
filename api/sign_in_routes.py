@@ -16,7 +16,7 @@ from engine import act_accounts, audit
 from engine import sign_in as flow
 from engine.config import Config
 from engine.connectors import ConnectorError
-from engine.sign_in_sources import not_read, start_sources
+from engine.sign_in_sources import not_read, refused_accounts, start_sources
 from engine.storage import Store
 from engine.worker import Worker
 from engine.workspace import Workspace
@@ -58,9 +58,17 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         }
 
     def view(s: flow.SignIn) -> SignInView:
+        refused_ids = refused_accounts(store, cfg)
         client_id, _, source = host.sign_in_app(s, ws.root)
         status = flow.status(keys(s.plugin), s)
         accounts = flow.list_accounts(keys(s.plugin), s)
+        # An account whose sources the service refused at their last read needs signing in again, though its own
+        # tokens look valid here.
+        refused = {
+            flow.account_key(src.account)
+            for src in cfg.watch.sources
+            if src.account and src.connector.split("/", 1)[0] == s.plugin and src.id in refused_ids
+        }
         return SignInView(
             can_act=bool(s.acting_scopes),
             name=s.name,
@@ -74,7 +82,9 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
                 SignInAccount(
                     key=a.key,
                     address=a.address,
-                    status=flow.account_status(a),  # type: ignore[arg-type]
+                    status="expired"  # type: ignore[arg-type]
+                    if flow.account_status(a) == "expired" or (a.address and flow.account_key(a.address) in refused)
+                    else "signed_in",
                     missing=flow.missing(s, flow.allowed_scopes(s, a.tokens)),
                     **acting_of(s, a),
                 )

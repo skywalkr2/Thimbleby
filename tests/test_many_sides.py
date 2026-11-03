@@ -327,9 +327,11 @@ def test_a_source_serving_two_sides_narrows_the_ranks_after_it_to_them(env):
     # Two aliases of two sides decide nothing without the source; with it, only the sides it serves count.
     assert stamp(file_ops(env, [new_op(text=both)])[0])[0] == PERSONAL_ID
     assert stamp(file_ops(env, [new_op(text=both)], source=source)[0]) == (in_second, "alias", "qzx-two")
-    assert stamp(file_ops(env, [new_op(text="qzx-two and qzx-three")], source=source)[0])[0] == PERSONAL_ID
-    # What names only a side the source doesn't serve waits under Personal, unplaced.
-    assert stamp(file_ops(env, [new_op(text="Only qzx-per here")], source=source)[0])[0] == PERSONAL_ID
+    # Two of the sides it serves decide nothing, and a source that serves no Personal never files there for want of a
+    # signal: the item stays unfiled for the person's question.
+    assert stamp(file_ops(env, [new_op(text="qzx-two and qzx-three")], source=source)[0])[0] is None
+    # What names only a side the source doesn't serve is read as nothing, for the same reason.
+    assert stamp(file_ops(env, [new_op(text="Only qzx-per here")], source=source)[0])[0] is None
     assert stamp(file_ops(env, [new_op(text="Only qzx-per here")])[0])[:2] == (in_personal, "alias")
 
 

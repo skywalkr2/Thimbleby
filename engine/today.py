@@ -8,7 +8,7 @@ in `workspace.user.timezone`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from email.utils import parseaddr
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -46,6 +46,9 @@ class AgendaItem:
     )
     repeats: str | None = None  # an own entry that happens again: how often (day, week, two_weeks or month)
     occurrence: str | None = None  # for one date of such an entry: when its rule had it, to move or cancel that date
+    #: The other sources that hold the same invitation (its `uid` and its start are the same in an account's own
+    #: calendar and another's): it is listed once, under the first, and these are the others.
+    also_in: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -64,6 +67,9 @@ class Arrived:
     version: int = 0
     #: The saved copy of the message the assistant was handed, when it was handed in: the page the row opens.
     saved: str | None = None
+    #: The other sources that hold a copy of the same message or thread (they share a message id): it is listed once,
+    #: under the first, and these are the others.
+    also_in: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -111,6 +117,7 @@ def agenda(
         (e.data["source"], e.data["key"]): e for e in view.list("event") if e.data.get("key") and e.data.get("source")
     }
     with_todo = {a.data["event"] for a in view.list("action") if a.data.get("event")}
+    uids: dict[int, str] = {}
     for snap in view.list("snapshot"):
         data = snap.data
         event = data.get("event")
@@ -121,31 +128,57 @@ def agenda(
             if not on:
                 continue
             entry = kept.get((data["source"], date_["key"]))
-            found.append(
-                AgendaItem(
-                    snapshot=snap.id,
-                    source=data["source"],
-                    title=date_["title"],
-                    start=date_["start"],
-                    end=date_["end"],
-                    all_day=bool(event.get("all_day")),
-                    where=date_["where"],
-                    link=data.get("link"),
-                    cancelled=date_["cancelled"],
-                    days=on,
-                    entry=entry.id if entry is not None else None,
-                    series=entry.data.get("series") if entry is not None else None,
-                    open_items=_open_on(view, entry, today, here)
-                    if entry is not None and entry.data.get("series")
-                    else 0,
-                    todo_offer=entry_rules.task_offer(entry.data, cfg)
-                    if entry is not None and entry.id not in with_todo
-                    else None,
-                    agenda=agenda_module.for_entry(view, entry, today, here) if entry is not None else [],
-                )
+            item = AgendaItem(
+                snapshot=snap.id,
+                source=data["source"],
+                title=date_["title"],
+                start=date_["start"],
+                end=date_["end"],
+                all_day=bool(event.get("all_day")),
+                where=date_["where"],
+                link=data.get("link"),
+                cancelled=date_["cancelled"],
+                days=on,
+                entry=entry.id if entry is not None else None,
+                series=entry.data.get("series") if entry is not None else None,
+                open_items=_open_on(view, entry, today, here) if entry is not None and entry.data.get("series") else 0,
+                todo_offer=entry_rules.task_offer(entry.data, cfg)
+                if entry is not None and entry.id not in with_todo
+                else None,
+                agenda=agenda_module.for_entry(view, entry, today, here) if entry is not None else [],
             )
+            if event.get("uid"):
+                uids[id(item)] = str(event["uid"])
+            found.append(item)
     found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
-    return [*found, *_own_entries(store, days, here, today, undated)]
+    return [*_one_invitation_each(found, uids), *_own_entries(store, days, here, today, undated)]
+
+
+def _instant(item: AgendaItem) -> str:
+    """When an item starts as one comparable text: the same moment written with another offset is the same."""
+    try:
+        began = moment(item.start, all_day=item.all_day)
+    except (TypeError, ValueError):
+        return item.start
+    return began.astimezone(UTC).isoformat() if isinstance(began, datetime) else began.isoformat()
+
+
+def _one_invitation_each(found: list[AgendaItem], uids: dict[int, str]) -> list[AgendaItem]:
+    """The same invitation held by two sources (two accounts that were both invited) is one item: items of different
+    sources with the same invitation identity (`EventDetails.uid`) and the same start are one, listed under the first
+    with the others named in `also_in`. An item with no identity, and two items of one source, are never joined."""
+    first: dict[tuple[str, str], AgendaItem] = {}
+    out: list[AgendaItem] = []
+    for item in found:
+        uid = uids.get(id(item))
+        if uid:
+            held = first.setdefault((uid, _instant(item)), item)
+            if held is not item and held.source != item.source:
+                if item.source not in held.also_in:
+                    held.also_in.append(item.source)
+                continue
+        out.append(item)
+    return out
 
 
 def event_dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
@@ -334,6 +367,7 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
     from engine.handled import _mail_requests
 
     handed = _mail_requests(view)
+    ids: dict[int, set[str]] = {}
     for snap in view.list("snapshot"):
         data = snap.data
         message = data.get("message")
@@ -356,22 +390,52 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
             continue
         sender, address = _sender_shown(message.get("sender"), known)
         held = [r for r in handed.get((data["source"], data["key"]), []) if r.data.get("source")]
-        found.append(
-            Arrived(
-                snapshot=snap.id,
-                source=data["source"],
-                title=data["title"],
-                sender=sender,
-                received=message["received"],
-                unread=message.get("unread"),
-                link=data.get("link"),
-                sender_address=address,
-                version=snap.version,
-                saved=held[-1].data["source"] if held else None,
-            )
+        row = Arrived(
+            snapshot=snap.id,
+            source=data["source"],
+            title=data["title"],
+            sender=sender,
+            received=message["received"],
+            unread=message.get("unread"),
+            link=data.get("link"),
+            sender_address=address,
+            version=snap.version,
+            saved=held[-1].data["source"] if held else None,
         )
+        if message_ids := _message_ids(message):
+            ids[id(row)] = message_ids
+        found.append(row)
     found.sort(key=lambda a: moment(a.received), reverse=True)
+    found = _one_thread_each(found, ids)
     return Inbox(items=found[: cfg.ui.today.mail_max], left_out=left_out, set_aside=set_aside)
+
+
+def _message_ids(message: dict[str, Any]) -> set[str]:
+    """The message ids a message names: its own and those of the messages it follows (`MessageDetails`), case set aside
+    and angle brackets removed."""
+    named = [message.get("message_id"), *(message.get("references") or [])]
+    return {str(n).strip().strip("<>").strip().casefold() for n in named if n and str(n).strip().strip("<>").strip()}
+
+
+def _one_thread_each(found: list[Arrived], ids: dict[int, set[str]]) -> list[Arrived]:
+    """A thread held by two sources (a message copied to two mailboxes, or two replies of one thread in two of them) is
+    one row: a message of another source that names a message id the row already names is joined to it, newest first,
+    and the source is named in `also_in`. A message with no ids, and two messages of one source, are never joined."""
+    out: list[Arrived] = []
+    for row in found:
+        mine = ids.get(id(row))
+        twin = (
+            next((o for o in out if mine and mine & ids.get(id(o), set()) and o.source != row.source), None)
+            if mine
+            else None
+        )
+        if twin is None:
+            out.append(row)
+            continue
+        ids[id(twin)] |= mine
+        if row.source not in twin.also_in:
+            twin.also_in.append(row.source)
+    return out
 
 
 @dataclass

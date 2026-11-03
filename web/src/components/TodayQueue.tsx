@@ -1100,10 +1100,18 @@ function QueueRow(props: {
           line.place && line.other_place
             ? tn("queue.clash.meta.travel", between, { need: durationWords(needed, tn), from: line.place, to: line.other_place })
             : tn("queue.clash.meta.travel_apart", between, { need: durationWords(needed, tn) });
+        // Which calendars the two are in, so two meetings of different accounts are told apart.
+        const names = [line.source_name, line.other_source_name].filter((n): n is string => !!n);
+        const calendars =
+          names.length === 2
+            ? t(names[0] === names[1] ? "queue.clash.calendars_same" : "queue.clash.calendars", { first: names[0], second: names[1] })
+            : names.length === 1
+              ? t("queue.clash.calendar_one", { name: names[0] })
+              : "";
         return {
           pill: t("queue.pill.clash"),
           tone: "warn",
-          meta: line.state === "travel" ? travel : tn("queue.clash.meta.overlap", line.minutes ?? 0),
+          meta: [line.state === "travel" ? travel : tn("queue.clash.meta.overlap", line.minutes ?? 0), calendars].filter(Boolean).join(" · "),
           primary: { label: first.label, run: first.run },
           menu: [show, ...rest],
         };
