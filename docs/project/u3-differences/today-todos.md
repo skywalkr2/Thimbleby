@@ -33,7 +33,7 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | today | Thirteen "Choose another account for Email from …" lines for one cause and three "Add the Sent folder" lines | One line for each cause with the count and the lines behind it (`tests/test_one_line_per_cause.py`, `TodayStoppedGroup.test.tsx`, `HeldLines.test.tsx`) |
 | today | A clash line cut off the second calendar's name | Each calendar's name is shortened by itself and the meta may wrap on a clash line |
 | today-states | The filtered side kept its line and never said "Nothing on the … side" | The side says so above the lines that belong to no side (`TodaySides.test.tsx`); the drive picks the side first, while the backup line is still there |
-| today-states | All clear showed an At risk backup line | The drive makes the one backup the workspace asks for, then loads Today again; the setup line remains, so the empty card says setup isn't finished (see below) |
+| today-states | All clear showed an At risk backup line, then (once the backup was made) "Setup isn't finished" | The state runs on its own server, `tests/e2e_server.py --all-clear`, with every counted setup step done and nothing waiting (`tests/test_e2e_all_clear_seed.py`); the card drawn is the real "Nothing needs you" (change log 324) |
 | today-states | Loading showed the full page | The drive holds the screen's own reads (`holdReads` with the pattern of paths) and loads the app again on the screen |
 | today-states | The wrap-up card had every line and no "Show N more" | `ui.today.rail_rows` lines, then "Show N more" and "Show fewer" (`BriefCard.test.tsx`) |
 | todos-states | A side picked in an earlier state leaked into the next | `open()` in the capture's drive starts each state from every side |
@@ -51,7 +51,7 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | today | The brief card above the queue | Data-dependent (it appears when a form is due), not in the sample |
 | today | The mockup's rail is shorter than the queue by design | Caps are in rows (`RAIL_ROWS`, 3); the layout does not force the length, so a rail with long rows can still be longer than a short queue. The cap is a constant, not a setting (decision needed) |
 | today | The mockup's tab bar (Today, To-dos, +, Schedule, More) | The shell's, not this step's; the build's bar says Today, Keeping track, +, Search, More |
-| today-states | The brand card "Nothing needs you" | While setup is unfinished, Today's empty card says "Setup isn't finished" (a to-do of the setup, by design); the fixture's setup is not finished, so the brand card is held by `Today.test.tsx` |
+| today-states | The brand card's mark, display title, "A little more room to think…" and "See what was handled today" | Reached now (change log 324), and the build draws the real empty card: a check mark and one line, "Nothing needs you · Checked 2 connections, last at 8:05 PM", with Missed something?. The line says what was read so an empty Today is never mistaken for "couldn't check" (6.32, `Coverage.tsx`); the mockup's card would be a new component and wording the owner decides |
 | today-states | The side filter opened as a list, with a fifth side | At 1440 the sides are always a strip; the list is the phone's sheet, which the drive opens at 390 only |
 | today-states | A save that failed, Changed somewhere else | Toasts, as `states-phone.md` explains |
 | todos | The long titles clamp to two lines | Not changed in this pass; the row's `clamp` is not given to the to-do row (P2 left) |

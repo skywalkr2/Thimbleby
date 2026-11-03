@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { addDays, fullDay } from "../lib/dates";
+import { addDays, fullDay, shortDay } from "../lib/dates";
 import { entry, scheduleRoutes, TODAY, WEEK } from "../lib/schedule-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
 import { Schedule } from "./Schedule";
@@ -21,10 +21,10 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }));
 });
 
-async function open() {
+async function open(heading = fullDay(TODAY)) {
   const calls = fakeApi(scheduleRoutes());
   renderApp(<Schedule />);
-  await screen.findByRole("heading", { level: 2, name: fullDay(TODAY) });
+  await screen.findByRole("heading", { level: 2, name: heading });
   return calls;
 }
 
@@ -42,29 +42,29 @@ describe("swiping on a phone", () => {
   afterEach(() => document.documentElement.removeAttribute("data-narrow"));
 
   test("a swipe to the left moves forward by the view's unit and a swipe to the right moves back, as the arrows do", async () => {
-    const calls = await open();
+    const calls = await open(shortDay(TODAY));
     swipe([300, 200], [100, 210]);
-    await screen.findByRole("heading", { level: 2, name: fullDay(addDays(TODAY, 1)) });
+    await screen.findByRole("heading", { level: 2, name: shortDay(addDays(TODAY, 1)) });
     expect(requested(calls)).toContain(`schedule?from=${addDays(TODAY, 1)}&days=1`);
     swipe([100, 200], [300, 190]);
-    await screen.findByRole("heading", { level: 2, name: fullDay(TODAY) });
+    await screen.findByRole("heading", { level: 2, name: shortDay(TODAY) });
     swipe([100, 200], [300, 200]);
-    await screen.findByRole("heading", { level: 2, name: fullDay(addDays(TODAY, -1)) });
+    await screen.findByRole("heading", { level: 2, name: shortDay(addDays(TODAY, -1)) });
   });
 
   test("a mostly vertical or a short movement is the page scrolling and moves nothing, and the arrows still work", async () => {
     const user = userEvent.setup();
-    const calls = await open();
+    const calls = await open(shortDay(TODAY));
     const before = requested(calls).length;
     swipe([200, 100], [150, 400]); // mostly down
     swipe([200, 100], [230, 100]); // too short
     expect(requested(calls)).toHaveLength(before);
     await user.click(screen.getByRole("button", { name: "Next day" }));
-    await screen.findByRole("heading", { level: 2, name: fullDay(addDays(TODAY, 1)) });
+    await screen.findByRole("heading", { level: 2, name: shortDay(addDays(TODAY, 1)) });
   });
 
   test("a movement with two fingers moves nothing", async () => {
-    const calls = await open();
+    const calls = await open(shortDay(TODAY));
     const before = requested(calls).length;
     const frame = document.querySelector("[data-swipe]") as HTMLElement;
     fireEvent.touchStart(frame, { touches: [{ clientX: 300, clientY: 200 }, { clientX: 320, clientY: 200 }], changedTouches: [] });

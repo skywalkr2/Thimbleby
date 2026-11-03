@@ -238,7 +238,7 @@ export function AddMeeting(props: { today: string; compact?: boolean; primary?: 
   );
 }
 
-function MeetingDrawer(props: { today: string; onClose: () => void }) {
+export function MeetingDrawer(props: { today: string; onClose: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();

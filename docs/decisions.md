@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The capture reaches "Nothing needs you", and the Schedule's header on a phone is one short row (final review, group f7; section 324)
+
+**Decided:** (owner: nothing is left undone before the gate; design by the main session.) The test server takes `--all-clear`, which makes a
+workspace whose counted setup steps are all done the way the app records them (the person named, the work answered Just me, one service
+account that passed the whole connection test, an inbox and a sent folder read, a note handed in, a backup made, two people besides the
+person) and nothing waiting on Today; the capture's "All clear" state uses a server started with it, so the brand card is drawn from the
+real "nothing needs you" path and no check is patched. On a phone the Schedule's header is the title with a "..." menu holding Add to schedule
+(and a new event on a connected calendar), because the tab bar's plus hands something in and does not add to the schedule; the moves and
+the range are one row that does not wrap, and the range is short ("Nov 2 – 6", a day "Tue, Nov 3"). Wider windows are unchanged.
+**Impact:** test and capture tooling, wording none new (existing keys), `shortDay` and `shortRange` in the date helpers, `ScheduleMenu`;
+no config key, API or op change. Change log: section 324.
+
 ## 2026-11-03: A removed person's page offers Restore; the last capture and browser-test data (final review, group f6; section 323)
 
 **Decided:** (owner: nothing is left undone before the gate; design by the main session.) The person-not-found line "Undo is on the People page

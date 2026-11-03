@@ -143,3 +143,25 @@ test("a calendar whose account needs signing in again is named in one line over 
   // The entries it last read stay shown.
   expect(screen.getByRole("button", { name: /Venue walk-through/ })).toBeInTheDocument();
 });
+
+test("on a phone the header is the title and a menu, and the moves and a short range are one row", async () => {
+  const user = userEvent.setup();
+  window_({ phone: true });
+  await open("week");
+  // The tab bar's plus hands something in, so adding to the schedule is in the menu and there is no button row for it.
+  expect(screen.queryByRole("button", { name: "Add to schedule" })).toBeNull();
+  const row = document.querySelector("[data-nav-row]") as HTMLElement;
+  expect(within(row).getByRole("button", { name: "Today" })).toBeInTheDocument();
+  expect(within(row).getByRole("heading", { level: 2 })).toHaveTextContent(/^Oct 26 – 30$/);
+  await user.click(screen.getByRole("button", { name: "More actions for Schedule" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Add to schedule" }));
+  expect(await screen.findByRole("dialog", { name: "Add a meeting" })).toBeInTheDocument();
+});
+
+test("wide, Add to schedule is the header's button and the range is written out", async () => {
+  window_({ wide: true });
+  await open("week");
+  expect(screen.getByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "More actions for Schedule" })).toBeNull();
+  expect(within(document.querySelector("[data-nav-row]") as HTMLElement).getByRole("heading", { level: 2 })).toHaveTextContent("October 26 – November 1, 2026");
+});

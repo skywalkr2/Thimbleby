@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { clockDay, clockTime, dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, setTimePrefs, sinceDay, time, timeOfDay, timeStep, todayOn, wallTime, whenText } from "./dates";
+import { clockDay, clockTime, dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, setTimePrefs, shortDay, shortRange, sinceDay, time, timeOfDay, timeStep, todayOn, wallTime, whenText } from "./dates";
 
 test("the coming Monday is never the day itself: a Monday holds for the Monday a week on", () => {
   // The 19th of October is a Monday in this year.
@@ -146,4 +146,10 @@ describe("the clock setting", () => {
     expect(timeOfDay("07:05", "en-US")).toBe("07:05");
     expect(timeStep()).toBe(30);
   });
+});
+
+test("a range on a phone is short: the month once inside one month, both months across two, no year", () => {
+  expect(shortRange("2026-11-02", "2026-11-06")).toEqual({ start: "Nov 2", end: "6" });
+  expect(shortRange("2026-11-30", "2026-12-04")).toEqual({ start: "Nov 30", end: "Dec 4" });
+  expect(shortDay("2026-11-03")).toBe("Tue, Nov 3");
 });

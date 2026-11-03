@@ -311,6 +311,13 @@ def main() -> None:
         "the check on rows of empty parts",
     )
     parser.add_argument(
+        "--all-clear",
+        action="store_true",
+        help="make the workspace as --just-me does and finish every counted setup step the way the app records it "
+        "(the person named, the work answered, an AI account that passed its test, a mail source read, a note handed "
+        "in, a backup made, two people) so nothing waits on Today and it shows Nothing needs you",
+    )
+    parser.add_argument(
         "--plain-stages",
         action="store_true",
         help="leave the stage list as the files hold it (no stage that starts work), so a side added while the app "
@@ -340,7 +347,11 @@ def main() -> None:
     capture_folder = tmp / "capture" if args.capture else None
     if capture_folder is not None:
         capture_folder.mkdir()
-    if args.just_me or args.first_day or args.sides or args.many_sides:
+    if args.all_clear:
+        from tests import e2e_all_clear
+
+        ws = e2e_all_clear.make_workspace(tmp)
+    elif args.just_me or args.first_day or args.sides or args.many_sides:
         # Saving the person's name names a workspace that still has the default name after them, as the app does, so no
         # header reads "Workspace".
         ws = init_workspace(tmp / "ws", git=False, you=the_person(), name=f"{the_person().split()[0]}'s")
@@ -370,6 +381,8 @@ def main() -> None:
         # flag like the rest: settings read again from the files and the environment leave a flag's key alone.
         "server.addons_dir": str(tmp / "addons"),
     }
+    if args.all_clear:
+        flags.update(e2e_all_clear.flags())
     if not args.plain_stages:
         # A stage that starts work when entered, so the browser tests can exercise waiting for the go.
         flags["stages.types.project.stages"] = [
@@ -478,6 +491,8 @@ def main() -> None:
         seed_found_promises(store, cfg)
     if args.first_day:
         seed_first_go(store)
+    if args.all_clear:
+        e2e_all_clear.seed_all_clear(ws, cfg, store)
 
     async def case_list(_request):
         return JSONResponse(cases)

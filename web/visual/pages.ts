@@ -6,7 +6,6 @@
 //  - `undrivable` is a reason, written for the person reading the difference list, why the build can't be put in that state with
 //    the fixtures and fakes there are. Nothing is skipped without one; a drive that throws is listed with what it said.
 import {
-  api,
   clickFirstOf,
   goOffline,
   go,
@@ -146,16 +145,9 @@ export const ENTRIES: Entry[] = [
   {
     page: "today-states",
     title: "All clear (brand moment)",
-    server: "sides",
-    stage: "empty",
-    open: async (env) => {
-      // Nothing is waiting for the person once the one backup the workspace asks for has been made; this entry follows the filtered
-      // one, which needs that line to be there, and every later entry finds the backup made.
-      await api(env.base, env.token, "backup", { method: "POST" });
-      // The app is loaded again, so the backup line the page had read is not kept on screen as a settled line.
-      await env.page.reload();
-      await open(env, "today");
-    },
+    server: "clear",
+    stage: "done",
+    open: (env) => open(env, "today"),
   },
   { page: "today-states", title: "Loading (skeleton at row height, no shift)", server: "accounts", stage: "signed-in", open: LOADING("today", /\/api\/(today|changes|followups|stages|watch)/) },
   { page: "today-states", title: "One account of three needs you", server: "accounts", stage: "failing", open: (env) => open(env, "today") },

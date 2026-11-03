@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
 import { minutesOf, moveBy, rangeOf, rememberView, SHORT, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
 import { RANGE_DAYS, RANGES, rememberRange, storedRange, type TimelineRange } from "../lib/timeline";
-import { addDays, fullDay, todayOn, monthDayLong, monthDayYear, monthYear, weekdayLong } from "../lib/dates";
+import { addDays, fullDay, shortDay, shortRange, todayOn, monthDayLong, monthDayYear, monthYear, weekdayLong } from "../lib/dates";
 import { typing } from "../lib/keys";
 import { useIsNarrow, useMediaQuery, useWidth } from "../lib/media";
 import { onSide, useSideFilter } from "../lib/sides";
@@ -24,6 +24,7 @@ import { SideFilter } from "./SideFilter";
 import { useNow } from "./RailSources";
 import { AddMeeting } from "./ScheduleCard";
 import { NewEvent } from "./NewEvent";
+import { ScheduleMenu } from "./ScheduleMenu";
 import { EntryButton, entryKey, entryTitle, type Calendars, type Entry } from "./ScheduleEntry";
 import { ScheduleLegend, useHiddenCalendars } from "./ScheduleLegend";
 import { EntryDetails } from "./ScheduleEntryPane";
@@ -228,15 +229,19 @@ export function Schedule() {
   const subtitle = isTimeline || view === "month" || clashes.length === 0 ? undefined : t(clashes.length === 1 ? "schedule.clash.sub.one" : "schedule.clash.sub.other", { n: clashes.length, day: weekdayLong(clashes[0]) });
   const back = { day: t("schedule.back.day"), week: t("schedule.back.week"), month: t("schedule.back.month"), timeline: t("schedule.back.timeline") }[unit];
   const forward = { day: t("schedule.forward.day"), week: t("schedule.forward.week"), month: t("schedule.forward.month"), timeline: t("schedule.forward.timeline") }[unit];
+  // On a phone the range is short ("Nov 2 – 6") so the row of moves and the range stays one line.
+  const rangeText = (first: string, last: string) => (phone ? t("schedule.range", shortRange(first, last)) : t("schedule.range", { start: monthDayLong(first), end: monthDayYear(last) }));
   const heading = isTimeline
     ? tl
-      ? t("schedule.range", { start: monthDayLong(tl.first), end: monthDayYear(tl.last) })
+      ? rangeText(tl.first, tl.last)
       : t("schedule.view.timeline")
     : view === "day"
-      ? fullDay(date)
+      ? phone
+        ? shortDay(date)
+        : fullDay(date)
       : view === "month"
         ? monthYear(date)
-        : t("schedule.range", { start: monthDayLong(range.shown[0]), end: monthDayYear(range.shown[range.shown.length - 1]) });
+        : rangeText(range.shown[0], range.shown[range.shown.length - 1]);
   const sideName = found?.entry.side ? (filter.options.find((o) => o.id === found.entry.side)?.name ?? null) : null;
   const viewNames: Record<CalendarView, string> = { day: t("schedule.view.day"), work_week: t("schedule.view.work_week"), week: t("schedule.view.week"), month: t("schedule.view.month"), timeline: t("schedule.view.timeline") };
   const rangeOptions = RANGES.map((r) => ({ value: r, label: t(`schedule.timeline.range.${r}`) }));
@@ -250,15 +255,15 @@ export function Schedule() {
         id="schedule-title"
         title={t("schedule.title")}
         subtitle={subtitle}
-        primary={
-          // Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here.
-          data ? <AddMeeting today={data.today} primary /> : undefined
-        }
+        // Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. On a phone the tab bar's
+        // plus hands something in rather than adding to the schedule, so both adds are in the menu at the right of the title's row.
+        primary={data && !phone ? <AddMeeting today={data.today} primary /> : undefined}
         // A connected calendar that can add events after the person's yes offers a new event on it.
-        actions={data ? <NewEvent today={data.today} /> : undefined}
+        actions={data && !phone ? <NewEvent today={data.today} /> : undefined}
+        more={data && phone ? <ScheduleMenu today={data.today} /> : undefined}
       />
       <div className={styles.bar}>
-        <div className={styles.row} data-bar-row="">
+        <div className={`${styles.row} ${styles.navRow}`} data-bar-row="" data-nav-row="">
           <div className={styles.nav} role="group" aria-label={t("schedule.nav")}>
             <IconButton icon="chevron" label={back} className={styles.back} variant="secondary" onPress={() => go(-1)} />
             <Button onClick={() => setAnchor(null)}>{t("schedule.today")}</Button>

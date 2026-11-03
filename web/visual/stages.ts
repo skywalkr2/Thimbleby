@@ -4,8 +4,8 @@ import type { BrowserContext } from "playwright-core";
 import { api, LONG } from "./drive.ts";
 import { chromiumSignIn } from "./signin.ts";
 
-export type ServerName = "accounts" | "sides";
-export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "bulk";
+export type ServerName = "accounts" | "sides" | "clear";
+export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "bulk" | "done";
 
 export const STAGE_ORDER: Record<ServerName, Stage[]> = {
   // fresh: nothing signed in, the walkthrough closed so the app's own menus are there; signed-in: three accounts read;
@@ -13,6 +13,8 @@ export const STAGE_ORDER: Record<ServerName, Stage[]> = {
   accounts: ["fresh", "signed-in", "failing"],
   // empty: five sides and nothing else; seeded: a few people, to-dos and a long-named person; bulk: over a hundred to-dos.
   sides: ["empty", "seeded", "bulk"],
+  // done: setup finished and nothing waiting (the server's own seed; nothing is added here).
+  clear: ["done"],
 };
 
 export interface StageEnv {

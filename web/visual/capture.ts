@@ -85,6 +85,12 @@ async function startServer(servers: Servers, name: ServerName, offset: number): 
     const info = (await (await fetch(`${fakeBase}/__e2e/info`)).json()) as { token: string };
     return { running: { base: `http://127.0.0.1:${app}/`, token: info.token, fake: fakeBase, seed: {} }, cleanup: () => removeStateFolder(state) };
   }
+  if (name === "clear") {
+    // Every counted setup step done and nothing waiting: Today's "Nothing needs you" card (tests/e2e_server.py --all-clear).
+    const clearPort = PORT_BASE + 4 + offset;
+    await servers.start("clear", "tests.e2e_server", ["--port", String(clearPort), "--base-path", "/", "--all-clear", "--plain-stages"], `http://127.0.0.1:${clearPort}/api/health`);
+    return { running: { base: `http://127.0.0.1:${clearPort}/`, token: "e2e-token", fake: null, seed: {} }, cleanup: () => undefined };
+  }
   const port = PORT_BASE + 3 + offset;
   await servers.start("sides", "tests.e2e_server", ["--port", String(port), "--base-path", "/", "--many-sides", "--plain-stages"], `http://127.0.0.1:${port}/api/health`);
   return { running: { base: `http://127.0.0.1:${port}/`, token: "e2e-token", fake: null, seed: {} }, cleanup: () => undefined };
@@ -164,7 +170,7 @@ async function main(): Promise<number> {
   try {
     browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined });
     const offset = portOffset();
-    for (const name of ["accounts", "sides"] as ServerName[]) {
+    for (const name of ["accounts", "sides", "clear"] as ServerName[]) {
       const mine = entries.filter((e) => e.server === name);
       if (mine.length === 0) continue;
       const last = Math.max(...mine.map((e) => STAGE_ORDER[name].indexOf(e.stage)));

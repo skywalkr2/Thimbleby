@@ -39,6 +39,7 @@ The last picture was taken before the stale-calendar line over the Schedule (bel
 |---|---|---|
 | schedule | The full-page picture was split, the header mid-page | The capture tool scrolls to the top before a full-page picture; the app still opens at now |
 | schedule | At 390 the view switch wrapped, Timeline alone | One row of segments that share the width (`Schedule.module.css`) |
+| schedule | At 390 the header was 187px: the title, an Add to schedule row, then Today and a range wrapping to two lines | The title with a "..." menu holding Add to schedule (the tab bar's plus hands something in), then the moves and a short range ("Nov 2 – 6") on one row that does not wrap (`ScheduleLayouts.test.tsx`; change log 324) |
 | connections-states | "No accounts yet" had a small icon and an outline "Ask how to add one" | The card "Connect your mail and calendar" with the filled "Add a connection"; asking stays beside it (`Sources.test.tsx`) |
 | connections-states | "Sign-in refused" had two filled buttons | Try again is filled; Sign in again is plain while the refusal shows (`ConnectionCard.test.tsx`) |
 

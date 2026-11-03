@@ -240,6 +240,20 @@ export function monthDayYear(iso: string): string {
   return monthDayYearFormat.format(dateOf(iso));
 }
 
+const shortDayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+
+/** A day as weekday, month and day in short words, "Tue, Nov 3", for a heading on a phone. */
+export function shortDay(iso: string): string {
+  return shortDayFormat.format(dateOf(iso));
+}
+
+/** The first and last day of a range in short words with no year: "Nov 2" and "6" inside one month, "Nov 30" and "Dec 4" across two. */
+export function shortRange(first: string, last: string): { start: string; end: string } {
+  const [a, b] = [dateOf(first), dateOf(last)];
+  const sameMonth = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+  return { start: monthDay(first), end: sameMonth ? String(b.getDate()) : monthDay(last) };
+}
+
 /** The month of a day with its year, "October 2026", for the heading of a month. */
 export function monthYear(iso: string): string {
   return monthYearFormat.format(dateOf(iso));

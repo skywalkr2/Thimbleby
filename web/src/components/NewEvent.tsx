@@ -28,7 +28,7 @@ export function NewEvent(props: { today: string }) {
   );
 }
 
-function NewEventDrawer(props: { today: string; accounts: { id: string; label: string }[]; onClose: () => void }) {
+export function NewEventDrawer(props: { today: string; accounts: { id: string; label: string }[]; onClose: () => void }) {
   const { t } = useWords();
   const draft = useDraftAct();
   const base = useId();

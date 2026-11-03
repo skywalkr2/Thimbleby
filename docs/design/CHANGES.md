@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 324. The capture reaches "Nothing needs you"; the Schedule's header on a phone is one short row (2026-11-03; final review group f7)
+
+| Where | Before | Now |
+|---|---|---|
+| Browser-test and capture servers (14) | "All clear" could not be reached: the capture's workspace had setup unfinished, so the empty card said "Setup isn't finished" | `tests/e2e_server.py --all-clear` (`tests/e2e_all_clear.py`) finishes every counted setup step through the store and the app's own record-keeping (a service account whose whole connection test passed, an inbox and a sent folder read, a note handed in, a backup made, two people) and leaves nothing on Today; the capture's "All clear" state runs on it. **Built** (`tests/test_e2e_all_clear_seed.py`) |
+| The Schedule's header on a phone (7.7) | The title, an "Add to schedule" row, then Today and a range that wrapped to two lines: 187px at 390 | The title with a "..." menu holding Add to schedule (the tab bar's plus hands something in, so the menu is the way to add), then the moves and a short range ("Nov 2 – 6") on one row that does not wrap. Wide windows keep the filled button. **Built** (`ScheduleLayouts.test.tsx`, `dates.test.ts`) |
+
+- **No config key, no API change.**
+
 ## 323. A removed person's page offers Restore; the quality server holds found promises; a dot never ends a line on setup's account row (2026-11-03; final review group f6)
 
 | Where | Before | Now |
