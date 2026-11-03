@@ -6,6 +6,13 @@
 .back svg { transform: rotate(180deg); }
 .range { margin: 0; flex: 1 1 12rem; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .views { max-width: 100%; }
+/* On a phone the view switch is one row of segments that share the width, never a second line with one view on it. */
+@media (max-width: 639.98px) {
+  .views { display: flex; width: 100%; flex-wrap: nowrap; box-sizing: border-box; }
+  .range { flex-basis: 7rem; font-size: var(--text-md); line-height: var(--lh-md); }
+  .row { column-gap: var(--space-2); }
+  .views > button { flex: 1 1 auto; min-width: 0; padding-inline: var(--space-2); }
+}
 .frame { min-width: 0; touch-action: pan-y; }
 .none { margin: var(--space-3) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
 .caption { margin: 0; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); }

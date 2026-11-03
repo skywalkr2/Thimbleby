@@ -6,6 +6,7 @@
 //  - `undrivable` is a reason, written for the person reading the difference list, why the build can't be put in that state with
 //    the fixtures and fakes there are. Nothing is skipped without one; a drive that throws is listed with what it said.
 import {
+  api,
   clickFirstOf,
   goOffline,
   go,
@@ -111,7 +112,7 @@ async function waitingSignIn(env: Env, button: RegExp): Promise<void> {
   await env.page.waitForTimeout(900);
 }
 
-const LOADING = (hash: string) => (env: Env) => holdReads(env, NEUTRAL, hash);
+const LOADING = (hash: string, alsoHold?: RegExp) => (env: Env) => holdReads(env, NEUTRAL, hash, alsoHold);
 const OFFLINE = (hash: string) => async (env: Env) => {
   await open(env, hash);
   await goOffline(env);
@@ -132,8 +133,31 @@ export const ENTRIES: Entry[] = [
       await env.page.waitForTimeout(900);
     },
   },
-  { page: "today-states", title: "All clear (brand moment)", server: "sides", stage: "empty", open: (env) => open(env, "today") },
-  { page: "today-states", title: "Loading (skeleton at row height, no shift)", server: "accounts", stage: "signed-in", open: LOADING("today") },
+  {
+    page: "today-states",
+    title: "A side filtered to nothing",
+    server: "sides",
+    stage: "empty",
+    open: async (env) => {
+      await open(env, "today");
+      await pickSide(env, (env.seed.sides as string[])[3]);
+    },
+  },
+  {
+    page: "today-states",
+    title: "All clear (brand moment)",
+    server: "sides",
+    stage: "empty",
+    open: async (env) => {
+      // Nothing is waiting for the person once the one backup the workspace asks for has been made; this entry follows the filtered
+      // one, which needs that line to be there, and every later entry finds the backup made.
+      await api(env.base, env.token, "backup", { method: "POST" });
+      // The app is loaded again, so the backup line the page had read is not kept on screen as a settled line.
+      await env.page.reload();
+      await open(env, "today");
+    },
+  },
+  { page: "today-states", title: "Loading (skeleton at row height, no shift)", server: "accounts", stage: "signed-in", open: LOADING("today", /\/api\/(today|changes|followups|stages|watch)/) },
   { page: "today-states", title: "One account of three needs you", server: "accounts", stage: "failing", open: (env) => open(env, "today") },
   { page: "today-states", title: "Offline", server: "accounts", stage: "signed-in", open: OFFLINE("today") },
   {
@@ -161,16 +185,6 @@ export const ENTRIES: Entry[] = [
       await refuseWrites(env, 500, "The app couldn't write to its folder.");
       await clickFirstOf(env, [/^Back up now$/, /^Give them dates$/, /^Continue setup$/], "Today has no row whose button saves something on this fixture");
       await env.page.waitForTimeout(900);
-    },
-  },
-  {
-    page: "today-states",
-    title: "A side filtered to nothing",
-    server: "sides",
-    stage: "empty",
-    open: async (env) => {
-      await open(env, "today");
-      await pickSide(env, (env.seed.sides as string[])[3]);
     },
   },
   {
@@ -211,7 +225,7 @@ export const ENTRIES: Entry[] = [
       await env.page.waitForTimeout(700);
     },
   },
-  { page: "todos-states", title: "Loading", server: "sides", stage: "seeded", open: LOADING("work/open") },
+  { page: "todos-states", title: "Loading", server: "sides", stage: "seeded", open: LOADING("work/open", /\/api\/(today|todos|actions|followups|projects|people)/) },
   {
     page: "todos-states",
     title: "Ticked, with Undo",

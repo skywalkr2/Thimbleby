@@ -1042,6 +1042,20 @@ yet follow, that it is *designed*, with its phase.
 
 Change log: section 321.
 
+## 320. One cause is one Today line; a side with nothing says so; the wrap-up card and the to-do tabs agree with their counts (2026-11-03; final side-by-side review, group a)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's queue (7.7) | One line for each request that stopped (thirteen "Choose another account" lines for one cause) and one "Add the Sent folder" line for each mailbox | `refused` and `failed` lines with one cause (`state` `no_person`, else the same words) are one line with `count` and the lines in `items`; its button for `no_person` is "Say who you are" (setup step 'workspace'), else it opens the list. `sent_folder` for several mailboxes is one line with `count`, `sources` and `names`. Built: `tests/test_one_line_per_cause.py`, `web/src/components/TodayStoppedGroup.test.tsx`, `web/src/shell/HeldLines.test.tsx` |
+| Today's clash line (7.7) | The first calendar's name and "and" used the line, the second was cut | Each calendar's name is shortened by itself and the second is always drawn |
+| Today's side filter (7.7) | A line that belongs to no side kept the screen from saying the side was empty | "Nothing on the {side} side today" with the way back above the app's own lines. Built: `TodaySides.test.tsx` |
+| The wrap-up card (7.7) | Every line of every section, with no cap | `ui.today.rail_rows` lines across the card, then "Show N more" and "Show fewer". Built: `BriefCard.test.tsx` |
+| To-dos and questions (7.5) | A tab with no rows said "Nothing matches these filters" | Says the tab is empty; the filter text is only for rows the filters hid. The line under the title counts both tabs, as the tabs do |
+| Connections (7.9) | "No connections yet" with an outline "Ask how to add one" | Card "Connect your mail and calendar" with the filled "Add a connection"; asking stays beside it. A refused sign-in card has one filled button |
+| Schedule on a phone (7.9) | The view switch wrapped, Timeline alone on a second line | One row of segments that share the width |
+| Skeletons (7.21) | A tone too near the surface in day and night | The border tone, shimmering to the well tone |
+| The capture tool | A full-page picture of a scrolled page put the sticky header mid-picture; a side picked in one state carried into the next; Loading kept the answers the shell had read | Scrolls to the top first; each state opens on every side; the screen's own reads are held and the app is loaded again |
+
 ## 319. States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (2026-11-03; visual review VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04)
 
 | Where | Before | Now |

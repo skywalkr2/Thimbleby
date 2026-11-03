@@ -136,7 +136,7 @@ export function ConnectionCardView(props: {
             {need && again.item && (
               <Button
                 size="sm"
-                variant="primary"
+                variant={refused || problem ? "secondary" : "primary"}
                 className={styles.again}
                 disabled={again.busy || !again.item.ready}
                 aria-label={t("sign_in.sign_in_again_account", { account: accountName })}

@@ -323,6 +323,9 @@ test("a read that fails says why in the message", async () => {
 test("with no connections, the screen says what to add and offers to ask how", async () => {
   const { onAsk } = open([]);
   expect(await screen.findByText(/No connections yet/)).toBeInTheDocument();
+  expect(screen.getByText("Connect your mail and calendar")).toBeInTheDocument();
+  // The card's own button is the one filled button; asking how stays beside it.
+  expect(screen.getByRole("button", { name: "Add a connection" }).className).toMatch(/primary/);
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Ask how to add one" }));
   expect(onAsk).toHaveBeenCalledWith("How do I connect something for Helper to read?");

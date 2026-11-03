@@ -1390,11 +1390,12 @@ test("a clash line names both meetings in its title and both calendars in its me
   const clash = row("clash");
   const marks = clash.querySelectorAll("[data-mark=calendar]");
   expect(Array.from(marks).map((m) => m.getAttribute("data-color"))).toEqual(["purple", "teal"]);
-  expect(clash).toHaveTextContent("Studio calendar and");
-  expect(clash).toHaveTextContent("Clinic calendar");
+  const named = Array.from(clash.querySelectorAll("[data-mark=calendar] + [title]")).map((el) => el.getAttribute("title"));
+  expect(named).toEqual(["Studio calendar", "Clinic calendar"]);
+  expect(clash).toHaveTextContent("Studio calendarandClinic calendar");
   expect(clash).toHaveTextContent("They overlap by 30 minutes");
-  // The meta is one line: its parts are inline, never stacked.
-  expect(clash.querySelector("p")?.className).toMatch(/oneLine/);
+  // The meta of a clash may wrap, so the second calendar is never the part that is cut off.
+  expect(clash.querySelector("p")?.className).not.toMatch(/oneLine/);
   await user.click(within(clash).getByRole("button", { name: /More|menu/i }));
   expect(await screen.findByRole("menuitem", { name: "Open Budget check-in" })).toBeInTheDocument();
 });

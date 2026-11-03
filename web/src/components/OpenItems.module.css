@@ -33,3 +33,6 @@
 .needsLine .needs { margin: 0; padding: 0 var(--row-px) var(--space-3); }
 /* The list keeps to a readable width on a wide window; the page's grid is the limit on a narrow one. */
 .todoList { max-width: 55rem; }
+
+/* A to-do just ticked keeps its place with its title struck through. */
+.doneTitle { text-decoration: line-through; color: var(--text-muted); }

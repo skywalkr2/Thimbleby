@@ -2,7 +2,7 @@
 .region { display: block; }
 .row { display: grid; grid-template-columns: var(--row-lead-w) minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
 .row:last-child { border-bottom: 0; }
-.bar, .btn, .lead { display: block; border-radius: var(--radius-sm); background: var(--surface-sunk); }
+.bar, .btn, .lead { display: block; border-radius: var(--radius-sm); background: var(--border); } /* a tone that shows on the surface in day and in night; the well tone is too near it */
 .lead { width: 18px; height: 18px; justify-self: center; border-radius: var(--radius-full); }
 .lines { display: grid; gap: var(--space-2); }
 .bar { height: 14px; width: 60%; }
@@ -10,5 +10,5 @@
 .btn { width: 84px; height: var(--btn-h-sm); border-radius: var(--radius-btn); }
 @media (prefers-reduced-motion: no-preference) {
   .bar, .btn, .lead { animation: shimmer 1.4s ease-in-out infinite; }
-  @keyframes shimmer { 50% { background: var(--border); } }
+  @keyframes shimmer { 50% { background: var(--surface-sunk); } }
 }

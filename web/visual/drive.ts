@@ -40,6 +40,10 @@ export async function settle(page: Page): Promise<void> {
 
 /** Opens a screen by its fragment and waits for it. */
 export async function open(env: Env, hash: string): Promise<void> {
+  // Each state starts from every side: a side picked in an earlier state is not carried into this one.
+  await env.page
+    .evaluate(() => window.localStorage.setItem("cockpit:side-filter", "all"))
+    .catch(() => undefined);
   await go(env, hash);
   await settle(env.page);
 }
@@ -92,7 +96,7 @@ export async function refuseReads(env: Env, pattern: string | RegExp, status: nu
  * Loading: opens the app on a screen that needs no data, remembers every address it read to start, and from then on holds
  * every read of any other address until the capture is over. The screen asked for then draws what it draws while it waits.
  */
-export async function holdReads(env: Env, neutralHash: string, hash: string): Promise<void> {
+export async function holdReads(env: Env, neutralHash: string, hash: string, alsoHold?: RegExp): Promise<void> {
   // A page of its own, loaded again from nothing, so no answer from the start (Today's, which the capture opens on) is kept.
   await env.page.goto("about:blank");
   await env.page.goto(`${env.base}?token=${env.token}#${neutralHash}`);
@@ -115,7 +119,15 @@ export async function holdReads(env: Env, neutralHash: string, hash: string): Pr
     release();
     await env.page.unroute("**/api/**", handler).catch(() => undefined);
   });
-  await go(env, hash);
+  if (alsoHold) {
+    // The shell reads some of the screen's own data to start (the count in the menu): those reads are held too, and the app is
+    // loaded again from nothing on the screen, so it has no answer of them kept.
+    for (const path of [...known]) if (alsoHold.test(path)) known.delete(path);
+    await env.page.goto("about:blank");
+    await env.page.goto(`${env.base}?token=${env.token}#${hash}`);
+  } else {
+    await go(env, hash);
+  }
   await env.page.waitForTimeout(900);
 }
 

@@ -131,6 +131,9 @@ test("a sign-in that came back as another account is refused in words naming bot
   expect(refused).toHaveTextContent(`That was a different account: ${ALEX}. Sign in as ${BLAKE}.`);
   expect(refused).toHaveAttribute("data-sign-in-refused");
   expect(within(refused).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  // One filled button in the card: Try again, not also Sign in again.
+  const filled = Array.from(card.querySelectorAll("button")).filter((b) => /primary/.test(b.className));
+  expect(filled.map((b) => b.textContent)).toEqual(["Try again"]);
   expect(screen.getAllByRole("region", { name: new RegExp(`${ALEX}|${BLAKE}`) })).toHaveLength(2);
 });
 

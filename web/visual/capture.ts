@@ -125,6 +125,13 @@ async function takeOne(context: BrowserContext, running: Running, entry: Entry, 
       taken.push({ file, firstScreen: true });
     }
     const file = captureName(entry.page, state, size);
+    // A screen that opens scrolled (the Schedule, at now) is drawn whole from its top: a full-page picture of a scrolled page puts
+    // its sticky header at the scroll position, in the middle of the picture.
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) if (el.scrollTop > 0) el.scrollTop = 0;
+    });
+    await page.waitForTimeout(300);
     await page.screenshot({ path: join(out, file), fullPage: true });
     taken.push({ file, firstScreen: false });
     return taken;

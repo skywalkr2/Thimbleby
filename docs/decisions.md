@@ -15,6 +15,23 @@ the window holds fewer promises than the new setting `dispatch.knowledge.quality
 `walkthrough.offline.*`, `quality.early.*`; the capture's person "A save that failed" drive changes a field first (Save is off until then).
 Change log: section 321.
 
+## 2026-11-03: Today says one cause once; the side filter says "nothing for this side"; the wrap-up card and the to-do tabs agree with their counts (final side-by-side review, group a; section 320)
+
+**Decided:** (owner: the screens match the mockups before the gate week; design by the main session.) *One decision, one line:*
+requests that stopped for the same reason (the same cause, else the same words) are one Today line with the count and the lines
+behind it ("Say who you are: 13 items wait for it", its button says who to ask; the pane lists each request with its own buttons), and
+connected mailboxes with no Sent folder are one line ("Add the Sent folder for 3 mailboxes", the names under it; one "Don't ask again"
+ends all of them, with Undo); the engine makes the grouped line, so every screen that counts lines counts one. *The side filter:* a
+side with nothing of its own says "Nothing on the {side} side today" with the way back even while the app's own lines (the
+backup and other lines that belong to no side) stay under every choice. *The rail:* the wrap-up card holds `ui.today.rail_rows`
+lines and one button, "Show N more". *To-dos:* a tab with nothing in it says so; "Nothing matches" is only for rows the filters hid.
+*Connections:* with no connection the empty card is "Connect your mail and calendar" with the one filled "Add a connection"; a refused
+sign-in card has one filled button (Try again). *Schedule:* on a phone the view switch is one row. Clash lines name both calendars,
+each shortened by itself. The capture tool scrolls to the top before a full-page picture and starts each state from every side. *Why:*
+the reviewer's side-by-side found thirteen near-identical lines for one cause, a cut-off second calendar and states the drives never
+reached. *Impact:* `QueueLineView` gains `sources` (a `sent_folder` line's sources) and `state` gains `no_person`; wording keys
+only; no op, tier or trust rule changes. Change log: section 320.
+
 ## 2026-11-03: States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04; section 319)
 
 **Decided:** (owner: the screens match the reviewer's mockups before the gate week; design by the main session.) *States:* every list

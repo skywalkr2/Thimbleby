@@ -81,6 +81,8 @@ export function OpenItems() {
   const narrow = useIsNarrow();
   const [tab, setTab] = useState<Tab>("actions");
   const [filters, setFilters] = useState<Filters>(takeFilters);
+  // The to-dos just ticked stay in their place, struck through, with Undo, until the person moves on (another tab or filter).
+  const [settled, setSettled] = useState<Map<string, OpenAction>>(new Map());
   const ids = useId();
   const addTodo = useAddTodo();
   // With a side beside Personal, the list can be narrowed to one side; what is on no side shows under every choice.
@@ -127,11 +129,23 @@ export function OpenItems() {
   const shownActions = narrowed.filter((a) => !a.needs_date);
   const shownQuestions = questionsShown(questions, filters);
   const shown = tab === "actions" ? shownActions.length : shownQuestions.length;
-  const set = (patch: Partial<Filters>) => setFilters((now) => ({ ...now, ...patch }));
+  const set = (patch: Partial<Filters>) => {
+    setSettled(new Map());
+    setFilters((now) => ({ ...now, ...patch }));
+  };
   const choose = (next: Tab) => {
     setTab(next);
     set({ state: "" });
   };
+  const gone = (a: OpenAction) => setSettled((now) => new Map(now).set(a.id, a));
+  const undone = (id: string) =>
+    setSettled((now) => {
+      const next = new Map(now);
+      next.delete(id);
+      return next;
+    });
+  const stillOpen = new Set(actions.map((a) => a.id));
+  const ticked = [...settled.values()].filter((a) => !stillOpen.has(a.id) && actionsShown([a], filters).length > 0);
 
   return (
     <section className="panel-section" aria-labelledby="open-title" data-open-items="">
@@ -182,13 +196,18 @@ export function OpenItems() {
           ) : (
             <>
               {shown + (tab === "actions" ? needDate.length : 0) === 0 ? (
-                <FilteredEmpty text={t("open.none_match")} onClear={() => setFilters(NO_FILTERS)} />
+                // A tab with nothing in it says so; "nothing matches" is only for rows the filters hid.
+                total === 0 ? (
+                  <EmptyState icon="check" text={t(`open.empty.${tab}`)} />
+                ) : (
+                  <FilteredEmpty text={t("open.none_match")} onClear={() => setFilters(NO_FILTERS)} />
+                )
               ) : tab === "actions" ? (
                 // With no row to list (every to-do waits for a date) what is left is the add row and one line, which are not a list.
                 <RowList aria-label={shownActions.length > 0 ? t("open.list.actions") : undefined} role={shownActions.length > 0 ? undefined : "presentation"} className={styles.todoList}>
                   <InlineAddTodo onDetails={addTodo.open} />
-                  {groupActions(shownActions, today).map(({ group, rows }) => (
-                    <TodoGroupRows key={group} group={group} rows={rows} inlineOrigin={narrow} />
+                  {groupActions([...shownActions, ...ticked], today).map(({ group, rows }) => (
+                    <TodoGroupRows key={group} group={group} rows={rows} inlineOrigin={narrow} ticked={new Set(ticked.map((a) => a.id))} onDone={gone} onUndone={undone} />
                   ))}
                   <NeedsADateLine rows={needDate} />
                 </RowList>
@@ -209,19 +228,23 @@ export function OpenItems() {
 }
 
 /** One group of the to-dos: its label with the count, then its rows. The label is a part of the list, not a row of it. */
-function TodoGroupRows(props: { group: string; rows: OpenAction[]; inlineOrigin: boolean }) {
+function TodoGroupRows(props: { group: string; rows: OpenAction[]; inlineOrigin: boolean; ticked: Set<string>; onDone: (a: OpenAction) => void; onUndone: (id: string) => void }) {
   const { t } = useWords();
   const id = useId();
   return (
     <>
       <li role="presentation" className={styles.groupItem}>
-        <GroupLabel id={id} as="h3" count={props.rows.length} tone={props.group === "overdue" ? "danger" : "plain"} data-todo-group={props.group}>
+        <GroupLabel id={id} as="h3" count={props.rows.filter((a) => !props.ticked.has(a.id)).length} tone={props.group === "overdue" ? "danger" : "plain"} data-todo-group={props.group}>
           {t(`open.group.${props.group}`)}
         </GroupLabel>
       </li>
-      {props.rows.map((a) => (
-        <ActionRow key={a.id} action={a} inlineOrigin={props.inlineOrigin} />
-      ))}
+      {props.rows.map((a) =>
+        props.ticked.has(a.id) ? (
+          <DoneRow key={a.id} action={a} onUndone={props.onUndone} />
+        ) : (
+          <ActionRow key={a.id} action={a} inlineOrigin={props.inlineOrigin} onDone={props.onDone} />
+        ),
+      )}
     </>
   );
 }
@@ -243,7 +266,7 @@ function join(parts: Array<ReactNode | null | undefined | false | "">): ReactNod
   ));
 }
 
-function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
+function ActionRow(props: { action: OpenAction; inlineOrigin: boolean; onDone?: (a: OpenAction) => void }) {
   const { t, tn } = useWords();
   const place = usePlaceText();
   const act = useAct();
@@ -262,7 +285,11 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
   const said = useSaid();
   const done = (note?: string) =>
     act(
-      () => api.actionStatus(a.id, "done", note),
+      async () => {
+        const result = await api.actionStatus(a.id, "done", note);
+        props.onDone?.(a);
+        return result;
+      },
       (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(a.id, "open") }),
     );
   const twin = a.duplicate;
@@ -351,13 +378,14 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
   // The title opens the to-do's own page.
   const title = (
     <NotesTitle notes={a.notes}>
-      <a href={viewHref(recordView("action", a.id))}>{shortTitle(a.text, a.due)}</a>
+      <a href={viewHref(recordView("action", a.id))}>{shortTitle(a.text, a.due, 2)}</a>
     </NotesTitle>
   );
   return (
     <Row
       ref={ref}
       onKeyDown={escape}
+      clamp={shortTitle(a.text, a.due, 2) !== a.text ? a.text : undefined}
       lead={
         unowned ? undefined : <RoundCheck label={t("followups.mark_done")} data-key="primary" onClick={() => void done()} />
       }
@@ -405,6 +433,35 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
       {hand.line}
       <LearnedLines records={[a.id]} />
     </Row>
+  );
+}
+
+/** A to-do just ticked: it stays where it was, struck through, with when it was done and Undo, until the person moves on. */
+function DoneRow(props: { action: OpenAction; onUndone: (id: string) => void }) {
+  const { t } = useWords();
+  const act = useAct();
+  const a = props.action;
+  const undo = () =>
+    void act(
+      async () => {
+        const result = await api.actionStatus(a.id, "open");
+        props.onUndone(a.id);
+        return result;
+      },
+      undefined,
+    );
+  return (
+    <Row
+      data-done-row=""
+      lead={<Icon name="check" size={18} />}
+      title={<span className={styles.doneTitle}>{a.text}</span>}
+      meta={t("open.done_just_now")}
+      primary={
+        <Button variant="quiet" size="sm" onClick={undo} aria-label={t("open.undo_named", { text: a.text })}>
+          {t("toast.undo")}
+        </Button>
+      }
+    />
   );
 }
 

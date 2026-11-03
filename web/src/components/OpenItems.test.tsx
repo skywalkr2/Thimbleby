@@ -315,6 +315,42 @@ test("Mark done acts at once, with Undo", async () => {
   await waitFor(() => expect(calls.filter((c) => c.route === "POST actions/A-1/status").pop()?.body).toEqual({ status: "open" }));
 });
 
+test("a ticked to-do keeps its place struck through, says it was done just now and has Undo in the row, until the person moves on", async () => {
+  const user = userEvent.setup();
+  let ticked = false;
+  const calls = api({
+    "GET open-items": () => ({ actions: ticked ? actions.filter((a) => a.id !== "A-1") : actions, questions, stale_days: 21 }),
+    "POST actions/A-1/status": (body) => {
+      ticked = (body as { status: string }).status === "done";
+      return { ok: "A-1", request: null };
+    },
+  });
+  renderApp(<OpenItems />);
+  const [first] = await rows();
+  const text = "Send the proof to the printer";
+  await user.click(within(first).getByRole("button", { name: "Mark done" }));
+  const done = await waitFor(() => {
+    const found = document.querySelector<HTMLElement>("[data-done-row]");
+    if (!found) throw new Error("not yet");
+    return found;
+  });
+  expect(done).toHaveTextContent(text);
+  expect(done).toHaveTextContent("Done just now");
+  await user.click(within(done).getByRole("button", { name: `Undo: ${text}` }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST actions/A-1/status").pop()?.body).toEqual({ status: "open" }));
+  await waitFor(() => expect(document.querySelector("[data-done-row]")).toBeNull());
+});
+
+test("a tab with nothing in it says so, and only rows the filters hid say that nothing matches", async () => {
+  const user = userEvent.setup();
+  api({}, { questions: [] });
+  renderApp(<OpenItems />);
+  await rows();
+  await user.click(screen.getByRole("button", { name: /^Questions/ }));
+  expect(await screen.findByText(/No questions are open/)).toBeInTheDocument();
+  expect(screen.queryByText("Nothing matches these filters.")).toBeNull();
+});
+
 test("a note typed on Mark done reaches the assistant with the act", async () => {
   const user = userEvent.setup();
   const calls = api({ "POST actions/A-1/status": () => ({ ok: "A-1", request: "R-1" }) });

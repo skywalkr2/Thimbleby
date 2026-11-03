@@ -288,7 +288,14 @@ export function Sources(props: {
         noAi ? (
           <EmptyState icon="rss" text={t("sources.empty_no_ai")} action={{ label: t("sources.empty_choose_ai"), href: viewHref("settings/ai") }} />
         ) : (
-          <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
+          <EmptyState icon="rss" title={t("sources.empty_title")} text={t("sources.empty")}>
+            <Button variant="primary" aria-expanded={form?.type === "add"} onClick={openAdd}>
+              {t("sources.empty_add")}
+            </Button>
+            <Button variant="quiet" onClick={() => props.onAsk(t("sources.ask_text"))}>
+              {t("sources.empty_ask")}
+            </Button>
+          </EmptyState>
         )
       ) : (
         <ul className={cardStyles.cards} aria-label={t("sources.title")} data-connection-cards="">

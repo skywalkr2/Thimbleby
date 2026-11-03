@@ -24717,7 +24717,7 @@
             "title": "Moved"
           },
           "names": {
-            "description": "For a switch_failed line: what the check found didn't come out right, by name, the first few.",
+            "description": "For a switch_failed line: what the check found didn't come out right, by name, the first few. For a sent_folder line that covers several mailboxes: their names.",
             "items": {
               "type": "string"
             },
@@ -25194,6 +25194,14 @@
             "description": "For a clash line: the calendar the first meeting comes from; none for the app's own.",
             "title": "Source Name"
           },
+          "sources": {
+            "description": "For a sent_folder line that covers several mailboxes: the watched sources' ids, one for each.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
           "stable_budget": {
             "anyOf": [
               {
@@ -25282,7 +25290,8 @@
                   "workspace",
                   "pending",
                   "restored",
-                  "not_restored"
+                  "not_restored",
+                  "no_person"
                 ],
                 "type": "string"
               },
@@ -25290,7 +25299,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a date_reminder line: the kind of day, deadline, renewal, expiry, warranty or bill. For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, moved the same way) or replies (the same person was owed `count` replies). For a folder_rename line: backups or workspace, which folder is offered a rename. For a restore line: pending (a restore waits for the restart that swaps it in), restored (the swap was made; `text` is the folder holding what was there before) or not_restored (it wasn't; `text` says why and the workspace is as it was).",
+            "description": "For a date_reminder line: the kind of day, deadline, renewal, expiry, warranty or bill. For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, moved the same way) or replies (the same person was owed `count` replies). For a folder_rename line: backups or workspace, which folder is offered a rename. For a restore line: pending (a restore waits for the restart that swaps it in), restored (the swap was made; `text` is the folder holding what was there before) or not_restored (it wasn't; `text` says why and the workspace is as it was). For a refused or failed line that stands for several requests with one cause: no_person when no one is set as the person the app is for.",
             "title": "State"
           },
           "subject": {

@@ -109,6 +109,9 @@
 .mark { display: inline; }
 .markName { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; vertical-align: bottom; }
 .markName + .markName { margin-inline-start: var(--space-2); }
+/* Each calendar's name is shortened on its own, so the second one is never the part that is cut off. */
+.markText { display: inline-block; min-width: 0; max-width: min(22rem, 60vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.markJoin { margin-inline-start: var(--space-1); }
 
 /* The line's lead slot: its icon in the muted color, or in the problem color for a line at risk. */
 .queue [data-row-lead] { color: var(--text-muted); }

@@ -312,6 +312,8 @@ export function TodayQueue(props: {
   const shown = display.map((d) => d.line);
   const ghosts = new Set(display.filter((d) => d.ghost).map((d) => d.line.key));
   const empty = count === 0 && !queue.isPending;
+  // A side with nothing of its own says so even while the app's own lines (they belong to no side) stay under every choice.
+  const sideBare = filter.choice !== "all" && count !== null && count > 0 && count === lines.length && lines.every((line) => line.side == null && !(line.sides ?? []).length);
   const selectedLine = selectedAt >= 0 ? ordered[selectedAt] : undefined;
   // A review that is open has the screen's one filled button ("Keep all"), so the first Decide line is drawn as the others are.
   const firstDecision = inGroup(shown, "decide").find((line) => !isHeld(line) && !isRestoreLine(line) && !isLearned(line))?.key;
@@ -360,6 +362,7 @@ export function TodayQueue(props: {
           <ListState query={queue} failed={t("queue.load_failed")}>
             {() => (
             <>
+              {sideBare && <FilteredEmpty data-queue-empty="side" text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />}
               {GROUPS.map((group) => {
                 const these = inGroup(shown, group);
                 const extra = group === "decide" && stage.count > 0;
@@ -674,10 +677,12 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "first_go":
         return noAccount ? tn("first_go.no_account", line.count) : firstGoText({ count: line.count, estimate: line.estimate_usd ?? null, unpriced: line.unpriced });
       case "refused":
+        if (line.count > 1) return line.state === "no_person" ? tn("queue.refused.no_person", line.count) : tn("queue.refused.group", line.count);
         return t("queue.refused", { what });
       case "no_effect":
         return t("queue.no_effect", { title: line.subject ?? "" });
       case "failed":
+        if (line.count > 1) return tn("queue.failed.group", line.count);
         return t("queue.failed", { what });
       case "overdue":
         return line.count === 1 && line.subject ? shortTitle(line.subject) : tn("queue.overdue", line.count);
@@ -848,6 +853,13 @@ function QueueRow(props: {
   const [capturing, setCapturing] = useState(false);
 
   const what = titleWords(line.title);
+  // A line for several stopped requests with one cause names the first few of them; the pane opens all of them.
+  const stoppedList = (l: QueueLine): string => {
+    const names = (l.items ?? []).map((item) => titleWords(item.title)).filter(Boolean);
+    if (l.count < 2 || !names.length) return "";
+    const shown = names.slice(0, 2).join(", ");
+    return names.length > 2 ? t("queue.stopped.group.more", { list: shown, n: names.length - 2 }) : shown;
+  };
   const title = lineTitle(line);
   // The line's words, on one line (it is cut with an ellipsis, and the inspector has the rest). What came from outside is
   // said once in the inspector, never on a line.
@@ -979,9 +991,13 @@ function QueueRow(props: {
           menu: [],
         };
       case "refused":
-        return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting), primary: { label: t("changes.send_other") }, menu: [] };
+        if (line.count > 1 && line.state === "no_person" && props.handlers.onOpenGuide) {
+          const guide = props.handlers.onOpenGuide;
+          return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting, stoppedList(line)), primary: { label: t("changes.say_who"), run: () => guide("workspace") }, menu: [] };
+        }
+        return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting, stoppedList(line)), primary: { label: line.count > 1 ? t("queue.stopped.group.open", { n: line.count }) : t("changes.send_other") }, menu: [] };
       case "failed":
-        return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting), primary: { label: t("queue.act.open") }, menu: [] };
+        return { pill: t("queue.pill.stopped"), tone: "danger", meta: meta(line.waiting, stoppedList(line)), primary: { label: line.count > 1 ? t("queue.stopped.group.open", { n: line.count }) : t("queue.act.open") }, menu: [] };
       case "no_effect": {
         // The person's own words, then two ways on: open the question to answer again, or leave it.
         const item = changes.data?.find((c) => c.id === line.request);
@@ -1165,7 +1181,8 @@ function QueueRow(props: {
               {names.map((name, i) => (
                 <span key={`${name}-${i}`} className={styles.markName}>
                   <MarkDot kind="calendar" color={calendarColor(name)} />
-                  {i < names.length - 1 ? t("queue.clash.calendar_and", { name }) : name}
+                  <span className={styles.markText} title={name}>{name}</span>
+                  {i < names.length - 1 && <span className={styles.markJoin}>{t("queue.clash.calendar_and")}</span>}
                 </span>
               ))}
             </span>
@@ -1476,7 +1493,7 @@ function QueueRow(props: {
         </>
       }
       meta={metaNode}
-      oneLine
+      oneLine={line.kind !== "clash"}
       primary={primary}
       menu={menu.length > 0 || (d.groups?.length ?? 0) > 0 ? <RowMenu label={title} actions={menu} groups={d.groups} /> : undefined}
       onClick={onClick}

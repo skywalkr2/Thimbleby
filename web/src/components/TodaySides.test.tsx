@@ -5,6 +5,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { RestartProvider } from "../lib/restart";
 import { forgetMoves } from "../lib/moves";
+import { setSideChoice } from "../lib/sides";
 import { forgetLine } from "../lib/today";
 import { project, unfiledItem, unfiledView } from "../lib/records-fixtures";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
@@ -199,4 +200,17 @@ test("items the rules filed beside a side on a guess name that side, offer Perso
   await waitFor(() => expect(calls.find((c) => c.route === "POST filing/keep")?.body).toMatchObject({ side: PERSONAL.id }));
   expect(calls.some((c) => c.route === "POST filing/move")).toBe(false);
   expect(await screen.findByText(`Kept under ${FIRST.name}.`)).toBeInTheDocument();
+});
+
+test("a side with nothing of its own says so, even while a line that belongs to no side stays under it", async () => {
+  const backup: Line = { key: "backup", group: "risk", kind: "backup", state: "unset", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} };
+  setSideChoice(FIRST.project);
+  show(backup, [FIRST, SECOND]);
+  const empty = await waitFor(() => {
+    const found = document.querySelector<HTMLElement>('[data-queue-empty="side"]');
+    if (!found) throw new Error("not yet");
+    return found;
+  });
+  expect(empty).toHaveTextContent("Orchard Press");
+  expect(document.querySelector('[data-queue-line="backup"]')).not.toBeNull();
 });

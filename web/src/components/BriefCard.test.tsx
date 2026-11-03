@@ -4,7 +4,14 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
 import { day } from "../lib/dates";
-import { fakeApi, Refuse, renderApp, type Routes, snapshotOf } from "../test-utils";
+import { fakeApi, rcFixture, Refuse, renderApp as render, type Routes, snapshotOf } from "../test-utils";
+
+/** The card with room for every line, unless a test says how many rows the card holds (`ui.today.rail_rows`). */
+function renderApp(ui: Parameters<typeof render>[0], overrides: Parameters<typeof render>[1] = {}, options: Parameters<typeof render>[2] = {}, rows = 50) {
+  const shown = render(ui, overrides, options);
+  shown.client.setQueryData(["runtime-config"], rcFixture({ rail_rows: rows }));
+  return shown;
+}
 import { BriefCard } from "./BriefCard";
 
 // The brief (design 6.32): the form that is due, as a card at the top of Today. Each section in order with its heading, a
@@ -82,10 +89,10 @@ const MONDAY: Brief = {
   message: { state: "none", to: [{ person: "PER-9", name: "Lena Example" }] },
 };
 
-async function show(brief: Brief, extra: Routes = {}, over: { unnamed?: boolean } = {}) {
+async function show(brief: Brief, extra: Routes = {}, over: { unnamed?: boolean } = {}, rows = 50) {
   const calls = fakeApi({ "GET brief": () => brief, "GET today/queue": () => [NUDGE], ...extra });
   const onOpenRecord = vi.fn();
-  renderApp(<BriefCard workspace="ws" onOpenRecord={onOpenRecord} />, {}, over);
+  renderApp(<BriefCard workspace="ws" onOpenRecord={onOpenRecord} />, {}, over, rows);
   if (brief.form !== null) {
     await waitFor(() => {
       const card = document.querySelector<HTMLElement>("[data-brief], [data-brief-closed]");
@@ -730,4 +737,18 @@ test("a brief line says its day once, with no full stop before a comma, and a lo
   });
   expect(await screen.findByText("Get a catering quote, now due Wed, Oct 21")).toBeInTheDocument();
   expect(screen.getByText(/^Print, sign and mail the signed form to the council office at…, now due Thu, Oct 22$/)).toBeInTheDocument();
+});
+
+test("the card holds ui.today.rail_rows lines and says how many more, which open on request", async () => {
+  const user = userEvent.setup();
+  await show(EVENING, {}, {}, 3);
+  const lines = () => document.querySelectorAll("[data-section] li").length;
+  await waitFor(() => expect(lines()).toBe(3));
+  expect(sectionsOf().map((s) => s.dataset.section)).toEqual(["done", "moved"]);
+  const more = screen.getByRole("button", { name: "Show 2 more" });
+  await user.click(more);
+  expect(lines()).toBe(5);
+  expect(sectionsOf()).toHaveLength(4);
+  await user.click(screen.getByRole("button", { name: "Show fewer" }));
+  expect(lines()).toBe(3);
 });

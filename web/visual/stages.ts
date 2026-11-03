@@ -94,6 +94,7 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
     case "sides/empty": {
       const seeded = (await (await fetch(`${env.base}__e2e/many-sides`)).json()) as { names: string[]; ids: string[] };
       env.seed.sides = seeded.names;
+      env.seed.sideProjects = seeded.ids;
       const people = await api<Array<{ id: string; is_pm: boolean }>>(env.base, env.token, "people");
       env.seed.me = people.find((p) => p.is_pm)!.id;
       return;
@@ -115,7 +116,12 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
         { text: LONG_TITLE, when: dayOffset(3) },
         { text: OTHER_LANGUAGES[4], when: dayOffset(1) },
       ];
-      for (const todo of todos) await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [me] } });
+      // Some of the to-dos belong to a side's project, so the side strip's counts differ from one side to the next.
+      const projects = (env.seed.sideProjects as string[]) ?? [];
+      for (const [n, todo] of todos.entries()) {
+        const project = n % 3 === 2 || projects.length === 0 ? undefined : projects[n % projects.length];
+        await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [me], project } });
+      }
       return;
     }
     case "sides/bulk": {

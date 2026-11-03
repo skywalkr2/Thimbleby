@@ -3775,6 +3775,7 @@ class QueueLineView(BaseModel):
             "pending",
             "restored",
             "not_restored",
+            "no_person",
         ]
         | None
     ) = Field(
@@ -3797,7 +3798,8 @@ class QueueLineView(BaseModel):
         "moved the same way) or replies (the same person was owed `count` replies). For a folder_rename line: backups "
         "or workspace, which folder is offered a rename. For a restore line: pending (a restore waits for the "
         "restart that swaps it in), restored (the swap was made; `text` is the folder holding what was there before) "
-        "or not_restored (it wasn't; `text` says why and the workspace is as it was).",
+        "or not_restored (it wasn't; `text` says why and the workspace is as it was). For a refused or failed line "
+        "that stands for several requests with one cause: no_person when no one is set as the person the app is for.",
     )
     choices: list[str] = Field(
         default_factory=list,
@@ -3870,7 +3872,12 @@ class QueueLineView(BaseModel):
     )
     names: list[str] = Field(
         default_factory=list,
-        description="For a switch_failed line: what the check found didn't come out right, by name, the first few.",
+        description="For a switch_failed line: what the check found didn't come out right, by name, the first few. "
+        "For a sent_folder line that covers several mailboxes: their names.",
+    )
+    sources: list[str] = Field(
+        default_factory=list,
+        description="For a sent_folder line that covers several mailboxes: the watched sources' ids, one for each.",
     )
     model: str | None = Field(
         None, description="For an account_check line: the short name of the account's model in that chain."

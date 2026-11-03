@@ -72,7 +72,9 @@ class Line:
     added `source`: `count` items with something to look over and their results counted in `outcome`, which replace
     the lines each would have had; the list opens in the details pane, and "All looks good" there reviews it),
     batches (batches left unopened for `ui.today.fold_batches_after_days`, folded into one line: `count` of them,
-    each a `review` or `intake_review` line in `parts`, oldest first), refused, restart (work held until the person
+    each a `review` or `intake_review` line in `parts`, oldest first), refused (and failed:
+    several with one cause are one line, `count` of them, each in `items`, `state` no_person for that cause),
+    restart (work held until the person
     restarts the app: `count` is how many requests wait), stuck (background work that stopped checking in:
     `waiting_since` is when it last did; the person restarts the app), handover (the synced folder can't be used until
     the person settles it: `state` is diverged, chosen or elsewhere and `text` the other computer), failed,
@@ -137,7 +139,9 @@ class Line:
     title in `subject` and id in `question`, their own words in `text`; the line opens the question to answer again, and
     "Leave it" dismisses the request),
     sent_folder (a connected mailbox that reads no sent folder: its first source's id in `source`, the mailbox's name in
-    `subject`; the line opens where the source's folders are chosen, and Dismiss ends it for good),
+    `subject`;
+    several mailboxes are one line with `count`, their sources in `sources` and names in `names`;
+    the line opens where the source's folders are chosen, and Dismiss ends it for good),
     folder_rename (a folder made under the product's earlier name, found where the new default would be: `state` is
     backups or workspace, `subject` the folder as it is named now and `text` as it would be named; Rename is the
     person's own change and Keep stops the offer for good),
@@ -258,6 +262,8 @@ class Line:
     credential_kind: str | None = None
     credential_name: str | None = None
     places: list[str] = field(default_factory=list)
+    #: For a sent_folder line that covers several mailboxes, their sources' ids (their names are in `names`).
+    sources: list[str] = field(default_factory=list)
     names: list[str] = field(default_factory=list)
     usd_per_day: float | None = None
     reason: str | None = None
@@ -321,6 +327,29 @@ class Line:
     since: str = ""
 
 
+def _one_line_per_cause(found: dict[tuple[str, str, str | None, str | None], list[Line]]) -> list[Line]:
+    """Stopped requests with one cause are one line with a count and the lines behind it in `items` (`state` is the
+    cause's kind when it has one), never one line each; a request that stopped alone keeps its own line."""
+    lines: list[Line] = []
+    for (kind, group, cause_kind, waiting), members in found.items():
+        if len(members) == 1:
+            lines.extend(members)
+            continue
+        lines.append(
+            Line(
+                key=f"{kind}:all:{cause_kind or waiting or ''}",
+                group=group,
+                kind=kind,
+                count=len(members),
+                waiting=waiting,
+                state=cause_kind if cause_kind == "no_person" else None,
+                items=members,
+                since=min(m.since or "" for m in members),
+            )
+        )
+    return lines
+
+
 def _folder_lines(ws: Any, store: Any, cfg: Any, home: Path | None = None) -> list[Line]:
     """Lines about folders: a connected mailbox that reads no sent folder, and a folder made under the product's earlier
     name that is offered a rename once."""
@@ -329,17 +358,30 @@ def _folder_lines(ws: Any, store: Any, cfg: Any, home: Path | None = None) -> li
     lines: list[Line] = []
     private = ws.private_dir
     gone = sent_folders.dismissed(private)
-    for box in sent_folders.missing(cfg, watch.connectors(store)):
-        if box.source not in gone:
-            lines.append(
-                Line(
-                    key=f"sent_folder:{box.source}",
-                    group="decide",
-                    kind="sent_folder",
-                    source=box.source,
-                    subject=box.label,
-                )
+    boxes = [box for box in sent_folders.missing(cfg, watch.connectors(store)) if box.source not in gone]
+    if len(boxes) == 1:
+        lines.append(
+            Line(
+                key=f"sent_folder:{boxes[0].source}",
+                group="decide",
+                kind="sent_folder",
+                source=boxes[0].source,
+                subject=boxes[0].label,
             )
+        )
+    elif boxes:
+        # Mailboxes with the same missing folder are one line with a count and their names, not one line each.
+        lines.append(
+            Line(
+                key="sent_folder:all",
+                group="decide",
+                kind="sent_folder",
+                count=len(boxes),
+                source=boxes[0].source,
+                sources=[box.source for box in boxes],
+                names=[box.label for box in boxes],
+            )
+        )
     if cfg.server.mode != "hosted":
         here = home or Path.home()
         for which in folder_rename.offers(cfg, private, ws.root, here):
@@ -700,6 +742,7 @@ def _everything(
     first_go: list[Any] = []
     catch_up_go: list[Any] = []
     intake_go: dict[str, list[Any]] = {}
+    same_cause: dict[tuple[str, str, str | None, str | None], list[Line]] = {}
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") not in ("needs_you", "failed"):
@@ -740,17 +783,21 @@ def _everything(
             kind, group = "go", "decide"
         else:
             kind, group = "refused", "decide"
-        lines.append(
-            Line(
-                key=f"{kind}:{req.id}",
-                group=group,
-                kind=kind,
-                title=title(d, changesets.get(d.get("changeset") or "")),
-                request=req.id,
-                waiting=d.get("waiting"),
-                since=str(d.get("created_at") or ""),
-            )
+        stopped = Line(
+            key=f"{kind}:{req.id}",
+            group=group,
+            kind=kind,
+            title=title(d, changesets.get(d.get("changeset") or "")),
+            request=req.id,
+            waiting=d.get("waiting"),
+            since=str(d.get("created_at") or ""),
         )
+        if kind == "go":
+            lines.append(stopped)
+        else:
+            cause_kind = (d.get("cause") or {}).get("kind")
+            same_cause.setdefault((kind, group, cause_kind, d.get("waiting")), []).append(stopped)
+    lines.extend(_one_line_per_cause(same_cause))
 
     from engine.extract import health
 

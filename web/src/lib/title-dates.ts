@@ -25,10 +25,10 @@ export function plainTitle(text: string, due?: string | null): string {
 }
 
 // How many words a title holds before it is cut (`ui.title_words`); set from the runtime configuration when the app starts.
-let titleWords = 12;
+let baseWords = 12;
 
 export function setTitleWords(words: number | null | undefined): void {
-  if (words && words > 0) titleWords = Math.floor(words);
+  if (words && words > 0) baseWords = Math.floor(words);
 }
 
 /** Punctuation that was doubled where words were joined: a full stop before a comma, or two stops in a row. */
@@ -44,7 +44,9 @@ function tidy(text: string): string {
 /** A title for a row (design 7.7, "Titles are short"): a to-do's words as `plainTitle` writes them, then the first sentence
  * when it fits, else the first words cut at a word with an ellipsis, never in the middle of a word. A date the row's own meta
  * already says (`due`) is left out of the words, so a day is said once. The stored text is never changed. */
-export function shortTitle(text: string, due?: string | null): string {
+/** `lines` is how many lines the row gives the title: it holds that many times `ui.title_words` words. */
+export function shortTitle(text: string, due?: string | null, lines = 1): string {
+  const titleWords = baseWords * lines;
   let whole = tidy(plainTitle(text, due));
   const count = (s: string) => s.split(/\s+/).filter(Boolean).length;
   // A run of letters with no space in it (an address, a pasted code) counts for its length, not as one word.

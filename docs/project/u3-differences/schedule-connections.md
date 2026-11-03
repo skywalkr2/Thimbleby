@@ -33,6 +33,15 @@ The last picture was taken before the stale-calendar line over the Schedule (bel
 | schedule | Two outline buttons in the header and no line under the title | Add to schedule is the one filled button; the line under the title names the clashes in view |
 | schedule-states | One calendar can't be read: no line | One line over the calendar naming it and the account, "Entries shown are from <time>", with Sign in again (`ScheduleStale`) |
 
+## Fixed in the final side-by-side review (change log 320)
+
+| Page | Difference found | What was done |
+|---|---|---|
+| schedule | The full-page picture was split, the header mid-page | The capture tool scrolls to the top before a full-page picture; the app still opens at now |
+| schedule | At 390 the view switch wrapped, Timeline alone | One row of segments that share the width (`Schedule.module.css`) |
+| connections-states | "No accounts yet" had a small icon and an outline "Ask how to add one" | The card "Connect your mail and calendar" with the filled "Add a connection"; asking stays beside it (`Sources.test.tsx`) |
+| connections-states | "Sign-in refused" had two filled buttons | Try again is filled; Sign in again is plain while the refusal shows (`ConnectionCard.test.tsx`) |
+
 ## Left, with the reason
 
 | Page | Difference | Why |

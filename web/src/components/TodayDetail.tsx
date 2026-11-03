@@ -89,9 +89,27 @@ function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (
     case "intake_review":
     case "batches":
       return <BatchDetail line={line} sendBack={props.sendBack} />;
+    case "refused":
+    case "failed":
+      return line.count > 1 ? <StoppedDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} /> : <ChangeDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} />;
     default:
       return <ChangeDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} />;
   }
+}
+
+/** Several requests that stopped for one cause: the same card What changed shows for each of them, one row each. */
+function StoppedDetail(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (step: string) => void }) {
+  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
+  if (changes.isPending) return <Skeleton />;
+  const found = (props.line.items ?? []).map((member) => changes.data?.find((c) => c.id === member.request)).filter((c) => c !== undefined);
+  if (!found.length) return <Gone />;
+  return (
+    <RowList as="ol">
+      {found.map((item) => (
+        <ChangeRow key={item.id} item={item} reveal={0} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} />
+      ))}
+    </RowList>
+  );
 }
 
 /** What came in from outside is said once, here, and not on every line of a list: the assistant reads it as information and

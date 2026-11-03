@@ -977,6 +977,29 @@ test("a mailbox with no sent folder is a line that starts with the verb, opens w
   expect(await screen.findByText("Okay. You won't be asked about the Sent folder for Project mail again.")).toBeInTheDocument();
 });
 
+test("mailboxes with no sent folder are one line with a count and their names, and one dismissal ends them all", async () => {
+  const user = userEvent.setup();
+  let lines = [sentFolder({ key: "sent_folder:all", count: 3, sources: ["a", "b", "c"], names: ["First mail", "Second mail", "Third mail"], subject: undefined, source: "a" })];
+  const { calls, onOpenSources } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST watch/a/sent-folder/dismiss": () => ({ ok: "a" }),
+    "POST watch/b/sent-folder/dismiss": () => ({ ok: "b" }),
+    "POST watch/c/sent-folder/dismiss": () => {
+      lines = [];
+      return { ok: "c" };
+    },
+  });
+  const rows = await screen.findAllByRole("region", { name: "Sent folder" });
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toHaveTextContent("Add the Sent folder for 3 mailboxes so the promises you make are found");
+  expect(rows[0]).toHaveTextContent("First mail, Second mail, Third mail");
+  await user.click(within(rows[0]).getByRole("button", { name: "Add the Sent folder for First mail" }));
+  expect(onOpenSources).toHaveBeenCalledTimes(1);
+  await user.click(within(rows[0]).getByRole("button", { name: "More actions for Sent folder" }));
+  await user.click(await screen.findByRole("menuitem", { name: /Don't ask again for any of them/ }));
+  await waitFor(() => expect(calls.filter((c) => c.route.endsWith("sent-folder/dismiss")).length).toBe(3));
+});
+
 test("the offer to rename a folder asks in the person's words, and nothing is renamed until Rename", async () => {
   const user = userEvent.setup();
   let lines = [folderRename()];

@@ -20,7 +20,7 @@ import { useMoney } from "../lib/money";
 import { reveal } from "../lib/reveal";
 import { useDraftAct, useSendOptions } from "../lib/acts";
 import { useToasts } from "../lib/toasts";
-import { useQueue, useTodayCount, type QueueLine } from "../lib/today";
+import { useQueue, useRailRows, useTodayCount, type QueueLine } from "../lib/today";
 import { shortTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -567,6 +567,9 @@ export function BriefCard(props: {
   const [asked, setAsked] = useState<Form | null>(null);
   useBriefClosings();
   const [unfolded, setUnfolded] = useState<boolean | null>(null);
+  // The card holds `ui.today.rail_rows` lines before one button says how many more there are, so a long day never makes the rail longer than the queue.
+  const [allRows, setAllRows] = useState(false);
+  const railRows = useRailRows();
   const narrow = useIsNarrow();
   const found = useBrief(asked);
   const queue = useQueue();
@@ -645,17 +648,42 @@ export function BriefCard(props: {
       )}
       <div id={`${id}-body`} hidden={!isUnfolded}>
         {data.message && (data.message.state === "ask" ? <WhoFor message={data.message} /> : <Message message={data.message} />)}
-        {data.sections.map((section) => ({ section, lines: section.lines.filter((line) => onSide(line.side, filter.choice)) })).filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0).map(({ section, lines }) => (
-          <div key={section.key} className={styles.section} data-section={section.key}>
-            <h3 className={styles.sub}>{heading(section.key, t)}</h3>
-            <ul className={styles.lines}>
-              {lines.map((line, n) => (
-                <LineRow key={line.key} showAgain={Boolean(line.quieted) && lines.findIndex((x) => x.quieted === line.quieted) === n} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
-              ))}
-            </ul>
-            {section.more > 0 && <p className="hint">{tn("brief.more", section.more)}</p>}
-          </div>
-        ))}
+        {(() => {
+          const filtered = data.sections
+            .map((section) => ({ section, lines: section.lines.filter((line) => onSide(line.side, filter.choice)) }))
+            .filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0);
+          let room = allRows ? Number.POSITIVE_INFINITY : railRows;
+          const capped = filtered.map(({ section, lines }) => {
+            const take = Math.min(lines.length, room);
+            room -= take;
+            return { section, lines: lines.slice(0, take), left: lines.length - take };
+          });
+          const hidden = capped.reduce((sum, c) => sum + c.left, 0);
+          return (
+            <>
+              {capped
+                .filter(({ section, lines }) => lines.length > 0 || section.lines.length === 0)
+                .map(({ section, lines }) => (
+                  <div key={section.key} className={styles.section} data-section={section.key}>
+                    <h3 className={styles.sub}>{heading(section.key, t)}</h3>
+                    <ul className={styles.lines}>
+                      {lines.map((line, n) => (
+                        <LineRow key={line.key} showAgain={Boolean(line.quieted) && lines.findIndex((x) => x.quieted === line.quieted) === n} line={line.kind === "on_today" && line.change === "need" && needing ? { ...line, count: needing } : line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
+                      ))}
+                    </ul>
+                    {section.more > 0 && !hidden && <p className="hint">{tn("brief.more", section.more)}</p>}
+                  </div>
+                ))}
+              {(hidden > 0 || (allRows && filtered.reduce((n, f) => n + f.lines.length, 0) > railRows)) && (
+                <p className={styles.actions} data-brief-more="">
+                  <Button variant="quiet" size="sm" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
+                    {allRows ? t("brief.rows.fewer") : tn("brief.rows.more", hidden)}
+                  </Button>
+                </p>
+              )}
+            </>
+          );
+        })()}
         {data.quiet && <p className={styles.quiet}>{quiet}</p>}
         {data.goals && <Goals goals={data.goals} />}
       </div>

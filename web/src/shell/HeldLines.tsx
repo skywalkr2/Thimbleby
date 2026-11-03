@@ -540,15 +540,26 @@ function WorkAccessLine(props: { line: Line }) {
 /** A connected mailbox that reads no sent folder: the one button opens where the mailbox's folders are chosen, and the
  * menu ends the line for good. The line goes by itself once a sent folder is read. */
 function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const act = useAct();
   const { line } = props;
-  const source = line.source ?? "";
-  const account = line.subject ?? "";
+  const sources = line.count > 1 && (line.sources ?? []).length ? line.sources ?? [] : [line.source ?? ""];
+  const many = sources.length > 1;
+  const names = line.names ?? [];
+  const account = many ? (names[0] ?? "") : (line.subject ?? "");
   const dismiss = () =>
     void act(
-      () => api.dismissSentFolder(source),
-      () => ({ message: t("queue.sent_folder.dismissed", { account }), undo: () => api.dismissSentFolderUndo(source) }),
+      async () => {
+        let last: S["Ok"] | undefined;
+        for (const source of sources) last = await api.dismissSentFolder(source);
+        return last;
+      },
+      () => ({
+        message: many ? t("queue.sent_folder.dismissed_all") : t("queue.sent_folder.dismissed", { account }),
+        undo: async () => {
+          for (const source of sources) await api.dismissSentFolderUndo(source);
+        },
+      }),
     );
   return (
     <Row
@@ -556,8 +567,8 @@ function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
       aria-label={t("queue.sent_folder.label")}
       data-queue-line="sent_folder"
       pill={<Pill tone="neutral">{t("queue.sent_folder.label")}</Pill>}
-      title={t("queue.sent_folder", { account })}
-      meta={t("queue.sent_folder.sub")}
+      title={many ? tn("queue.sent_folder.many", sources.length) : t("queue.sent_folder", { account })}
+      meta={many ? t("queue.sent_folder.many_sub", { list: names.join(", ") }) : t("queue.sent_folder.sub")}
       primary={
         props.onOpen && (
           <Button size="sm" variant="primary" data-key="primary" aria-label={t("queue.sent_folder.open_named", { account })} onClick={props.onOpen}>
@@ -567,7 +578,7 @@ function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
       }
       menu={
         <MenuButton
-          groups={[{ id: "sent-folder", entries: [{ id: "dismiss", label: t("queue.sent_folder.dismiss"), note: t("queue.sent_folder.dismiss_note"), run: dismiss }] }]}
+          groups={[{ id: "sent-folder", entries: [{ id: "dismiss", label: many ? t("queue.sent_folder.dismiss_all") : t("queue.sent_folder.dismiss"), note: t("queue.sent_folder.dismiss_note"), run: dismiss }] }]}
           trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.sent_folder.label") })} tooltip={false} />}
         />
       }

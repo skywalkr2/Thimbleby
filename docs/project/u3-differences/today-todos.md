@@ -26,6 +26,21 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | todos | (Questions) | They never had a tick; a test now holds it |
 | both | The phone: "⋯" at the top right (done in 313); the first screens | Checked: the lead slot, the buttons under the words, the inset card without a left margin |
 
+## Fixed in the final side-by-side review (change log 320)
+
+| Page | Difference found | What was done |
+|---|---|---|
+| today | Thirteen "Choose another account for Email from …" lines for one cause and three "Add the Sent folder" lines | One line for each cause with the count and the lines behind it (`tests/test_one_line_per_cause.py`, `TodayStoppedGroup.test.tsx`, `HeldLines.test.tsx`) |
+| today | A clash line cut off the second calendar's name | Each calendar's name is shortened by itself and the meta may wrap on a clash line |
+| today-states | The filtered side kept its line and never said "Nothing on the … side" | The side says so above the lines that belong to no side (`TodaySides.test.tsx`); the drive picks the side first, while the backup line is still there |
+| today-states | All clear showed an At risk backup line | The drive makes the one backup the workspace asks for, then loads Today again; the setup line remains, so the empty card says setup isn't finished (see below) |
+| today-states | Loading showed the full page | The drive holds the screen's own reads (`holdReads` with the pattern of paths) and loads the app again on the screen |
+| today-states | The wrap-up card had every line and no "Show N more" | `ui.today.rail_rows` lines, then "Show N more" and "Show fewer" (`BriefCard.test.tsx`) |
+| todos-states | A side picked in an earlier state leaked into the next | `open()` in the capture's drive starts each state from every side |
+| todos-states | Questions showed "Nothing matches these filters" with no filter set | The tab says it is empty (`OpenItems.test.tsx`); the line under the title counts both tabs, as the two tab counts add up |
+| todos-states | A ticked to-do vanished; only the toast had Undo | The row stays where it was, struck through, "Done just now" and Undo, until the person changes tab or filter (`OpenItems.test.tsx`) |
+| all | Skeletons were nearly invisible | The bars use the border tone and shimmer to the well tone, in day and night |
+
 ## Left, with the reason
 
 | Page | Difference | Why |
@@ -36,6 +51,11 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | today | The brief card above the queue | Data-dependent (it appears when a form is due), not in the sample |
 | today | The mockup's rail is shorter than the queue by design | Caps are in rows (`RAIL_ROWS`, 3); the layout does not force the length, so a rail with long rows can still be longer than a short queue. The cap is a constant, not a setting (decision needed) |
 | today | The mockup's tab bar (Today, To-dos, +, Schedule, More) | The shell's, not this step's; the build's bar says Today, Keeping track, +, Search, More |
+| today-states | The brand card "Nothing needs you" | While setup is unfinished, Today's empty card says "Setup isn't finished" (a to-do of the setup, by design); the fixture's setup is not finished, so the brand card is held by `Today.test.tsx` |
+| today-states | The side filter opened as a list, with a fifth side | At 1440 the sides are always a strip; the list is the phone's sheet, which the drive opens at 390 only |
+| today-states | A save that failed, Changed somewhere else | Toasts, as `states-phone.md` explains |
+| todos | The long titles clamp to two lines | Not changed in this pass; the row's `clamp` is not given to the to-do row (P2 left) |
+| today, todos | The side strip shows the same count on every side | The fixture's to-dos have no side, so each side counts all of them (data); P2 left |
 | today | The side filter "Showing Needs you" chip | Not a feature (the queue has one view) |
 | today-review | The capture cannot reach the opened review | Today has no line to look over on the capture fixture, so `differences.md` lists it as not drivable; it is held by `Today.test.tsx` ("while a review is open…") and `web/e2e/today-todos-46.spec.ts` |
 | todos | "by Friday" read from the add row | The add row sends the title only (the server reads a day from its own field); so a to-do added from the row needs a date and is counted in the line at the foot |
