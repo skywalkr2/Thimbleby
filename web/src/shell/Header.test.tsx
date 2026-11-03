@@ -66,11 +66,13 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-test("the brand is a link to Today, named for what it does, with the product's mark and the workspace name", () => {
+test("the brand is a link to Today, named for what it does, with the product's mark and the product's name from the wording sheet", () => {
   show();
   const brand = screen.getByRole("link", { name: "Go to Today · Example Workspace" });
   expect(brand).toHaveAttribute("href", expect.stringMatching(/#today$/));
-  expect(brand).toHaveTextContent("Example Workspace");
+  // The name beside the mark is the product's; the workspace's own name is in the link's name, the person's menu and the tab's title.
+  expect(brand).toHaveTextContent("Thimbleby");
+  expect(brand).not.toHaveTextContent("Example Workspace");
   // The mark is decorative (the name beside it is the text), and comes in a day and a night version, one drawn at a time.
   const marks = Array.from(brand.querySelectorAll("img[data-brand-mark]"));
   expect(marks.map((m) => m.getAttribute("data-brand-mark"))).toEqual(["day", "night"]);
@@ -152,12 +154,14 @@ test("the header carries a search field named for the assistant, which is not a 
   expect(screen.queryByRole("button", { name: "Search or ask" })).toBeNull();
 });
 
-test("Hand something in is the one primary button, and it opens the hand-in", async () => {
+test("Hand something in is the tonal weight, never the filled one, so a screen's own primary is the only filled button; it opens the hand-in", async () => {
   const user = userEvent.setup();
   const onHandIn = vi.fn();
   show({ handlers: { onHandIn } });
   const button = screen.getByRole("button", { name: "Hand something in" });
-  expect(button).toHaveAttribute("data-variant", "primary");
+  expect(button).toHaveAttribute("data-variant", "tonal");
+  expect(button).toHaveAttribute("data-weight", "tonal");
+  expect(document.querySelectorAll('header [data-weight="filled"]')).toHaveLength(0);
   await user.click(button);
   expect(onHandIn).toHaveBeenCalledTimes(1);
 });
@@ -272,10 +276,10 @@ test("the header has no Quick links button: the links are the first group of the
   expect(screen.queryByRole("menuitem", { name: "Odd one" })).toBeNull();
   // The person and Settings lead, then the links under their own title, then the figures and the appearance choices.
   const groups = screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
-  expect(groups.slice(0, 4)).toEqual(["Casey Example", "Quick links", "How Helper is doing", "Theme"]);
+  expect(groups.slice(0, 4)).toEqual(["Casey Example · Example Workspace", "Quick links", "How Helper is doing", "Theme"]);
 });
 
-test("the person's menu leads with their name and Settings, and the button is named after them, not after what is in the menu", async () => {
+test("the person's menu leads with their name and the workspace's, then Settings, and the button is named after them, not after what is in the menu", async () => {
   const user = userEvent.setup();
   const onOpenSettings = vi.fn();
   show({ handlers: { onOpenSettings } });
@@ -283,7 +287,7 @@ test("the person's menu leads with their name and Settings, and the button is na
   expect(button).not.toHaveAccessibleName(/appearance/i);
   await user.click(button);
   const first = screen.getAllByRole("group")[0];
-  expect(first).toHaveAccessibleName("Casey Example");
+  expect(first).toHaveAccessibleName("Casey Example · Example Workspace");
   expect(within(first).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Settings"]);
   // The figures entry is a plain line: nothing in it looks like a chosen option.
   const doing = screen.getByRole("menuitem", { name: "How Helper is doing" });

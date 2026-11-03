@@ -47,6 +47,7 @@ import { sentCheckTitle, useSentCheckChoices } from "./SentCheckLine";
 import { LearnedLine, isLearned } from "./LearnedToday";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
+import { useKeyboardInput } from "../lib/input-mode";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { ActTodayRows } from "./ActToday";
@@ -767,7 +768,9 @@ function QueueRow(props: {
   const { line } = props;
   const open = props.selection !== null;
   // The row the keyboard focus is in is the cursor row: a soft fill and a bar at its left edge.
+  // The fill and bar show for the keyboard only: a row that takes the cursor by itself as Today opens shows neither until a key is pressed.
   const [cursor, setCursor] = useState(false);
+  const keyboard = useKeyboardInput();
   const opens = opensItems(line);
   const inPlace = open && !props.beside;
   const detailId = `detail-${line.key.replace(/[^A-Za-z0-9_-]/g, "-")}`;
@@ -1378,7 +1381,7 @@ function QueueRow(props: {
     <Row
       as="div"
       ref={ref}
-      selected={open || cursor}
+      selected={open || (cursor && keyboard)}
       onFocus={() => setCursor(true)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCursor(false);
@@ -1394,10 +1397,10 @@ function QueueRow(props: {
       title={
         <>
           <span id={`${detailId}-title`} title={line.notes ?? undefined}>
+            {title}
             {area}
             {project}
             <ViewTags views={line.views} className={styles.tag} />
-            {title}
           </span>
           {line.notes && (
             <span id={`${detailId}-notes`} className="sr">

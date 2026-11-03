@@ -196,7 +196,11 @@ test.describe("A review happens on Today", () => {
       const rows = page.locator("[data-queue-line]");
       await expect(rows.first()).toBeVisible();
       await expect(rows).toHaveCount(lines.length);
-      // The cursor starts on the first line.
+      // The cursor starts on the first line, which shows neither its ring nor its cursor fill and bar until a key is pressed (VP06).
+      await expect(rows.first()).toBeFocused();
+      expect(await rows.first().evaluate((row) => getComputedStyle(row).boxShadow)).toBe("none");
+      await page.keyboard.press("j");
+      await page.keyboard.press("k");
       await expect(rows.first()).toBeFocused();
       const found = await page.evaluate(() => {
         const probe = (property: "backgroundColor" | "boxShadow", value: string) => {

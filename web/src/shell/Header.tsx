@@ -2,7 +2,8 @@
 // field (its last row asks the assistant), the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
 // Hand something in, Help and the person's initials, which open the user menu: their name and Settings, their own pages, how the assistant is
 // doing, then theme and density.
-// The brand shows the workspace's own logo when it has one, else the product's mark (day or night by the theme), then the name in the display face.
+// The brand shows the workspace's own logo when it has one, else the product's mark (day or night by the theme), then the product's name
+// from the wording sheet in the display face; the workspace's own name is in the user menu's heading and in the browser tab's title.
 // Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the search field shrinks; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
 // before the Ask field gives any up.
 import { useQuery } from "@tanstack/react-query";
@@ -74,11 +75,13 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
 
 /** The person's menu: under their name, Settings; then their quick links when they have any, how the assistant is doing, and
  * this device's appearance. */
-export function useUserMenuGroups(person: string, handlers: { onOpenSettings: () => void; onOpenQuality: () => void }): MenuGroup[] {
+export function useUserMenuGroups(person: string, handlers: { onOpenSettings: () => void; onOpenQuality: () => void }, workspace?: string): MenuGroup[] {
   const { t } = useWords();
   const pages = usePagesGroup();
   const appearance = useAppearanceGroups();
-  const me: MenuGroup = { id: "me", title: person, entries: [{ id: "settings", label: t("nav.settings"), icon: "gear", run: handlers.onOpenSettings }] };
+  // The heading names the person and the workspace they are in; a person with no name of their own is shown the workspace's.
+  const heading = workspace && workspace !== person ? t("user.heading", { person, workspace }) : person;
+  const me: MenuGroup = { id: "me", title: heading, entries: [{ id: "settings", label: t("nav.settings"), icon: "gear", run: handlers.onOpenSettings }] };
   const doing: MenuGroup = { id: "doing", label: t("quality.open"), entries: [{ id: "quality", label: t("quality.open"), run: handlers.onOpenQuality }] };
   return [me, ...(pages ? [pages] : []), doing, ...appearance];
 }
@@ -108,7 +111,7 @@ export function Header(props: {
   const { t } = useWords();
   const { rc } = props;
   const person = usePersonName(rc.workspace_name);
-  const userMenu = useUserMenuGroups(person, { onOpenSettings: props.onOpenSettings, onOpenQuality: props.onOpenQuality });
+  const userMenu = useUserMenuGroups(person, { onOpenSettings: props.onOpenSettings, onOpenQuality: props.onOpenQuality }, rc.workspace_name);
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
   const tight = useMediaQuery("(max-width: 1439px)");
@@ -128,7 +131,7 @@ export function Header(props: {
             <img className={`${styles.logo} ${styles.markNight}`} src={markNight} alt="" data-brand-mark="night" />
           </>
         )}
-        {!props.narrow && <span className={styles.name}>{rc.workspace_name}</span>}
+        {!props.narrow && <span className={styles.name}>{t("app.name")}</span>}
       </a>
       {rc.demo && (
         <span className={styles.chip}>
@@ -143,7 +146,7 @@ export function Header(props: {
       </div>
       {!props.narrow && (
         <div className={styles.end}>
-          <Button variant="primary" icon="plus" onClick={props.onHandIn}>
+          <Button variant="tonal" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>
           <MenuButton groups={helpGroups} trigger={<IconButton icon="help" label={t("header.help")} data-feedback-button="" />} />

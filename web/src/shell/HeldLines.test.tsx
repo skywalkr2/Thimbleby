@@ -134,7 +134,8 @@ test("each paused account has its own line, and both kinds can show together", a
 test("work waiting for an internet connection is one line that starts with checking the connection, with the count and since when", async () => {
   show([line("offline", { key: "offline", waiting_since: `${localDate(new Date())}T14:05:00-05:00`, count: 3 })]);
   const row = await screen.findByRole("region", { name: "No internet connection" });
-  expect(row).toHaveTextContent(/^No internet connectionCheck your internet connection: 3 tasks have been waiting since 2:05\s?PM/);
+  // The line starts with what to do; its mark stands after the words.
+  expect(row).toHaveTextContent(/^Check your internet connection: 3 tasks have been waiting since 2:05\s?PMNo internet connection/);
   expect(row).toHaveTextContent("The assistant carries on when your internet connection returns.");
   expect(row.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   expect(within(row).queryByRole("button")).toBeNull();
@@ -640,7 +641,7 @@ test("a source that couldn't be read for too long is a line that starts with wha
   const user = userEvent.setup();
   const { onOpenSources } = show([unreadSource()]);
   const row = await screen.findByRole("region", { name: "Connection not read" });
-  expect(row).toHaveTextContent(/^Connection not readSign in to Work mail again: not read since yesterday/);
+  expect(row).toHaveTextContent(/^Sign in to Work mail again: not read since yesterday.*Connection not read/);
   expect(row).toHaveTextContent("The sign-in was withdrawn. Sign in to it again, then it is read on its next turn.");
   await user.click(within(row).getByRole("button", { name: "Open Connections" }));
   expect(onOpenSources).toHaveBeenCalledTimes(1);

@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Button, ButtonLink } from "./Button";
 import { IconButton } from "./IconButton";
 
@@ -110,4 +112,37 @@ test("a disabled primary keeps its weight and its reason sits beside it, in the 
   expect(button).toHaveAttribute("data-variant", "primary");
   expect(button.parentElement).toContainElement(screen.getByText("Pick a person first"));
   expect(button.nextElementSibling).toBe(screen.getByText("Pick a person first"));
+});
+
+// Three weights as pills (design 7.12): filled, tonal and plain, with the outline as the bordered default. Each button names the weight
+// it is drawn in, so a browser test can count the filled ones in view (at most one a screen).
+test("every variant names the weight it is drawn in: primary and danger are filled, tonal is soft, quiet is plain, the default is the outline", () => {
+  render(
+    <>
+      <Button variant="primary">Filled</Button>
+      <Button variant="danger">Remove</Button>
+      <Button variant="tonal">Soft</Button>
+      <Button variant="quiet">Plain</Button>
+      <Button>Outline</Button>
+      <ButtonLink variant="tonal" href="#x">
+        Soft link
+      </ButtonLink>
+    </>,
+  );
+  const weight = (name: string) => screen.getByRole(name === "Soft link" ? "link" : "button", { name }).getAttribute("data-weight");
+  expect(weight("Filled")).toBe("filled");
+  expect(weight("Remove")).toBe("filled");
+  expect(weight("Soft")).toBe("tonal");
+  expect(weight("Plain")).toBe("plain");
+  expect(weight("Outline")).toBe("outline");
+  expect(weight("Soft link")).toBe("tonal");
+});
+
+test("the weights are drawn as pills in the style sheet: filled solid, tonal the soft accent with no border, plain text", () => {
+  const css = readFileSync(join(__dirname, "Button.module.css"), "utf8");
+  expect(css).toMatch(/\.btn \{[^}]*border-radius: var\(--radius-btn\)/s);
+  expect(css).toMatch(/\.primary \{[^}]*background: var\(--accent\)/);
+  expect(css).toMatch(/\.tonal \{[^}]*background: var\(--accent-soft\); border-color: transparent; color: var\(--accent-text\)/);
+  expect(css).toMatch(/\.quiet \{[^}]*background: transparent/);
+  expect(readFileSync(join(__dirname, "..", "theme", "tokens.css"), "utf8")).toMatch(/--radius-btn: var\(--radius-full\)/);
 });

@@ -12,6 +12,7 @@ import { WordingProvider, useWords } from "./lib/wording";
 import { OwnRequestsProvider } from "./components/HandIn";
 import { Button } from "./ui/Button";
 import { initAppearance } from "./lib/theme";
+import { installInputMode } from "./lib/input-mode";
 import { setClockZone } from "./lib/dates";
 import { useSides } from "./lib/sides";
 import { setTitleWords } from "./lib/title-dates";
@@ -59,6 +60,7 @@ function LiveWording(props: { rc: S["RuntimeConfig"]; children: ReactNode }) {
 
 function start(rc: S["RuntimeConfig"]) {
   initAppearance(rc);
+  installInputMode();
   // The phone layout applies from the first paint, not after the first render.
   if (typeof window.matchMedia === "function") {
     document.documentElement.toggleAttribute("data-narrow", window.matchMedia(`(max-width: ${rc.narrow_below_px - 1}px)`).matches);

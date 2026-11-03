@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { day, setClockZone, time, todayOn } from "../lib/dates";
+import { resetInputMode } from "../lib/input-mode";
 import { useShortcuts } from "../lib/keys";
 import { takeFilters } from "../lib/open-items";
 import { showNewLines } from "../lib/queue-hold";
@@ -616,16 +617,22 @@ test("the cursor starts on the first line, and the arrows and Enter walk and ope
   expect(await within(row("decision")).findByRole("textbox", { name: "Your answer" })).toBeInTheDocument();
 });
 
-test("the line that has the keyboard focus is the cursor row, and the cursor leaves with the focus", async () => {
+test("the line that has the keyboard focus is the cursor row once a key is pressed, and the cursor leaves with the focus; before that the first line shows no cursor", async () => {
   const user = userEvent.setup();
+  resetInputMode();
   show([decision, review, send]);
   await screen.findByText("Matte or soft-touch?", { selector: "li *" });
   await waitFor(() => expect(row("decision")).toHaveFocus());
-  expect(row("decision")).toHaveAttribute("data-selected");
-  expect(row("decision")).toHaveAttribute("aria-current", "true");
+  // The first line took the cursor by itself as Today opened, so it has neither the cursor's fill and bar nor a ring (VP06).
+  expect(row("decision")).not.toHaveAttribute("data-selected");
+  expect(row("decision")).not.toHaveAttribute("aria-current");
   await user.keyboard("{ArrowDown}");
   expect(row("review")).toHaveAttribute("data-selected");
+  expect(row("review")).toHaveAttribute("aria-current", "true");
   expect(row("decision")).not.toHaveAttribute("data-selected");
+  await user.keyboard("{ArrowUp}");
+  expect(row("decision")).toHaveAttribute("data-selected");
+  expect(row("decision")).toHaveAttribute("aria-current", "true");
 });
 
 test("a line opened in place is an inset card under its row, closed by its own Close", async () => {

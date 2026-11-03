@@ -8,6 +8,7 @@ import { useWords } from "../lib/wording";
 import { SearchBox } from "../components/SearchBox";
 import { MISSED_BUTTON, useAnythingToMiss, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
+import { GroupLabel } from "../ui/GroupLabel";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { BottomSheet } from "../ui/Overlay";
@@ -101,7 +102,7 @@ export function BottomBar(props: {
           {nav.workTitle}
         </button>
         <span className={styles.plusCell}>
-          <button type="button" className={styles.plus} aria-label={t("handin.open")} onClick={props.onHandIn}>
+          <button type="button" className={styles.plus} data-weight="tonal" aria-label={t("handin.open")} onClick={props.onHandIn}>
             <Icon name="plus" size={22} />
           </button>
         </span>
@@ -122,7 +123,7 @@ export function BottomBar(props: {
       {sheet === "more" && (
         <Sheet title={t("nav.more")} onClose={close}>
           <Links entries={[...nav.records, ...nav.bottom]} current={props.current} onPick={close} />
-          <p className={styles.section}>{t("header.help")}</p>
+          <GroupLabel as="p" className={styles.section}>{t("header.help")}</GroupLabel>
           <div className={styles.list}>
             {anythingMissed && (
               <button type="button" className={styles.link} {...{ [MISSED_BUTTON]: "" }} onClick={later(missed)}>
@@ -146,7 +147,7 @@ export function BottomBar(props: {
               {t("app.version", { version: props.version })}
             </button>
           </div>
-          <p className={styles.section}>{t("user.theme")}</p>
+          <GroupLabel as="p" className={styles.section}>{t("user.theme")}</GroupLabel>
           <div className={styles.choices}>
             <SegmentedControl<Theme>
               label={t("user.theme")}
@@ -155,7 +156,7 @@ export function BottomBar(props: {
               options={(["system", "light", "dark"] as Theme[]).map((id) => ({ value: id, label: t(`user.theme.${id}`) }))}
             />
           </div>
-          <p className={styles.section}>{t("user.density")}</p>
+          <GroupLabel as="p" className={styles.section}>{t("user.density")}</GroupLabel>
           <div className={styles.choices}>
             <SegmentedControl<Density>
               label={t("user.density")}

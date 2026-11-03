@@ -558,17 +558,17 @@ function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
       title={t("queue.sent_folder", { account })}
       meta={t("queue.sent_folder.sub")}
       primary={
-        <>
-          {props.onOpen && (
-            <Button size="sm" variant="primary" data-key="primary" aria-label={t("queue.sent_folder.open_named", { account })} onClick={props.onOpen}>
-              {t("queue.sent_folder.open")}
-            </Button>
-          )}
-          <MenuButton
-            groups={[{ id: "sent-folder", entries: [{ id: "dismiss", label: t("queue.sent_folder.dismiss"), note: t("queue.sent_folder.dismiss_note"), run: dismiss }] }]}
-            trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.sent_folder.label") })} tooltip={false} />}
-          />
-        </>
+        props.onOpen && (
+          <Button size="sm" variant="primary" data-key="primary" aria-label={t("queue.sent_folder.open_named", { account })} onClick={props.onOpen}>
+            {t("queue.sent_folder.open")}
+          </Button>
+        )
+      }
+      menu={
+        <MenuButton
+          groups={[{ id: "sent-folder", entries: [{ id: "dismiss", label: t("queue.sent_folder.dismiss"), note: t("queue.sent_folder.dismiss_note"), run: dismiss }] }]}
+          trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.sent_folder.label") })} tooltip={false} />}
+        />
       }
     />
   );
@@ -774,12 +774,13 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void; onOpenKnowledg
       title={text}
       meta={t("queue.rule_review.sub")}
       primary={
-        <>
-        {props.onOpen && (
+        props.onOpen && (
           <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpen}>
             {t("queue.rule_review.open")}
           </Button>
-        )}
+        )
+      }
+      menu={
         <MenuButton
           groups={[
             {
@@ -797,7 +798,6 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void; onOpenKnowledg
           ]}
           trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.rule_review.label") })} tooltip={false} />}
         />
-              </>
       }
     />
   );

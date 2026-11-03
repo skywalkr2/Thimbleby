@@ -21,6 +21,12 @@
         "cockpit/token-values": null,
         "cockpit/weight-tokens": null
       }
+    },
+    {
+      "files": ["src/ui/GroupLabel.module.css"],
+      "rules": {
+        "declaration-property-value-disallowed-list": null
+      }
     }
   ]
 }

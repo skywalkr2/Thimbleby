@@ -6,10 +6,5 @@
 .toSend { font-weight: var(--weight-semibold); color: var(--text); }
 /* The "Needs a date" group above the to-dos: a heading band, then one row for each to-do with a date picker. */
 .needs { margin-bottom: var(--space-4); }
-.needsHead {
-  margin: 0; padding: var(--space-2) var(--row-px) var(--space-1); font-size: var(--text-xs); line-height: var(--lh-xs);
-  font-weight: var(--weight-semibold); color: var(--band-text); background: var(--band-bg);
-  border-top: 1px solid var(--border); border-bottom: var(--band-bottom);
-}
-.needsCount { margin-left: var(--space-1); font-weight: var(--weight-regular); color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.needsHead { padding-left: var(--row-px); }
 .pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); min-width: 0; }

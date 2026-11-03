@@ -9,6 +9,7 @@ import { shortTitle } from "../lib/title-dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { DateField } from "../ui/DateField";
+import { GroupLabel } from "../ui/GroupLabel";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
 import styles from "./OpenItems.module.css";
@@ -34,12 +35,9 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: 
   };
   return (
     <section className={styles.needs} aria-labelledby="needs-date-title" data-needs-date="">
-      <h2 id="needs-date-title" className={styles.needsHead}>
+      <GroupLabel as="h2" id="needs-date-title" count={props.rows.length} className={styles.needsHead}>
         {t("open.needs_date.title")}
-        <span className={styles.needsCount} aria-hidden="true">
-          · {props.rows.length}
-        </span>
-      </h2>
+      </GroupLabel>
       <RowList aria-label={t("open.needs_date.list")}>
         {props.rows.map((a) => (
           <Row

@@ -1,4 +1,4 @@
-// Today's rail (design 7.7): at most three cards beside the queue (below it under 1024px, and on the phone each folded to one
+// Today's rail (design 7.7): at most three cards beside the queue (below it under 1100px, and on the phone each folded to one
 // line): Briefing, Schedule and Came in. The Schedule card is always drawn, so the side column is never blank; the others are
 // drawn when they have something. When nothing but the Schedule's own "nothing today" is there and the queue is empty, one line
 // says so. What needs the person is the queue, not the rail, and a to-do is acted on in To-dos and questions, so

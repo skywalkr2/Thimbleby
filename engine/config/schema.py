@@ -260,7 +260,7 @@ class WorkspaceFile(FileModel):
     name: str = Field(
         "Workspace",
         max_length=80,
-        description="The name shown at the top of every screen. Setup names it after you.",
+        description="The workspace's name, shown in the browser tab and at the top of your menu. Setup names it after you.",
     )
     assistant_name: str = Field(
         "Reginald",

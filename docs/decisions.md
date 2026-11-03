@@ -29,6 +29,32 @@ the app restores beside itself and swaps at a start when nothing is open; nothin
 (`restore`), one worker reason (`restore` in `restart_for`), two screens (Backups, Today), wording; no setting, no plugin API
 change. Change log: section 314.
 
+## 2026-11-03: The 4.6 mockups' shared rules: rows, type, one filled button, one grid, keyboard-only focus, the product's name in the header (VP01 to VP04, VP06, VC01 to VC03, VC08; section 313)
+
+**Decided:** (1) **Rows (VP02):** every row has a leading slot that is always 24px wide (empty, or a check, an icon or a dot), so every
+title in a list starts on one edge; a mark (`pill`) stands after the title's words, and a project or view tag follows the title, never
+a column before it. On a phone the row's parts stack and its "..." menu sits at the top right. (2) **Type (VP03):** a group's label is
+11px, uppercase, spaced, with its count in a pill (`GroupLabel`); a panel's, a tab's and the sidebar's counts are the same pill; a
+screen's own title is the display face at 30px (28px on a phone); help text is never under 13px. **This reverses the design's "no
+uppercase label longer than one word" and the build's "no uppercase" style rule, for the group label only:** the stylelint rule still
+refuses uppercase everywhere else and `web/.stylelintrc.json` names the one file. (3) **Buttons (VP04):** a pill in three weights,
+filled, tonal and plain, with the outline kept as the bordered default (the brief named three; the mockups' bordered "secondary" is
+the default of most buttons, so it stays and is flagged for the owner); each button names its weight (`data-weight`); the header's
+Hand something in and the phone's "+" are tonal, so the screen's own primary is the only filled button in view. (4) **One grid
+(VP01):** a header's tab strip and filter chips each start on the content area's left edge on a row of their own; under 1100px
+Today's rail and a record's side drop under the main column (before, 1024). The app still fills the window; the mockups' 1120px
+maximum is not adopted (7.13). (5) **Focus (VP06):** a row that takes the cursor by itself as Today opens (where the keys begin)
+shows neither its ring nor the cursor fill and bar until a key is pressed (`data-input` on the page's root); the arrows, `j` and `k`
+still walk the list. Nothing is focused that only looks selected. (6) **The header's name:** it shows the product's name from the
+wording sheet (`app.name`), not the workspace's; the workspace's name is the heading of the person's menu ("<person> · <workspace>")
+and leads the browser tab's title ("<workspace> · <product>"). *Why:* the owner wants the build to match the reviewer's mockups
+before the gate week; the review scored rows, type and buttons as the largest remaining losses after the brand. *Not done here:* icons
+or dots in Today's lead slots, the mockups' state sheets, the Settings screens' own section labels, and the setting "Name shown at the
+top" (its label and description still say the name is shown at the top of every screen; changing them touches the Settings screens,
+which another helper is working on, and several browser tests that name the label). *Impact:* tokens (`--text-label`,
+`--tracking-label`, `--text-title`, `--row-lead-w`; the `--band-*` tokens are gone), the shared components, no API model, no engine
+change, no new setting. Change log: section 313.
+
 ## 2026-11-03: The product's own palette, faces and mark are the default; night surfaces lift (VP16, VP06; section 312)
 
 **Decided:** (1) The default tokens are the UI/UX reviewer's 4.6 palette: warm paper by day and a burgundy accent, near-black

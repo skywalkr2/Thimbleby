@@ -6,4 +6,5 @@
 }
 .tab:hover { color: var(--text); }
 .tab[aria-pressed="true"] { color: var(--text); border-bottom-color: var(--accent); }
-.count { color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-variant-numeric: tabular-nums; }
+/* A count is a pill, the same as in a group's label and a panel's title. */
+.count { padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }

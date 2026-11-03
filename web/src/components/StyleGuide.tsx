@@ -13,6 +13,7 @@ import { ICON_NAMES, Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { LoadFailed } from "../ui/LoadFailed";
 import { MenuButton } from "../ui/MenuButton";
+import { GroupLabel } from "../ui/GroupLabel";
 import { Panel } from "../ui/Panel";
 import { Pill } from "../ui/Pill";
 import { FilterChip } from "../ui/FilterChip";
@@ -153,6 +154,7 @@ export function StyleGuide() {
       <Section title={t("styleguide.buttons")} note={t("styleguide.buttons_note")}>
         <div className={styles.demo}>
           <Button variant="primary">{t("styleguide.primary")}</Button>
+          <Button variant="tonal">{t("styleguide.tonal")}</Button>
           <Button>{t("styleguide.secondary")}</Button>
           <Button variant="quiet">{t("styleguide.ghost")}</Button>
           <Button variant="danger">{t("styleguide.danger")}</Button>
@@ -207,6 +209,7 @@ export function StyleGuide() {
       </Section>
 
       <Panel title={t("styleguide.rows")} count={6} flush>
+        <GroupLabel count={6}>{t("styleguide.group_label")}</GroupLabel>
         <ul className={styles.list}>
           <Row
             lead={<RoundCheck label={t("styleguide.row_lead_check")} onClick={() => undefined} />}

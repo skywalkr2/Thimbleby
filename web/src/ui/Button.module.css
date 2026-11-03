@@ -1,5 +1,6 @@
-/* The one button (design 7.12): three weights, primary solid, secondary outline, quiet text. Same height, radius (a pill; an
-   icon-only button is a circle) and type on all of them, so a row of mixed buttons lines up. */
+/* The one button (design 7.12): pills in three weights, filled (primary), tonal and plain (quiet), with the outline (secondary) as
+   the bordered default. Same height, radius (a pill; an icon-only button is a circle) and type on all of them, so a row of
+   mixed buttons lines up. */
 .wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); max-width: 100%; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
@@ -21,6 +22,9 @@
 .primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 .primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .secondary { background: var(--surface); }
+/* Tonal: the soft accent fill with the accent's own text, no border. It is never as loud as the filled weight. */
+.tonal { background: var(--accent-soft); border-color: transparent; color: var(--accent-text); }
+.tonal:hover { background: color-mix(in srgb, var(--accent-soft) 78%, var(--accent)); }
 .quiet { border-color: transparent; background: transparent; color: var(--text-muted); padding: 0 var(--space-2); }
 .quiet:hover { background: var(--surface-sunk); color: var(--text); }
 .quiet.sm { padding: 0 var(--space-2); }
@@ -32,6 +36,7 @@
 }
 /* A disabled primary keeps its colour family, softened, so it still reads as the region's main action; its reason is beside it. */
 .primary:disabled, .primary:disabled:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent-text); }
+.tonal:disabled, .tonal:disabled:hover { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); }
 .quiet:disabled, .quiet:disabled:hover { background: transparent; border-color: transparent; color: var(--text-subtle); }
 .loading { cursor: progress; }
 .loading:active { transform: none; }

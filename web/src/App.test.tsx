@@ -315,7 +315,10 @@ test("a new name for the workspace shows in the header at once, with no reload",
   name = "My projects";
   await act(() => client.invalidateQueries());
   expect(await screen.findByRole("link", { name: "Go to Today · My projects" })).toBeInTheDocument();
-  expect(within(screen.getByRole("banner")).getByText("My projects")).toBeInTheDocument();
+  // The header names the product beside the mark; the workspace's name is the link's name and leads the tab's title.
+  expect(within(screen.getByRole("banner")).getByText("Thimbleby")).toBeInTheDocument();
+  expect(within(screen.getByRole("banner")).queryByText("My projects")).toBeNull();
+  await waitFor(() => expect(document.title).toBe("My projects · Thimbleby"));
 });
 
 test("the accent color is applied from what the app has now, so a saved color shows with no reload", async () => {

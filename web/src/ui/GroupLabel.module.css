@@ -1,0 +1,15 @@
+/* A group's label: 11px, uppercase, spaced, with its count in a pill. This file is the one place uppercase text is allowed
+   (the web build's style rules refuse it elsewhere); the words in the page stay as they are written. */
+.label {
+  display: flex; align-items: center; gap: var(--space-2); margin: 0; min-width: 0;
+  padding: var(--space-4) var(--row-px, var(--space-4)) var(--space-2);
+  font-family: var(--font-ui); font-size: var(--text-label); line-height: var(--lh-label); font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted);
+}
+.label[data-tone="danger"] { color: var(--danger); }
+.words { min-width: 0; overflow-wrap: anywhere; }
+.count {
+  flex: none; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text);
+  font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); letter-spacing: 0; text-transform: none;
+  font-variant-numeric: tabular-nums;
+}

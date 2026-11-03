@@ -1043,6 +1043,22 @@ yet follow, that it is *designed*, with its phase.
 - **05 (5.0), 06 (6.14), 07 (7.9):** the restore, the swap and the page as above. The swap keeps this computer's own
   settings (`storage.yaml`, `server.yaml`) in place, and a failed swap removes only its own plan from the kept folder.
 
+## 313. The mockups' shared rules: rows, type, one filled button, one grid, keyboard-only focus, the product's name (2026-11-03; visual review VP01 to VP04, VP06, VC01 to VC03, VC08)
+
+| Where | Before | Now |
+|---|---|---|
+| Row (7.12, 7.14) | The leading slot took no width when empty; a mark stood before the title; on a phone a lone action stayed at the right and several went under the title | A 24px slot always (`--row-lead-w`); the mark and a project or view tag after the title's words; on a phone the buttons go under the words and the menu sits at the top right. **Built** (`web/src/ui/Row.test.tsx`: "a row's leading slot is always there and is 24px wide…", "the buttons and the menu are separate parts…"; `web/src/theme/dayMode.test.ts`: "below 640px the parts of a row stack…"; browser `web/e2e/shared-rules.spec.ts`, written, not yet run) |
+| Group label (7.12 type) | Today's and "Needs a date"'s headings 12px, sentence case, in a band at night; counts plain | `GroupLabel`: 11px, uppercase, spaced, count in a pill; the sidebar's and menus' section labels use it; the band tokens are gone; a panel's, a tab's and the sidebar's counts are pills. **Built** (`web/src/ui/GroupLabel.test.tsx`, `web/src/ui/Panel.test.tsx`, `web/src/theme/dayMode.test.ts`) |
+| Type tokens (7.12) | Page title 22px | `--text-title` 30/36 for a screen's title (28px on a phone), `--text-label` 11px with `--tracking-label`; 22px stays for a smaller title. **Built** (`web/src/ui/PageHeader.test.tsx`) |
+| Button (7.12) | Primary, secondary, quiet, danger; the header's Hand something in was the primary | A `tonal` variant (soft accent fill); `data-weight` (filled, tonal, outline, plain) on every button; Hand something in and the phone's "+" are tonal. **Built** (`web/src/ui/Button.test.tsx`: "every variant names the weight it is drawn in…", `web/src/shell/Header.test.tsx`; browser `web/e2e/a11y.spec.ts` "day mode") |
+| PageHeader (7.12, 7.13) | The filter chips sat at the right of the tab strip, or hung off it | The tab strip, then the chips on a row of their own, both from the content area's left edge; Today's rail and a record's side drop under the main column below 1100px (before, 1024), a lone rail card full width. **Built** (`web/src/ui/PageHeader.test.tsx`; browser `shared-rules.spec.ts`, written, not yet run) |
+| Focus (7.1, 7.12) | The first line of Today took the cursor as it opened and showed its ring and cursor bar | It still takes the cursor (the keys begin there) but shows neither until a key is pressed (`web/src/lib/input-mode.ts`, `data-input` on the root). **Built** (`web/src/lib/input-mode.test.tsx`, `web/src/components/Today.test.tsx`: "the line that has the keyboard focus is the cursor row once a key is pressed…"; browser `shared-rules.spec.ts`, written, not yet run) |
+| Header (7.1) | The workspace's name beside the mark; the tab said the workspace's name | The product's name (`app.name`); the person's menu heading is "<person> · <workspace>" (`user.heading`); the tab says "<workspace> · <product>" (`app.title`). **Built** (`web/src/shell/Header.test.tsx`, `web/src/App.test.tsx`; browser `web/e2e/brand.spec.ts`, written, not yet run) |
+
+- **7.12, 7.11:** the build's "no uppercase" style rule has one exception, the group label's own style file.
+- **Setting `workspace.name`:** labelled "Workspace name", shown in the browser tab and at the top of the person's menu.
+- **Left:** icons and dots in Today's lead slots, the state sheets, the mockups' other pages.
+
 ## 312. The product's palette, faces and mark; night surfaces lift (2026-11-03; visual review VP16, VP06)
 
 | Where | Before | Now |

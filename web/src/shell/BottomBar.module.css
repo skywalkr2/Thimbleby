@@ -13,7 +13,7 @@
 .item[aria-current="page"] { color: var(--accent-text); font-weight: var(--weight-semibold); }
 .plus {
   display: grid; place-items: center; width: var(--space-12); height: var(--space-12); margin-top: calc(-1 * var(--space-4));
-  border: 0; border-radius: var(--radius-full); background: var(--accent); color: var(--text-on-accent); cursor: pointer; box-shadow: var(--elev-2);
+  border: 1px solid var(--border); border-radius: var(--radius-full); background: var(--accent-soft); color: var(--accent-text); cursor: pointer; box-shadow: var(--elev-2);
 }
 .plusCell { display: grid; justify-items: center; }
 
@@ -28,7 +28,8 @@
 .link[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
 .link[disabled] { color: var(--text-subtle); cursor: default; }
 .count { margin-left: auto; font-size: var(--text-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
-.section { margin: var(--space-3) var(--space-2) var(--space-1); color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+/* A sheet's section label is the shared group label (ui/GroupLabel); here it only takes the sheet's own margins. */
+.dialog .section { margin: var(--space-3) 0 0; padding: var(--space-1) var(--space-2); color: var(--text-subtle); }
 .choices { padding: 0 var(--space-2); }
 
 /* The search field opens in a strip just above the bar; its results open upward from it. */

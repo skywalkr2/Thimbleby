@@ -118,7 +118,7 @@ test("the source label is kept out of what is copied: it is its own marked eleme
     expect(label.closest("[data-copy='never']")).not.toBeNull();
     const copyable = row.cloneNode(true) as HTMLElement;
     copyable.querySelectorAll("[data-copy='never']").forEach((el) => el.remove());
-    expect(copyable.textContent?.replace(/\s+/g, " ").trim()).toMatch(/^(Key)?(Trim size is fixed\.|Both spines are in the folder\.|The proof is approved\.)$/);
+    expect(copyable.textContent?.replace(/\s+/g, " ").trim()).toMatch(/^(Trim size is fixed\.|Both spines are in the folder\.|The proof is approved\.)(Key)?$/);
   }
 });
 

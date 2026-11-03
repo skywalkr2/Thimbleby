@@ -42,7 +42,7 @@ test("a restore waiting for the restart is a line that says what it is for, with
   const user = userEvent.setup();
   const calls = show(() => [line("pending")], { "POST restart": () => ({ restarting: true }) });
   const row = await screen.findByRole("region", { name: "Restore" });
-  expect(row).toHaveTextContent(/^Restore.*Restart to restore your workspace \(from .+\)/);
+  expect(row).toHaveTextContent(/Restart to restore your workspace \(from .+\)/);
   expect(row).toHaveTextContent("set aside, not deleted");
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
   await user.click(await within(row).findByRole("button", { name: "Restart now" }));

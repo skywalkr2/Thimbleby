@@ -58,7 +58,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(fullName).not.toBeFocused();
     await fullName.click();
     await page.keyboard.type(me);
-    await expect(main.getByLabel("Name shown at the top")).toHaveCount(0);
+    await expect(main.getByLabel("Workspace name")).toHaveCount(0);
     await expect(main.getByLabel("Your assistant's name")).toHaveCount(0);
     await expect(main.getByRole("radio")).toHaveCount(0);
     const zone = main.getByRole("combobox", { name: "Your time zone" });

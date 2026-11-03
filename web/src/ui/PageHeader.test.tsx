@@ -1,6 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { Button } from "./Button";
 import { FilterChip } from "./FilterChip";
 import { PageHeader } from "./PageHeader";
 import { RoundCheck } from "./RoundCheck";
@@ -86,4 +89,30 @@ test("the round tick is a button with the action's name", async () => {
   render(<RoundCheck label="Mark done" onClick={run} />);
   await user.click(screen.getByRole("button", { name: "Mark done" }));
   expect(run).toHaveBeenCalledTimes(1);
+});
+
+// One content grid (VP01): a header, its tabs and chips, and the screen's lists share the content area's left and right edges, so the
+// header adds no margin or padding of its own to either side. The title is the display face at the title size, 28px on a phone.
+test("the header sits on the content area's edges: no side margin or padding, and the title takes the title size from the tokens", () => {
+  const css = readFileSync(join(__dirname, "PageHeader.module.css"), "utf8");
+  const header = /\.header \{[^}]*\}/s.exec(css)?.[0] ?? "";
+  expect(header).not.toMatch(/(^|[^-])(margin|padding)(-inline|-left|-right)?:/);
+  expect(css).toMatch(/h1\.title \{[^}]*font-family: var\(--font-display\); font-size: var\(--text-title\); line-height: var\(--lh-title\)/s);
+  expect(css).toMatch(/@media \(max-width: 639\.98px\) \{ h1\.title \{ font-size: var\(--text-2xl\)/);
+  const tokens = readFileSync(join(__dirname, "..", "theme", "tokens.css"), "utf8");
+  expect(tokens).toMatch(/--text-title: 30px/);
+  expect(tokens).toMatch(/--text-2xl: 28px/);
+});
+
+test("the one primary action is the last of the header's actions, and a tonal or outline button beside it is never counted as filled", () => {
+  render(
+    <PageHeader
+      title="People"
+      actions={<Button variant="tonal">Import</Button>}
+      primary={<Button variant="primary">Add a person</Button>}
+    />,
+  );
+  expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Add a person" })).toHaveAttribute("data-weight", "filled");
+  expect(screen.getByRole("button", { name: "Import" })).toHaveAttribute("data-weight", "tonal");
 });

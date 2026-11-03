@@ -7,6 +7,7 @@ import { Link } from "react-aria-components";
 import { useMediaQuery } from "../lib/media";
 import { viewHref, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { GroupLabel } from "../ui/GroupLabel";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { Tooltip } from "../ui/Tooltip";
@@ -76,16 +77,16 @@ export function Sidebar(props: { current: View; expanded: boolean; onToggle: () 
       {/* With no side beside Personal the group has no heading, only a name for screen readers. */}
       <div className={styles.group} role="group" aria-label={nav.justMe ? nav.workTitle : undefined} aria-labelledby={nav.justMe ? undefined : "nav-work"}>
         {!nav.justMe && (
-          <span id="nav-work" className={styles.title}>
+          <GroupLabel as="span" id="nav-work" className={styles.title}>
             {nav.workTitle}
-          </span>
+          </GroupLabel>
         )}
         {nav.work.map(entry)}
       </div>
       <div className={styles.group} role="group" aria-labelledby="nav-records">
-        <span id="nav-records" className={styles.title}>
+        <GroupLabel as="span" id="nav-records" className={styles.title}>
           {t("nav.records")}
-        </span>
+        </GroupLabel>
         {nav.records.map(entry)}
       </div>
       <div className={styles.bottom}>

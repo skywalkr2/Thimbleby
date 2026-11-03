@@ -58,8 +58,8 @@ export function PageHeader(props: PageHeaderProps) {
       </div>
       {(tabs || filters) && (
         <div className={[styles.bar, tabs ? styles.ruled : ""].filter(Boolean).join(" ")}>
-          {tabs && <div className={styles.tabs}>{tabs}</div>}
-          {filters && <div className={styles.chips}>{filters}</div>}
+          {tabs && <div className={styles.tabs} data-header-tabs="">{tabs}</div>}
+          {filters && <div className={styles.chips} data-header-filters="">{filters}</div>}
         </div>
       )}
     </div>

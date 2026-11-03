@@ -85,7 +85,7 @@ test("the day values are the reviewed ones, and decorative edges stay quiet", ()
   expect(contrast(light("--border"), light("--surface"))).toBeLessThan(1.3);
 });
 
-test("night mode keeps its values and its bordered, banded look; type, row titles and links are the same as by day", () => {
+test("night mode keeps its values and its bordered look; type, row titles and links are the same as by day", () => {
   expect(dark["--canvas"]).toBe("var(--gray-950)");
   expect(dark["--text"]).toBe("#f4f4f2");
   expect(dark["--text-muted"]).toBe("#aaaead");
@@ -95,8 +95,8 @@ test("night mode keeps its values and its bordered, banded look; type, row title
   expect(dark["--pane-border"]).toBe("var(--border)");
   // A card is seen by its surface and a faint top light as well as its hairline (VP06).
   expect(dark["--pane-edge"]).toBe("inset 0 1px 0 rgb(255 255 255 / 0.04)");
-  expect(dark["--band-bg"]).toBe("var(--canvas)");
-  expect(dark["--band-bottom"]).toBe("1px solid var(--border)");
+  // A group's label has no band, by day or by night (VP03): the tokens for one are gone.
+  expect(tokens).not.toMatch(/--band-/);
   expect(dark["--pill-neutral-bg"]).toBe("var(--surface-sunk)");
   // What the two themes share is set once, in the light block, and night does not set it again.
   for (const name of ["--row-title-weight", "--link", "--row-selected-bg", "--row-selected-bar"]) {
@@ -106,7 +106,7 @@ test("night mode keeps its values and its bordered, banded look; type, row title
   expect(primitives["--row-title-weight"]).toBe("var(--weight-semibold)");
   // The media block for the system theme sets the same values as the in-app choice.
   const media = tokens.slice(tokens.indexOf("@media (prefers-color-scheme: dark)"), tokens.indexOf(':root[data-theme="dark"] {'));
-  for (const name of ["--btn-border", "--pane-border", "--pane-edge", "--band-bg", "--band-bottom", "--pill-neutral-bg", "--pill-neutral-edge"]) {
+  for (const name of ["--btn-border", "--pane-border", "--pane-edge", "--pill-neutral-bg", "--pill-neutral-edge"]) {
     expect(media).toContain(`${name}: ${dark[name]}`);
   }
 });
@@ -128,7 +128,7 @@ test("a row's actions are never solid: the primary draws as the outline, and the
   expect(tokens).not.toMatch(/--row-action|--row-pill-w/);
 });
 
-test("panes take their edge from the tokens, and a group header has no band", () => {
+test("panes take their edge from the tokens, and a group label has no band and is uppercase 11px with a count pill", () => {
   for (const file of ["ui/Panel.module.css", "ui/ListDetail.module.css", "ui/RecordsTable.module.css"]) {
     const css = read(file);
     expect(css, file).toMatch(/border: 1px solid var\(--pane-border\); box-shadow: var\(--pane-edge\)/);
@@ -140,11 +140,13 @@ test("panes take their edge from the tokens, and a group header has no band", ()
     expect(line, selector).toContain("var(--pane-border)");
     expect(line, selector).toContain("var(--pane-edge)");
   }
-  const head = /\.groupHead \{[^}]*\}/s.exec(read("components/Today.module.css"))?.[0] ?? "";
-  expect(head).toContain("background: var(--band-bg)");
-  expect(head).toContain("border-bottom: var(--band-bottom)");
+  const label = /\.label \{[^}]*\}/s.exec(read("ui/GroupLabel.module.css"))?.[0] ?? "";
+  expect(label).toContain("font-size: var(--text-label)");
+  expect(label).toContain("text-transform: uppercase");
+  expect(label).toContain("letter-spacing: var(--tracking-label)");
+  expect(label).not.toMatch(/background|border/);
+  expect(read("ui/GroupLabel.module.css")).toMatch(/\.count \{[^}]*border-radius: var\(--radius-full\)/s);
   const light = tokens.slice(0, tokens.indexOf("/* ---------- Dark"));
-  expect(light).toMatch(/--band-bg: transparent/);
   expect(light).toMatch(/--pane-border: transparent/);
 });
 
@@ -184,12 +186,15 @@ test("the type scale: a paragraph is never under 13px, and the 12px size is for 
   expect(read("styles.css")).toMatch(/\.hint \{ font-size: var\(--text-meta\)/);
 });
 
-test("below 640px a lone action stays at the row's edge and several sit under the title", () => {
+test("below 640px the parts of a row stack: the buttons go under the words and the menu sits at the row's top right", () => {
   const css = read("ui/Row.module.css");
   const phone = css.slice(css.indexOf("@media (max-width: 639.98px)"));
-  expect(phone).toMatch(/\.row, :global\(\[data-narrow\]\) \.row \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto/);
-  // A lone action stays at the right edge; a second button sends the actions under the title, at the right.
-  expect(phone).toMatch(/\.row > \.actions:has\(> :global\(\[data-variant\]\) ~ :global\(\[data-variant\]\)\)[^{]*\{[^}]*grid-column: 1 \/ -1;[^}]*justify-content: flex-end/);
+  expect(phone).toMatch(/\.row \{[^}]*grid-template-columns: var\(--row-lead-w\) minmax\(0, 1fr\)/);
+  expect(phone).toMatch(/\.actions \{ display: contents; \}/);
+  expect(phone).toMatch(/\.buttons \{[^}]*grid-column: 2; justify-content: flex-start/);
+  expect(phone).toMatch(/\.menu \{[^}]*position: absolute; top: var\(--space-1\); right: var\(--space-1\)/);
+  // The configured phone layout (an attribute on the page) does the same as a narrow window.
+  expect(css).toMatch(/:global\(\[data-narrow\]\) \.menu \{[^}]*position: absolute/);
 });
 
 // Dark-mode accents and elevation (design 7.12, VC09): a floating thing lifts off the page by a raised fill and an edge at night,

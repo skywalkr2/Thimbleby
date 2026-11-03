@@ -1,8 +1,9 @@
-// A list row (design 7.14): an optional leading slot, then the title with one meta line, then the actions at the right edge.
-// The leading slot (`lead`: a round check box, a dot) takes no width when it is empty, so titles start at the left edge of a
-// list that has none. A mark the group heading does not already say (`pill`) sits in the title's line, never in a column of
-// its own, so titles line up whether or not a row has one. A row's actions are never solid: the one
-// primary draws as an outline. The row the cursor is on has a soft fill and a bar at its left edge. `clamp` keeps a title to
+// A list row (design 7.14): a leading slot, then the title with one meta line, then the actions at the right edge.
+// The leading slot is always there and always 24px wide (`lead`: a round check box, an icon, a side or calendar dot, or nothing),
+// so every title in a list starts on one edge whatever its row holds. A mark the group heading does not already say (`pill`)
+// stands after the title's words, never before them, so it can't move them. A row's actions are never solid: the one
+// primary draws as an outline. On a phone the actions go under the words and the menu ("..."), when there is one, sits at the
+// row's top right. The row the cursor is on has a soft fill and a bar at its left edge. `clamp` keeps a title to
 // two lines for a compact list; `oneLine` keeps the meta to one line, cut with an ellipsis. `data-row` puts it in the keyboard
 // loop. Rows are separated by hairlines, never cards.
 // A row that opens something under it is an ExpandableRow: its title is a button (`expand`) that says whether the body is open
@@ -10,6 +11,7 @@
 // row's `children`, in a RowBody. `meta` is one line, `metaLines` several, each drawn as a
 // line of its own. `titleId` names the title text for the row's `aria-labelledby`.
 import { Children, type HTMLAttributes, type ReactNode, type Ref } from "react";
+import { InRowActions } from "./rowContext";
 import styles from "./Row.module.css";
 
 /** What makes a row's title and meta one button that opens the row's body. */
@@ -23,9 +25,9 @@ export interface RowExpand {
 }
 
 export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
-  /** A control or marker that leads the row: a round check box, an unread dot. */
+  /** What fills the 24px leading slot: a round check box, an icon, a side or calendar dot. The slot is there without it. */
   lead?: ReactNode;
-  /** A mark that says something the group heading does not; it stands before the title. */
+  /** A mark that says something the group heading does not; it stands after the title's words. */
   pill?: ReactNode;
   title: ReactNode;
   /** The id of the title's own text, for the row's `aria-labelledby`. */
@@ -64,7 +66,6 @@ function linesOf(meta: ReactNode, more: ReactNode[] | undefined): ReactNode[] {
 export function Row(props: RowProps) {
   const { lead, pill, title, titleId, meta, metaLines, expand, oneLine, clamp, primary, menu, actions, selected, loop = true, children, as = "li", className, ref, ...rest } = props;
   const Tag = as as "div";
-  const leads = !!lead;
   // The cursor's row: given by `selected`, or by `aria-current` as a list's row attributes set it.
   const isSelected = selected ?? rest["aria-current"] === "true";
   const lines = linesOf(meta, metaLines);
@@ -77,16 +78,13 @@ export function Row(props: RowProps) {
       data-row={loop ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
       aria-current={isSelected ? "true" : undefined}
-      className={[styles.row, leads ? styles.leads : "", isSelected ? styles.selected : "", className ?? ""].filter(Boolean).join(" ")}
+      className={[styles.row, menu ? styles.hasMenu : "", isSelected ? styles.selected : "", className ?? ""].filter(Boolean).join(" ")}
     >
-      {leads && (
-        <div className={styles.lead} data-row-lead="">
-          {lead}
-        </div>
-      )}
+      <div className={styles.lead} data-row-lead="">
+        {lead}
+      </div>
       <div className={expand ? `${styles.main} ${styles.expandable}` : styles.main}>
-        <div className={clamp ? `${styles.title} ${styles.clamp}` : styles.title} title={clamp}>
-          {pill && <span className={styles.mark}>{pill}</span>}
+        <div className={clamp ? `${styles.title} ${styles.clamp}` : styles.title} title={clamp} data-row-title="">
           {expand ? (
             <button
               type="button"
@@ -104,6 +102,7 @@ export function Row(props: RowProps) {
           ) : (
             title
           )}
+          {pill && <span className={styles.mark}>{pill}</span>}
         </div>
         {lines.map((line, i) => (
           <p key={i} className={metaClass} title={oneLine && typeof line === "string" ? line : undefined}>
@@ -113,9 +112,15 @@ export function Row(props: RowProps) {
       </div>
       {(primary || menu || actions) && (
         <div className={styles.actions}>
-          {primary}
-          {actions}
-          {menu}
+          <InRowActions.Provider value={true}>
+            {(primary || actions) && (
+              <div className={styles.buttons}>
+                {primary}
+                {actions}
+              </div>
+            )}
+            {menu && <div className={styles.menu}>{menu}</div>}
+          </InRowActions.Provider>
         </div>
       )}
       {Children.toArray(children).length > 0 && <div className={styles.extra} data-row-extra="">

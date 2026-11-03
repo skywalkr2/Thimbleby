@@ -31,13 +31,15 @@
   --font-display: "Fraunces Variable", Fraunces, Georgia, "Times New Roman", serif;   /* page titles, setup step titles, the greeting, the name beside the mark */
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  --text-xs: 12px;   --lh-xs: 16px;      /* pills, keycaps, captions and group headers only: never a paragraph */
+  --text-label: 11px; --lh-label: 16px; --tracking-label: 0.08em;   /* a group label: uppercase, spaced, with a count pill (GroupLabel); never a sentence */
+  --text-xs: 12px;   --lh-xs: 16px;      /* pills, count pills, keycaps and captions only: never a paragraph */
   --text-meta: 13px; --lh-meta: 18px;    /* a row's meta line and help text: no paragraph is smaller than this */
   --text-sm: 14px;   --lh-sm: 20px;      /* secondary text, buttons, inputs */
   --text-md: 15px;   --lh-md: 22px;      /* body, row titles */
   --text-section: 16px; --lh-section: 22px; /* a section's title */
   --text-lg: 18px;   --lh-lg: 24px;      /* dialog and drawer titles */
-  --text-xl: 22px;   --lh-xl: 28px;      /* page titles */
+  --text-xl: 22px;   --lh-xl: 28px;      /* a smaller page title (a record inside a pane, a step title) */
+  --text-title: 30px; --lh-title: 36px;  /* a screen's own title (the h1), in the display face; 28px on a phone (--text-2xl) */
   --text-2xl: 28px;  --lh-2xl: 34px;     /* the empty Today greeting only */
   --weight-regular: 400; --weight-medium: 500; --weight-semibold: 600;
 
@@ -127,16 +129,16 @@
   --btn-h: 34px; --btn-h-sm: 30px; --btn-px: 14px; --btn-px-sm: 10px;
   --input-h: 40px;
   --row-h: 48px;
+  --row-lead-w: var(--target-min);   /* a row's leading slot: always this wide, whatever it holds (a check, an icon, a dot), so titles share one edge */
   --row-py: 10px; --row-px: var(--space-4); --row-gap: var(--space-3);
   /* The row the cursor is on, or that is open in a pane: a soft tint and a 2px bar at its left edge. Its buttons stay the same weight. */
   --row-selected-bg: color-mix(in srgb, var(--accent-soft) 55%, transparent); --row-selected-bar: inset 2px 0 0 var(--accent);
   --pill-h: 22px; --pill-px: 8px;
   --card-p: var(--space-4);
-  /* Where day and night differ in shape, not only in color: a pane's edge is a soft shadow by day and a hairline by night,
-     and group headers lose their band by day. Type, row titles, buttons and links are the same in both. */
+  /* Where day and night differ in shape, not only in color: a pane's edge is a soft shadow by day and a hairline by night. A
+     group's label has no band in either. Type, row titles, buttons and links are the same in both. */
   --pane-border: transparent;
   --pane-edge: 0 0 0 1px rgb(23 23 23 / 0.05), 0 1px 3px rgb(23 23 23 / 0.05);
-  --band-bg: transparent; --band-text: var(--text-muted); --band-bottom: 0 solid transparent;
   --row-title-weight: var(--weight-semibold);
   --pill-neutral-bg: transparent; --pill-neutral-edge: inset 0 0 0 1px var(--border);
   --link: var(--accent-text);          /* the one link colour: accent-text adapts, so it is the same by day and by night */
@@ -182,7 +184,6 @@
     --elev-3: 0 12px 32px rgb(0 0 0 / 0.5);
     --btn-border: var(--border-strong);
     --pane-border: var(--border); --pane-edge: inset 0 1px 0 rgb(255 255 255 / 0.04);   /* a hairline and a faint top light: a card is seen by its surface, not only its edge */
-    --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
     --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
     --surface-raised: #25262a; --overlay-edge: 0 0 0 1px var(--border-strong);
     --row-btn-bg: var(--accent-soft); --row-btn-border: transparent; --row-btn-text: var(--accent-text); --row-btn-hover: color-mix(in srgb, var(--accent-soft) 78%, var(--accent));
@@ -220,7 +221,6 @@
   --elev-3: 0 12px 32px rgb(0 0 0 / 0.5);
   --btn-border: var(--border-strong);
   --pane-border: var(--border); --pane-edge: inset 0 1px 0 rgb(255 255 255 / 0.04);   /* a hairline and a faint top light: a card is seen by its surface, not only its edge */
-  --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
   --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
   --surface-raised: #25262a; --overlay-edge: 0 0 0 1px var(--border-strong);
   --row-btn-bg: var(--accent-soft); --row-btn-border: transparent; --row-btn-text: var(--accent-text); --row-btn-hover: color-mix(in srgb, var(--accent-soft) 78%, var(--accent));

@@ -1,5 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { Button } from "./Button";
 import { Row } from "./Row";
 
 test("a row has a leading mark, a title, a meta line, then the primary action and the menu", () => {
@@ -73,7 +76,7 @@ test("a row with nothing under it adds no space for it", () => {
   expect(full.querySelector("[class*='extra']")).not.toBeNull();
 });
 
-test("a row with nothing to lead it has no leading column; a control leads it, and a mark stands in the title's line", () => {
+test("a row's leading slot is always there and is 24px wide, with and without content; a mark stands after the title's words", () => {
   render(
     <ul>
       <Row title="Plain" />
@@ -82,8 +85,65 @@ test("a row with nothing to lead it has no leading column; a control leads it, a
     </ul>,
   );
   const [plain, marked, ticked] = screen.getAllByRole("listitem");
-  expect(plain.querySelector("[data-row-lead]")).toBeNull();
-  expect(marked.querySelector("[data-row-lead]")).toBeNull();
-  expect(within(marked).getByText("Clash").closest("[class*='title']")).toContainElement(within(marked).getByText("Marked"));
+  // Every row has the slot, empty or not, so every title starts on one edge.
+  for (const row of [plain, marked, ticked]) expect(row.querySelector(":scope > [data-row-lead]")).not.toBeNull();
+  expect(plain.querySelector("[data-row-lead]")).toBeEmptyDOMElement();
+  expect(marked.querySelector("[data-row-lead]")).toBeEmptyDOMElement();
   expect(within(ticked).getByRole("button", { name: "Done" }).closest("[data-row-lead]")).not.toBeNull();
+  // The slot is the first thing in the row, then the words.
+  expect(plain.firstElementChild).toBe(plain.querySelector("[data-row-lead]"));
+  // The mark comes after the title's words in the title's line, never before them.
+  const title = within(marked).getByText("Marked").closest("[data-row-title]") as HTMLElement;
+  expect(title).toContainElement(within(marked).getByText("Clash"));
+  expect(title.textContent).toBe("MarkedClash");
+});
+
+test("the slot's width is the one token, so no row can draw it another width", () => {
+  const css = readFileSync(join(__dirname, "Row.module.css"), "utf8");
+  const tokens = readFileSync(join(__dirname, "..", "theme", "tokens.css"), "utf8");
+  expect(tokens).toMatch(/--row-lead-w: var\(--target-min\)/);
+  expect(tokens).toMatch(/--target-min: 24px/);
+  expect(css).toMatch(/\.row \{[^}]*grid-template-columns: var\(--row-lead-w\) minmax\(0, 1fr\) auto/s);
+  expect(css).toMatch(/\.lead \{[^}]*width: var\(--row-lead-w\)/s);
+});
+
+test("the buttons and the menu are separate parts of the row, so a phone can put the menu at the top right and the buttons under the words", () => {
+  render(
+    <ul>
+      <Row title="Both" primary={<button type="button">Answer</button>} menu={<button type="button">More</button>} />
+      <Row title="Menu only" menu={<button type="button">More</button>} />
+      <Row title="Neither" />
+    </ul>,
+  );
+  const [both, menuOnly, neither] = screen.getAllByRole("listitem");
+  expect(both.querySelector("[class*='buttons']")).toContainElement(within(both).getByRole("button", { name: "Answer" }));
+  expect(both.querySelector("[class*='menu']")).toContainElement(within(both).getByRole("button", { name: "More" }));
+  expect(both.querySelector("[class*='buttons']")).not.toContainElement(within(both).getByRole("button", { name: "More" }));
+  expect(menuOnly.querySelector("[class*='buttons']")).toBeNull();
+  expect(neither.querySelector("[class*='actions']")).toBeNull();
+  const css = readFileSync(join(__dirname, "Row.module.css"), "utf8");
+  const phone = css.slice(css.indexOf("@media (max-width: 639.98px)"));
+  expect(phone).toMatch(/\.row \{[^}]*grid-template-columns: var\(--row-lead-w\) minmax\(0, 1fr\)/);
+  expect(phone).toMatch(/\.menu \{[^}]*position: absolute; top: var\(--space-1\); right: var\(--space-1\)/);
+  expect(phone).toMatch(/\.buttons \{[^}]*grid-column: 2/);
+});
+
+test("a button among a row's actions says it is drawn as an outline when it is a primary, and the row's other buttons keep their own weight", () => {
+  render(
+    <ul>
+      <Row
+        title="Row"
+        primary={<Button variant="primary">Open</Button>}
+        actions={
+          <>
+            <Button variant="tonal">Soft</Button>
+            <Button variant="quiet">Plain</Button>
+          </>
+        }
+      />
+    </ul>,
+  );
+  expect(screen.getByRole("button", { name: "Open" })).toHaveAttribute("data-weight", "outline");
+  expect(screen.getByRole("button", { name: "Soft" })).toHaveAttribute("data-weight", "tonal");
+  expect(screen.getByRole("button", { name: "Plain" })).toHaveAttribute("data-weight", "plain");
 });

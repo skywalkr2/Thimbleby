@@ -2,7 +2,7 @@
 // four things the components exist to make true everywhere, so a screen that drifts back to its own version fails here:
 //   1. no paragraph text is smaller than 13px (a pill, a caption, a key cap and a table's column head are not paragraphs);
 //   2. at most one filled primary button in a region (the header, a pane, a dialog, the main content);
-//   3. no list row has an empty leading column (a row without a mark has no column for one);
+//   3. no list row has a leading column wider than the 24px slot every row has (nothing starts more than 72px from the edge);
 //   4. no field has the cursor when a screen opens (a form, dialog or drawer the person opened is another matter).
 //   5. no native, unstyled select, date, time or file control and no fieldset drawn with its legend on a border (VC05, E12): a
 //      list, a date, a file and a group of ticks come from the shared components, which mark themselves `data-ui`.
@@ -89,8 +89,9 @@ const crowdedPrimaries = (page: Page) =>
     return [...regions.values()].filter((names) => names.length > 1).map((names) => names.join(" | "));
   });
 
-/** Rows with a gap at their left edge: nothing they hold starts within 72px of it (16px of padding and at most a 44px leading
- * control), so a column was kept for a mark that is not there. */
+/** Rows with a gap at their left edge: nothing they hold starts within 72px of it (16px of padding, the 24px leading slot every row
+ * has and the gap after it, with room for a wider control), so a column wider than the slot was kept for a mark. The shared-rules
+ * spec holds the other half: every title in a list starts on one edge. */
 const emptyLeads = (page: Page) =>
   page.evaluate(() => {
     const found: string[] = [];

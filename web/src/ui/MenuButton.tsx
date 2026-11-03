@@ -5,6 +5,7 @@
 import { Fragment, useRef, type ReactNode } from "react";
 import { Header, Menu, MenuItem, MenuSection, MenuTrigger, Popover, Separator, Text } from "react-aria-components";
 import { Icon, type IconName } from "./Icon";
+import label from "./GroupLabel.module.css";
 import styles from "./MenuButton.module.css";
 
 export interface MenuEntry {
@@ -82,7 +83,7 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
                 selectionMode={group.checked !== undefined ? "multiple" : group.selected !== undefined ? "single" : "none"}
                 selectedKeys={group.checked !== undefined ? group.checked : group.selected !== undefined ? [group.selected] : undefined}
               >
-                {group.title && <Header className={styles.header}>{group.title}</Header>}
+                {group.title && <Header className={`${label.label} ${styles.header}`}>{group.title}</Header>}
                 {group.entries.map((entry) => (
                   <MenuItem
                     key={entry.id}

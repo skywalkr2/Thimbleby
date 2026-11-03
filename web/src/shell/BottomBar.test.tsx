@@ -27,7 +27,8 @@ test("the bar has Today, Work, a plus for handing something in, Search and More"
   const bar = screen.getByRole("navigation", { name: "Views" });
   expect(within(bar).getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
   expect(within(bar).getByRole("button", { name: "Work" })).toBeInTheDocument();
-  expect(within(bar).getByRole("button", { name: "Hand something in" })).toBeInTheDocument();
+  // The plus is the tonal weight, so the bar never draws a second filled button beside a screen's own primary (VP04).
+  expect(within(bar).getByRole("button", { name: "Hand something in" })).toHaveAttribute("data-weight", "tonal");
   expect(within(bar).getByRole("button", { name: "Search" })).toBeInTheDocument();
   expect(within(bar).getByRole("button", { name: "More" })).toBeInTheDocument();
 });
