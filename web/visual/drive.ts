@@ -1,0 +1,132 @@
+// What the capture map uses to put a page in a state: the environment of one capture, and small helpers for the ways the
+// states are driven (offline, a refused write, a held read, a made-up answer). Nothing here names a page; pages.ts does.
+import type { BrowserContext, Page, Route } from "playwright-core";
+import type { Size } from "./names.ts";
+
+/** What a capture has to work with. */
+export interface Env {
+  page: Page;
+  context: BrowserContext;
+  size: Size;
+  /** The app's address, with the base path and a trailing slash. */
+  base: string;
+  token: string;
+  /** The stand-in outside services' address, when this server has them (the accounts server). */
+  fake: string | null;
+  /** What the stage's setup recorded (ids, names, addresses), for the drives to read. */
+  seed: Record<string, any>;
+  /** Called after the capture, in reverse order: whatever a drive changed (a route, offline, a held read) is put back. */
+  undo: Array<() => Promise<void> | void>;
+}
+
+/** Why a page can't be put in a state in this build. Thrown from a drive; the capture is then listed with this reason. */
+export class Unreachable extends Error {}
+
+export const LONG = { timeout: 30_000 };
+
+/** Sets the address's fragment, as a person's click on a link does. */
+export async function go(env: Env, hash: string): Promise<void> {
+  await env.page.evaluate((to) => {
+    window.location.hash = to;
+  }, hash);
+}
+
+/** Waits until a screen has what it loads: a heading shows, no skeleton is left, and the last fetches had a moment to land. */
+export async function settle(page: Page): Promise<void> {
+  await page.locator("h1").first().waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForFunction(() => !document.querySelector("[data-skeleton]"), null, { timeout: 30_000 }).catch(() => undefined);
+  await page.waitForTimeout(700);
+}
+
+/** Opens a screen by its fragment and waits for it. */
+export async function open(env: Env, hash: string): Promise<void> {
+  await go(env, hash);
+  await settle(env.page);
+}
+
+/** The first of a list of names that has a button on the page. Throws Unreachable with the reason when none has. */
+export async function clickFirstOf(env: Env, names: Array<string | RegExp>, why: string): Promise<string> {
+  for (const name of names) {
+    const found = env.page.getByRole("button", { name }).first();
+    if ((await found.count()) > 0 && (await found.isVisible().catch(() => false))) {
+      await found.click();
+      return typeof name === "string" ? name : name.source;
+    }
+  }
+  throw new Unreachable(why);
+}
+
+/** The browser goes offline: the app is told, and asked to look again, as it is when the window is brought back. */
+export async function goOffline(env: Env): Promise<void> {
+  await env.context.setOffline(true);
+  env.undo.push(() => env.context.setOffline(false));
+  await env.page.evaluate(() => {
+    window.dispatchEvent(new Event("offline"));
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await env.page.waitForTimeout(900);
+}
+
+/** Every write the app sends from now on is refused with this status (500 is a failed save, 409 a change made elsewhere). */
+export async function refuseWrites(env: Env, status: 500 | 409, detail: string): Promise<void> {
+  const handler = async (route: Route) => {
+    if (route.request().method() === "GET" || route.request().method() === "HEAD") return route.fallback();
+    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ detail }) });
+  };
+  await env.page.route("**/api/**", handler);
+  env.undo.push(() => env.page.unroute("**/api/**", handler));
+}
+
+/** Answers every read of one address pattern with this status and text, for "couldn't load". */
+export async function refuseReads(env: Env, pattern: string | RegExp, status: number, detail: string): Promise<void> {
+  const handler = async (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ detail }) });
+  };
+  await env.page.route(pattern, handler);
+  env.undo.push(() => env.page.unroute(pattern, handler));
+}
+
+/**
+ * Loading: opens the app on a screen that needs no data, remembers every address it read to start, and from then on holds
+ * every read of any other address until the capture is over. The screen asked for then draws what it draws while it waits.
+ */
+export async function holdReads(env: Env, neutralHash: string, hash: string): Promise<void> {
+  // A page of its own, loaded again from nothing, so no answer from the start (Today's, which the capture opens on) is kept.
+  await env.page.goto("about:blank");
+  await env.page.goto(`${env.base}?token=${env.token}#${neutralHash}`);
+  await settle(env.page);
+  const known = new Set<string>();
+  const note = (url: string) => known.add(new URL(url).pathname + new URL(url).search);
+  for (const entry of await env.page.evaluate(() => performance.getEntriesByType("resource").map((e) => e.name))) note(entry);
+  let release: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const handler = async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== "GET" || known.has(url.pathname + url.search)) return route.fallback();
+    await released;
+    return route.fallback().catch(() => undefined);
+  };
+  await env.page.route("**/api/**", handler);
+  env.undo.push(async () => {
+    release();
+    await env.page.unroute("**/api/**", handler).catch(() => undefined);
+  });
+  await go(env, hash);
+  await env.page.waitForTimeout(900);
+}
+
+/** Calls the app's own API with the capture's token, for seeding and for reading ids. */
+export async function api<T = any>(base: string, token: string, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+  const answer = await fetch(`${base}api/${path}`, {
+    method: init?.method ?? "GET",
+    headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+  if (!answer.ok) throw new Error(`${init?.method ?? "GET"} api/${path} answered ${answer.status}: ${(await answer.text()).slice(0, 200)}`);
+  const text = await answer.text();
+  return (text ? JSON.parse(text) : null) as T;
+}

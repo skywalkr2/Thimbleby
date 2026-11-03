@@ -16,6 +16,8 @@ build/
 # Web
 node_modules
 web/dist/
+# The visual hand-back tool writes its pictures here.
+web/visual/out/
 
 # Local environment and secrets
 .env

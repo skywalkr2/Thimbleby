@@ -14,7 +14,8 @@
     "lint:css": "stylelint \"src/**/*.css\"",
     "build": "npm run lint:css && npm run gen:api && tsc --noEmit && vite build",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "visual:capture": "node --experimental-strip-types --no-warnings visual/capture.ts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "5.2.9",
