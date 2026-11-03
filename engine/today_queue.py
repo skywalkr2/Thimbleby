@@ -328,12 +328,12 @@ class Line:
 
 
 def _one_line_per_cause(found: dict[tuple[str, str, str | None, str | None], list[Line]]) -> list[Line]:
-    """Stopped requests with one known cause are one line with a count and the lines behind it in `items` (`state` is the
-    cause's kind), never one line each; a request that stopped alone, or with no known cause, keeps its own line."""
+    """Stopped requests with one known cause are one line with a count and the lines behind it in `items` (`state` is
+    the cause's kind), never one line each; a request that stopped alone, or with no known cause, keeps its own line."""
     lines: list[Line] = []
     for (kind, group, cause_kind, waiting), members in found.items():
-        # Only a known cause groups: two requests that stopped with the same general words may have stopped for different
-        # reasons, so each keeps its own line.
+        # Only a known cause groups: two requests that stopped with the same general words may have stopped for
+        # different reasons, so each keeps its own line.
         if len(members) == 1 or not cause_kind:
             lines.extend(members)
             continue
