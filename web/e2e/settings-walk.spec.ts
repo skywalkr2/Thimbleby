@@ -232,6 +232,8 @@ test("every page of Settings is built in one frame: the same title, search and s
   // A page's frame is measured once its layout has settled (the same box on three reads a short while apart), so a page
   // still filling in on a busy machine is not measured half-built. What is compared is unchanged.
   const box = async (selector: string) => {
+    // The page's own faces must have loaded: a title measured in the fallback face is wider than the same title later.
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
     let last = await once(selector);
     let same = 0;
     for (let tries = 0; tries < 100 && same < 3; tries++) {

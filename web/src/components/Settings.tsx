@@ -345,22 +345,26 @@ export function Settings(props: {
           : section === "you"
             ? !me.isPending
             : true);
+  const searching = query.trim() !== "";
   useEffect(() => {
     if (!settled) return;
     const root = content.current;
     if (!root) return;
-    // A search made on another page keeps the cursor in the search box, so typing goes on where it was.
+    // A search made on another page keeps the cursor in the search box, so typing goes on where it was. The search can
+    // arrive just after the section opens (the page it was typed on hands it over), so this runs again when it does.
     const searchBox = document.getElementById(SEARCH_ID);
     if (query.trim() && searchBox instanceof HTMLInputElement) {
       searchBox.focus({ preventScroll: true });
       searchBox.setSelectionRange(searchBox.value.length, searchBox.value.length);
       return;
     }
+    // Someone clearing the search box keeps typing there.
+    if (searchBox && document.activeElement === searchBox) return;
     // A section opens with the cursor on its heading, never in a field.
     root.querySelector<HTMLElement>("[data-section-heading]")?.focus({ preventScroll: true });
-    // Only when a section opens: a save must not move the cursor.
+    // Only when a section opens or a search starts: a save must not move the cursor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, settled]);
+  }, [section, settled, searching]);
 
   // The fingerprint to save against is the one the screen loaded with and what each save answered with. A background
   // reload doesn't replace it, so a change made elsewhere is refused instead of being written over; after the refusal
