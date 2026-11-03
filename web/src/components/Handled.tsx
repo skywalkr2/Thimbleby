@@ -19,7 +19,6 @@ import { useWords } from "../lib/wording";
 import { SearchField } from "../ui/SearchField";
 import { Icon } from "../ui/Icon";
 import { SegmentedControl } from "../ui/SegmentedControl";
-import { Skeleton } from "../ui/Skeleton";
 import styles from "./Handled.module.css";
 import { AssistantCloses } from "./HandledClosed";
 import { SideFilter } from "./SideFilter";
@@ -30,6 +29,8 @@ import { useSelection } from "../lib/act-batch";
 import { MailSelectionBar } from "./MailSelection";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { PageHeader } from "../ui/PageHeader";
 import { TabStrip } from "../ui/TabStrip";
 import { Pill } from "../ui/Pill";
@@ -139,57 +140,63 @@ export function Handled() {
         />
       ) : null}
       {picked.selected.size > 0 && <MailSelectionBar records={[...picked.selected]} onClear={picked.clear} />}
-      {list.isPending ? (
-        <Skeleton />
-      ) : list.isError ? (
-        <EmptyState icon="alert" text={t("handled.load_failed")} action={{ label: t("action.try_again"), onClick: () => void list.refetch() }} />
-      ) : list.data.groups.length === 0 ? (
-        <EmptyState role="status" text={query ? t("handled.none_match") : side.choice !== "all" ? t("sides.empty.handled", { side: side.named }) : t(`handled.empty.${tab}`)} />
-      ) : (
-        <div className={styles.groups}>
-          {list.data.groups.map((g, index) => {
-            const key = `${tab}|${shownGroup}|${item ?? ""}|${g.key}`;
-            const limit = pageRows + (more[key] ?? 0);
-            // A search shows the mail it found, so its groups are open.
-            const open = !!query || opened.has(key);
-            const name =
-              g.label ??
-              (g.key.startsWith("kind:")
-                ? t(`handled.kind.${g.key.slice(5) as Row["kind"]}`)
-                : g.key.startsWith("item:")
-                  ? t(`handled.item_group.${g.key.slice(5) as Item}`)
-                  : t(shownGroup === "sender" ? "handled.sender_unknown" : "handled.reason_unknown"));
-            return (
-              <section key={key} className={styles.group} data-group={g.key}>
-                <h2>
-                  <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={open ? `${ids}-group-${index}` : undefined} onClick={() => toggle(key)}>
-                    <span className={styles.head}>
-                      <span className={styles.chevron} data-open={open ? "" : undefined}>
-                        <Icon name="chevron" size={16} />
+      <ListState query={list} failed={t("handled.load_failed")}>
+        {(data) =>
+          data.groups.length === 0 ? (
+            query ? (
+              <FilteredEmpty role="status" text={t("handled.none_match")} onClear={() => { setTyped(""); setQuery(""); }} />
+            ) : side.choice !== "all" ? (
+              <FilteredEmpty role="status" text={t("sides.empty.handled", { side: side.named })} onClear={() => side.set("all")} />
+            ) : (
+              <EmptyState role="status" text={t(`handled.empty.${tab}`)} />
+            )
+          ) : (
+          <div className={styles.groups}>
+            {data.groups.map((g, index) => {
+              const key = `${tab}|${shownGroup}|${item ?? ""}|${g.key}`;
+              const limit = pageRows + (more[key] ?? 0);
+              // A search shows the mail it found, so its groups are open.
+              const open = !!query || opened.has(key);
+              const name =
+                g.label ??
+                (g.key.startsWith("kind:")
+                  ? t(`handled.kind.${g.key.slice(5) as Row["kind"]}`)
+                  : g.key.startsWith("item:")
+                    ? t(`handled.item_group.${g.key.slice(5) as Item}`)
+                    : t(shownGroup === "sender" ? "handled.sender_unknown" : "handled.reason_unknown"));
+              return (
+                <section key={key} className={styles.group} data-group={g.key}>
+                  <h2>
+                    <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={open ? `${ids}-group-${index}` : undefined} onClick={() => toggle(key)}>
+                      <span className={styles.head}>
+                        <span className={styles.chevron} data-open={open ? "" : undefined}>
+                          <Icon name="chevron" size={16} />
+                        </span>
+                        <strong>{t("handled.group_name", { name, n: g.count })}</strong>
                       </span>
-                      <strong>{t("handled.group_name", { name, n: g.count })}</strong>
-                    </span>
-                  </button>
-                </h2>
-                {open && (
-                  <RowList id={`${ids}-group-${index}`}>
-                    {g.items.slice(0, limit).map((row) => (
-                      <HandledRow key={row.id} item={row} picked={row.saved && row.item === "mail" && row.tab !== "closed" ? { on: picked.selected.has(row.saved), toggle: () => picked.toggle(row.saved ?? "") } : undefined} />
-                    ))}
-                    {g.items.length > limit && (
-                      <RowItem>
-                        <Button variant="quiet" onClick={() => setMore((now) => ({ ...now, [key]: (now[key] ?? 0) + pageRows }))}>
-                          {t("handled.show_more", { n: g.items.length - limit })}
-                        </Button>
-                      </RowItem>
-                    )}
-                  </RowList>
-                )}
-              </section>
-            );
-          })}
-        </div>
-      )}
+                    </button>
+                  </h2>
+                  {open && (
+                    <RowList id={`${ids}-group-${index}`}>
+                      {g.items.slice(0, limit).map((row) => (
+                        <HandledRow key={row.id} item={row} picked={row.saved && row.item === "mail" && row.tab !== "closed" ? { on: picked.selected.has(row.saved), toggle: () => picked.toggle(row.saved ?? "") } : undefined} />
+                      ))}
+                      {g.items.length > limit && (
+                        <RowItem>
+                          <Button variant="quiet" onClick={() => setMore((now) => ({ ...now, [key]: (now[key] ?? 0) + pageRows }))}>
+                            {t("handled.show_more", { n: g.items.length - limit })}
+                          </Button>
+                        </RowItem>
+                      )}
+                    </RowList>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+          )
+        }
+      </ListState>
       {tab === "read" && <AssistantCloses />}
     </section>
   );

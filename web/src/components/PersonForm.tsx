@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
+import { NotSaved } from "../ui/NotSaved";
 import { readable } from "../lib/records";
 import { useFirstField } from "../lib/focus";
 import { useSideFilter, useSides } from "../lib/sides";
@@ -267,11 +268,7 @@ export function PersonDrawer(props: {
             </div>
           );
         })}
-        {problem && (
-          <div className="problem-note" role="alert">
-            <p>{problem}</p>
-          </div>
-        )}
+        {problem && <NotSaved what={name.trim() || undefined} reason={problem} busy={busy} onRetry={() => void save()} />}
       </form>
     </Drawer>
   );

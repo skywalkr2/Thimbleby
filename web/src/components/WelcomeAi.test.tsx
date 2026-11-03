@@ -437,8 +437,8 @@ test("with no suggestion from the app, the list's first model is never chosen: t
   // The list shows its placeholder, not the first model it offers.
   expect(picker).toHaveTextContent("Pick a model");
   expect(checks(calls)).toHaveLength(0);
-  // Leaving the key box looks at it again; the person picks once that has settled, as they would between two clicks, and then
-  // moves on from the box (Enter), which checks it with the model they picked.
+  // Leaving the key box does not check the same key again (see the test below); the person picks, and then moves on from the box
+  // (Enter), which checks it with the model they picked.
   await user.tab();
   const settled = await screen.findByLabelText("AI model for everyday work");
   await user.selectOptions(settled, "model-c");
@@ -446,6 +446,44 @@ test("with no suggestion from the app, the list's first model is never chosen: t
   await user.keyboard("{Enter}");
   expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
   expect(checks(calls)[0].body).toMatchObject({ models: { everyday: "model-c" } });
+});
+
+test("clicking the model list after a paste does not check the same key a second time, which would replace the list under the click", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST ai/models": () => ({ models: MODELS }) });
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.paste("pasted-key");
+  const picker = await screen.findByLabelText("AI model for everyday work");
+  expect(modelsAsked(calls)).toHaveLength(1);
+  // The click leaves the key box; its text has not changed since the check, so nothing is asked again.
+  await user.click(picker);
+  await user.keyboard("{Escape}");
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(modelsAsked(calls)).toHaveLength(1);
+  expect(checks(calls)).toHaveLength(0);
+  expect(screen.getByLabelText("AI model for everyday work")).toBe(picker);
+});
+
+test("a key that was changed since the last check is checked once when the cursor leaves the box", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.paste("pasted-key");
+  await screen.findByText("Works. Ready to use.");
+  expect(checks(calls)).toHaveLength(1);
+  await user.type(screen.getByLabelText("Access key"), "x");
+  await user.tab();
+  await waitFor(() => expect(checks(calls)).toHaveLength(2));
+  expect(checks(calls)[1].body).toMatchObject({ key: "pasted-keyx" });
+  // Leaving it again with the same text checks nothing more.
+  await user.click(screen.getByLabelText("Access key"));
+  await user.tab();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(checks(calls)).toHaveLength(2);
 });
 
 test("a typed key is checked when the cursor leaves the box, or on Enter, never on every letter", async () => {

@@ -22,27 +22,27 @@ function show(handlers: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeed
   );
 }
 
-test("the bar has Today, Work, a plus for handing something in, Search and More", () => {
+test("the bar has Today, To-dos, a tonal plus for handing something in, Schedule and More, and no Search", () => {
   show();
   const bar = screen.getByRole("navigation", { name: "Views" });
   expect(within(bar).getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
-  expect(within(bar).getByRole("button", { name: "Work" })).toBeInTheDocument();
+  expect(within(bar).getByRole("link", { name: "To-dos" })).toHaveAttribute("href", expect.stringMatching(/#work\/open$/));
   // The plus is the tonal weight, so the bar never draws a second filled button beside a screen's own primary (VP04).
   expect(within(bar).getByRole("button", { name: "Hand something in" })).toHaveAttribute("data-weight", "tonal");
-  expect(within(bar).getByRole("button", { name: "Search" })).toBeInTheDocument();
+  expect(within(bar).getByRole("link", { name: "Schedule" })).toHaveAttribute("href", expect.stringMatching(/#schedule$/));
   expect(within(bar).getByRole("button", { name: "More" })).toBeInTheDocument();
+  expect(within(bar).queryByRole("button", { name: "Search" })).toBeNull();
+  expect(within(bar).queryByRole("button", { name: "Work" })).toBeNull();
 });
 
-test("the bar carries the same search field, which ends with Ask", async () => {
-  const user = userEvent.setup();
-  const onAsk = vi.fn();
-  show({ onAsk });
-  await user.click(screen.getByRole("button", { name: "Search" }));
-  const field = screen.getByRole("searchbox");
-  expect(field).toHaveAttribute("placeholder", "Search or ask Helper");
-  await user.click(field);
-  await user.click(screen.getByRole("button", { name: "Ask Helper" }));
-  expect(onAsk).toHaveBeenCalledWith("");
+test("the tab of the screen that is open is the current one, and More is current on a screen that has no tab", () => {
+  fakeApi({ "GET panels": () => [], "GET changes": () => [], "GET followups": () => [] });
+  const noop = () => undefined;
+  renderApp(<BottomBar current="work/open" version="9.8.7" onHandIn={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />);
+  const bar = screen.getByRole("navigation", { name: "Views" });
+  expect(within(bar).getByRole("link", { name: "To-dos" })).toHaveAttribute("aria-current", "page");
+  expect(within(bar).getByRole("link", { name: "Today" })).not.toHaveAttribute("aria-current");
+  expect(within(bar).getByRole("button", { name: "More" })).not.toHaveAttribute("aria-current");
 });
 
 test("the plus runs the same action as the header's", async () => {
@@ -55,24 +55,16 @@ test("the plus runs the same action as the header's", async () => {
   expect(onAsk).not.toHaveBeenCalled();
 });
 
-test("Work opens a sheet with its views, as links", async () => {
-  const user = userEvent.setup();
-  show();
-  await user.click(screen.getByRole("button", { name: "Work" }));
-  const sheet = await screen.findByRole("dialog", { name: "Work" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Schedule", "What changed", "Handled for you", "Follow-ups", "To-dos and questions", "Stages"]);
-  expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
-  await user.keyboard("{Escape}");
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-});
-
-test("More lists Records and Settings, with no Connections or Add-ons beside it, the help items, and this device's theme and density", async () => {
+test("More has the work screens, the saved items and Settings in sections, with no Connections or Add-ons beside it, the help items, and this device's theme and density", async () => {
   const user = userEvent.setup();
   const onHelp = vi.fn();
   show({ onHelp });
   await user.click(screen.getByRole("button", { name: "More" }));
   const sheet = await screen.findByRole("dialog", { name: "More" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Notes", "Knowledge", "Settings"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "Stages", "Projects", "People", "Files", "Notes", "Knowledge", "Settings"]);
+  expect(within(sheet).getByText("Work")).toBeInTheDocument();
+  expect(within(sheet).getByText("Saved items")).toBeInTheDocument();
+  expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
   expect(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Setup guide" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Write feedback" })).toBeInTheDocument();
@@ -83,7 +75,7 @@ test("More lists Records and Settings, with no Connections or Add-ons beside it,
   await waitFor(() => expect(onHelp).toHaveBeenCalledTimes(1));
 });
 
-test("with no side besides Personal the phone's bar says Keeping track, not Work, and its sheet lists no Stages", async () => {
+test("with no side besides Personal the phone's More sheet says Keeping track, not Work, and lists no Stages", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET panels": () => [],
@@ -95,8 +87,10 @@ test("with no side besides Personal the phone's bar says Keeping track, not Work
   const noop = () => undefined;
   renderApp(<BottomBar current="today" version="9.8.7" onHandIn={noop} onOpenRecord={noop} onAsk={noop} onHelp={noop} onFeedback={noop} onOpenGuide={noop} />);
   const bar = screen.getByRole("navigation", { name: "Views" });
-  await user.click(await within(bar).findByRole("button", { name: "Keeping track" }));
-  const sheet = await screen.findByRole("dialog", { name: "Keeping track" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Schedule", "What changed", "Handled for you", "Follow-ups", "To-dos and questions"]);
-  expect(within(bar).queryByRole("button", { name: "Work" })).toBeNull();
+  await user.click(within(bar).getByRole("button", { name: "More" }));
+  const sheet = await screen.findByRole("dialog", { name: "More" });
+  expect(await within(sheet).findByText("Keeping track")).toBeInTheDocument();
+  expect(within(sheet).queryByText("Work")).toBeNull();
+  expect(within(sheet).queryByRole("link", { name: "Stages" })).toBeNull();
+  expect(within(sheet).getAllByRole("link").slice(0, 3).map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups"]);
 });

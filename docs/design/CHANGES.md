@@ -1027,6 +1027,31 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 319. States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (2026-11-03; visual review VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04)
+
+| Where | Before | Now |
+|---|---|---|
+| Loading and couldn't load (7.21) | Each list drew its own skeleton or an alert-iconed empty state | One `ListState`: skeleton rows with a lead circle at row height; `LoadFailed` with the reason and Try again; offline words; a list that loaded stays readable. **Built** (`web/src/ui/states.test.tsx`, `web/src/components/ListStates.test.tsx`: eight screens) |
+| Offline (7.21) | The status chip and a Today line said it; no screen did | One `OfflineBanner` at the top of the content, from `lib/connection.tsx`; Try now reopens the stream. **Built** (`states.test.tsx`, `ListStates.test.tsx`) |
+| A failed save (7.21) | A toast (the to-do add row), a note (a person's form, a record's details) | `NotSaved` in the row or form: "Not saved", the reason, Try again; the words stay. **Built** (`InlineAddTodo.test.tsx`, `PersonForm.test.tsx`, `RecordPage.test.tsx`) |
+| Changed elsewhere (7.21) | Untouched fields refreshed and listed; a field the person also edited was silently kept | `ChangedElsewhere`: old → new and what they typed, Keep mine or Use the new one. **Built** (`RecordPage.test.tsx`, `states.test.tsx`) |
+| Filtered to nothing (7.21) | A sentence | `FilteredEmpty`: the sentence and Clear filter. **Built** (`ListStates.test.tsx`) |
+| A failing account on Today (7.12) | A pill after the words | A state row: the warning edge, tint, icon and word. **Built** (`web/src/shell/HeldLines.test.tsx`) |
+| Counts (7.12) | The whole number | "99+" in group labels, tabs, segmented choices and the menu; the exact number in the accessible name. **Built** (`states.test.tsx`) |
+| The phone's bar (7.1) | Today · Work · + · Search · More | Today · To-dos · + · Schedule · More; More is a sheet in sections; Search is a header icon. **Built** (`web/src/shell/BottomBar.test.tsx`, `Header.test.tsx`) |
+| The side filter on a phone and under 1100px (7.8, 7.21) | A strip, or a list on a phone | One button in the page header and a sheet. **Built** (`web/src/components/SideFilterSheet.test.tsx`) |
+| Hit targets on a touch screen (7.21) | 24px floor, a 32px icon button, 40px row buttons | 44px: `--hit-min`, `--hit-icon`, `--btn-h-sm` on a coarse pointer. Done in CSS; the browser check `web/e2e/states-phone.spec.ts` is written, not yet run |
+| Settings at 1024 (7.9) | The list of sections folded under 720px of the page | Folds under 1100px of the window. Done in CSS and `SettingsNav`; the browser check `web/e2e/states-phone.spec.ts` is written, not yet run |
+| A date at the end of a to-do's title (7.21) | Typed into the Add form only | The add row finds it by rules, shows the day before Enter with a way to drop it. **Built** (`web/src/lib/todo-phrase.test.ts`, `InlineAddTodo.test.tsx`, `tests/test_add_todo.py`) |
+| The rail's rows (7.7, 04) | A constant of 3 | `ui.today.rail_rows`. **Built** (`web/src/components/TodayRail.test.tsx`) |
+| The clock and the time list (7.12, 04) | The computer's locale; every 15 minutes | `ui.time_format` and `ui.time_step`. **Built** (`web/src/lib/dates.test.ts`, `web/src/ui/TimeField.test.tsx`) |
+| The setup key (7.8) | Leaving the key box started a second check | Checked only when the key changed since the last check. **Built** (`web/src/components/WelcomeAi.test.tsx`) |
+| The setup mail step (7.8) | Continue in the body | Continue in the footer on the column's edge. **Built** (`web/src/components/Walkthrough.test.tsx`) |
+
+- **Config:** `ui.today.rail_rows`, `ui.time_format`, `ui.time_step` (schema entries, defaults, descriptions, demo values in both workspaces; `RuntimeConfig.rail_rows|time_format|time_step`).
+- **Wording:** `state.*`, `people.load_failed`, `projects.load_failed`, `nav.tab.todos`, `nav.more.*`, `sides.filter.open|sheet|sheet_hint`, `open.inline_add.date_*`, `addtodo.phrase.*`, `settings.key.ui.time_*`, `settings.key.ui.today.rail_rows`.
+- **Left:** `docs/project/u3-differences/states-phone.md` lists each with its reason (Schedule and Connections, the Files drop zone, changed-elsewhere on a to-do's own edit, captures, the browser run).
+
 ## 318. Schedule and Connections built to the 4.6 mockups; signing in again to one account refuses another (2026-11-03; visual review VS06, VS18, X45, X53, X57, VC13)
 
 | Where | Before | Now |

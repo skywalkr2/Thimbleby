@@ -88,6 +88,9 @@
   --target-min: 24px;          /* the floor for any control (WCAG 2.5.8): nothing is smaller */
   --check-inset: 3px;          /* the gap from the 24px element to that box: (--target-min - 18px) / 2 */
   --target-icon: 32px;         /* an icon-only button is at least this square */
+  --hit-min: var(--target-min);   /* what a control's hit area is at least: 24px, and 44px on a coarse pointer (below) */
+  --hit-icon: var(--target-icon); /* what an icon-only button is at least: 32px, and 44px on a coarse pointer */
+  --hit-offset: 0px;              /* how far a larger hit area reaches past the 24px slot it sits in, so the layout does not grow */
 
   /* ---------- 2. Semantic roles (light) ---------- */
   --canvas: var(--gray-100);         /* page background: close to the panes, which part from it by a soft edge */
@@ -241,7 +244,12 @@
 /* ---------- Global rules ---------- */
 /* Touch targets are at least 44px whatever the density: this comes after, and is as specific as, the compact block. */
 @media (pointer: coarse) {
-  :root, :root[data-density="compact"] { --btn-h: var(--tap-min); --btn-h-sm: 40px; --input-h: var(--tap-min); }
+  :root, :root[data-density="compact"] {
+    --btn-h: var(--tap-min); --btn-h-sm: var(--tap-min); --input-h: var(--tap-min);
+    /* Every control, icon button, round check and check box is at least 44px to hit; what is drawn in it keeps its size. */
+    --hit-min: var(--tap-min); --hit-icon: var(--tap-min); --check-inset: calc((var(--tap-min) - 18px) / 2);
+    --hit-offset: calc((var(--target-min) - var(--tap-min)) / 2);
+  }
 }
 @media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } }
 

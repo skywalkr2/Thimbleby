@@ -759,19 +759,19 @@ test.describe("screen use and the shell", () => {
     await expect(chip).not.toContainText("Disconnected", { timeout: 20_000 });
   });
 
-  test("on a phone the bottom bar is visible, the page does not scroll sideways, and the sheets list the views", async ({ page }) => {
+  test("on a phone the bottom bar is visible, the page does not scroll sideways, and the More sheet lists the views", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);
     const bar = page.getByRole("navigation", { name: "Views" });
     await expect(bar).toBeVisible();
-    for (const name of ["Today", "Work", "Hand something in", "Search", "More"]) {
-      await expect(bar.getByRole(name === "Today" ? "link" : "button", { name })).toBeVisible();
+    for (const name of ["Today", "To-dos", "Hand something in", "Schedule", "More"]) {
+      await expect(bar.getByRole(["Today", "To-dos", "Schedule"].includes(name) ? "link" : "button", { name })).toBeVisible();
     }
     const box = (await bar.boundingBox())!;
     expect(box.y + box.height).toBeGreaterThanOrEqual(844 - 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await bar.getByRole("button", { name: "Work" }).click();
-    const sheet = page.getByRole("dialog", { name: "Work" });
+    await bar.getByRole("button", { name: "More" }).click();
+    const sheet = page.getByRole("dialog", { name: "More" });
     await expect(sheet.getByRole("link", { name: "Stages" })).toBeVisible();
     await sheet.getByRole("link", { name: "Stages" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeVisible();

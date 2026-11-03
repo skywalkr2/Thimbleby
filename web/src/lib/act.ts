@@ -11,7 +11,12 @@ export function useAct() {
   const { push } = useToasts();
   const { t } = useWords();
   return useCallback(
-    async function act<T>(run: () => Promise<T>, after?: (result: T) => Omit<ToastInput, "undo"> & { undo?: () => Promise<unknown> }): Promise<T | undefined> {
+    async function act<T>(
+      run: () => Promise<T>,
+      after?: (result: T) => Omit<ToastInput, "undo"> & { undo?: () => Promise<unknown> },
+      /** A screen that shows a failed save itself (a "Not saved" row beside what was changed) takes the failure here, and no toast is made. */
+      onError?: (err: unknown) => void,
+    ): Promise<T | undefined> {
       try {
         const result = await run();
         await client.invalidateQueries();
@@ -30,6 +35,10 @@ export function useAct() {
         }
         return result;
       } catch (err) {
+        if (onError) {
+          onError(err);
+          return undefined;
+        }
         const detail = err instanceof ApiError ? err.detail : "";
         const signedOut = err instanceof ApiError && err.status === 401;
         // A failure offers to run the same call again, except a signed-out one, which no retry can fix.

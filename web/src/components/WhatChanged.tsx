@@ -40,6 +40,8 @@ import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
 import { Highlighted } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill, type PillTone } from "../ui/Pill";
 
@@ -219,12 +221,14 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           {tn("changes.show_new", waiting.length)}
         </button>
       )}
-      {changes.isPending ? (
-        <Skeleton />
-      ) : changes.isError ? (
-        <EmptyState icon="alert" text={t("changes.load_failed")} action={{ label: t("action.try_again"), onClick: () => void changes.refetch() }} />
-      ) : rows.length === 0 ? (
-        <EmptyState text={side.choice !== "all" && (changes.data ?? []).length > 0 ? t("sides.empty.changes", { side: side.named }) : t("changes.empty")} />
+      <ListState query={changes} failed={t("changes.load_failed")}>
+        {() =>
+      rows.length === 0 ? (
+        side.choice !== "all" && (changes.data ?? []).length > 0 ? (
+          <FilteredEmpty text={t("sides.empty.changes", { side: side.named })} onClear={() => side.set("all")} />
+        ) : (
+          <EmptyState text={t("changes.empty")} />
+        )
       ) : (
         <ListDetail
           title={selected ? (folded(selected) ? editsTitle(selected, t) : changeTitle(selected, t, has)) : ""}
@@ -262,7 +266,9 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
             ))}
           </RowList>
         </ListDetail>
-      )}
+      )
+        }
+      </ListState>
     </section>
   );
 }

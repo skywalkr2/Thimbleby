@@ -54,10 +54,15 @@ export const PAGES = [
 /** A made-up first state for screens that load slowly: a neutral screen that needs no data, then the screen asked for. */
 const NEUTRAL = "settings/appearance";
 
-/** The side filter, whether it is a row of choices (a window) or a list (a phone): picks the side with this name. */
+/** The side filter, whether it is a row of choices (a wide window), one button that opens a sheet (a phone, and under 1100px) or
+    a list: picks the side with this name. */
 async function pickSide(env: Env, name: string): Promise<void> {
+  const button = env.page.getByRole("button", { name: /^Side: / }).first();
   const list = env.page.getByRole("combobox", { name: "Show" }).first();
-  if ((await list.count()) > 0 && (await list.isVisible())) {
+  if ((await button.count()) > 0 && (await button.isVisible())) {
+    await button.click();
+    await env.page.getByRole("dialog", { name: "Show one side" }).locator("[data-side-option]").filter({ hasText: name.slice(0, 12) }).first().click();
+  } else if ((await list.count()) > 0 && (await list.isVisible())) {
     await list.selectOption({ label: name });
   } else {
     await env.page.getByRole("radiogroup", { name: "Show" }).first().getByRole("radio", { name: new RegExp(`^${name.slice(0, 12)}`) }).click();
@@ -138,9 +143,12 @@ export const ENTRIES: Entry[] = [
     stage: "seeded",
     open: async (env) => {
       await open(env, "today");
-      // A window shows the sides as a row of choices already; a phone shows a list, which is opened here.
-      const list = env.page.getByRole("combobox", { name: "Show" }).first();
-      if ((await list.count()) > 0 && (await list.isVisible())) await list.focus();
+      // A wide window shows the sides as a row of choices already; a phone (and a window under 1100px) shows one button, whose sheet is opened here.
+      const button = env.page.getByRole("button", { name: /^Side: / }).first();
+      if ((await button.count()) > 0 && (await button.isVisible())) {
+        await button.click();
+        await env.page.getByRole("dialog", { name: "Show one side" }).waitFor({ timeout: 12_000 });
+      }
     },
   },
   {
@@ -189,8 +197,7 @@ export const ENTRIES: Entry[] = [
     stage: "seeded",
     open: async (env) => {
       await open(env, "work/open");
-      await env.page.getByRole("radio", { name: /^Lantern Row Studio/ }).click();
-      await env.page.waitForTimeout(700);
+      await pickSide(env, "Lantern Row Studio");
     },
   },
   {
@@ -200,7 +207,7 @@ export const ENTRIES: Entry[] = [
     stage: "seeded",
     open: async (env) => {
       await open(env, "work/open");
-      await env.page.getByRole("tab", { name: /^Questions/ }).click();
+      await env.page.getByRole("button", { name: /^Questions/ }).click();
       await env.page.waitForTimeout(700);
     },
   },
@@ -385,7 +392,7 @@ export const ENTRIES: Entry[] = [
       await person("pat")(env);
       await env.page.getByRole("button", { name: "Edit", exact: true }).click();
       await refuseWrites(env, 500, "The app couldn't write to its folder.");
-      await env.page.getByRole("button", { name: "Save", exact: true }).click();
+      await env.page.getByRole("dialog").getByRole("button", { name: /^Save/ }).click();
       await env.page.waitForTimeout(900);
     },
   },

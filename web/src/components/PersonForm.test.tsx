@@ -151,6 +151,26 @@ test("a refusal from the server is said in the form, beside what was typed", asy
   expect(within(dialog).getByLabelText("Email")).toHaveValue("ana@example.com");
 });
 
+test("a person who could not be saved stays in the form as Not saved, with the reason and Try again, and nothing typed is lost", async () => {
+  const user = userEvent.setup();
+  let fail = true;
+  const calls = api([], { ...sided, "POST people": () => (fail ? new Refuse(500, "The app couldn't write to its folder.") : { id: "P-9" }) });
+  renderApp(<People />);
+  const dialog = await openAdd(user);
+  await user.type(within(dialog).getByLabelText("Full name"), "Hal Person");
+  await user.type(within(dialog).getByLabelText("Email"), "hal@example.com");
+  await user.click(within(dialog).getByRole("button", { name: "Add a person" }));
+  const note = await within(dialog).findByRole("alert");
+  expect(note).toHaveTextContent("Not saved");
+  expect(note).toHaveTextContent("“Hal Person” wasn't saved.");
+  expect(note).toHaveTextContent("The app couldn't write to its folder.");
+  expect(within(dialog).getByLabelText("Full name")).toHaveValue("Hal Person");
+  expect(within(dialog).getByLabelText("Email")).toHaveValue("hal@example.com");
+  fail = false;
+  await user.click(within(note).getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST people")).toHaveLength(2));
+});
+
 test("a person with nothing besides their own life is asked who they are to you, and no side", async () => {
   const user = userEvent.setup();
   api([], {

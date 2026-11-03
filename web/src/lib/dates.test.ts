@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from "vitest";
-import { clockDay, clockTime, dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, sinceDay, time, todayOn, whenText } from "./dates";
+import { afterEach, describe, expect, test } from "vitest";
+import { clockDay, clockTime, dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, setTimePrefs, sinceDay, time, timeOfDay, timeStep, todayOn, wallTime, whenText } from "./dates";
 
 test("the coming Monday is never the day itself: a Monday holds for the Monday a week on", () => {
   // The 19th of October is a Monday in this year.
@@ -100,4 +100,50 @@ test("a date-time with an offset is moved to the person's clock, and one with no
   expect(clockDay("2026-10-29T03:00:00Z")).toBe("2026-10-28");
   expect(clockDay("2026-10-29T03:00:00")).toBe("2026-10-29");
   expect(clockDay("2026-10-29")).toBe("2026-10-29");
+});
+
+// ---- the clock setting (ui.time_format) and the time list's step (ui.time_step) ------------------------------------------------
+
+describe("the clock setting", () => {
+  afterEach(() => {
+    setTimePrefs({ format: "auto", step: 15 });
+    setClockZone(undefined);
+  });
+  const evening = new Date("2026-11-03T21:05:00Z");
+
+  test("auto follows the language: 12-hour for US English, 24-hour for German", () => {
+    setClockZone("UTC");
+    setTimePrefs({ format: "auto" });
+    expect(time(evening)).toMatch(/9:05\s?PM/);
+    expect(timeOfDay("21:05", "de-DE")).toBe("21:05");
+    expect(timeOfDay("09:30", "en-US")).toMatch(/^9:30\s?AM$/);
+  });
+
+  test("12h writes every time on the 12-hour clock, whatever the language", () => {
+    setClockZone("UTC");
+    setTimePrefs({ format: "12h" });
+    expect(time(evening)).toMatch(/9:05\s?PM/);
+    expect(timeOfDay("21:05", "de-DE")).toMatch(/9:05\s?PM/i);
+    expect(wallTime("2026-11-03T21:05:00")).toMatch(/9:05\s?PM/);
+    expect(dayAndTime("2026-11-03T21:05:00Z")).toMatch(/9:05\s?PM$/);
+  });
+
+  test("24h writes every time on the 24-hour clock with two digits", () => {
+    setClockZone("UTC");
+    setTimePrefs({ format: "24h" });
+    expect(time(evening)).toBe("21:05");
+    expect(time(new Date("2026-11-03T07:05:00Z"))).toBe("07:05");
+    expect(timeOfDay("09:30", "en-US")).toBe("09:30");
+    expect(wallTime("2026-11-03T07:05:00")).toBe("07:05");
+    expect(clockTime("2026-11-03T21:05:00Z")).toBe("21:05");
+    expect(dayAndTime("2026-11-03T21:05:00Z")).toMatch(/, 21:05$/);
+  });
+
+  test("an unknown format leaves the setting as it was, and the step is the setting's", () => {
+    setTimePrefs({ format: "24h", step: 30 });
+    setTimePrefs({ format: "nonsense", step: 0 });
+    expect(time(new Date("2026-11-03T07:05:00Z"))).toMatch(/07:05|7:05/);
+    expect(timeOfDay("07:05", "en-US")).toBe("07:05");
+    expect(timeStep()).toBe(30);
+  });
 });

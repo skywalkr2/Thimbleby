@@ -1,10 +1,9 @@
 // A person with several sides whose names are long (design 6.32, 7.1; re-sweep X83): the side filter, the sidebar and the icon
 // rail hold at a phone, a tablet and a desktop width. The server (`--many-sides`) has Personal beside four sides, three with
 // names long enough to cut; /__e2e/many-sides says what they are called. At every width nothing is wider than the window, a long
-// name is cut with an ellipsis and has its full name on hover (and in its own words for a screen reader), the filter is a list
-// to pick from on a phone, and the icon rail gives each side a mark of its own.
+// name is cut with an ellipsis and has its full name on hover (and in its own words for a screen reader), the filter is one button
+// that opens a sheet to pick from on a phone and up to 1100px, and the icon rail gives each side a mark of its own.
 import { expect, test, type Page } from "@playwright/test";
-import { choicesOf, choose } from "./choose";
 
 const LOADED = { timeout: 20_000 };
 const WIDTHS = [390, 768, 1024, 1280, 1440];
@@ -34,7 +33,8 @@ test.describe("Long names of sides", () => {
       await page.goto("?token=e2e-token");
       for (const view of ["today", "schedule", "work/changed", "work/followups"]) {
         await go(page, view);
-        const filter = width < 640 ? page.getByRole("combobox", { name: "Show" }) : page.getByRole("radiogroup", { name: "Show" });
+        // Up to 1100px of window the filter is one button that opens a sheet; wider, a strip of choices.
+        const filter = width <= 1100 ? page.getByRole("button", { name: /^Side: / }) : page.getByRole("radiogroup", { name: "Show" });
         await expect(filter.first()).toBeVisible(LOADED);
         expect(await overflow(page), `${view} at ${width}px scrolls sideways`).toBeLessThanOrEqual(0);
         const box = await filter.first().boundingBox();
@@ -45,21 +45,26 @@ test.describe("Long names of sides", () => {
     });
   }
 
-  test("on a phone the side filter is a list with every side by its full name, and choosing one keeps the window as it was", async ({ page }) => {
+  test("on a phone the side filter is one button that opens a sheet with every side by its full name, and choosing one keeps the window as it was", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("?token=e2e-token");
     await go(page, "today");
-    const list = page.getByRole("combobox", { name: "Show" });
-    await expect(list).toBeVisible(LOADED);
-    expect((await choicesOf(list)).map((c) => c.label)).toEqual(["All", "Personal", ...names]);
-    await choose(list, { label: names[0] });
-    await expect(list).toHaveAttribute("value", /PRJ-/);
+    const button = page.getByRole("button", { name: /^Side: / });
+    await expect(button).toBeVisible(LOADED);
+    await expect(page.getByRole("radiogroup", { name: "Show" })).toHaveCount(0);
+    await button.click();
+    const sheet = page.getByRole("dialog", { name: "Show one side" });
+    await expect(sheet).toBeVisible();
+    const labels = await sheet.locator("[data-side-option]").evaluateAll((els) => els.map((el) => (el.querySelector("span")?.textContent ?? "").trim()));
+    expect(labels).toEqual(["All", "Personal", ...names]);
+    await sheet.getByRole("button", { name: names[0] }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByRole("button", { name: `Side: ${names[0]}` })).toBeVisible();
     expect(await overflow(page)).toBeLessThanOrEqual(0);
-    await expect(page.getByRole("radio")).toHaveCount(0);
   });
 
   test("on a desktop each chip is cut at a width, has its full name on hover, and the control stays inside the window", async ({ page }) => {
-    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("?token=e2e-token");
     await go(page, "today");
     const group = page.getByRole("radiogroup", { name: "Show" }).first();

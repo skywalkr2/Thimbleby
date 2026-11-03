@@ -14,9 +14,15 @@
 .groupItem > :first-child { padding-top: var(--space-4); }
 .inlineAdd { display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: var(--space-2) var(--row-px); border-bottom: 1px solid var(--border); background: var(--surface); list-style: none; margin: 0; min-height: var(--row-h); }
 .inlinePlus { flex: none; width: var(--row-lead-w); display: grid; place-items: center; color: var(--accent); }
-.inlineAdd input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; padding: var(--space-2) 0; font: inherit; box-shadow: none; }
+.inlineAdd input { flex: 1 1 12rem; min-width: 0; border: 0; background: transparent; padding: var(--space-2) 0; font: inherit; box-shadow: none; }
 .inlineAdd input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+.inlineAdd { flex-wrap: wrap; }
 .inlineAdd .over { flex: none; font-size: var(--text-meta); }
+/* The date found in the title, said beside the row before Enter, with a way to drop it. */
+.found { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
+.found svg { flex: none; }
+/* A failed add keeps the words in the row and says so on a line of its own. */
+.inlineFailed { flex: 1 1 100%; margin: 0 calc(-1 * var(--row-px)) calc(-1 * var(--space-2)); }
 .over { color: var(--danger); font-weight: var(--weight-semibold); }
 .dueLate { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--danger); font-weight: var(--weight-semibold); vertical-align: bottom; }
 .dueToday { color: var(--warn); font-weight: var(--weight-semibold); }

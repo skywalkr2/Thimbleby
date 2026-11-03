@@ -35,10 +35,10 @@ export function localeWeekStart(locale?: string): number {
   return 0;
 }
 
-const fold = (text: string): string => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+export const fold = (text: string): string => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 /** The names of the twelve months in the locale, long and short, folded for matching ("sept" and "Sep." both read). */
-function monthNames(locale?: string): { month: number; names: string[] }[] {
+export function monthNames(locale?: string): { month: number; names: string[] }[] {
   const long = new Intl.DateTimeFormat(locale, { month: "long" });
   const short = new Intl.DateTimeFormat(locale, { month: "short" });
   return Array.from({ length: 12 }, (_, i) => {
@@ -47,7 +47,7 @@ function monthNames(locale?: string): { month: number; names: string[] }[] {
   });
 }
 
-function weekdayNames(locale?: string): { day: number; names: string[] }[] {
+export function weekdayNames(locale?: string): { day: number; names: string[] }[] {
   const long = new Intl.DateTimeFormat(locale, { weekday: "long" });
   const short = new Intl.DateTimeFormat(locale, { weekday: "short" });
   // The first of these days is a Monday.

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
+import { ConnectionProvider } from "./lib/connection";
 import { useLive } from "./lib/live";
 import { applyBrand } from "./lib/theme";
 import { showNewLines } from "./lib/queue-hold";
@@ -55,6 +56,7 @@ import { Sidebar, useSidebarMode } from "./shell/Sidebar";
 import { useNeedsYouNotices } from "./components/NeedsYouNotices";
 import shell from "./shell/Shell.module.css";
 import { Button } from "./ui/Button";
+import { OfflineBanner } from "./ui/OfflineBanner";
 export function App(props: { rc: S["RuntimeConfig"] }) {
   const live = useLive();
   // What the app is called is read again after any saved change, so a new name shows in the header at once, with no reload.
@@ -65,7 +67,9 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   return (
     <RestartProvider hellos={live.hellos}>
       <MissedOneProvider>
-        <Shell rc={fresh.data} live={live} />
+        <ConnectionProvider live={live}>
+          <Shell rc={fresh.data} live={live} />
+        </ConnectionProvider>
       </MissedOneProvider>
     </RestartProvider>
   );
@@ -419,6 +423,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
               </Button>
             </p>
           )}
+          <OfflineBanner />
           {handIn && <HandIn onClose={() => setHandIn(false)} />}
           {body}
         </main>

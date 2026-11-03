@@ -54,6 +54,9 @@ import { Unfiled } from "./Unfiled";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
+import { ChangedElsewhere, type ElsewhereChange } from "../ui/ChangedElsewhere";
+import { LoadFailed } from "../ui/LoadFailed";
+import { NotSaved } from "../ui/NotSaved";
 import { Skeleton } from "../ui/Skeleton";
 import { plainTitle } from "../lib/title-dates";
 import { offeredInForm, shownAsDetail } from "../lib/record-internals";
@@ -488,9 +491,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         <EmptyState icon="alert" title={t("person.gone_title")} text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people") }} />
       )}
       {record.isError && gone && !isPerson && <EmptyState icon="alert" text={t("record.not_found")} />}
-      {record.isError && !gone && (
-        <EmptyState icon="alert" text={t("record.load_failed")} action={{ label: t("action.try_again"), onClick: () => void record.refetch() }} />
-      )}
+      {record.isError && !gone && <LoadFailed message={t("record.load_failed")} detail={record.error instanceof ApiError && record.error.detail ? record.error.detail : null} onRetry={() => void record.refetch()} />}
       {data && (
         <div className="record-grid" data-person-page={asCard ? "" : undefined}>
           <div className="record-main">
@@ -657,6 +658,8 @@ function DetailsForm(props: {
   const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
   const lines = useValueLines();
   const [error, setError] = useState<{ text: string; stale: boolean } | null>(null);
+  // The fields the person edited that changed somewhere else too: old -> new, for them to choose between.
+  const [conflicts, setConflicts] = useState<Array<ElsewhereChange & { name: string; value: string | boolean }>>([]);
   const [saving, setSaving] = useState(false);
   const changed = changedFields(fields, record.fields, draft);
   const dirty = Object.keys(changed).length > 0;
@@ -666,6 +669,7 @@ function DetailsForm(props: {
     if (!dirty) return;
     setSaving(true);
     setError(null);
+    setConflicts([]);
     try {
       const done = await api.editRecord({ kind: props.kind, id: record.id, fields: changed, read_version: record.version });
       await client.invalidateQueries();
@@ -687,6 +691,8 @@ function DetailsForm(props: {
           const now = await client.fetchQuery({ queryKey: ["record", props.kind, record.id], queryFn: () => api.record(props.kind, record.id), staleTime: 0 });
           const saved = initialDraft(fields, now.fields);
           const out = reconcile(shown, draft, saved);
+          const text = (v: string | boolean | undefined) => (v === undefined || v === "" ? t("settings.empty") : String(v));
+          setConflicts(out.kept.map((name) => ({ name, label: labelOf(name), was: text(shown[name]), now: text(saved[name]), mine: text(draft[name]), value: saved[name] })));
           setDraft(out.next as Draft);
           setShown(saved);
           const at = now.changed_at ? new Date(now.changed_at) : null;
@@ -727,12 +733,22 @@ function DetailsForm(props: {
           own={props.kind.includes("/")}
         />
       ))}
-      {error && (
+      {error && !error.stale && <NotSaved reason={error.text} busy={saving} onRetry={() => void save()} />}
+      {error?.stale && (
         <div className="problem-note" role="alert">
           <p>{error.text}</p>
-          {error.stale && <p>{t("record.edit_stale")}</p>}
+          <p>{t("record.edit_stale")}</p>
         </div>
       )}
+      <ChangedElsewhere
+        changes={conflicts}
+        time={refreshed.time}
+        onKeep={() => setConflicts([])}
+        onTake={() => {
+          setDraft((d) => ({ ...d, ...Object.fromEntries(conflicts.map((c) => [c.name, c.value])) }));
+          setConflicts([]);
+        }}
+      />
       <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
       <Actions align="end">
         <Button variant="quiet" onClick={props.onDone}>

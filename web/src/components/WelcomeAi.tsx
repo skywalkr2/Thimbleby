@@ -170,6 +170,8 @@ export function WelcomeAi(props: {
   const verifying = useRef(0);
   /** The key the last check was made with, so the box changing to that same key (a paste) doesn't undo the check. */
   const verifiedKey = useRef("");
+  /** The same for the place a kept key is named (a hosted app), so leaving that box unchanged checks nothing again. */
+  const verifiedWhere = useRef("");
 
   const kind = endpoints.data?.find((e) => e.id === kindId);
   const server = usingFound ? found.data?.find((s) => s.endpoint === kindId) : undefined;
@@ -340,6 +342,7 @@ export function WelcomeAi(props: {
   ) => {
     const mine = ++verifying.current;
     verifiedKey.current = (over.key ?? key).trim();
+    verifiedWhere.current = keyRef.trim();
     const asAgent = !takesAddress(picked);
     const typedAddress = (over.address ?? address).trim();
     const typedKey = (over.key ?? key).trim();
@@ -1019,7 +1022,10 @@ export function WelcomeAi(props: {
           data-key-field-state={verdict.state}
           onKeyDown={enterChecks}
           onBlur={(e) => {
-            if (guide && e.target.value.trim() !== "" && verdict.state === "idle") void verify(kind, { key: e.target.value });
+            // Leaving the box checks only a key that changed since the last check: a click on the model list after a paste
+            // must not start a second check that replaces the list under the click.
+            const typed = e.target.value.trim();
+            if (guide && typed !== "" && typed !== verifiedKey.current && verdict.state === "idle") void verify(kind, { key: e.target.value });
           }}
           onChange={(e) => {
             setKey(e.target.value);
@@ -1054,7 +1060,8 @@ export function WelcomeAi(props: {
         aria-describedby="ai-key-where-hint"
         onKeyDown={enterChecks}
         onBlur={(e) => {
-          if (guide && e.target.value.trim() !== "" && verdict.state === "idle") void verify(kind);
+          const typed = e.target.value.trim();
+          if (guide && typed !== "" && typed !== verifiedWhere.current && verdict.state === "idle") void verify(kind);
         }}
         onChange={(e) => {
           setKeyRef(e.target.value);

@@ -307,7 +307,7 @@ export function Walkthrough(
                   <Button variant="primary" onClick={() => void finish()}>
                     {t("walkthrough.finish")}
                   </Button>
-                ) : next && !(current === "mail" && here === "todo") && !slot.current?.inline ? (
+                ) : next && !(current === "mail" && here === "todo" && !slot.current) && !slot.current?.inline ? (
                   <Button
                     variant={slot.current?.quiet ? "secondary" : "primary"}
                     loading={busy}
@@ -334,8 +334,6 @@ export function Walkthrough(
               <WalkthroughMail
                 onChooseSource={handlers.onChooseSource}
                 onOpenAddons={props.onOpenAddons}
-                onContinue={next ? () => void carryOn() : undefined}
-                continuing={busy}
               />
               {hasMailSteps && <StepList include={(s) => s.group === "mail" && !!s.plugin && !s.sign_in} {...handlers} />}
             </>

@@ -40,7 +40,8 @@ import { InRowActions } from "../ui/rowContext";
 import { Panel } from "../ui/Panel";
 import { Pill, type PillTone } from "../ui/Pill";
 import { Row } from "../ui/Row";
-import { Skeleton } from "../ui/Skeleton";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { Parts } from "./Coverage";
 import { TodayEmpty } from "./TodayEmpty";
 import { usePromiseChoices } from "./PromiseLine";
@@ -68,7 +69,6 @@ import { MadeBy } from "./MadeBy";
 import styles from "./Today.module.css";
 import { shortTitle } from "../lib/title-dates";
 
-import { EmptyState } from "../ui/EmptyState";
 export interface QueueHandlers {
   onOpenAiAccounts: () => void;
   onOpenHandover: () => void;
@@ -357,11 +357,8 @@ export function TodayQueue(props: {
               </Button>
             </div>
           )}
-          {queue.isPending ? (
-            <Skeleton />
-          ) : queue.isError ? (
-            <EmptyState icon="alert" text={t("queue.load_failed")} action={{ label: t("action.try_again"), onClick: () => void queue.refetch() }} />
-          ) : (
+          <ListState query={queue} failed={t("queue.load_failed")}>
+            {() => (
             <>
               {GROUPS.map((group) => {
                 const these = inGroup(shown, group);
@@ -401,7 +398,7 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && filter.choice !== "all" && (total ?? 0) > 0 && (
-                <EmptyState icon="check" data-queue-empty="side" text={t("sides.empty.today", { side: filter.named })} />
+                <FilteredEmpty data-queue-empty="side" text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />
               )}
               {count === 0 && (filter.choice === "all" || !((total ?? 0) > 0)) && (
                 <TodayEmpty
@@ -410,7 +407,8 @@ export function TodayQueue(props: {
                 />
               )}
             </>
-          )}
+            )}
+          </ListState>
         </Panel>
       </div>
       {props.beside && (

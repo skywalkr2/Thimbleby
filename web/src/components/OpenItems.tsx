@@ -13,6 +13,7 @@ import { day, monthDay, todayOn } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
 import {
   ACTION_STATES,
+  NO_FILTERS,
   QUESTION_STATES,
   actionsShown,
   dueToday,
@@ -36,7 +37,8 @@ import { GroupLabel } from "../ui/GroupLabel";
 import { MarkDot } from "../ui/MarkDot";
 import { InlineAddTodo } from "./InlineAddTodo";
 import { Row } from "../ui/Row";
-import { Skeleton } from "../ui/Skeleton";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { AskChooser } from "./AskChooser";
 import { SideFilter } from "./SideFilter";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
@@ -169,39 +171,39 @@ export function OpenItems() {
         }
       />
       {addTodo.form}
-      {items.isPending ? (
-        <Skeleton />
-      ) : items.isError ? (
-        <EmptyState icon="alert" text={t("open.load_failed")} action={{ label: t("action.try_again"), onClick: () => void items.refetch() }} />
-      ) : actions.length + questions.length === 0 ? (
-        <EmptyState
-          icon="check"
-          text={side.choice === "all" ? t("open.empty") : t("sides.empty.open", { side: side.named })}
-          action={{ label: t("addtodo.open"), onClick: () => addTodo.open(), primary: true }}
-        />
-      ) : (
-        <>
-          {shown + (tab === "actions" ? needDate.length : 0) === 0 ? (
-            <EmptyState text={t("open.none_match")} />
-          ) : tab === "actions" ? (
-            // With no row to list (every to-do waits for a date) what is left is the add row and one line, which are not a list.
-            <RowList aria-label={shownActions.length > 0 ? t("open.list.actions") : undefined} role={shownActions.length > 0 ? undefined : "presentation"} className={styles.todoList}>
-              <InlineAddTodo onDetails={addTodo.open} />
-              {groupActions(shownActions, today).map(({ group, rows }) => (
-                <TodoGroupRows key={group} group={group} rows={rows} inlineOrigin={narrow} />
-              ))}
-              <NeedsADateLine rows={needDate} />
-            </RowList>
-          ) : shown === 0 ? null : (
-            <RowList aria-label={t("open.list.questions")}>
-              {shownQuestions.map((q) => (
-                <QuestionRow key={q.id} question={q} inlineOrigin={narrow} />
-              ))}
-            </RowList>
-          )}
-          {total > 0 && <p className="hint" data-need-count="">{tn(`open.need.${tab}`, needYou, { total })}</p>}
-        </>
-      )}
+      <ListState query={items} failed={t("open.load_failed")}>
+        {() =>
+          actions.length + questions.length === 0 ? (
+            side.choice !== "all" ? (
+              <FilteredEmpty text={t("sides.empty.open", { side: side.named })} onClear={() => side.set("all")} />
+            ) : (
+              <EmptyState icon="check" text={t("open.empty")} action={{ label: t("addtodo.open"), onClick: () => addTodo.open(), primary: true }} />
+            )
+          ) : (
+            <>
+              {shown + (tab === "actions" ? needDate.length : 0) === 0 ? (
+                <FilteredEmpty text={t("open.none_match")} onClear={() => setFilters(NO_FILTERS)} />
+              ) : tab === "actions" ? (
+                // With no row to list (every to-do waits for a date) what is left is the add row and one line, which are not a list.
+                <RowList aria-label={shownActions.length > 0 ? t("open.list.actions") : undefined} role={shownActions.length > 0 ? undefined : "presentation"} className={styles.todoList}>
+                  <InlineAddTodo onDetails={addTodo.open} />
+                  {groupActions(shownActions, today).map(({ group, rows }) => (
+                    <TodoGroupRows key={group} group={group} rows={rows} inlineOrigin={narrow} />
+                  ))}
+                  <NeedsADateLine rows={needDate} />
+                </RowList>
+              ) : shown === 0 ? null : (
+                <RowList aria-label={t("open.list.questions")}>
+                  {shownQuestions.map((q) => (
+                    <QuestionRow key={q.id} question={q} inlineOrigin={narrow} />
+                  ))}
+                </RowList>
+              )}
+              {total > 0 && <p className="hint" data-need-count="">{tn(`open.need.${tab}`, needYou, { total })}</p>}
+            </>
+          )
+        }
+      </ListState>
     </section>
   );
 }

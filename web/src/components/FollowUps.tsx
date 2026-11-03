@@ -45,7 +45,9 @@ import { SafeLink, SafeText } from "./SafeText";
 import { Button } from "../ui/Button";
 import { ListDetail } from "../ui/ListDetail";
 import { SegmentedControl } from "../ui/SegmentedControl";
-import { Skeleton } from "../ui/Skeleton";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
+import { LoadFailed } from "../ui/LoadFailed";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 import { SideFilter } from "./SideFilter";
 import { MessageStyle } from "./MessageStyle";
@@ -261,12 +263,14 @@ export function FollowUps(props: { compact?: boolean }) {
         }
       />
       {ownRow && filter === "send" && <OwnTodosRow section={ownRow} />}
-      {followups.isPending ? (
-        <Skeleton />
-      ) : followups.isError ? (
-        <EmptyState icon="alert" text={t("followups.load_failed")} action={{ label: t("action.try_again"), onClick: () => void followups.refetch() }} />
-      ) : sections.length === 0 && actRows.length === 0 ? (
-        <EmptyState text={present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")} />
+      <ListState query={followups} failed={t("followups.load_failed")}>
+        {() =>
+      sections.length === 0 && actRows.length === 0 ? (
+        present.length > 0 ? (
+          <FilteredEmpty text={t("sides.empty.followups", { side: side.named })} onClear={() => side.set("all")} />
+        ) : (
+          <EmptyState text={t("followups.empty")} />
+        )
       ) : byProject ? (
         projectSections.length === 0 ? (
           <EmptyState text={t(`followups.empty_${filter}`)} />
@@ -333,9 +337,11 @@ export function FollowUps(props: { compact?: boolean }) {
             </RowList>
           )}
         </ListDetail>
-      )}
+      )
+        }
+      </ListState>
       {!compact && !byProject && filter === "send" && acts.isError && (
-        <EmptyState icon="alert" text={t("outgoing.load_failed")} action={{ label: t("action.try_again"), onClick: () => void acts.refetch() }} />
+        <LoadFailed message={t("outgoing.load_failed")} onRetry={() => void acts.refetch()} />
       )}
       {!compact && !byProject && filter === "send" && acts.isSuccess && <SentActs />}
       {!compact && !byProject && filter === "send" && <MessageStyle />}

@@ -45,7 +45,7 @@ const AFFECTS: Record<string, string[]> = {
   watch_run: ["watch", "watch-kinds", "waiting", "today", "status", "sign-ins", "jobs"],
   tool_run: ["jobs", "status", "files", "working-copies"],
   snapshot: ["status", "sync", "setup", "waiting"],
-  setting_change: ["settings", "status", "setup", "panels", "today", "lists", "ai-accounts", "ai-endpoints", "watch", "packs"],
+  setting_change: ["settings", "status", "setup", "panels", "today", "lists", "ai-accounts", "ai-endpoints", "watch", "packs", "runtime-config"],
   value_list: ["lists", "settings", "people", "projects"],
   // The audit trail has no screen yet, so writing an entry refreshes nothing.
   audit_entry: [],
@@ -94,7 +94,7 @@ export function invalidateFor(client: QueryClient, data: string): void {
 }
 
 /** `hellos` counts how many times the stream has (re)connected, so a caller can wait for the next one. */
-export function useLive(): { state: LiveState; lastUpdate: Date | null; hellos: number; refresh: () => void } {
+export function useLive(): { state: LiveState; lastUpdate: Date | null; hellos: number; refresh: () => void; reconnect: () => void } {
   const client = useQueryClient();
   const [state, setState] = useState<LiveState>(() => (typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "connecting"));
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -142,5 +142,11 @@ export function useLive(): { state: LiveState; lastUpdate: Date | null; hellos: 
     void client.invalidateQueries();
   }, [client]);
 
-  return { state, lastUpdate, hellos, refresh };
+  /** Opens the event stream afresh, for "Try now" while the connection is down. */
+  const reconnect = useCallback(() => {
+    setState((cur) => (cur === "offline" && typeof navigator !== "undefined" && navigator.onLine === false ? cur : "connecting"));
+    setAttempt((n) => n + 1);
+  }, []);
+
+  return { state, lastUpdate, hellos, refresh, reconnect };
 }

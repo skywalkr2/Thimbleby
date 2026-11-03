@@ -16,7 +16,8 @@ import { FormField } from "../ui/FormField";
 import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
 import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
-import { Skeleton } from "../ui/Skeleton";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { Organizations } from "./Organizations";
 import styles from "./People.module.css";
 import { PersonDrawer, heldReach } from "./PersonForm";
@@ -118,43 +119,49 @@ export function People() {
         fit={PEOPLE_FIT}
         detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} /> : null}
       >
-        {people.isPending ? (
-          <Skeleton />
-        ) : all.length === 0 ? (
-          <EmptyState text={side.choice !== "all" ? t("sides.empty.people", { side: side.named }) : t(justMe ? "setup.no_people.just_me" : "setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
-        ) : (
-          <>
-            {!justMe && ((orgs.data ?? []).length > 1 || org !== ALL) && filter}
-            {rows.length === 0 ? (
-              <EmptyState text={t("people.none_here")} />
+        <ListState query={people} failed={t("people.load_failed")}>
+          {() =>
+            all.length === 0 ? (
+              side.choice !== "all" ? (
+                <FilteredEmpty text={t("sides.empty.people", { side: side.named })} onClear={() => side.set("all")} />
+              ) : (
+                <EmptyState text={t(justMe ? "setup.no_people.just_me" : "setup.no_people")} action={{ label: t("setup.add_person"), onClick: () => setAdding(true) }} />
+              )
             ) : (
-              <RecordsTable
-                label={t("setup.people")}
-                name={{
-                  header: t("people.col.name"),
-                  title: (p) => p.name,
-                  cell: (p, open) => (
-                    <>
-                      <a href={viewHref(recordView("person", p.id))} onClick={open}>
-                        {p.name}
-                      </a>{" "}
-                      {tags(p)}
-                      {p.aliases.length > 0 && <div className="hint">{t("setup.also_called", { names: p.aliases.join(", ") })}</div>}
-                    </>
-                  ),
-                }}
-                columns={columns}
-                groups={[{ id: "all", title: t("setup.people"), rows }]}
-                rowKey={(p) => p.id}
-                selected={chosen}
-                onSelect={(p) => setChosen(p.id)}
-                actionsHeader={t("people.col.actions")}
-                actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
-              />
-            )}
-            <p className="hint">{tn("people.count", all.length)}</p>
-          </>
-        )}
+              <>
+                {!justMe && ((orgs.data ?? []).length > 1 || org !== ALL) && filter}
+                {rows.length === 0 ? (
+                  <FilteredEmpty text={t("people.none_here")} onClear={() => setOrg(ALL)} />
+                ) : (
+                  <RecordsTable
+                    label={t("setup.people")}
+                    name={{
+                      header: t("people.col.name"),
+                      title: (p) => p.name,
+                      cell: (p, open) => (
+                        <>
+                          <a href={viewHref(recordView("person", p.id))} onClick={open}>
+                            {p.name}
+                          </a>{" "}
+                          {tags(p)}
+                          {p.aliases.length > 0 && <div className="hint">{t("setup.also_called", { names: p.aliases.join(", ") })}</div>}
+                        </>
+                      ),
+                    }}
+                    columns={columns}
+                    groups={[{ id: "all", title: t("setup.people"), rows }]}
+                    rowKey={(p) => p.id}
+                    selected={chosen}
+                    onSelect={(p) => setChosen(p.id)}
+                    actionsHeader={t("people.col.actions")}
+                    actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
+                  />
+                )}
+                <p className="hint">{tn("people.count", all.length)}</p>
+              </>
+            )
+          }
+        </ListState>
       </ListDetail>
       {!justMe && <Organizations />}
       {adding && <PersonDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}

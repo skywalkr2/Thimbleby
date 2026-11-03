@@ -2191,7 +2191,7 @@ describe("Mail and calendar", () => {
     expect(mine).not.toHaveAttribute("data-signed-in");
   });
 
-  test("after signing in the step leads with the result: what is connected and read, that it waits for the first Go, one Continue and the list folded", async () => {
+  test("after signing in the step leads with the result: what is connected and read, that it waits for the first Go, one Continue in the footer and the list folded", async () => {
     const user = userEvent.setup();
     service("on", { signed: true });
     open();
@@ -2204,9 +2204,11 @@ describe("Mail and calendar", () => {
     expect(within(block).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
     // That the reading waits for the first Go is said once on the screen, not again in the step's own lead line.
     expect(screen.getAllByText(/waits for you to start the assistant/)).toHaveLength(1);
-    // Exactly one Continue, right under the result; the list is behind "Connect another" and shows when it is pressed.
+    // Exactly one Continue, in the footer on the column's edge like every other step's, not in the body; the list is behind
+    // "Connect another" and shows when it is pressed.
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
-    expect(block.contains(screen.getByRole("button", { name: "Continue" }))).toBe(true);
+    expect(block.contains(screen.getByRole("button", { name: "Continue" }))).toBe(false);
+    expect((document.querySelector("[data-step-footer]") as HTMLElement).contains(screen.getByRole("button", { name: "Continue" }))).toBe(true);
     expect(screen.queryByText("Services you can connect")).toBeNull();
     expect(screen.queryByText("Service mail-addon", { selector: "strong" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Connect another account" }));

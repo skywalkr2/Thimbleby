@@ -401,6 +401,86 @@ test("after a refusal because it changed meanwhile, fields not touched take what
   expect(calls.filter((c) => c.route === "POST records/edit")[1].body).toEqual({ kind: KIND, id: ID, read_version: 5, fields: { title: "The harbor!" } });
 });
 
+test("a save that fails for any other reason keeps what was typed, says Not saved with Try again, and Try again saves it", async () => {
+  const user = userEvent.setup();
+  let fail = true;
+  const calls = fakeApi(editRoutes({ "POST records/edit": () => (fail ? new Refuse(500, "The app couldn't write to its folder.") : { changeset: "CS-9" }) }));
+  const form = await openForm(user);
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), "!");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  const note = await screen.findByRole("alert");
+  expect(note).toHaveTextContent("Not saved");
+  expect(note).toHaveTextContent("The app couldn't write to its folder.");
+  expect(note).toHaveTextContent("Nothing is lost: your change is kept here until it saves.");
+  expect(within(form).getByRole("textbox", { name: "Title" })).toHaveValue("The harbor!");
+  fail = false;
+  await user.click(within(note).getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST records/edit")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST records/edit")[1].body).toMatchObject({ fields: { title: "The harbor!" } });
+});
+
+test("a field the person edited that was also changed elsewhere shows old, new and theirs, and they choose", async () => {
+  const user = userEvent.setup();
+  let moved = false;
+  fakeApi(
+    editRoutes({
+      [`GET record?${on}`]: () => ({
+        kind: KIND,
+        id: ID,
+        version: moved ? 5 : 4,
+        changed_at: "2026-10-20T09:14:00Z",
+        fields: { id: ID, title: moved ? "The harbor, renamed" : "The harbor", pages: 12, final: false, due: "2026-11-01", state: "draft", mood: "calm", owner: "P-2", tags: ["one", "two"], locked: "x" },
+        long_text: [field],
+      }),
+      "POST records/edit": (body) => {
+        if ((body as { read_version: number }).read_version === 4) {
+          moved = true;
+          return new Refuse(409, "This record changed after you opened it.");
+        }
+        return { changeset: "CS-9" };
+      },
+    }),
+  );
+  const form = await openForm(user);
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), "!");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  const box = await screen.findByText("Changed somewhere else");
+  const changed = box.closest("[data-changed-elsewhere]") as HTMLElement;
+  expect(changed.querySelector("[data-was]")).toHaveTextContent("The harbor");
+  expect(changed.querySelector("[data-now]")).toHaveTextContent("The harbor, renamed");
+  expect(changed).toHaveTextContent("Yours: The harbor!");
+  // Keep mine: the typed words stay and the notice goes.
+  await user.click(within(changed).getByRole("button", { name: "Keep mine" }));
+  expect(screen.queryByText("Changed somewhere else")).toBeNull();
+  expect(within(form).getByRole("textbox", { name: "Title" })).toHaveValue("The harbor!");
+});
+
+test("choosing the new one puts what is saved now in the field in place of what was typed", async () => {
+  const user = userEvent.setup();
+  let moved = false;
+  fakeApi(
+    editRoutes({
+      [`GET record?${on}`]: () => ({
+        kind: KIND,
+        id: ID,
+        version: moved ? 5 : 4,
+        fields: { id: ID, title: moved ? "The harbor, renamed" : "The harbor", pages: 12, final: false, due: "2026-11-01", state: "draft", mood: "calm", owner: "P-2", tags: ["one", "two"], locked: "x" },
+        long_text: [field],
+      }),
+      "POST records/edit": () => {
+        moved = true;
+        return new Refuse(409, "This record changed after you opened it.");
+      },
+    }),
+  );
+  const form = await openForm(user);
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), "!");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  await user.click(await screen.findByRole("button", { name: "Use the new one" }));
+  expect(within(form).getByRole("textbox", { name: "Title" })).toHaveValue("The harbor, renamed");
+  expect(screen.queryByText("Changed somewhere else")).toBeNull();
+});
+
 test("Cancel puts the values back and closes the form", async () => {
   const user = userEvent.setup();
   fakeApi(editRoutes());

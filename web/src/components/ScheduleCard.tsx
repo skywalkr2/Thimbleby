@@ -9,7 +9,7 @@ import { addDays, clockDay, clockTime, todayOn, time } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
 import { useSideFilter } from "../lib/sides";
 import { useCalendarColor } from "../lib/marks";
-import { RAIL_ROWS, useQueue } from "../lib/today";
+import { useQueue, useRailRows } from "../lib/today";
 import { Icon } from "../ui/Icon";
 import { useWords } from "../lib/wording";
 import { AgendaItems } from "./AgendaList";
@@ -82,6 +82,7 @@ function whenText(event: Event, date: string, t: T): string {
  * `settled` is true once everything it asks has answered. */
 export function useScheduleCard(onAddSource?: () => void, connectHref?: string): { settled: boolean; drawn: boolean; card: ReactNode } {
   const { t, tn } = useWords();
+  const railRows = useRailRows();
   const sourceState = useSourceState(onAddSource ?? (connectHref ? () => {} : undefined), t("today.agenda.connect"), "calendar");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
@@ -158,16 +159,16 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
             const events = rows.filter((r) => r !== "now").length;
             let visible = rows;
             let hidden = 0;
-            if (events > RAIL_ROWS) {
+            if (events > railRows) {
               let begin = Math.max(0, rows.indexOf("now"));
-              while (begin > 0 && rows.slice(begin).filter((r) => r !== "now").length < RAIL_ROWS) begin--;
+              while (begin > 0 && rows.slice(begin).filter((r) => r !== "now").length < railRows) begin--;
               let taken = 0;
               visible = rows.slice(begin).filter((r) => {
                 if (r === "now") return true;
                 taken += 1;
-                return taken <= RAIL_ROWS;
+                return taken <= railRows;
               });
-              hidden = events - Math.min(taken, RAIL_ROWS);
+              hidden = events - Math.min(taken, railRows);
             }
             return (
               <div key={group.date} className="tb-group">

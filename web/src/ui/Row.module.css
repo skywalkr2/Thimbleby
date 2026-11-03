@@ -36,7 +36,7 @@
 /* An expandable row's title is one button that covers the whole text of the row (the meta opens it too): plain text to look at,
    with the title underlined under the pointer. */
 .expandable { position: relative; }
-.expander { display: inline-block; border: 0; background: none; padding: 0; margin: 0; text-align: left; cursor: pointer; width: auto; height: auto; min-height: var(--target-min); overflow: visible; font: inherit; color: inherit; }
+.expander { display: inline-block; border: 0; background: none; padding: 0; margin: 0; text-align: left; cursor: pointer; width: auto; height: auto; min-height: var(--hit-min); overflow: visible; font: inherit; color: inherit; }
 .expander::after { content: ""; position: absolute; inset: 0; }
 .expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
 .expandable:hover .expander { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
@@ -64,13 +64,13 @@
    Written at the weight of the rules above, and after them. */
 @media (max-width: 639.98px) {
   .row { grid-template-columns: var(--row-lead-w) minmax(0, 1fr); row-gap: var(--space-1); }
-  .hasMenu { padding-right: calc(var(--space-1) + var(--target-icon) + var(--space-1)); }
+  .hasMenu { padding-right: calc(var(--space-1) + var(--hit-icon) + var(--space-1)); }
   .actions { display: contents; }
   .buttons { grid-column: 2; justify-content: flex-start; margin-top: var(--space-1); }
   .menu { position: absolute; top: var(--space-1); right: var(--space-1); }
 }
 :global([data-narrow]) .row { grid-template-columns: var(--row-lead-w) minmax(0, 1fr); row-gap: var(--space-1); }
-:global([data-narrow]) .hasMenu { padding-right: calc(var(--space-1) + var(--target-icon) + var(--space-1)); }
+:global([data-narrow]) .hasMenu { padding-right: calc(var(--space-1) + var(--hit-icon) + var(--space-1)); }
 :global([data-narrow]) .actions { display: contents; }
 :global([data-narrow]) .buttons { grid-column: 2; justify-content: flex-start; margin-top: var(--space-1); }
 :global([data-narrow]) .menu { position: absolute; top: var(--space-1); right: var(--space-1); }

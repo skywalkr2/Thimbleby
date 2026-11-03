@@ -209,19 +209,20 @@ test("until the workspace knows the person's name, the avatar uses the workspace
   await waitFor(() => expect(screen.getByRole("button", { name: /^Menu for / })).toBeInTheDocument());
 });
 
-test("on a phone only the brand, the status chip and the user menu remain", async () => {
+test("on a phone only the brand, the status chip, a search icon and the user menu remain", async () => {
   show({ narrow: true, demo: true });
   const header = screen.getByRole("banner");
   expect(within(header).getByRole("link", { name: /Go to Today/ })).toBeInTheDocument();
   expect(within(header).getByRole("button", { name: /^App status: / })).toBeInTheDocument();
   expect(within(header).getByRole("button", { name: /^Menu for / })).toBeInTheDocument();
+  expect(within(header).getByRole("button", { name: "Search" })).toBeInTheDocument();
   expect(within(header).queryByRole("button", { name: "Search or ask" })).toBeNull();
   expect(within(header).queryByRole("button", { name: "Hand something in" })).toBeNull();
   expect(within(header).queryByRole("button", { name: "Help" })).toBeNull();
   expect(within(header).getByText("Demo")).toBeInTheDocument();
 });
 
-test("on a phone only the logo, the status chip and the avatar are in the header: no workspace name, no assistant label", async () => {
+test("on a phone only the logo, the status chip, the search icon and the avatar are in the header: no workspace name, no assistant label", async () => {
   show({ narrow: true });
   const header = screen.getByRole("banner");
   const brand = within(header).getByRole("link", { name: "Go to Today · Example Workspace" });
@@ -230,7 +231,19 @@ test("on a phone only the logo, the status chip and the avatar are in the header
   expect(brand.querySelector("img[data-brand-mark]")).not.toBeNull();
   await within(header).findByRole("button", { name: /^App status: / });
   expect(within(header).queryByRole("button", { name: /^Helper/ })).toBeNull();
-  expect(Array.from(header.querySelectorAll("button, a")).map((el) => el.getAttribute("aria-label") ?? el.textContent)).toHaveLength(3);
+  expect(Array.from(header.querySelectorAll("button, a")).map((el) => el.getAttribute("aria-label") ?? el.textContent)).toHaveLength(4);
+});
+
+test("the search icon on a phone opens the search field in a strip under the header, which ends with Ask", async () => {
+  const user = userEvent.setup();
+  const onAsk = vi.fn();
+  show({ narrow: true, handlers: { onAsk } });
+  await user.click(screen.getByRole("button", { name: "Search" }));
+  const field = screen.getByRole("searchbox");
+  expect(field).toHaveAttribute("placeholder", "Search or ask Helper");
+  await user.click(field);
+  await user.click(screen.getByRole("button", { name: "Ask Helper" }));
+  expect(onAsk).toHaveBeenCalledWith("");
 });
 
 test("on a phone the assistant's state is in the status chip's popover", async () => {

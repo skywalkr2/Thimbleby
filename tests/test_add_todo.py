@@ -173,3 +173,21 @@ def test_a_typed_to_do_has_no_where_it_came_from(api):
     action_id = made["action"]
     assert client.get("/api/record", params={"kind": "action", "id": action_id}).json()["origin"] is None
     assert origins(store.read(), "action", [action_id]) == {action_id: None}
+
+
+@pytest.mark.parametrize(
+    ("words", "day"),
+    [
+        ("by Friday", "2026-11-06"),
+        ("tomorrow", "2026-11-03"),
+        ("on the 12th", "2026-11-12"),
+        ("next week", "2026-11-13"),
+        ("today", "2026-11-02"),
+        ("Friday", "2026-11-06"),
+    ],
+)
+def test_a_date_phrase_at_the_end_of_a_title_is_read_by_rules_on_a_fixed_monday(api, words, day):
+    """The add row finds the phrase at the end of a title and asks this reader what it means; the table is the days it
+    gives from Monday 2026-11-02, with no assistant involved."""
+    client, _, _ = api
+    assert client.post("/api/todos/day", json={"words": words}).json() == {"status": "ok", "day": day}

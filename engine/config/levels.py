@@ -43,12 +43,15 @@ BASIC: dict[str, str] = {
     "steward.reminders.quiet_start": "today",
     "steward.reminders.quiet_end": "today",
     "steward.brief.enabled": "today",
+    "ui.today.rail_rows": "today",
     "steward.reminders.where": "today",
     "steward.reminders.where_account": "today",
     "storage.backups.automatic": "backups",
     "storage.sync.folder": "backups",
     "ui.theme": "appearance",
     "ui.density": "appearance",
+    "ui.time_format": "appearance",
+    "ui.time_step": "appearance",
     "workspace.project.business": "business",
 }
 

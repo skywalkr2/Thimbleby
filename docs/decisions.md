@@ -4,6 +4,24 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04; section 319)
+
+**Decided:** (owner: the screens match the reviewer's mockups before the gate week; design by the main session.) *States:* every list
+screen (Today, To-dos and questions, Follow-ups, What changed, Handled for you, People, Projects, Files, Notes, Knowledge and a record's
+page) has the same states from one set of shared components: loading as skeleton rows at row height; couldn't load as the plain reason
+with Try again (and "The app can't reach its server" while the connection is down; a list that loaded stays readable); **offline as one
+banner** on every screen from the one connection state, gone when the connection is back; **a failed save as "Not saved"** in the row
+or form with the reason and Try again, the words kept; **changed elsewhere** as old, new and the person's own, to keep or replace;
+**filtered to nothing** as the filter named and Clear filter; a failing account as a state row; a count above 99 as "99+". *The phone:*
+the bottom bar is Today, To-dos, a tonal +, Schedule and More (More is a sheet in sections; Search is an icon in the header); there is no
+strip of sides on a phone or under 1100px: one button in the page header opens a sheet; Settings folds its sections under 1100px; every
+control is at least 44px on a coarse pointer. *Follow-ups:* the add row finds a date at the end of a title by rules and shows the day
+before Enter with a way to drop it (the day is the server's reading, `POST /api/todos/day`); three settings: `ui.today.rail_rows` (3),
+`ui.time_format` (auto) and `ui.time_step` (15); a pasted key is checked once, not again when the cursor leaves the box unchanged; the
+mail step's Continue is the footer's. *Why:* the reviewer's VP07 and VP08 rows were "not built"; a person meets offline, a failed save
+and a long list on a real install. *Impact:* three config keys (schema, default, description, demo values in both workspaces, Settings
+pages, `RuntimeConfig` fields), web otherwise; `useAct` gains an optional failure handler; no op, tier or trust rule changes. Change log: section 319.
+
 ## 2026-11-03: Schedule and Connections built to the 4.6 mockups; signing in again to one account refuses another (VS06, VS18, X45, X53, X57, VC13; section 318)
 
 **Decided:** (owner: these screens match the reviewer's mockups before the gate week; design by the main session.) *Connections:* one

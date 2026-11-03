@@ -260,7 +260,7 @@ class WorkspaceFile(FileModel):
     name: str = Field(
         "Workspace",
         max_length=80,
-        description="The workspace's name, shown in the browser tab and at the top of your menu. Setup names it after "
+        description="The workspace's name, shown in the window's tab and at the top of your menu. Setup names it after "
         "you.",
     )
     assistant_name: str = Field(
@@ -2462,6 +2462,13 @@ class TodaySettings(ConfigModel):
         description="Top priorities also lists the dated to-dos that fall due in the next this many days, after its "
         "lines. Zero leaves that list out.",
     )
+    rail_rows: int = Field(
+        3,
+        ge=1,
+        le=10,
+        description="How many rows each card in Today's side column (what came in, and the schedule) shows before its "
+        "line for the rest. The rest are one click away.",
+    )
 
 
 class FollowupsSettings(ConfigModel):
@@ -2922,6 +2929,18 @@ class UiFile(FileModel):
         "comfortable",
         description="How much fits on screen. Comfortable rows, or compact ones that show more at once. Each person "
         "can change it for their own device, and touch screens keep large targets either way.",
+    )
+    time_format: Literal["auto", "12h", "24h"] = Field(
+        "auto",
+        description="How times of day are written. Automatic follows the language of this workspace, and the other two "
+        "are always the 12-hour clock (9:30 AM) or the 24-hour clock (09:30).",
+    )
+    time_step: int = Field(
+        15,
+        ge=1,
+        le=120,
+        description="The minutes between the times offered in a time box's list (a time can still be typed to the "
+        "minute).",
     )
 
     @field_validator("shortcuts")

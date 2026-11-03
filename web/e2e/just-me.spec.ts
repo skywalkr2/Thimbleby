@@ -341,12 +341,16 @@ test.describe('"Just me" sees no work words', () => {
       await page.setViewportSize(size);
       await go(page, "work/open");
       await heading(page, "To-dos and questions");
-      // At a phone width the menu is the sheet behind the work button.
-      if (size.width < 1024) await page.getByRole("button", { name: "Keeping track", exact: true }).click();
-      const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ needs? you$/ });
-      await expect(entry).toBeVisible(LOADED);
-      // The figure is drawn and the words are the link's name; nothing waits on What changed here, so it has no count.
-      await expect(entry.locator('[class*="count"]')).toHaveText(/^\d+$/);
+      // At a phone width the To-dos entry is a tab of the bar (its name says what waits), and the rest of the menu is the More sheet.
+      if (size.width < 1024) {
+        await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^To-dos, \d+ needs? you$/ })).toBeVisible(LOADED);
+        await page.getByRole("button", { name: "More", exact: true }).click();
+      } else {
+        const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ needs? you$/ });
+        await expect(entry).toBeVisible(LOADED);
+        // The figure is drawn and the words are the link's name; nothing waits on What changed here, so it has no count.
+        await expect(entry.locator('[class*="count"]')).toHaveText(/^\d+$/);
+      }
       await expect(page.getByRole("link", { name: /^Handled for you(?!,)/ })).toBeVisible();
       if (size.width < 1024) await page.keyboard.press("Escape");
 

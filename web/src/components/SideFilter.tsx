@@ -1,20 +1,32 @@
-// The All / Personal / <side> choice beside the heading of every list that can hold both sides (design 6.32, 7.8): Today,
-// What changed, Handled for you, Follow-ups, To-dos, People and Files. One option for each side of the person's work. It is
+// The side filter on Today and Follow-ups (design 6.32, 7.8): All, Personal and each side of the person's work, shown only to a
+// person who has set one, and remembered on this browser as the theme is. One option for each side of the person's work. It is
 // there only for a person who has set one, and nothing is drawn without a side; the pick is the same on every screen and is
 // remembered on this browser. A screen that has something waiting for the person passes it as `waiting`, and each choice
 // then says how many wait in it, in words for a screen reader.
-import { useIsNarrow } from "../lib/media";
+// On a phone, and below 1100px of window where a row of choices with long names would take several lines, there is no strip:
+// one button in the page header names the pick and opens a sheet with the choices as a list to pick from.
+import { useState } from "react";
+import { useIsNarrow, useMediaQuery } from "../lib/media";
+import { countText } from "../lib/counts";
 import { useSideFilter, type SideChoice } from "../lib/sides";
 import { useTabCounts, type WaitingScreen } from "../lib/waiting";
 import { useWords } from "../lib/wording";
-import { Select } from "../ui/Select";
+import { Button } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 import { SegmentedControl } from "../ui/SegmentedControl";
+import { Sheet } from "../ui/Sheet";
+import styles from "./SideFilter.module.css";
+
+/** The window width below which the strip gives way to the button and its sheet. */
+export const SIDE_STRIP_BELOW = "(max-width: 1100px)";
 
 export function SideFilter(props: { waiting?: WaitingScreen }) {
   const { t, tn } = useWords();
   const filter = useSideFilter();
   const counted = useTabCounts(props.waiting ?? "changed");
   const narrow = useIsNarrow();
+  const tight = useMediaQuery(SIDE_STRIP_BELOW);
+  const [open, setOpen] = useState(false);
   if (!filter.offered) return null;
   const option = (value: SideChoice, label: string) => {
     const count = props.waiting ? counted(value) : 0;
@@ -25,17 +37,54 @@ export function SideFilter(props: { waiting?: WaitingScreen }) {
     // A side's views follow it, each named with its side so a choice is never a bare name.
     ...filter.options.flatMap((o) => [option(o.id, o.name), ...filter.views.filter((v) => v.side === o.id).map((v) => option(v.id, t("sides.filter.view", { side: v.sideName, view: v.name })))]),
   ];
-  // On a phone the choices are a list to pick from, one control as wide as the window at most, however long the names are:
-  // a row of chips with long names has no room.
-  if (narrow) {
+  if (narrow || tight) {
+    const current = options.find((o) => o.value === filter.picked) ?? options[0];
     return (
-      <Select aria-label={t("sides.filter.label")} value={filter.picked} onChange={(e) => filter.set(e.target.value as SideChoice)} data-side-select="">
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.count ? `${o.label} (${o.countWords ?? o.count})` : o.label}
-          </option>
-        ))}
-      </Select>
+      <>
+        <Button
+          className={styles.open}
+          icon="chevron-down"
+          aria-haspopup="dialog"
+          aria-label={t("sides.filter.open", { name: current.label })}
+          title={current.label}
+          data-side-select=""
+          onClick={() => setOpen(true)}
+        >
+          <span className={styles.openName}>{t("sides.filter.open", { name: current.label })}</span>
+        </Button>
+        {open && (
+          <Sheet title={t("sides.filter.sheet")} onClose={() => setOpen(false)}>
+            <p className={styles.hint}>{t("sides.filter.sheet_hint")}</p>
+            <ul className={styles.options} aria-label={t("sides.filter.label")}>
+              {options.map((o) => (
+                <li key={o.value}>
+                  <button
+                    type="button"
+                    className={styles.option}
+                    aria-current={o.value === filter.picked ? "true" : undefined}
+                    aria-label={o.count ? `${o.label}, ${o.countWords ?? o.count}` : undefined}
+                    data-side-option={o.value}
+                    onClick={() => {
+                      filter.set(o.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className={styles.name}>{o.label}</span>
+                    {o.count ? (
+                      <span className={styles.count} aria-hidden="true">
+                        {countText(o.count)}
+                      </span>
+                    ) : null}
+                    <span className={styles.tick} aria-hidden="true">
+                      {o.value === filter.picked && <Icon name="check" size={18} />}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Sheet>
+        )}
+      </>
     );
   }
   return <SegmentedControl<SideChoice> label={t("sides.filter.label")} value={filter.picked} onChange={filter.set} options={options} />;

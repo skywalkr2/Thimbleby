@@ -55,10 +55,11 @@ def test_the_settings_walk_counts_at_most_26_basic_and_30_advanced():
     more = sum(_rows(shown, page, True) for page in PAGES | {"advanced"})
     assert without_business <= 23 and with_business <= 26, (without_business, with_business)
     assert more <= 30, more
-    # The name, the working hours, the quiet hours and the one notices switch make room: 18 rows (where reminders go is
-    # one), 19 with a business (the words that mean each side moved to Advanced, Filing), and 28 more behind the pages'
-    # folds and Advanced (the calendar's day start and end are two of them).
-    assert (without_business, with_business, more) == (18, 19, 30)
+    # The name, the working hours, the quiet hours and the one notices switch make room: 21 rows (where reminders go
+    # is one; the clock, the time list's step and Today's rail rows are three more), 22 with a business (the words
+    # that mean each side moved to Advanced, Filing), and 28 more behind the pages' folds and Advanced (the
+    # calendar's day start and end are two of them).
+    assert (without_business, with_business, more) == (21, 22, 30)
     assert {s.topic for s in shown if s.advanced and s.page} == set(levels.TOPICS)
     assert all(s.topic is None for s in shown if s.page in PAGES and not s.advanced)
     assert all(s.topic for s in shown if s.advanced and s.page)

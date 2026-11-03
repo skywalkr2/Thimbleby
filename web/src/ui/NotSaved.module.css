@@ -1,0 +1,6 @@
+/* A failed save, inline: the state word, the sentence, Try again. The danger edge and tint back up the word and icon. */
+.row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0;
+  padding: var(--space-3) var(--row-px, var(--space-4)); border-left: 3px solid var(--danger); background: var(--danger-soft);
+}
+.text { flex: 1 1 16rem; min-width: 0; margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); color: var(--text); overflow-wrap: anywhere; }

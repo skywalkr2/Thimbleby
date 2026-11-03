@@ -1,0 +1,14 @@
+/* The side filter on a phone (and under 1100px): one button that names the pick, and a sheet that lists the choices. A long name
+   wraps in the sheet and is cut at the button, never wider than the window. */
+.open { max-width: 100%; min-width: 0; }
+.openName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hint { margin: 0; padding: 0 var(--space-2); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.options { list-style: none; margin: 0; padding: 0; display: grid; }
+.option {
+  display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--tap-min); padding: var(--space-2) var(--space-2); border: 0; border-radius: var(--radius-md);
+  background: transparent; color: var(--text); font-family: var(--font-ui); font-size: var(--text-md); line-height: var(--lh-md); text-align: left; cursor: pointer;
+}
+.option[aria-current="true"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
+.name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.count { flex: none; font-size: var(--text-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.tick { flex: none; width: 18px; height: 18px; display: inline-grid; place-items: center; }

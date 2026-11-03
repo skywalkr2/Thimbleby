@@ -1,13 +1,14 @@
 /* Loading shows the shape of what's coming: rows in the row anatomy, shimmering unless motion is reduced. */
 .region { display: block; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.row { display: grid; grid-template-columns: var(--row-lead-w) minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
 .row:last-child { border-bottom: 0; }
-.bar, .btn { display: block; border-radius: var(--radius-sm); background: var(--surface-sunk); }
+.bar, .btn, .lead { display: block; border-radius: var(--radius-sm); background: var(--surface-sunk); }
+.lead { width: 18px; height: 18px; justify-self: center; border-radius: var(--radius-full); }
 .lines { display: grid; gap: var(--space-2); }
 .bar { height: 14px; width: 60%; }
 .short { width: 36%; height: 12px; }
 .btn { width: 84px; height: var(--btn-h-sm); border-radius: var(--radius-btn); }
 @media (prefers-reduced-motion: no-preference) {
-  .bar, .btn { animation: shimmer 1.4s ease-in-out infinite; }
+  .bar, .btn, .lead { animation: shimmer 1.4s ease-in-out infinite; }
   @keyframes shimmer { 50% { background: var(--border); } }
 }

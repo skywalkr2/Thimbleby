@@ -10,7 +10,7 @@ html[data-toasts][data-narrow] { scroll-padding-bottom: calc(var(--toast-h, 0px)
 body { font-family: var(--font-ui); font-size: var(--text-md); line-height: var(--lh-md); }
 button, input, textarea, select { font: inherit; color: inherit; }
 /* No control is smaller than the target floor (WCAG 2.5.8). */
-button { min-width: var(--target-min); min-height: var(--target-min); }
+button { min-width: var(--hit-min); min-height: var(--hit-min); }
 /* A row shows its ring only for the keyboard: after a key has been pressed (lib/input-mode) and the row has the cursor. A click, or
    the row taking the cursor by itself as a screen opens, shows none. The ring sits inside the row's padding, never over its text. */
 [data-row]:focus { outline: none; }
@@ -37,7 +37,7 @@ main p { max-width: var(--measure); }
 .heading h2 { font-size: var(--text-section); line-height: var(--lh-section); }
 .heading h3 { font-size: var(--text-md); line-height: var(--lh-md); }
 .filters { display: inline-flex; gap: var(--space-1); background: var(--surface-sunk); padding: var(--space-1); border-radius: var(--radius-btn); }
-.filters button { border: 0; background: transparent; min-height: 24px; padding: 0 var(--space-3); border-radius: var(--radius-btn); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; }
+.filters button { border: 0; background: transparent; min-height: var(--hit-min); padding: 0 var(--space-3); border-radius: var(--radius-btn); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; }
 .filters button:hover { color: var(--text); }
 .filters button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--elev-1); }
 .newbar { justify-self: center; border: 0; background: var(--accent); color: var(--text-on-accent); font-weight: var(--weight-semibold); font-size: var(--text-sm); border-radius: var(--radius-full); padding: var(--space-2) var(--space-4); cursor: pointer; box-shadow: var(--elev-2); }
@@ -94,8 +94,8 @@ textarea.big { min-height: 220px; max-width: var(--measure); }
 input:disabled, textarea:disabled { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
 /* A checkbox or radio is a 24px control, so its hit area is the element itself (not just its label); the box drawn in it stays
    18px, as a pseudo-element, and the check mark or dot sits at its centre. */
-label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: var(--target-min); }
-input[type="checkbox"], input[type="radio"] { appearance: none; position: relative; width: var(--target-min); min-width: var(--target-min); height: var(--target-min); min-height: var(--target-min); padding: 0; flex: none; border: 0; background: transparent; display: inline-grid; place-content: center; cursor: pointer; border-radius: var(--radius-sm); }
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: var(--hit-min); }
+input[type="checkbox"], input[type="radio"] { appearance: none; position: relative; width: var(--hit-min); min-width: var(--hit-min); height: var(--hit-min); min-height: var(--hit-min); padding: 0; flex: none; border: 0; background: transparent; display: inline-grid; place-content: center; cursor: pointer; border-radius: var(--radius-sm); }
 input[type="checkbox"]::before, input[type="radio"]::before { content: ""; position: absolute; inset: var(--check-inset); box-sizing: border-box; border: 1.5px solid var(--border-strong); background: var(--surface); }
 input[type="checkbox"]::before { border-radius: var(--radius-sm); }
 input[type="radio"]::before { border-radius: var(--radius-full); }
@@ -152,7 +152,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .preview figcaption { font-size: var(--text-xs); color: var(--text-muted); }
 
 /* Plugin panels, record pages, text review and working copies */
-.link-button { display: inline-flex; align-items: center; min-height: var(--target-min); border: 0; background: none; padding: 0; font: inherit; font-weight: var(--weight-semibold); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.link-button { display: inline-flex; align-items: center; min-height: var(--hit-min); border: 0; background: none; padding: 0; font: inherit; font-weight: var(--weight-semibold); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); background: var(--surface); }
 .document { display: grid; gap: var(--space-3); min-width: 0; }
 .document > * { margin: 0; }
@@ -265,7 +265,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
 .chip { display: inline-flex; align-items: center; max-width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-full); background: var(--surface-sunk); font-size: var(--text-sm); line-height: var(--lh-sm); padding-inline-start: var(--space-3); }
 .chip > span { overflow-wrap: anywhere; min-width: 0; padding-block: var(--space-1); }
-.chip-remove { min-width: var(--target-icon); min-height: var(--target-min); align-self: stretch; border: 0; background: none; color: var(--text-muted); cursor: pointer; border-start-end-radius: var(--radius-full); border-end-end-radius: var(--radius-full); font-size: var(--text-md); }
+.chip-remove { min-width: var(--hit-icon); min-height: var(--hit-min); align-self: stretch; border: 0; background: none; color: var(--text-muted); cursor: pointer; border-start-end-radius: var(--radius-full); border-end-end-radius: var(--radius-full); font-size: var(--text-md); }
 .chip-remove:hover { color: var(--text); }
 .chip-remove:disabled { cursor: default; }
 /* The rarely changed settings of a page: one closed fold at its foot, the rows inside it set out like the rest of the page. */
@@ -277,6 +277,10 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 }
 @container settingsform (max-width: 720px) {
   .setting.beside { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1100px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .settings-nav { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 }
 @container settings (max-width: 720px) {
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }

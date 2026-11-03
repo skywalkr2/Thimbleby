@@ -23,6 +23,7 @@ import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { MenuButton } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
+import { StateMark } from "../ui/StateMark";
 import { Row } from "../ui/Row";
 import { AccountMoveLine, ModelMovedLine, ModelWatchLine } from "./ModelLines";
 import styles from "./HeldLines.module.css";
@@ -655,8 +656,9 @@ function SourceUnreadLine(props: { line: Line; onOpen?: () => void }) {
       as="section"
       aria-label={t("queue.source_unread.label")}
       data-queue-line="source_unread"
-      pill={<Pill tone="warn">{t("queue.source_unread.label")}</Pill>}
+      state="warn"
       title={<>{t(key, { label: line.subject ?? "", when: since })}</>}
+      meta={<StateMark tone="warn">{t("queue.source_unread.label")}</StateMark>}
       primary={props.onOpen ? (
           <>
           <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpen}>

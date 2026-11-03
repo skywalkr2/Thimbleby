@@ -125,7 +125,7 @@ test("a message that still names the assistant shows why it is held back and can
   const calls = fakeApi({ ...markSentRoutes, "GET followups": () => held });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(reason);
+  expect((await screen.findByText(reason)).closest('[role="alert"]')).not.toBeNull();
   expect(underBox()).toBeDisabled();
   expect(posts(calls)).toHaveLength(0);
 });

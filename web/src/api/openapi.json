@@ -27049,6 +27049,12 @@
             ],
             "title": "Pm"
           },
+          "rail_rows": {
+            "default": 3,
+            "description": "The rows each card of Today's side column shows before Show more (ui.today.rail_rows).",
+            "title": "Rail Rows",
+            "type": "integer"
+          },
           "shortcuts": {
             "additionalProperties": {
               "type": "string"
@@ -27066,6 +27072,23 @@
             ],
             "title": "Theme",
             "type": "string"
+          },
+          "time_format": {
+            "default": "auto",
+            "description": "How times of day are written: by the language, or on the 12 or 24-hour clock (ui.time_format).",
+            "enum": [
+              "auto",
+              "12h",
+              "24h"
+            ],
+            "title": "Time Format",
+            "type": "string"
+          },
+          "time_step": {
+            "default": 15,
+            "description": "The minutes between the times a time box lists (ui.time_step).",
+            "title": "Time Step",
+            "type": "integer"
           },
           "timezone": {
             "default": "UTC",

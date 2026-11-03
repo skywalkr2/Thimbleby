@@ -13,7 +13,7 @@ import { OwnRequestsProvider } from "./components/HandIn";
 import { Button } from "./ui/Button";
 import { initAppearance } from "./lib/theme";
 import { installInputMode } from "./lib/input-mode";
-import { setClockZone } from "./lib/dates";
+import { setClockZone, setTimePrefs } from "./lib/dates";
 import { useSides } from "./lib/sides";
 import { setTitleWords } from "./lib/title-dates";
 
@@ -45,6 +45,7 @@ function LiveWording(props: { rc: S["RuntimeConfig"]; children: ReactNode }) {
   // Every moment on every screen is written on the person's own clock, not the computer's.
   setClockZone(rc.timezone);
   setTitleWords(rc.title_words);
+  setTimePrefs({ format: rc.time_format, step: rc.time_step });
   return (
     <WordingProvider
       overrides={rc.wording}

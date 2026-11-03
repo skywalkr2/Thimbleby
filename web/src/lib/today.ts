@@ -9,8 +9,15 @@ import { useStageToday } from "../components/StageToday";
 import { useActToday } from "./acts";
 
 /** How many lines a card of Today's rail holds before one line says how many more there are, so the rail is never longer than
- * the queue beside it. */
-export const RAIL_ROWS = 3;
+ * the queue beside it, when the setting (`ui.today.rail_rows`) is not known yet. */
+export const RAIL_ROWS_DEFAULT = 3;
+
+/** How many rows each card of Today's rail shows (`ui.today.rail_rows`), read from the runtime configuration the app holds. */
+export function useRailRows(): number {
+  const rc = useQuery({ queryKey: ["runtime-config"], queryFn: api.runtimeConfig, enabled: false, staleTime: Infinity });
+  const rows = rc.data?.rail_rows;
+  return rows && rows > 0 ? Math.floor(rows) : RAIL_ROWS_DEFAULT;
+}
 
 export type QueueLine = S["QueueLineView"];
 export type QueueGroupName = QueueLine["group"];

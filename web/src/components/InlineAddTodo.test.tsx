@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { person } from "../lib/records-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, Refuse, renderApp } from "../test-utils";
 import { InlineAddTodo } from "./InlineAddTodo";
 
 function api(extra = {}) {
@@ -64,4 +64,97 @@ test("with several sides and none picked the form opens with the words typed, si
   await waitFor(() => expect(words).toBe("Call the printer"));
   expect(calls.some((c) => c.route === "POST todos")).toBe(false);
   expect(field).toHaveValue("");
+});
+
+// ---- a date said at the end of the title ------------------------------------------------------------------------------
+
+/** The day the server reads each phrase as, on a fixed Monday (2026-11-02): the add row asks it and shows the answer. */
+const DAYS: Record<string, string> = { "by Friday": "2026-11-06", tomorrow: "2026-11-03", "on the 12th": "2026-11-12", "next week": "2026-11-13" };
+
+function withDays(extra = {}) {
+  return api({
+    "POST todos/day": (body: unknown) => {
+      const words = (body as { words: string }).words;
+      return DAYS[words] ? { status: "ok", day: DAYS[words] } : { status: "unclear", day: null };
+    },
+    ...extra,
+  });
+}
+
+test.each([
+  ["Send the headcount by Friday", "Send the headcount", "by Friday", "Fri, Nov 6"],
+  ["Call the printer tomorrow", "Call the printer", "tomorrow", "Tue, Nov 3"],
+  ["Pay the deposit on the 12th", "Pay the deposit", "on the 12th", "Thu, Nov 12"],
+  ["Book the room next week", "Book the room", "next week", "Fri, Nov 13"],
+])("%s: the date found is shown before Enter, and the to-do is added with that day and the title without it", async (typed, title, phrase, shown) => {
+  const user = userEvent.setup();
+  const calls = withDays();
+  row();
+  const field = await screen.findByRole("textbox", { name: "Add a to-do" });
+  await waitFor(() => expect(calls.some((c) => c.route === "GET people")).toBe(true));
+  await user.type(field, typed);
+  const found = await screen.findByText(`Due ${shown}`);
+  expect(found.closest("[data-date-found]")).not.toBeNull();
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST todos")?.body).toEqual({ text: title, when: phrase, owners: ["P-1"] }));
+  await waitFor(() => expect(field).toHaveValue(""));
+});
+
+test("the date found can be dropped before Enter: the whole words are added with no day", async () => {
+  const user = userEvent.setup();
+  const calls = withDays();
+  row();
+  const field = await screen.findByRole("textbox", { name: "Add a to-do" });
+  await waitFor(() => expect(calls.some((c) => c.route === "GET people")).toBe(true));
+  await user.type(field, "Send the headcount by Friday");
+  await screen.findByText("Due Fri, Nov 6");
+  await user.click(screen.getByRole("button", { name: "Don't set a date from “by Friday”" }));
+  expect(screen.queryByText("Due Fri, Nov 6")).toBeNull();
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST todos")?.body).toEqual({ text: "Send the headcount by Friday", owners: ["P-1"] }));
+});
+
+test("a title with no date goes in as it is, to Needs a date, and shows no date", async () => {
+  const user = userEvent.setup();
+  const calls = withDays();
+  row();
+  const field = await screen.findByRole("textbox", { name: "Add a to-do" });
+  await waitFor(() => expect(calls.some((c) => c.route === "GET people")).toBe(true));
+  await user.type(field, "Call the printer{Enter}");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST todos")?.body).toEqual({ text: "Call the printer", owners: ["P-1"] }));
+  expect(calls.some((c) => c.route === "POST todos/day")).toBe(false);
+  expect(document.querySelector("[data-date-found]")).toBeNull();
+});
+
+test("a phrase the server can't read is not taken out of the title", async () => {
+  const user = userEvent.setup();
+  const calls = withDays();
+  row();
+  const field = await screen.findByRole("textbox", { name: "Add a to-do" });
+  await waitFor(() => expect(calls.some((c) => c.route === "GET people")).toBe(true));
+  await user.type(field, "Visit Sam on Friday{Enter}");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST todos")?.body).toEqual({ text: "Visit Sam on Friday", owners: ["P-1"] }));
+});
+
+// ---- a save that fails ------------------------------------------------------------------------------------------------
+
+test("a failed add keeps the words in the row, says Not saved with the reason, and Try again adds it", async () => {
+  const user = userEvent.setup();
+  let fail = true;
+  const calls = api({ "POST todos": () => (fail ? new Refuse(500, "The app couldn't write to its folder.") : { action: "A-9", changesets: ["CS-9"] }) });
+  row();
+  const field = await screen.findByRole("textbox", { name: "Add a to-do" });
+  await waitFor(() => expect(calls.some((c) => c.route === "GET people")).toBe(true));
+  await user.type(field, "Pay the deposit{Enter}");
+  const note = await screen.findByRole("alert");
+  expect(note).toHaveTextContent("Not saved");
+  expect(note).toHaveTextContent("“Pay the deposit” wasn't saved.");
+  expect(note).toHaveTextContent("The app couldn't write to its folder.");
+  // Nothing is lost: the words are still in the row, and no toast took the failure.
+  expect(field).toHaveValue("Pay the deposit");
+  fail = false;
+  await user.click(within(note).getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(field).toHaveValue(""));
+  expect(calls.filter((c) => c.route === "POST todos")).toHaveLength(2);
+  expect(screen.queryByText("Not saved")).toBeNull();
 });

@@ -163,7 +163,8 @@ async function go(page: Page, label: string) {
     return;
   }
   const nav = page.getByRole("navigation", { name: "Views" });
-  const name = new RegExp(`^${label}`);
+  // On a phone To-dos is a tab of the bar under its short name; every other view is in the More sheet.
+  const name = new RegExp(`^${label === "To-dos and questions" ? "To-dos" : label}`);
   const link = nav.getByRole("link", { name });
   if (await link.count()) {
     // The address changes, then the view with it: wait for the entry to say it is the current one. A heavy view (Settings)
@@ -179,7 +180,7 @@ async function go(page: Page, label: string) {
     }).toPass({ timeout: 30_000 });
     return;
   }
-  for (const sheet of ["Work", "More"]) {
+  for (const sheet of ["More"]) {
     await nav.getByRole("button", { name: sheet }).click();
     const inSheet = page.getByRole("dialog", { name: sheet }).getByRole("link", { name });
     if (await inSheet.count()) {

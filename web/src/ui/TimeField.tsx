@@ -5,14 +5,11 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { Popover as AriaPopover } from "react-aria-components";
 import { parseTime, timesOfDay } from "../lib/date-input";
-import { timeOfDay } from "../lib/dates";
+import { timeOfDay, timeStep } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { contained } from "./containEvents";
 import { Icon } from "./Icon";
 import styles from "./TimeField.module.css";
-
-/** The minutes between the times offered, unless a field names its own. */
-export const TIME_STEP = 15;
 
 /** What a date or time box passes to `onChange`: the value, under the names a change event has them. */
 export interface FieldChange {
@@ -27,7 +24,7 @@ export interface TimeFieldProps {
   value?: string;
   defaultValue?: string;
   onChange?: (event: FieldChange) => void;
-  /** The minutes between the times in the list. */
+  /** The minutes between the times in the list; the setting's when a field names none. */
   step?: number;
   required?: boolean;
   disabled?: boolean;
@@ -40,8 +37,10 @@ export interface TimeFieldProps {
 }
 
 export function TimeField(props: TimeFieldProps) {
-  const { id, name, className, value, defaultValue, onChange, step = TIME_STEP, required, disabled, autoFocus, onBlur, ref } = props;
+  const { id, name, className, value, defaultValue, onChange, step: stepGiven, required, disabled, autoFocus, onBlur, ref } = props;
   const { t, locale } = useWords();
+  // The minutes between the times offered are the setting's (`ui.time_step`), unless a field names its own.
+  const step = stepGiven ?? timeStep();
   const [own, setOwn] = useState(defaultValue ?? "");
   const held = value === undefined ? own : value;
   const [draft, setDraft] = useState<string | null>(null);

@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp, type Routes, snapshotOf, dayValue } from "../test-utils";
+import { Refuse, fakeApi, rcFixture, renderApp, type Routes, snapshotOf, dayValue } from "../test-utils";
 import { TodayRail } from "./TodayRail";
 import { ThisWeekInspector } from "./ThisWeek";
 
@@ -853,6 +853,40 @@ test("Came in holds three messages and a quiet button for the rest, which opens 
   expect(card.querySelectorAll("[data-came-in]")).toHaveLength(5);
   await user.click(within(card).getByRole("button", { name: "Show fewer" }));
   expect(card.querySelectorAll("[data-came-in]")).toHaveLength(3);
+});
+
+// ---- the rows each card holds (ui.today.rail_rows) ----------------------------------------------------------------------
+
+/** Opens the rail with the setting the app holds for the number of rows (the runtime configuration it started with). */
+function openWithRows(rows: number, extra: Routes) {
+  fakeApi(routes(extra));
+  const { client } = renderApp(<TodayRail onView={vi.fn()} queueEmpty={false} />);
+  client.setQueryData(["runtime-config"], rcFixture({ rail_rows: rows }));
+}
+
+test("ui.today.rail_rows sets how many meetings the Schedule card holds before its line for the rest", async () => {
+  const meetings = [13, 14, 15, 16, 17].map((hour) => event({ title: `Meeting at ${hour}`, start: at(TODAY, hour), end: at(TODAY, hour, 30), snapshot: `s-${hour}` }));
+  openWithRows(5, { "GET today/agenda": () => meetings });
+  const card = await column("Schedule");
+  expect(await within(card).findByText("Meeting at 17")).toBeInTheDocument();
+  expect(card.querySelectorAll("[data-event]")).toHaveLength(5);
+  expect(within(card).queryByRole("link", { name: /more in the schedule/ })).toBeNull();
+});
+
+test("a smaller ui.today.rail_rows holds fewer rows in each card and says how many more there are", async () => {
+  const user = userEvent.setup();
+  const meetings = [13, 14, 15, 16, 17].map((hour) => event({ title: `Meeting at ${hour}`, start: at(TODAY, hour), end: at(TODAY, hour, 30), snapshot: `s-${hour}` }));
+  const items = [1, 2, 3, 4, 5].map((n) => message({ title: `Mail ${n}`, sender: "Robin Sample", unread: false, snapshot: `m-${n}` }));
+  openWithRows(1, { "GET today/agenda": () => meetings, "GET today/arrived": () => ({ items, left_out: 0, set_aside: 0 }) });
+  const schedule = await column("Schedule");
+  expect(await within(schedule).findByText("Meeting at 13")).toBeInTheDocument();
+  expect(schedule.querySelectorAll("[data-event]")).toHaveLength(1);
+  expect(within(schedule).getByRole("link", { name: "4 more in the schedule" })).toBeInTheDocument();
+  const came = await column("Came in");
+  expect(await within(came).findByText("Mail 1")).toBeInTheDocument();
+  expect(came.querySelectorAll("[data-came-in]")).toHaveLength(1);
+  await user.click(within(came).getByRole("button", { name: "4 more" }));
+  expect(came.querySelectorAll("[data-came-in]")).toHaveLength(5);
 });
 
 test("no button in the rail is filled", async () => {

@@ -14,7 +14,8 @@ import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
-import { Skeleton } from "../ui/Skeleton";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { SideFilter } from "./SideFilter";
 
 /** The first line of a note that reads as words: a piece of a data dump or a line left with nothing in it is passed over. */
@@ -32,24 +33,24 @@ export function Notes() {
   return (
     <section className="panel-section" aria-labelledby="notes-title">
       <PageHeader id="notes-title" title={t("notes.title")} subtitle={everything.length > 0 ? t("notes.sub") : undefined} filters={<SideFilter />} />
-      {notes.isPending ? (
-        <Skeleton />
-      ) : notes.isError ? (
-        <EmptyState icon="alert" text={t("notes.load_failed")} action={{ label: t("action.try_again"), onClick: () => void notes.refetch() }} />
-      ) : everything.length === 0 ? (
-        <EmptyState text={t("notes.empty")} />
-      ) : shown.length === 0 ? (
-        <EmptyState text={t("sides.empty.notes", { side: side.named })} />
-      ) : (
-        <>
-          <RowList aria-label={t("notes.title")}>
-            {shown.map((n) => (
-              <NoteRow key={n.id} note={n} where={place({ name: n.project_name, side: n.side_name })} />
-            ))}
-          </RowList>
-          <p className="hint">{tn("notes.count", shown.length)}</p>
-        </>
-      )}
+      <ListState query={notes} failed={t("notes.load_failed")}>
+        {() =>
+          everything.length === 0 ? (
+            <EmptyState text={t("notes.empty")} />
+          ) : shown.length === 0 ? (
+            <FilteredEmpty text={t("sides.empty.notes", { side: side.named })} onClear={() => side.set("all")} />
+          ) : (
+            <>
+              <RowList aria-label={t("notes.title")}>
+                {shown.map((n) => (
+                  <NoteRow key={n.id} note={n} where={place({ name: n.project_name, side: n.side_name })} />
+                ))}
+              </RowList>
+              <p className="hint">{tn("notes.count", shown.length)}</p>
+            </>
+          )
+        }
+      </ListState>
     </section>
   );
 }

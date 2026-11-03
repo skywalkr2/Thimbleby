@@ -19,6 +19,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
 import { RecordsTable, type TableColumn, type TableGroup } from "../ui/RecordsTable";
+import { ListState } from "../ui/ListState";
 import { Skeleton } from "../ui/Skeleton";
 import { ProjectDrawer } from "./ProjectForm";
 import { RecordConversation } from "./RecordConversation";
@@ -164,51 +165,53 @@ export function Projects() {
         fit={PROJECTS_FIT}
         detail={selected ? <ProjectDetail project={selected} parent={selected.parent ? byId.get(selected.parent) : undefined} total={total} onEdit={() => setEditing(selected)} /> : null}
       >
-        {projects.isPending ? (
-          <Skeleton />
-        ) : all.length === 0 ? (
-          <EmptyState text={t("setup.no_projects")} action={{ label: t("setup.add_project"), onClick: () => setAdding(true) }} />
-        ) : (
-          <>
-            <RecordsTable
-              label={t("setup.projects")}
-              name={{
-                header: t("projects.col.name"),
-                title: (p) => p.name,
-                cell: (p, open) => (
-                  <span className={styles.inside} data-depth={depth(p)} style={{ "--depth": depth(p) } as React.CSSProperties}>
-                    <a href={viewHref(recordView("project", p.id))} onClick={open}>
-                      {p.name}
+        <ListState query={projects} failed={t("projects.load_failed")}>
+          {() =>
+            all.length === 0 ? (
+              <EmptyState text={t("setup.no_projects")} action={{ label: t("setup.add_project"), onClick: () => setAdding(true) }} />
+            ) : (
+            <>
+              <RecordsTable
+                label={t("setup.projects")}
+                name={{
+                  header: t("projects.col.name"),
+                  title: (p) => p.name,
+                  cell: (p, open) => (
+                    <span className={styles.inside} data-depth={depth(p)} style={{ "--depth": depth(p) } as React.CSSProperties}>
+                      <a href={viewHref(recordView("project", p.id))} onClick={open}>
+                        {p.name}
+                      </a>
+                      {p.completed && p.group && <div className="hint">{t("projects.was_in", { group: p.group })}</div>}
+                      {p.parent && byId.get(p.parent) && <div className="hint">{t("setup.inside_of", { name: byId.get(p.parent)!.name })}</div>}
+                    </span>
+                  ),
+                }}
+                columns={columns}
+                groups={
+                  sides.size > 0
+                    ? groupBySide(all, { loose: t("projects.group.loose"), completed: t("projects.group.completed") })
+                    : groupProjects(real, { none: t("projects.group.none"), open: t("projects.group.open"), completed: t("projects.group.completed") })
+                }
+                groupHead={(g) => {
+                  const side = g.id.startsWith("side:") ? sides.get(g.id.slice(5)) : undefined;
+                  // A name too long for the cell ends in an ellipsis, with the whole name as the title.
+                  return side ? (
+                    <a href={viewHref(recordView("project", side.id))} title={side.name}>
+                      {side.name}
                     </a>
-                    {p.completed && p.group && <div className="hint">{t("projects.was_in", { group: p.group })}</div>}
-                    {p.parent && byId.get(p.parent) && <div className="hint">{t("setup.inside_of", { name: byId.get(p.parent)!.name })}</div>}
-                  </span>
-                ),
-              }}
-              columns={columns}
-              groups={
-                sides.size > 0
-                  ? groupBySide(all, { loose: t("projects.group.loose"), completed: t("projects.group.completed") })
-                  : groupProjects(real, { none: t("projects.group.none"), open: t("projects.group.open"), completed: t("projects.group.completed") })
-              }
-              groupHead={(g) => {
-                const side = g.id.startsWith("side:") ? sides.get(g.id.slice(5)) : undefined;
-                // A name too long for the cell ends in an ellipsis, with the whole name as the title.
-                return side ? (
-                  <a href={viewHref(recordView("project", side.id))} title={side.name}>
-                    {side.name}
-                  </a>
-                ) : undefined;
-              }}
-              rowKey={(p) => p.id}
-              selected={chosen}
-              onSelect={(p) => setChosen(p.id)}
-              actionsHeader={t("people.col.actions")}
-              actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
-            />
-            <p className="hint">{tn("projects.count", real.length)}</p>
-          </>
-        )}
+                  ) : undefined;
+                }}
+                rowKey={(p) => p.id}
+                selected={chosen}
+                onSelect={(p) => setChosen(p.id)}
+                actionsHeader={t("people.col.actions")}
+                actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
+              />
+              <p className="hint">{tn("projects.count", real.length)}</p>
+            </>
+            )
+          }
+        </ListState>
       </ListDetail>
       <Views />
       <Unfiled />

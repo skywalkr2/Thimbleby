@@ -17,6 +17,27 @@ export function setClockZone(zone: string | null | undefined): void {
   }
 }
 
+export type TimeFormat = "auto" | "12h" | "24h";
+let timeFormatSetting: TimeFormat = "auto";
+let timeStepSetting = 15;
+
+/** How times of day are written (`ui.time_format`) and how far apart a time box lists them (`ui.time_step`); set from the runtime
+ * configuration, like the clock's zone. A value that is none of the known ones leaves the setting as it was. */
+export function setTimePrefs(prefs: { format?: string | null; step?: number | null }): void {
+  if (prefs.format === "auto" || prefs.format === "12h" || prefs.format === "24h") timeFormatSetting = prefs.format;
+  if (prefs.step && prefs.step > 0) timeStepSetting = Math.floor(prefs.step);
+}
+
+/** The minutes between the times a time box lists. */
+export const timeStep = (): number => timeStepSetting;
+
+/** The options that make an hour and minute read on the chosen clock: the locale's own, 12-hour, or 24-hour with two digits. */
+function clockOptions(): Intl.DateTimeFormatOptions {
+  if (timeFormatSetting === "12h") return { hour: "numeric", minute: "2-digit", hour12: true };
+  if (timeFormatSetting === "24h") return { hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
+  return { hour: "numeric", minute: "2-digit" };
+}
+
 /** A formatter for moments, on the person's clock. */
 const onClock = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(undefined, { ...options, timeZone: clockZone });
 
@@ -27,7 +48,6 @@ export function isAfternoon(when: Date, fromHour: number): boolean {
 }
 
 /** A time of day written from numbers (a wall time), with no zone to move it by. */
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
 export function day(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -59,7 +79,7 @@ export function dayAndTime(iso: string): string {
 
 /** A moment's time of day on the person's clock: "7:37 AM". */
 export function time(when: Date): string {
-  return onClock({ hour: "numeric", minute: "2-digit" }).format(when);
+  return onClock(clockOptions()).format(when);
 }
 
 /** The numbers of a moment on the person's clock. */
@@ -144,7 +164,7 @@ export function addDays(iso: string, n: number): string {
 /** The time of day exactly as the server wrote it (the person's own clock), in the reader's time format. */
 export function wallTime(iso: string): string {
   const found = /T(\d{2}):(\d{2})/.exec(iso);
-  return found ? timeFormat.format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
+  return found ? new Intl.DateTimeFormat(undefined, clockOptions()).format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
 }
 
 /** Whether a date-time carries an offset ("Z" or "+02:00"), so it is an instant and not a time already on the person's clock. */
@@ -250,5 +270,5 @@ export function fieldDay(iso: string | null | undefined, locale?: string): strin
 /** A time of day written as HH:MM, in the reader's own clock (12-hour or 24-hour): "9:30 AM" or "09:30". */
 export function timeOfDay(hhmm: string | null | undefined, locale?: string): string {
   const found = /^(\d{2}):(\d{2})/.exec(hhmm ?? "");
-  return found ? formatter(locale, { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
+  return found ? formatter(locale, clockOptions()).format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
 }

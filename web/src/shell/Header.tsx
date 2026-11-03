@@ -7,6 +7,7 @@
 // Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the search field shrinks; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
 // before the Ask field gives any up.
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import type { LiveState } from "../lib/live";
@@ -119,7 +120,10 @@ export function Header(props: {
   // One status on screen: when the assistant has a problem the status chip says it, so its own line shows only while it is fine.
   const alive = useAlive();
   const lineShown = !inChip && !(alive && alive.tone !== "ok" && ASSISTANT_OWN.includes(alive.kind));
+  // On a phone the search field is behind an icon in the header; it opens in a strip under it.
+  const [searching, setSearching] = useState(false);
   return (
+    <>
     <header className={styles.header}>
       <a className={styles.brand} href={viewHref("today")} aria-label={t("nav.brand_named", { name: rc.workspace_name })} title={rc.workspace_name}>
         {rc.logo ? (
@@ -144,6 +148,9 @@ export function Header(props: {
         <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} narrow={inChip} />
         {lineShown && <AssistantLine onOpenGuide={props.onOpenGuide} />}
       </div>
+      {props.narrow && (
+        <IconButton icon="search" label={t("search.open")} aria-expanded={searching} data-ask-button="" onPress={() => setSearching((on) => !on)} />
+      )}
       {!props.narrow && (
         <div className={styles.end}>
           <Button variant="tonal" icon="plus" onClick={props.onHandIn}>
@@ -161,5 +168,21 @@ export function Header(props: {
         }
       />
     </header>
+    {props.narrow && searching && (
+      <div className={styles.searchStrip}>
+        <SearchBox
+          autoFocus
+          onOpenRecord={(kind, id) => {
+            setSearching(false);
+            props.onOpenRecord(kind, id);
+          }}
+          onAsk={(question) => {
+            setSearching(false);
+            props.onAsk(question);
+          }}
+        />
+      </div>
+    )}
+    </>
   );
 }

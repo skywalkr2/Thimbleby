@@ -12,7 +12,7 @@ import { useSetAside } from "../lib/set-aside";
 import { onAnySide, useSideFilter, useSides } from "../lib/sides";
 import { useSideSlot } from "../lib/marks";
 import { MarkDot } from "../ui/MarkDot";
-import { RAIL_ROWS } from "../lib/today";
+import { useRailRows } from "../lib/today";
 import { anyReading } from "../lib/sources";
 import { recordView, viewHref } from "../lib/views";
 import { Button } from "../ui/Button";
@@ -92,8 +92,9 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const items = (arrived.data?.items ?? []).filter((m) => onAnySide(m.sides, filter.picked));
   // The card holds a few lines and one line for the rest, so the rail is never longer than the queue beside it.
   const [all, setAll] = useState(false);
+  const railRows = useRailRows();
   const slotOf = useSideSlot();
-  const shown = all ? items : items.slice(0, RAIL_ROWS);
+  const shown = all ? items : items.slice(0, railRows);
   const more = items.length - shown.length;
   const { setAside: moveToFolder, isPersonal, isSideCorrection } = useSetAside();
   const { justMe, personal, sides } = useSides();
@@ -200,7 +201,7 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
               </li>
             );
           })}
-          {(more > 0 || all) && items.length > RAIL_ROWS && (
+          {(more > 0 || all) && items.length > railRows && (
             <li className="tb-more">
               <Button variant="quiet" size="sm" aria-expanded={all} onClick={() => setAll(!all)}>
                 {all ? t("today.arrived.fewer") : tn("today.arrived.more", more)}

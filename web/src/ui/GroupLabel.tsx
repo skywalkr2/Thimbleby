@@ -3,11 +3,12 @@
 // eye and left out of the heading's name: the list itself says how many rows it holds. `tone="danger"` is for a group of
 // things that are late or failing; the word says it too, so the color is never the only sign.
 import type { ElementType, HTMLAttributes, ReactNode } from "react";
+import { countText } from "../lib/counts";
 import styles from "./GroupLabel.module.css";
 
 export interface GroupLabelProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
-  /** How many rows the group holds, drawn in a pill after the words. Left out when it is 0 or not given. */
+  /** How many rows the group holds, drawn in a pill after the words ("99+" above 99). Left out when it is 0 or not given. */
   count?: number;
   tone?: "plain" | "danger";
   /** The element drawn: a heading by default. */
@@ -21,7 +22,7 @@ export function GroupLabel(props: GroupLabelProps) {
       <span className={styles.words}>{children}</span>
       {count ? (
         <span className={styles.count} aria-hidden="true" data-group-count="">
-          {count}
+          {countText(count)}
         </span>
       ) : null}
     </Tag>

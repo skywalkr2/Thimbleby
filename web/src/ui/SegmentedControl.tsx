@@ -2,6 +2,7 @@
 // neither is ever the main navigation.
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
 import styles from "./SegmentedControl.module.css";
+import { countText } from "../lib/counts";
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -39,7 +40,7 @@ export function SegmentedControl<T extends string>(props: {
           </span>
           {o.count ? (
             <span className={styles.count} aria-hidden="true">
-              {o.count}
+              {countText(o.count)}
             </span>
           ) : null}
         </ToggleButton>

@@ -647,6 +647,16 @@ test("a source that couldn't be read for too long is a line that starts with wha
   expect(onOpenSources).toHaveBeenCalledTimes(1);
 });
 
+test("a failing account is a state row: the warning edge, an icon and the words, never the color alone", async () => {
+  show([unreadSource()]);
+  const row = await screen.findByRole("region", { name: "Connection not read" });
+  expect(row).toHaveAttribute("data-state", "warn");
+  const mark = row.querySelector("[data-state-mark]");
+  expect(mark).toHaveAttribute("data-tone", "warn");
+  expect(mark).toHaveTextContent("Connection not read");
+  expect(mark?.querySelector("svg")).not.toBeNull();
+});
+
 test("a source line for a kind of failure with no verb of its own still starts with one", async () => {
   show([unreadSource({ problem_kind: "outage" })]);
   expect(await screen.findByRole("region", { name: "Connection not read" })).toHaveTextContent(/Check Work mail: not read since/);

@@ -58,7 +58,7 @@ import { useSides } from "../lib/sides";
 import { applyAppearanceChanges, useAppearance } from "../lib/theme";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
-import { useIsNarrow } from "../lib/media";
+import { useIsNarrow, useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
 import { AiChoices } from "./AiRouting";
@@ -108,7 +108,8 @@ export function SettingsNav(props: {
   const addonName = useAddonName();
   // On a phone the sections are behind one line that names the open one, so the page's own content is not pushed down the
   // screen by a list of every section.
-  const narrow = useIsNarrow();
+  // Below 1100px of window the list of sections folds too: the page's content has the room, not a column of section names.
+  const narrow = useIsNarrow() || useMediaQuery("(max-width: 1100px)");
   const [picking, setPicking] = useState(false);
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")

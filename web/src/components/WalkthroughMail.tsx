@@ -15,7 +15,6 @@ import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
 import { freshSettings, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useSignInWindow } from "../lib/sign-in-window";
-import { useContinue } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -26,6 +25,7 @@ import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
 import { useSourceSave } from "./Sources";
 import { ReadToken } from "./ReadToken";
 import { FormBlock } from "../ui/FormBlock";
+import { useContinue } from "../lib/walkthrough-continue";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { SOURCES, SourceSides, listOf } from "./SourceSides";
@@ -201,10 +201,6 @@ function SetAsideLine() {
 export function WalkthroughMail(props: {
   onChooseSource: (plugin: string | null, kind?: string) => void;
   onOpenAddons: () => void;
-  /** Moves on to the next screen. With it, the step draws its Continue under the result of a connection. */
-  onContinue?: () => void;
-  /** The move on is being made. */
-  continuing?: boolean;
 }) {
   const { t } = useWords();
   const client = useQueryClient();
@@ -253,8 +249,9 @@ export function WalkthroughMail(props: {
   const others = read.filter((s) => !covered.has(s.id));
   const hasResult = connected.length > 0;
 
-  // The step's own Continue is drawn under the result, so the walkthrough leaves its own out.
-  useContinue(hasResult && props.onContinue ? { run: async () => true, inline: true } : null);
+  // Continue is the walkthrough's own, in the footer on the column's edge like every other step's: it comes once something is
+  // connected (or the step was done or left for later), so this step draws none of its own and only says that it can be pressed.
+  useContinue(hasResult ? { run: async () => true } : null);
   // A result that appears while the screen is open (the sign-in just finished) takes the cursor to its first field.
   useEffect(() => {
     const was = shown.current;
@@ -362,13 +359,6 @@ export function WalkthroughMail(props: {
             );
           })}
           <SetAsideLine />
-          {props.onContinue && (
-            <Actions align="end">
-              <Button variant="primary" loading={props.continuing} onClick={props.onContinue}>
-                {t("walkthrough.next")}
-              </Button>
-            </Actions>
-          )}
         </div>
       )}
       {folded && (

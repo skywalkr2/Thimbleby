@@ -14,6 +14,8 @@ import { onSide, useSideFilter, useSideOf, useSides } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
+import { FilteredEmpty } from "../ui/FilteredEmpty";
+import { ListState } from "../ui/ListState";
 import { Skeleton } from "../ui/Skeleton";
 import { useActionReview } from "./ActionReview";
 import { AddFile } from "./AddFile";
@@ -89,21 +91,21 @@ export function Files() {
         fit={FILES_FIT}
         detail={selected ? <FileDetail file={selected} project={placeOf(selected.project)} side={!!selected.project && sides.has(selected.project)} earlier={everything.find((f) => f.id === selected.replaces)?.name} /> : null}
       >
-        {files.isPending ? (
-          <Skeleton />
-        ) : files.isError ? (
-          <EmptyState icon="alert" text={t("files.load_failed")} action={{ label: t("action.try_again"), onClick: () => void files.refetch() }} />
-        ) : everything.length === 0 ? (
-          <EmptyState text={t("files.empty")} />
-        ) : shown.length === 0 ? (
-          <EmptyState text={t("sides.empty.files", { side: side.named })} />
-        ) : (
-          <RowList>
-            {shown.map((file) => (
-              <FileRow key={file.id} file={file} project={placeOf(file.project)} side={!!file.project && sides.has(file.project)} choice={choice} />
-            ))}
-          </RowList>
-        )}
+        <ListState query={files} failed={t("files.load_failed")}>
+          {() =>
+            everything.length === 0 ? (
+              <EmptyState text={t("files.empty")} />
+            ) : shown.length === 0 ? (
+              <FilteredEmpty text={t("sides.empty.files", { side: side.named })} onClear={() => side.set("all")} />
+            ) : (
+              <RowList>
+                {shown.map((file) => (
+                  <FileRow key={file.id} file={file} project={placeOf(file.project)} side={!!file.project && sides.has(file.project)} choice={choice} />
+                ))}
+              </RowList>
+            )
+          }
+        </ListState>
       </ListDetail>
       {adding && (
         <AddFile

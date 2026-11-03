@@ -677,6 +677,10 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `title_words` (12; the most words a row's title holds before it is cut at a word and ends with an ellipsis, 7.7), `toast_seconds` (7; how long a plain message stays: a toast with Undo or another button stays until dismissed or replaced; 0 keeps every toast until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
+- `time_format` (`auto`; `12h` or `24h`) and `time_step` (15; 1 to 120 minutes): how times of day are written everywhere (`auto` follows the
+  language of the workspace) and how far apart a time box's list offers them (a time can still be typed to the minute); on the Appearance
+  page of Settings. `today.rail_rows` (3; 1 to 10): how many rows each card of Today's side column (what came in, the schedule) shows
+  before its line for the rest; on the Today page of Settings (7.21; change log 319).
 - `handled_group` (`kind`): how Handled for you groups what it lists to start with, `kind` (what the item is: bills,
   orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled) or
   `sender`; the others are one button away on the screen (7.20). Advanced.

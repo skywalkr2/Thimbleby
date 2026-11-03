@@ -12,7 +12,7 @@ handled_group: kind   # how Handled for you groups what it lists to start with: 
 handled_rows_shown: 25   # how many rows a group shows before Show more
 feedback_problem_days: 3   # how far back Send feedback offers to add failed work
 feedback_problem_max: 20   # the most failures it offers to add
-today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, schedule_days: 2, stale_after_days: 21, fold_batches_after_days: 3, top_priorities_lines: 4, top_priorities_ahead_days: 10}   # what Today's agenda and what came in cover
+today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, schedule_days: 2, stale_after_days: 21, fold_batches_after_days: 3, top_priorities_lines: 4, top_priorities_ahead_days: 10, rail_rows: 4}   # what Today's agenda and what came in cover
 schedule: {week_starts_on: sunday, day_starts: "08:00", day_ends: "18:00", month_entries: 4, timeline_range: two_weeks}   # the calendar page: its week, its hours and its months
 followups: {action_due_within_days: 5, undated_after_days: 10, question_after_days: 3, second_nudge_items: 2, escalate_after_chases: 2, soon_days: 2}   # when a sent item is due a follow-up, and how soon counts as due soon
 walkthrough: {first_promises: 3, suggested_people: 5, not_people_addresses: [info, support, sales, billing], not_people_names: [team, support, bank, store]}   # how many promises the first-result screen shows; how many people the people step suggests, and the address and name words that are never a person
@@ -21,3 +21,5 @@ brand: {color: "#8a3b5c", logo: null, logo_max_kb: 512}   # the accent color; a 
 notifications: {enabled: false, browser: true, webhook: null, webhook_format: plain, webhook_app: null, apps_extra: [], quiet_hours: {start: "21:00", end: "07:00"}, retry_minutes: 10, message_one: "1 decision waiting for you", message_many: "{count} decisions waiting for you", test_message: "This is a test. You will get a note like this when something needs you."}   # notices that something needs you: off until turned on, to you only, a count and never what an item is about
 theme: system   # system, light or dark; each person can change it on their own device
 density: comfortable   # comfortable or compact
+time_format: 24h   # how times of day are written: auto (the language's own), 12h or 24h
+time_step: 30   # the minutes between the times a time box lists

@@ -1698,6 +1698,14 @@ class RuntimeConfig(BaseModel):
     narrow_below_px: int
     toast_seconds: float
     title_words: int = Field(12, description="The most words a row's title holds before it is cut (ui.title_words).")
+    rail_rows: int = Field(
+        3, description="The rows each card of Today's side column shows before Show more (ui.today.rail_rows)."
+    )
+    time_format: Literal["auto", "12h", "24h"] = Field(
+        "auto",
+        description="How times of day are written: by the language, or on the 12 or 24-hour clock (ui.time_format).",
+    )
+    time_step: int = Field(15, description="The minutes between the times a time box lists (ui.time_step).")
     shortcuts: dict[str, str]
     wording: dict[str, str]
     demo: bool = Field(False, description="The workspace holds made-up example data; every screen says so.")
