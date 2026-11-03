@@ -23,6 +23,7 @@ Options (after `--`):
 | `--sizes a,b` | Sizes like `1440-day,390-night`. Default: 1440 day, 1440 night, 1024 day, 390 day, 390 night. |
 | `--out folder` | Where everything is written. Default `web/visual/out/` (ignored by git). It is emptied first. |
 | `--ref ref` | The git ref the mockups are read from. Default `origin/claude/sweet-einstein-s840wp`. |
+| `--inventory` | Captures every screen of the app (the map in `inventory.ts`) instead of the mockup pages; see "The inventory" below. `--pages` then names screens, and `--sizes` replaces each screen's own sizes. |
 | `--strict` | Exit with 1 when a state that has a drive could not be reached. Without it the exit code is 0 and the state is listed. |
 
 `PW_PORT_OFFSET` moves the servers' ports (they start at 8840, outside the ones `web/playwright.config.ts` uses) so two runs can share
@@ -85,3 +86,26 @@ skipped. A drive that throws is listed too, with what it said, and the tool goes
 Add an entry to `ENTRIES` in `pages.ts` (the state's `title` is its title on the sheet, exactly) and, if it needs a server state
 nobody has made yet, a stage in `stages.ts`. `names.test.ts` checks the map has every page, each entry has a drive or a reason, and
 the names match the reviewer's pictures: `npm --prefix web test -- --run visual`.
+
+## The inventory
+
+`npm --prefix web run visual:capture -- --inventory --out <folder>` captures every screen of the app, with or without a mockup, for a
+reviewer who scores each screen from pictures. `inventory.ts` is its map, in the shape of `pages.ts`: one entry per screen (its id,
+label, group, the server and stage it needs, and the clicks that reach it), and an entry per state where a shared state applies
+(Loading, Couldn't load, Offline, Filtered to nothing). It covers Today and its review, the work screens (with the Follow-ups tabs and
+the To-dos and Questions tabs), the Schedule's five views, the records and their pages, Handover, Quality, every Settings section, every
+setup step, and the header's menus, the More sheet and the drawers and dialogs.
+
+```
+<out>/<screen>[-<state>]-<theme>-<width>.png    the whole screen, at 1440 day, 1440 night, 1024 day and 390 day
+                                                 (and 390 night for the main screens, those marked `main`)
+<out>/index.md                                   every screen and state with links to its pictures, then the ones not captured, with reasons
+<out>/manifest.json                              the same, as data
+```
+
+There are no mockups to put beside these, so no side-by-side images and no `differences.md` are written, and a phone's first-screen
+picture is not taken. An entry may be limited to the widths where it exists (`widths`: the phone's More sheet). A dialog, drawer, sheet or menu (`window`, the `OVERLAYS` list in `inventory.ts`) is photographed as the window shows it, not as the whole page, so its scrim covers what a person sees. A screen that can't be
+reached (`undrivable`, or a drive that throws `Unreachable`) is listed in `index.md` with its reason; `--strict` makes a drive that
+failed exit with 1. Data a screen needs and the servers lack is added through the app's own API in `stages.ts` (the `filled` stage of
+the sides server adds two organizations, one with a very long name). Add a screen by adding an entry to `build()` in `inventory.ts`;
+`names.test.ts` checks every entry has a drive or a reason and that the reviewer's list of screens is there.

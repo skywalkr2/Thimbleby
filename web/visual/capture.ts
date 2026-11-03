@@ -11,8 +11,11 @@ import { chromium, type Browser, type BrowserContext } from "playwright-core";
 import { differencesMarkdown, writeSideBySide, type Result } from "./compose.ts";
 import { settle, Unreachable, type Env } from "./drive.ts";
 import { DEFAULT_REF, Mockups, type Section } from "./mockups.ts";
-import { captureName, chooseSizes, choosePages, FIRST_SCREEN_WIDTHS, matchMockup, slug, type Size } from "./names.ts";
+import { captureName, chooseScreens, chooseSizes, choosePages, FIRST_SCREEN_WIDTHS, inventorySizes, matchMockup, slug, type Size } from "./names.ts";
+import { indexMarkdown, type Problem } from "./index-md.ts";
+import { INVENTORY, SCREEN_IDS } from "./inventory.ts";
 import { ENTRIES, PAGES, type Entry } from "./pages.ts";
+import type { Screen } from "./inventory.ts";
 import { PORT_BASE, Servers, pythonFor, portOffset, removeStateFolder, requireFreshBuild, stateFolder } from "./servers.ts";
 import { setUp, STAGE_ORDER, type ServerName } from "./stages.ts";
 
@@ -25,6 +28,8 @@ const HELP = `Captures the built app at the reviewer's widths and themes, beside
   --sizes a,b       the sizes, like 1440-day,390-night (default: 1440 day and night, 1024 day, 390 day and night)
   --out folder      where the pictures go (default: web/visual/out)
   --ref ref         the git ref the mockups are read from (default: ${DEFAULT_REF})
+  --inventory       capture every screen of the app (inventory.ts) instead of the mockup pages: pictures and an index.md, no side-by-sides.
+                    --pages then names screens (like today,settings-ai); --sizes replaces each screen's own sizes
   --strict          exit with 1 when any state that has a drive failed to be reached
   --help            this text
 
@@ -38,10 +43,11 @@ interface Args {
   out?: string;
   ref: string;
   strict: boolean;
+  inventory: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { withStates: false, ref: DEFAULT_REF, strict: false };
+  const args: Args = { withStates: false, ref: DEFAULT_REF, strict: false, inventory: false };
   for (let n = 0; n < argv.length; n += 1) {
     const name = argv[n];
     const value = () => {
@@ -58,6 +64,7 @@ function parseArgs(argv: string[]): Args {
     else if (name === "--out") args.out = value();
     else if (name === "--ref") args.ref = value();
     else if (name === "--strict") args.strict = true;
+    else if (name === "--inventory") args.inventory = true;
     else throw new Error(`Unknown option ${name}. Try --help.`);
   }
   return args;
@@ -116,7 +123,7 @@ interface Taken {
 }
 
 /** Opens one entry in a window of this size and takes its pictures; throws what went wrong. */
-async function takeOne(context: BrowserContext, running: Running, entry: Entry, size: Size, out: string): Promise<Taken[]> {
+async function takeOne(context: BrowserContext, running: Running, entry: Entry, size: Size, out: string, firstScreens = true): Promise<Taken[]> {
   const page = await context.newPage();
   const env: Env = { page, context, size, base: running.base, token: running.token, fake: running.fake, seed: running.seed, undo: [] };
   try {
@@ -125,7 +132,7 @@ async function takeOne(context: BrowserContext, running: Running, entry: Entry, 
     await entry.open!(env);
     const taken: Taken[] = [];
     const state = entry.title ? slug(entry.title) : null;
-    if (FIRST_SCREEN_WIDTHS.includes(size.width)) {
+    if (firstScreens && FIRST_SCREEN_WIDTHS.includes(size.width)) {
       const file = captureName(entry.page, state, size, true);
       await page.screenshot({ path: join(out, file) });
       taken.push({ file, firstScreen: true });
@@ -138,7 +145,7 @@ async function takeOne(context: BrowserContext, running: Running, entry: Entry, 
       for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) if (el.scrollTop > 0) el.scrollTop = 0;
     });
     await page.waitForTimeout(300);
-    await page.screenshot({ path: join(out, file), fullPage: true });
+    await page.screenshot({ path: join(out, file), fullPage: !(entry as Screen).window });
     taken.push({ file, firstScreen: false });
     return taken;
   } finally {
@@ -150,15 +157,18 @@ async function takeOne(context: BrowserContext, running: Running, entry: Entry, 
 async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
   const out = resolve(args.out ?? join(web, "visual", "out"));
-  const pages = choosePages(args.pages, PAGES, args.withStates);
-  const sizes = chooseSizes(args.sizes);
+  const inventory = args.inventory;
+  const pages = inventory ? chooseScreens(args.pages, SCREEN_IDS) : choosePages(args.pages, PAGES, args.withStates);
+  // The inventory has sizes of its own for each screen; the windows to open are every size any of them uses.
+  const sizes = inventory && !args.sizes ? chooseSizes(undefined) : chooseSizes(args.sizes);
+  const wants = (e: Entry, size: Size) => !inventory || inventorySizes(e as Screen, args.sizes).some((s) => s.width === size.width && s.theme === size.theme);
   requireFreshBuild(web);
-  const mockups = new Mockups(args.ref, root, web);
-  const available = mockups.available();
-  const entries = ENTRIES.filter((e) => pages.includes(e.page));
+  const mockups = inventory ? null : new Mockups(args.ref, root, web);
+  const available = mockups ? mockups.available() : new Set<string>();
+  const entries: Entry[] = (inventory ? INVENTORY : ENTRIES).filter((e) => pages.includes(e.page));
   if (entries.length === 0) throw new Error("Nothing to capture.");
   rmSync(out, { recursive: true, force: true });
-  mkdirSync(join(out, "side-by-side"), { recursive: true });
+  mkdirSync(inventory ? out : join(out, "side-by-side"), { recursive: true });
   const logs = join(out, "servers");
   const servers = new Servers(root, pythonFor(root), logs);
   const cleanups: Array<() => void> = [];
@@ -186,7 +196,7 @@ async function main(): Promise<number> {
         const here = mine.filter((e) => e.stage === stage);
         if (here.length === 0) continue;
         for (const size of sizes) {
-          const driven = here.filter((e) => !e.undrivable);
+          const driven = here.filter((e) => !e.undrivable && wants(e, size));
           if (driven.length === 0) continue;
           const context = await browser.newContext({
             viewport: { width: size.width, height: size.height },
@@ -202,7 +212,7 @@ async function main(): Promise<number> {
               if (failedEntries.has(entry)) continue;
               const label = `${entry.page}${entry.title ? ` · ${entry.title}` : ""} · ${size.width} ${size.theme}`;
               try {
-                for (const one of await takeOne(context, running, entry, size, out)) {
+                for (const one of await takeOne(context, running, entry, size, out, !inventory)) {
                   taken.set(one.file, { entry, size, ...one });
                 }
                 console.log(`  captured ${label}`);
@@ -224,6 +234,16 @@ async function main(): Promise<number> {
     for (const entry of entries.filter((e) => e.undrivable)) {
       results.push({ page: entry.page, title: entry.title ?? null, file: null, sideBySide: null, label: "", firstScreen: false, problem: { kind: "undrivable", reason: entry.undrivable! }, noMockup: false });
     }
+    if (inventory) {
+      const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+      const problems: Problem[] = results.filter((r) => r.problem).map((r) => ({ page: r.page, title: r.title, label: r.label, kind: r.problem!.kind, reason: r.problem!.reason }));
+      writeFileSync(join(out, "index.md"), indexMarkdown(entries as Screen[], new Set(taken.keys()), problems, { build: `commit ${commit}`, sizes: args.sizes }), "utf8");
+      writeFileSync(join(out, "manifest.json"), JSON.stringify({ taken: [...taken.keys()], problems }, null, 2), "utf8");
+      rmSync(join(out, ".work"), { recursive: true, force: true });
+      const seconds = Math.round((Date.now() - started) / 1000);
+      console.log(`Done in ${seconds} s: ${taken.size} pictures of ${entries.length} screens and states, ${problems.filter((p) => p.kind === "undrivable").length} listed as not reachable, ${problems.filter((p) => p.kind === "failed").length} drives failed. ${join(out, "index.md")}`);
+      return args.strict && problems.some((p) => p.kind === "failed") ? 1 : 0;
+    }
     // Each capture beside its mockup.
     const cuts = new Map<string, Section[] | null>();
     for (const [file, one] of taken) {
@@ -239,11 +259,11 @@ async function main(): Promise<number> {
       let crop: Section | null = null;
       if (entry.title) {
         const key = `${entry.page}@${size.width}`;
-        if (!cuts.has(key)) cuts.set(key, await mockups.sections(browser, entry.page, ENTRIES.filter((e) => e.page === entry.page).map((e) => e.title!), size.width));
+        if (!cuts.has(key)) cuts.set(key, await mockups!.sections(browser, entry.page, ENTRIES.filter((e) => e.page === entry.page).map((e) => e.title!), size.width));
         crop = cuts.get(key)?.find((s) => s.title === entry.title) ?? null;
       }
       const caption = `${entry.page}${entry.title ? ` · ${entry.title}` : ""} · ${size.theme} · ${size.width}px${one.firstScreen ? " · first screen" : ""}`;
-      await writeSideBySide(browser, join(out, ".work"), { build: join(out, file), mockup: mockups.picture(mockup), crop, width: size.width, caption, to: join(out, "side-by-side", file) });
+      await writeSideBySide(browser, join(out, ".work"), { build: join(out, file), mockup: mockups!.picture(mockup), crop, width: size.width, caption, to: join(out, "side-by-side", file) });
       result.sideBySide = file;
       console.log(`  side by side ${file}`);
     }
@@ -257,7 +277,7 @@ async function main(): Promise<number> {
     return args.strict && failed.length > 0 ? 1 : 0;
   } finally {
     await browser?.close().catch(() => undefined);
-    mockups.close();
+    mockups?.close();
     await servers.stop();
     for (const cleanup of cleanups) cleanup();
   }

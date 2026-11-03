@@ -1,8 +1,10 @@
 // The capture tool's naming and its choice of mockup pictures. Pure functions only; no browser, no servers, no git.
 import { describe, expect, it } from "vitest";
-import { captureName, choosePages, chooseSizes, matchMockup, mockupName, parseSize, picturesIn, SIZES, sheetOf, slug } from "./names";
+import { captureName, chooseScreens, inventorySizes, choosePages, chooseSizes, matchMockup, mockupName, parseSize, picturesIn, SIZES, sheetOf, slug } from "./names";
 import { ENTRIES, PAGES } from "./pages";
 import { differencesMarkdown, type Result } from "./compose";
+import { INVENTORY, SCREEN_IDS } from "./inventory";
+import { indexMarkdown } from "./index-md";
 
 const LISTING = [
   "reviews/ui-ux-2026-10/mockups-46/png/today-day-1440.png",
@@ -101,5 +103,50 @@ describe("the difference list", () => {
     expect(text).toContain("| Difference | Fixed or why it differs |");
     expect(text).toContain("## States that could not be driven");
     expect(text).toContain("| today-states · Offline | Can't be driven yet | no fixture |");
+  });
+});
+
+describe("the inventory", () => {
+  it("takes 390 at night for the main screens only, and keeps an entry to the widths it exists at", () => {
+    const names = (e: { main?: boolean; widths?: number[] }) => inventorySizes(e).map((s) => `${s.width}-${s.theme}`);
+    expect(names({})).toEqual(["1440-day", "1440-night", "1024-day", "390-day"]);
+    expect(names({ main: true })).toEqual(["1440-day", "1440-night", "1024-day", "390-day", "390-night"]);
+    expect(names({ widths: [390] })).toEqual(["390-day"]);
+    expect(inventorySizes({ main: true }, "1440-day").map((s) => s.width)).toEqual([1440]);
+  });
+
+  it("chooses screens by id and refuses a name no screen has", () => {
+    expect(chooseScreens("a,c", ["a", "b", "c"])).toEqual(["a", "c"]);
+    expect(chooseScreens(undefined, ["a", "b"])).toEqual(["a", "b"]);
+    expect(() => chooseScreens("zzz", ["a"])).toThrow(/No such screen: zzz/);
+  });
+
+  it("lists every screen of the reviewer's inventory, each with a drive or a reason, once", () => {
+    const wanted = ["today", "since-yesterday", "what-changed", "handled-for-you", "followups", "todos", "questions", "schedule-day", "schedule-timeline", "stages", "projects", "project-page", "people", "person-page", "organizations", "files", "notes", "knowledge", "handover", "quality", "setup-welcome", "setup-done", "status-popover", "user-menu", "more-sheet", "hand-in", "add-todo", "ask", "todo-edit-details", "settings-connections", "settings-advanced"];
+    for (const id of wanted) expect(SCREEN_IDS, id).toContain(id);
+    const seen = new Set<string>();
+    for (const e of INVENTORY) {
+      expect(!!e.open || !!e.undrivable, `${e.page} has a drive or a reason`).toBe(true);
+      expect(e.label && e.group, `${e.page} has a label and a group`).toBeTruthy();
+      const key = `${e.page}/${e.title ?? ""}`;
+      expect(seen.has(key), `${key} appears twice`).toBe(false);
+      seen.add(key);
+      if (e.title) expect(slug(e.title), e.title).not.toBe("");
+    }
+  });
+
+  it("writes an index with links, dashes for sizes not planned, and the problems with their reasons", () => {
+    const entries = [
+      { page: "today", label: "Today", group: "Today", main: true },
+      { page: "today", title: "Offline", label: "Today", group: "Today" },
+      { page: "more-sheet", label: "More sheet", group: "Header", widths: [390] },
+    ];
+    const taken = new Set(["today-day-1440.png", "today-offline-day-1440.png"]);
+    const text = indexMarkdown(entries, taken, [{ page: "more-sheet", title: null, label: "390 day", kind: "failed", reason: "no More button" }], { build: "commit x" });
+    expect(text).toContain("[view](today-day-1440.png)");
+    expect(text).toContain("| Today (`today`) | Offline |");
+    expect(text).toContain("not captured");
+    expect(text).toMatch(/\| `more-sheet` \| {2}\| 390 day \| the drive stopped: no More button \|/);
+    expect(text).toContain("2 of 3 screens and states have pictures (2 pictures)");
   });
 });

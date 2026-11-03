@@ -94,3 +94,19 @@ export function choosePages(option: string | undefined, all: readonly string[], 
   }
   return all.filter((name) => chosen.has(name));
 }
+
+/** The window sizes of one screen of the inventory: 1440 day and night, 1024 day and 390 day, and 390 night for a main screen. An
+ * entry that exists only at some widths keeps those; `option` (like `1440-day`) replaces the default list. */
+export function inventorySizes(entry: { main?: boolean; widths?: number[] }, option?: string): Size[] {
+  const base = option ? chooseSizes(option) : SIZES.filter((s) => entry.main || !(s.width === 390 && s.theme === "night"));
+  return entry.widths ? base.filter((s) => entry.widths!.includes(s.width)) : base;
+}
+
+/** The screens the options ask for, by id; a name no screen has is an error. */
+export function chooseScreens(option: string | undefined, all: readonly string[]): string[] {
+  if (!option) return [...all];
+  const asked = option.split(",").map((s) => s.trim()).filter(Boolean);
+  const unknown = asked.filter((name) => !all.includes(name));
+  if (unknown.length) throw new Error(`No such screen: ${unknown.join(", ")}. The screens are ${all.join(", ")}.`);
+  return all.filter((name) => asked.includes(name));
+}

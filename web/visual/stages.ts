@@ -5,14 +5,14 @@ import { api, LONG } from "./drive.ts";
 import { chromiumSignIn } from "./signin.ts";
 
 export type ServerName = "accounts" | "sides" | "clear";
-export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "bulk" | "done";
+export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "filled" | "bulk" | "done";
 
 export const STAGE_ORDER: Record<ServerName, Stage[]> = {
   // fresh: nothing signed in, the walkthrough closed so the app's own menus are there; signed-in: three accounts read;
   // failing: the third account's sign-in has been withdrawn.
   accounts: ["fresh", "signed-in", "failing"],
-  // empty: five sides and nothing else; seeded: a few people, to-dos and a long-named person; bulk: over a hundred to-dos.
-  sides: ["empty", "seeded", "bulk"],
+  // empty: five sides and nothing else; seeded: a few people, to-dos and a long-named person; filled: two organizations, one with a very long name (the inventory); bulk: over a hundred to-dos.
+  sides: ["empty", "seeded", "filled", "bulk"],
   // done: setup finished and nothing waiting (the server's own seed; nothing is added here).
   clear: ["done"],
 };
@@ -134,6 +134,24 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
         const project = n % 3 === 2 || projects.length === 0 ? undefined : projects[n % projects.length];
         await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [me], project } });
       }
+      return;
+    }
+    case "sides/filled": {
+      // Two organizations through the app's own API, one with a very long name, for the screens that list or open them.
+      const make = (body: object) => api<{ id: string }>(env.base, env.token, "organizations", { method: "POST", body });
+      const long = await make({ name: "Featherstonehaugh, Winterbottom and Ashcombe Printing and Bindery Limited", notes: "Prints and binds small runs." });
+      const short = await make({ name: "Quarry Press" });
+      env.seed.organizations = { long: long.id, short: short.id };
+      // To-dos owned by other people are the follow-ups: one overdue, one soon, one with no date, two in a project.
+      const people = env.seed.people as { pat: string; long: string; fresh: string };
+      const projects = (env.seed.sideProjects as string[]) ?? [];
+      const owed: Array<{ text: string; when?: string; owner: string; project?: string }> = [
+        { text: "Send the proofs back", when: dayOffset(-3), owner: people.pat },
+        { text: "Confirm the delivery window", when: dayOffset(2), owner: people.pat, project: projects[0] },
+        { text: "Share the guest list", owner: people.fresh, project: projects[0] },
+        { text: "Return the signed contract", when: dayOffset(6), owner: people.long, project: projects[1] },
+      ];
+      for (const { owner, ...todo } of owed) await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [owner] } });
       return;
     }
     case "sides/bulk": {
