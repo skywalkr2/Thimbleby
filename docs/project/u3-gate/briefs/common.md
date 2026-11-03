@@ -14,7 +14,7 @@ Before the app goes back to the UI/UX reviewer, every screen must score at least
 
 - **Score issues** by screen id, in `$G/gate-score/A/part1.md`, `part2.md` and `part3.md`, and in `$G/gate-score/B/part1.md`. Each has a section per screen, with issues tagged [B], [C] or nit, and some marked broken.
   - Fix every [B] and every broken issue for your screens.
-  - Fix the [C] issues where the fix is local and clear.
+  - Fix every [C] issue too. A [C] issue is left open only under the rule in "Definition of done".
   - Where the two scorers disagree, the stricter one counts.
 - **Audit rows**, in `$G/audit-open-rows.md`. The Part 1 table has the code location and a proposed fix for each row; the "Y07 to Y11, item by item" table does the same for the polish items.
 - **Pictures:** `$G/gate-inventory/` (named `<screen>[-<state>]-<theme>-<width>.png`, with `index.md`), and `$G/gate-mockups/side-by-side/` for the eight mockup pages (build beside mockup).
@@ -47,8 +47,8 @@ Fix, run your own tests, capture your screens, look at every picture against its
 - The unit tests for the files you changed.
 - `uv run pytest -q -n0 <files>` for any Python you changed.
 - `uv run python -m engine.selfcheck`, `uv run ruff check .` and `uv run ruff format --check .`.
-- The browser projects you touched, once, with the `PW_PORT_OFFSET` you were given.
-- Capture your screens once, by day and by night at 1440 and at 390:
+- The browser projects you touched, with the `PW_PORT_OFFSET` you were given, on the final code.
+- Capture your screens after your last code change, by day and by night at 1440 and at 390:
   `PW_PORT_OFFSET=<yours> npm --prefix web run visual:capture -- --inventory --pages <your screen ids> --out $G/gate-fix/<batch>-capture`
   Open the pictures and check each issue you fixed. Say in the report what each picture shows now.
 
@@ -62,9 +62,26 @@ Fix, run your own tests, capture your screens, look at every picture against its
 - Never add anything to an allowlist.
 - Don't poll: run each long command once in the background and wait for its notification.
 
+## Definition of done (read this before you start; your batch is not done until all of it holds)
+
+1. **Every line of `docs/project/u3-gate/items.md` tagged with your batch,** and every `[audit]` line for your rows, ends with exactly one of:
+   - `→ fixed: <test name>`, with the line ticked `- [x]`;
+   - `→ judged wrong: <why, with the picture or code that shows it>`;
+   - `→ needs the owner: <the decision, with the choices>`;
+   - `→ belongs to <batch>: <why>`.
+   "Not done", "left" and "not checked" are not endings. If you can't finish a line, keep working on it.
+2. **Every check under "Checks before you report" ran on the final code,** after your last change, and exited 0. A check that ran before a later change doesn't count.
+3. **Every picture of your screens was captured after your last change and opened,** and the report says what each shows.
+
+**If your context runs short before you're done,** don't stop silently and don't report the batch as finished. Write `$G/gate-fix/<batch>-handoff.md` with:
+- every line still open, and how far it got;
+- the files you changed;
+- the checks still to run.
+Then report "handing off" with that path. The main session starts a fresh helper from it. There is no time limit that ends the batch; the definition of done does.
+
 ## Report
 
 - **Per issue or row:** what you found, the fix (file:line), the test, and what the capture shows.
 - **Issues you judged wrong**, and why.
-- **What's left**, and why.
+- **Items closed:** every line of your batch from `items.md`, copied exactly, with its ending (see the definition of done).
 - **Each command's exit code.**

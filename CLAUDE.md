@@ -103,6 +103,20 @@ The self-check enforces it: a decision entry cites its change-log section ("Chan
   and fixing what a review finds there.
 - A subagent follows its brief literally, so every brief states the expected starting state (which files, records and
   functions exist) for the subagent to check before it builds on it.
+- **Every brief has a definition of done, and nothing else ends the work** (owner, 2026-11-03: "why are the processes
+  ending early"). Helpers followed their briefs literally and stopped early, because the briefs said "time-box … stop and
+  report", "fix where local and clear", "run once" and "report what's left".
+  - A brief never says those. It names the exact list the helper owns (item lines, rows or tests).
+  - Every item on that list must end as one of:
+    - fixed, with its test;
+    - judged wrong, with the evidence;
+    - needs the owner, with the choices;
+    - belongs to another named batch.
+    "Left" is not an ending.
+  - Every check and capture runs on the final code, after the last change.
+  - A helper whose context runs short writes a hand-off file and says "handing off". The main session starts a fresh
+    helper from it.
+  - A batch is sized to fit one helper's context: about 50 to 80 items or one shared component, not a whole area.
 - A subagent's "this can't be done" or "this needs a new op" comes back to the main session, never straight into a design
   change or a report.
 - **Quality and efficiency governance is the prime directive** (owner, 2026-10-13):
