@@ -41,13 +41,13 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [G4] [C] (A-part2) 2 Layout · `side-page-day-1440.png`: the message is centred at x 580 in a content column that starts at x 178, so it shares no edge with the title above. Fix: left-align under the title or centre both.
 
 ### status-popover (G1)
-- [ ] [G1] [B] (A-part2) 4 Type · `status-popover-day-1440.png`, y 120-195: the Connections summary is a single run-on paragraph of 11px text mixing roman and italic: "Checked 2 connections, last at 9:33 PM · Mail from before Tue, Oct 20 has not been read yet · Your inbox, avery.lane.home@example.com not read yet · Your calendar, avery.lane.home@example.com not read yet · Your inbox, avery.lane.studio@example.com not read yet · Your calendar, ...". It repeats what the three account rows directly below say (Read 9:33 PM / Not read yet). Fix: delete the paragraph; keep the account rows, and show one line "Checked 9:33 PM · mail before Oct 20 not read yet".
-- [ ] [G1] [B] (A-part2) 2 Layout · `status-popover-day-1440.png`, y 35-495: the popover is 445px wide and 460px tall on a 625px window and covers the page's greeting and the first list; it has five sections (Updates, Backup, Connections, Restart, Reginald) in two columns with unequal heights, plus a nested list of accounts with its own card and a full-width "Open Connections" button. Rubric: no card inside a card. Fix: a single column, four rows (status dot, label, one action), accounts folded under Connections.
-- [ ] [G1] [B] (A-part2) 1 Hier · `status-popover-day-1440.png`: three actions look alike: "Refresh" (outline), "Set up backups" (outline), "Open AI account setup" (outline) and one filled "Restart now"; the Restart row is the one that blocks work but sits at the bottom left, under the long paragraph. Fix: order rows by urgency: Restart first.
-- [ ] [G1] [C] (A-part2) 8 Phone · `status-popover-day-390.png`: the popover is a full-width sheet whose top is under the header (y 47), no visible title or close, 800px+ tall; the 12-line italic paragraph is at 17px and pushes accounts to y 480. "Reginald" section is cut at the bottom (y 840). Fix: the paragraph fix above; sheet with a title and a close.
-- [ ] [G1] [C] (A-part2) 5 Comp · `status-popover-day-1440.png`: colours of the three status words (brown "No backup on another device", brown "Restart the app...", brown "The assistant isn't set up yet") are all the same amber with no icon or dot; the header chip beside it is "Restart to finish" in a different style from the "Reginald" with a triangle. Fix: one status row pattern (dot or icon, word, action).
-- [ ] [G1] [C] (A-part2) 6 Colour · `status-popover-day-1440.png`: status brown on white is about 5:1; ok. `status-popover-night-1440.png` has orange on dark at 8:1; ok. The state is by text plus colour; the dots on the account rows are green/grey by colour with words beside them, ok.
-- [ ] [G1] [C] (A-part2) 3 Space · `status-popover-day-1440.png`: section gaps vary (Updates to Connections 12px, Connections to Restart 24px, rows inside accounts 0 with hairlines); labels at 10px uppercase-free sentence case differ from the page's uppercase group labels.
+- [ ] [G1] [B] (A-part2) 4 Type · `status-popover-day-1440.png`, y 120-195: the Connections summary is a single run-on paragraph of 11px text mixing roman and italic: "Checked 2 connections, last at 9:33 PM · Mail from before Tue, Oct 20 has not been read yet · Your inbox, avery.lane.home@example.com not read yet · Your calendar, avery.lane.home@example.com not read yet · Your inbox, avery.lane.studio@example.com not read yet · Your calendar, ...". It repeats what the three account rows directly below say (Read 9:33 PM / Not read yet). Fix: delete the paragraph; keep the account rows, and show one line "Checked 9:33 PM · mail before Oct 20 not read yet". → **fixed in G1 pass 1, awaiting review and merge: coverage as rows (StatusMenu.test.tsx).**
+- [ ] [G1] [B] (A-part2) 2 Layout · `status-popover-day-1440.png`, y 35-495: the popover is 445px wide and 460px tall on a 625px window and covers the page's greeting and the first list; it has five sections (Updates, Backup, Connections, Restart, Reginald) in two columns with unequal heights, plus a nested list of accounts with its own card and a full-width "Open Connections" button. Rubric: no card inside a card. Fix: a single column, four rows (status dot, label, one action), accounts folded under Connections. → **in G1 pass 2.**
+- [ ] [G1] [B] (A-part2) 1 Hier · `status-popover-day-1440.png`: three actions look alike: "Refresh" (outline), "Set up backups" (outline), "Open AI account setup" (outline) and one filled "Restart now"; the Restart row is the one that blocks work but sits at the bottom left, under the long paragraph. Fix: order rows by urgency: Restart first. → **in G1 pass 2.**
+- [ ] [G1] [C] (A-part2) 8 Phone · `status-popover-day-390.png`: the popover is a full-width sheet whose top is under the header (y 47), no visible title or close, 800px+ tall; the 12-line italic paragraph is at 17px and pushes accounts to y 480. "Reginald" section is cut at the bottom (y 840). Fix: the paragraph fix above; sheet with a title and a close. → **in G1 pass 2.**
+- [ ] [G1] [C] (A-part2) 5 Comp · `status-popover-day-1440.png`: colours of the three status words (brown "No backup on another device", brown "Restart the app...", brown "The assistant isn't set up yet") are all the same amber with no icon or dot; the header chip beside it is "Restart to finish" in a different style from the "Reginald" with a triangle. Fix: one status row pattern (dot or icon, word, action). → **in G1 pass 2.**
+- [ ] [G1] [C] (A-part2) 6 Colour · `status-popover-day-1440.png`: status brown on white is about 5:1; ok. `status-popover-night-1440.png` has orange on dark at 8:1; ok. The state is by text plus colour; the dots on the account rows are green/grey by colour with words beside them, ok. → **in G1 pass 2.**
+- [ ] [G1] [C] (A-part2) 3 Space · `status-popover-day-1440.png`: section gaps vary (Updates to Connections 12px, Connections to Restart 24px, rows inside accounts 0 with hairlines); labels at 10px uppercase-free sentence case differ from the page's uppercase group labels. → **in G1 pass 2.**
 
 ### user-menu (G4)
 - [ ] [G4] [C] (A-part2) 1 Hier · `user-menu-day-1440.png`, y 35-293: the menu mixes three jobs (workspace: Settings and "How Reginald is doing"; Theme with three radios; Spacing with two) in one 150px column. Appearance settings take more room than the two links a person came for. Fix: Theme and Spacing as one "Appearance" row opening Settings, or as two compact segmented controls.
@@ -742,22 +742,22 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [audit] **X05** (Done, untested (three-account wording)): Add a case with three accounts to `tests/test_source_folders_once.py` asserting the label names the account. S
 - [ ] [audit] **X09** (Partly): Pick one entry. Keep the per-account one and make the header button open it for the chosen account. `Sources.tsx`, `ConnectionCard.tsx`. Test: `Sources.test.tsx`. M
 - [ ] [audit] **X11** (Needs a decision): Choices below (D1). After the decision: `en.json`, `WelcomeAi.tsx`, `HandIn*.tsx`. Test: `WelcomeAi.test.tsx` plus a wording scan. M
-- [ ] [audit] **X43** (Not done): In `RecordsTable.tsx`, hide a column when every row's cell renders empty, at rest and with the pane the same way. Add one line saying what "need a place" means (`Projects.tsx`, wording). Tests: `src/ui/RecordsTable.test.tsx`, `tables.spec.ts`. M. One fix serves X43, VS12, Y05 and Y11-21
+- [ ] [audit] **X43** (Not done): In `RecordsTable.tsx`, hide a column when every row's cell renders empty, at rest and with the pane the same way. Add one line saying what "need a place" means (`Projects.tsx`, wording). Tests: `src/ui/RecordsTable.test.tsx`, `tables.spec.ts`. M. One fix serves X43, VS12, Y05 and Y11-21 → **fixed in G1 pass 1, awaiting review and merge: RecordsTable.test.tsx "a column that is empty for every row is not drawn".**
 - [ ] [audit] **X44** (Partly): The sheet's own "left" is "any work word on a screen no one named". Add a scan: render each main screen on the just-me seed and fail on a list of work words. `just-me.spec.ts`. S
-- [ ] [audit] **X48** (Partly): The delay is the same cause as X64. Fix there. S, inside X64
+- [ ] [audit] **X48** (Partly): The delay is the same cause as X64. Fix there. S, inside X64 → **fixed in G1 pass 1, awaiting review and merge: act.test.tsx, the toast no longer waits for the reads.**
 - [ ] [audit] **X59** (Partly): (a) A next step on each tile, or a recorded decision that only two have one. (b) Clip the last week's end to the window end in `engine/quality.py` or say "so far". (c) A period chooser needs a decision (D4). Tests: `Quality.test.tsx`, `tests/test_quality.py`. M
 - [ ] [audit] **X60** (Not done): In `today_queue.py`, make no `first_go` line while the AI is not set up. The existing "choose an AI account" line stays. Test: `tests/test_first_go.py`. S
-- [ ] [audit] **X63** (Partly): Add an "unknown page" view with "That page isn't here" and Back to Today. For an unknown Settings section, show a note on Settings. `lib/views.ts`, `App.tsx`, wording. Update `views.test.ts`; add a browser case. M
-- [ ] [audit] **X64** (Partly): (a) Add `tone: "warn"` to those sites: S, and a test that fails on any `*_blocked` toast without a tone. (b) Measure the lag per CLAUDE.md, then fix the queue: M. Total M
+- [ ] [audit] **X63** (Partly): Add an "unknown page" view with "That page isn't here" and Back to Today. For an unknown Settings section, show a note on Settings. `lib/views.ts`, `App.tsx`, wording. Update `views.test.ts`; add a browser case. M → **fixed in G1 pass 1, awaiting review and merge in part: the Not here page (views.test.ts, App.test.tsx); the Settings sentence is in pass 2.**
+- [ ] [audit] **X64** (Partly): (a) Add `tone: "warn"` to those sites: S, and a test that fails on any `*_blocked` toast without a tone. (b) Measure the lag per CLAUDE.md, then fix the queue: M. Total M → **fixed in G1 pass 1, awaiting review and merge: toasts.test.tsx scan, act.test.tsx.**
 - [ ] [audit] **X65** (Partly): Needs the reviewer's exact steps. Until then: S, add a test that makes two unseen entries and expects the Today line
 - [ ] [audit] **X69** (Partly): (a) Link the source mail in the review rows (`BatchDetail.tsx`, `ItemRow`). (b) The two count lines depend on X85's drafts. Tests: `BatchDetail.test.tsx`, `Today.test.tsx`. M
 - [ ] [audit] **X101** (Partly): Fetch an account's folders while adding (`api/setup_routes.py` folders route by account; `Sources.tsx`). Test: `Sources.test.tsx`, `tests/test_folder_chooser.py` or the folders route test. M
 - [ ] [audit] **Y01** (Partly): Style "Set them separately" as a visible link-button (underline and chevron): `WalkthroughMail.module.css`, S. Phone People layout: `WalkthroughPeople.module.css`, S. Test: `Walkthrough.test.tsx` plus `first-day.spec.ts` at 390
 - [ ] [audit] **Y03** (Partly): See Y10
-- [ ] [audit] **Y05** (Partly): The columns: see X43. Add a size test for Remove. S
-- [ ] [audit] **VC01** (Partly): Give each held kind an icon in the slot: `HeldLines.tsx`. Test: `HeldLines.test.tsx`. S
-- [ ] [audit] **VC02** (Partly): One `back` prop on `PageHeader` used by every record and settings page; remove the bare Back variants. Test: `PageHeader.test.tsx` plus a scan in `shared-rules.spec.ts`. M
-- [ ] [audit] **VC07** (Partly): Same as X64 (a). S
+- [ ] [audit] **Y05** (Partly): The columns: see X43. Add a size test for Remove. S → **fixed in G1 pass 1, awaiting review and merge in part: the columns (RecordsTable.test.tsx); the Remove size test is in pass 2.**
+- [ ] [audit] **VC01** (Partly): Give each held kind an icon in the slot: `HeldLines.tsx`. Test: `HeldLines.test.tsx`. S → **fixed in G1 pass 1, awaiting review and merge: HeldLines.test.tsx, every held line has its kind's icon.**
+- [ ] [audit] **VC02** (Partly): One `back` prop on `PageHeader` used by every record and settings page; remove the bare Back variants. Test: `PageHeader.test.tsx` plus a scan in `shared-rules.spec.ts`. M → **fixed in G1 pass 1, awaiting review and merge in part: one BackLink (PageHeader.test.tsx); the scan is in pass 2.**
+- [ ] [audit] **VC07** (Partly): Same as X64 (a). S → **fixed in G1 pass 1, awaiting review and merge: toasts.test.tsx.**
 - [ ] [audit] **VC11** (Needs a decision): D2
 - [ ] [audit] **VS01** (Needs a decision): D2
 - [ ] [audit] **VS02** (Partly): Same as Y01. S. Correct the cited test name on the sheet
@@ -768,14 +768,14 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [audit] **VS08** (Needs a decision): D5 (dropdown or labelled buttons). One-line rows: S
 - [ ] [audit] **VS09** (Not done): Remove the inner Message/Table tabs (the table becomes a menu action); move the message style into a drawer; one Copy message. `FollowUps.tsx`, `MessageStyle.tsx`. Test: `FollowUps.test.tsx`. M
 - [ ] [audit] **VS10** (Partly (remove "by Friday" from the left list)): Done tab: needs a finished-to-dos list (API plus `OpenItems.tsx`): M, and a decision, D6. "Show N more": needs a setting, S
-- [ ] [audit] **VS12** (Not done): See X43
+- [ ] [audit] **VS12** (Not done): See X43 → **fixed in G1 pass 1, awaiting review and merge: RecordsTable.test.tsx.**
 - [ ] [audit] **VS14** (Not done): Use `FileDrop` as the Files empty state (S). Knowledge: an inline add row per panel, like `InlineAddTodo`, with Undo (M). Tests: `Files.test.tsx`, `Knowledge.test.tsx`. Total M. Deferred in writing by the builder to a later step: `u3-differences/states-phone.md`
 - [ ] [audit] **VS16** (Not done): Add `last_checked` to `HandoverView` and a check-now route (`engine/handover.py`, `api/routes.py`), then pill, time and button in `Handover.tsx`. Run `uv run python -m api.openapi`. Tests: `tests/test_handover*.py`, `Handover.test.tsx`. M
 - [ ] [audit] **VS17** (Partly): Measure the gap above and below each group label in the browser, then fix the margin. `styles.css`. Test: a measured case in `settings-walk.spec.ts`. S
-- [ ] [audit] **VP01** (Partly): Add Settings and panel footers to the `shared-rules.spec.ts` edge check. S
-- [ ] [audit] **VP02** (Partly): Same as VC01. S. The sheet's "Today's lines have an empty slot" is stale
+- [ ] [audit] **VP01** (Partly): Add Settings and panel footers to the `shared-rules.spec.ts` edge check. S → **fixed in G1 pass 1, awaiting review and merge in part: Settings in the edge check (shared-rules.spec.ts); panel footers are in pass 2.**
+- [ ] [audit] **VP02** (Partly): Same as VC01. S. The sheet's "Today's lines have an empty slot" is stale → **fixed in G1 pass 1, awaiting review and merge: Row.test.tsx, HeldLines.test.tsx.**
 - [ ] [audit] **VP03** (Partly): Use `GroupLabel` for Settings' section and nav labels. `Settings.tsx`, `styles.css`. Test: `Settings.test.tsx`. S
-- [ ] [audit] **VP04** (Partly): Add the setup steps and the open dialogs to the one-filled-button count in `shared-rules.spec.ts`. S
+- [ ] [audit] **VP04** (Partly): Add the setup steps and the open dialogs to the one-filled-button count in `shared-rules.spec.ts`. S → **fixed in G1 pass 1, awaiting review and merge: shared-rules.spec.ts, the setup guide and an open dialog.**
 - [ ] [audit] **VP07** (Partly): Add the four states to Schedule and Connections (`ScheduleViews.tsx`, `Sources.tsx`); a conflict note on a to-do's edit; Knowledge's offline line. Tests: `ListStates.test.tsx`, `states-phone.spec.ts`. M
 - [ ] [audit] **VP09** (Not done): Decide the motion list first (D7). Then `tokens.css` durations, `prefers-reduced-motion`, one test. M
 - [ ] [audit] **VP10** (Partly): A whole-app keyboard walk: every main screen reachable and operable, with the cursor on the heading. New `web/e2e/keyboard.spec.ts`. M
@@ -800,7 +800,7 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [audit] **Y08-7** (Not done (nothing found)): Six small fixes, one test each. M
 - [ ] [audit] **Y08-9** (Not done (nothing found)): Reword. `en.json`. S
 - [ ] [audit] **Y09-1** (Not done): Lowercase the label when it follows words, or phrase it "from your calendar". `BatchDetail` title, `lib`. S
-- [ ] [audit] **Y09-4** (Not done): See X64 (a)
+- [ ] [audit] **Y09-4** (Not done): See X64 (a) → **fixed in G1 pass 1, awaiting review and merge: toasts.test.tsx.**
 - [ ] [audit] **Y09-5** (Not done): Drop "In this message"; size the box to its text; cap the bullet list. `FollowUps.tsx`. Test: `FollowUps.test.tsx`. S-M
 - [ ] [audit] **Y09-6** (Not done): Add the link to People. `FollowUps.tsx`. S
 - [ ] [audit] **Y09-7** (Partly): Move the help above the group: `NeedsADate.tsx`. S
@@ -808,8 +808,8 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [audit] **Y09-10** (Not done): Reword both strings. `en.json`. S
 - [ ] [audit] **Y09-11** (Partly): Check the "found" count includes the look-back; add a test. `engine/quality.py`. S
 - [ ] [audit] **Y09-13** (Not done): Drop the heading; drop the clause when no team. `PersonPage.tsx`. S
-- [ ] [audit] **Y10-F21** (Partly): X64
-- [ ] [audit] **Y10-F22** (Partly): X63
+- [ ] [audit] **Y10-F21** (Partly): X64 → **fixed in G1 pass 1, awaiting review and merge: act.test.tsx.**
+- [ ] [audit] **Y10-F22** (Partly): X63 → **fixed in G1 pass 1, awaiting review and merge: views.test.ts.**
 - [ ] [audit] **Y10-F23** (Partly): VS17
 - [ ] [audit] **Y10-F25** (Not done (nothing found)): Hide both once a key is stored; reword. `SecretField`. S
 - [ ] [audit] **Y10-F26** (Not done): Use `handover.intro.just_me`-style text when no folder is set. `Handover.tsx`. S
@@ -826,7 +826,7 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [audit] **Y11-18** (Partly): Fold identical all-day entries. `lib/calendar.ts`. Test: `calendar.test.ts`. S
 - [ ] [audit] **Y11-19** (Not done): Add a Calendar picker to the Add form. `ScheduleAdd`. M
 - [ ] [audit] **Y11-20** (Not done): Add an "account" group. `engine/handled`, `Handled.tsx`. M
-- [ ] [audit] **Y11-21** (Not done): X43
+- [ ] [audit] **Y11-21** (Not done): X43 → **fixed in G1 pass 1, awaiting review and merge: RecordsTable.test.tsx.**
 - [ ] [audit] **Y11-22** (Partly): Ellipsis with a title; side sheet on a phone; an empty "How to reach" prompts. `People.tsx`. S-M
 - [ ] [audit] **Y11-23** (Not done): Drop one. S
 - [ ] [audit] **Y11-24** (Partly): Find the double listing; test it. S
