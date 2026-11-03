@@ -4,6 +4,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Restore from a copy, staged and swapped in at the next start (X98, X04; section 314)
+
+**Decided:** (owner: every item of the re-sweep fixed before the gate week; design by the main session.) A person restores one of
+their backup copies from the Backups page, with no command line. (1) *Staged.* "Restore this copy" opens a confirmation that says
+the workspace goes back to how it was on the copy's date and time, that changes since are set aside and not deleted, and that the
+app restarts when the person chooses; an encrypted copy asks for its key in the same dialog. Confirming runs the existing
+`restore_backup` into `.cockpit/restore-pending/` (a refused key or a damaged copy is said in the dialog and leaves nothing),
+writes the marker `READY` last, and asks for a restart the usual way (new work waits; only the person's Restart now restarts).
+One restore waits at a time; a second replaces the first once it is itself made; Cancel removes it. (2) *Swapped at the next
+start*, before anything opens the workspace: the database with its side files, `config/`, `data/`, `sources/`, `files/`,
+`texts/`, `plugin-data/` and, when the restored workspace has them, `.gitignore` and `.git` are renamed into
+`.cockpit/before-restore/<UTC time>/`, then the restored ones are renamed in. Renames only; `before-restore/` is never deleted.
+A failing step is undone, the staged restore stays and the workspace starts as it was, with a Today line saying the restore didn't
+happen and why; a start after the computer stopped midway finishes the plan it wrote first. (3) *After*, Today has "Check your
+restored workspace (from <date>)", with Dismiss and "Put back what was there before", which stages the newest kept folder the same
+way, so each direction is reversible. (4) *Hosted* works the same (the setting decides nothing). (5) *With a synced folder set up
+the restore is refused*, with the reason: the next start compares this computer's history with the folder's, finds the restored
+one a prefix of the folder's and loads the folder's over it, so the restore would be undone without a word; turning the synced
+folder off first, or a restore into a new workspace, are the ways. (6) Not replaced: the private folder `.cockpit/` and anything
+outside the workspace folder. *Why:* replacing the database, settings and lease under the process that holds them is unsafe, so
+the app restores beside itself and swaps at a start when nothing is open; nothing is deleted so no backup is needed first.
+*Impact:* a new module (`engine/restore_in_app.py`), four routes and a field on `GET /api/backups`, one queue line kind
+(`restore`), one worker reason (`restore` in `restart_for`), two screens (Backups, Today), wording; no setting, no plugin API
+change. Change log: section 314.
+
 ## 2026-11-03: The product's own palette, faces and mark are the default; night surfaces lift (VP16, VP06; section 312)
 
 **Decided:** (1) The default tokens are the UI/UX reviewer's 4.6 palette: warm paper by day and a burgundy accent, near-black

@@ -136,9 +136,9 @@ export function labelForKey(key: string, items: Item[], t: T, has: Has): string 
 
 const RESTART_SHOWN = 3;
 
-/** What a restart brings in besides settings, by the name the app gives it: "code" is an update to the app and
- * "add-ons" an add-on installed or removed. */
-export const RESTART_OWN: Record<string, string> = { code: "restart.for_code", "add-ons": "restart.for_addons" };
+/** What a restart brings in besides settings, by the name the app gives it: "code" is an update to the app,
+ * "add-ons" an add-on installed or removed and "restore" a backup copy waiting to be swapped in. */
+export const RESTART_OWN: Record<string, string> = { code: "restart.for_code", "add-ons": "restart.for_addons", restore: "restart.for_restore" };
 
 /** What waits for a restart, in plain words: each settings key by its label, "code" as an update to the app, "add-ons"
  * as a change to the add-ons. Up to three are named, then how many more. Nothing when nothing waits. */

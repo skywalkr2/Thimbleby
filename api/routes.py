@@ -11,6 +11,7 @@ import json
 import logging
 from dataclasses import asdict
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -124,6 +125,7 @@ from api.schemas import (
     OwnerSuggestionView,
     PanelRow,
     PanelView,
+    PendingRestoreView,
     PeoplePasteDone,
     PeoplePasteEntry,
     PeoplePasteIn,
@@ -158,6 +160,8 @@ from api.schemas import (
     RequestChanged,
     RequestCounts,
     Requeued,
+    RestoreCopyIn,
+    RestoreStaged,
     RetryRequest,
     SendBack,
     SentCounts,
@@ -208,6 +212,7 @@ from engine import (
     new_terms,
     own_edits,
     repeats,
+    restore_in_app,
     review_batches,
     source_intake,
 )
@@ -2773,10 +2778,17 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return status()
 
+    def pending_restore() -> PendingRestoreView | None:
+        found = restore_in_app.pending(ws)
+        if found is None:
+            return None
+        return PendingRestoreView(made_at=found.made_at, kind=found.kind, records=found.records)
+
     @r.get("/backups")
     def backups() -> BackupsView:
         """Where backups go and how they stand: the places with how each last went, the newest dated copies found in
-        them, and whether backups run on their own (the setting is on and there is a place to put them)."""
+        them, whether backups run on their own (the setting is on and there is a place to put them), and a restore
+        waiting for the next start."""
         found = backup_module.overview(ws, cfg)
         b = found.state
         return BackupsView(
@@ -2793,7 +2805,60 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             copies=[BackupCopyView(**vars(c)) for c in found.copies],
             schedule=found.schedule,
             switch=found.switch,
+            pending=pending_restore(),
+            restore_blocked=restore_in_app.blocked(cfg),
         )
+
+    def restore_staged(stage: Any) -> RestoreStaged:
+        """Stage a restore (`stage` makes it) and ask for the restart that swaps it in: nothing in the workspace
+        changes until then. A copy that can't be restored (a wrong key, a damaged copy) is refused with the reason
+        and nothing is left."""
+        if why := restore_in_app.blocked(cfg):
+            raise HTTPException(status_code=409, detail=why)
+        try:
+            found = stage()
+        except restore_in_app.KeyNeeded as err:
+            raise HTTPException(status_code=409, detail=str(err), headers={"X-Cockpit-Needs": "key"}) from None
+        except restore_in_app.RestoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        worker.restore_staged()
+        return RestoreStaged(
+            pending=PendingRestoreView(made_at=found.made_at, kind=found.kind, records=found.records),
+            can_restart=worker.can_restart,
+        )
+
+    @r.post("/backups/restore")
+    def backup_restore(body: RestoreCopyIn) -> RestoreStaged:
+        """Make the workspace ready to go back to how it was in one of the copies the Backups page lists. Nothing is
+        replaced now: the swap is made at the next start, which the person chooses, and what the workspace holds then
+        is set aside (never deleted) so it can be put back. An encrypted copy needs its key."""
+        wanted = Path(body.path).expanduser().resolve()
+        copy = next(
+            (c for c in backup_module.overview(ws, cfg, limit=10**6).copies if Path(c.path).resolve() == wanted), None
+        )
+        if copy is None:
+            raise HTTPException(status_code=404, detail="That copy isn't in a place your backups go.")
+        return restore_staged(lambda: restore_in_app.stage(ws, wanted, body.key, made_at=copy.made_at))
+
+    @r.post("/backups/restore/cancel")
+    def backup_restore_cancel() -> Ok:
+        """Cancel the restore waiting for the next start; the workspace was never changed."""
+        restore_in_app.cancel(ws)
+        worker.restore_cancelled()
+        return Ok(ok="restore")
+
+    @r.post("/restore/put-back")
+    def restore_put_back() -> RestoreStaged:
+        """Make the workspace ready to go back to how it was before the last restore, from the files that restore set
+        aside. It is staged and swapped in the same way, at the next start."""
+        return restore_staged(lambda: restore_in_app.stage_put_back(ws))
+
+    @r.post("/restore/dismiss")
+    def restore_dismiss() -> Ok:
+        """Take the line about the last restore off Today."""
+        restore_in_app.dismiss(ws)
+        changed()
+        return Ok(ok="restore")
 
     @r.get("/events")
     async def stream() -> StreamingResponse:

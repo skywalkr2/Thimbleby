@@ -30,6 +30,8 @@ _REQUEUE_OP = "worker.requeue"
 _INTERRUPTED_OP = "worker.interrupted"
 #: What `Worker.restart_for` names when an add-on that is running was updated from the screen.
 ADD_ONS = "add-ons"
+#: What `Worker.restart_for` names while a restore of a backup copy waits for the restart that swaps it in.
+RESTORE = "restore"
 
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
@@ -325,6 +327,8 @@ class Worker:
         self.restart_requested = False
         #: The settings keys whose change waits for the restart, and "code" when the program itself changed.
         self.restart_for: list[str] = []
+        #: The restart is needed only because a restore is staged (cancelling it lifts the hold).
+        self._held_for_restore = False
 
     def apply_live(self) -> bool:
         """Take in changed settings now when every changed key is live (an AI account, the person's name); returns
@@ -617,6 +621,33 @@ class Worker:
             self.restart_for.append(ADD_ONS)
         if self.restart_needed is None:
             self.restart_needed = RESTART_NEEDED
+        self.events.changed()
+
+    def restore_staged(self) -> None:
+        """A restore of a backup copy is ready to be swapped in at the next start. Whatever the app does from now on
+        would be set aside by it, so new work waits for the restart the person chooses, with the restore named as what
+        it is for."""
+        if RESTORE not in self.restart_for:
+            self.restart_for.append(RESTORE)
+        if self.restart_needed is None:
+            self.restart_needed = RESTART_NEEDED
+            self._held_for_restore = True
+        self.events.changed()
+
+    def restore_cancelled(self) -> None:
+        """The staged restore was cancelled: if it was all the restart was for, the app carries on, and the work it
+        held is released."""
+        if RESTORE in self.restart_for:
+            self.restart_for.remove(RESTORE)
+        if self._held_for_restore and not self.restart_for and self.restart_needed == RESTART_NEEDED:
+            self.restart_needed = None
+            self._held_for_restore = False
+            ctx = WriteContext(actor="engine", trust="trusted", op="worker.release")
+            with self.store.transaction() as tx:
+                for r in tx.list("request"):
+                    if r.data["state"] == "queued" and r.data.get("waiting") == RESTART_NEEDED:
+                        tx.update("request", r.id, {"waiting": None}, ctx, read_version=r.version)
+            self.poke()
         self.events.changed()
 
     @property

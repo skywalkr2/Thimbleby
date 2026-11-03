@@ -1027,6 +1027,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 314. Restore from a backup copy in the app, staged and swapped in at the next start (2026-11-03; sweep X98, X04)
+
+| Where | Before | Now |
+|---|---|---|
+| Backups page (7.9) | "Restoring isn't a button in the app yet"; a copy could only become a new workspace from the command line | **Restore this copy** on each copy: a confirmation in plain words (the workspace goes back to how it was then, changes since are set aside not deleted, the app restarts when the person chooses), an encrypted copy asks for its key in the same dialog, a refusal is said in the dialog. A waiting restore shows on the page with Restart now and Cancel. **Built** (`web/src/components/BackupsPanel.test.tsx`, `RestoreLine.test.tsx`; `tests/test_restore_in_app.py`; browser test `web/e2e/settings-setup-fixes.spec.ts`, written, not yet run) |
+| Staging (5.0) | None | `restore_backup` into `.cockpit/restore-pending/`, marker `READY` last, then the usual restart ask (`restart_for` names `restore`); one at a time, a second replaces the first once made, Cancel removes it. **Built** (`tests/test_restore_in_app.py`: staging, wrong or missing key, second restore, Cancel; route tests) |
+| The swap (5.0, 6.14) | None | At the next `cockpit serve`, before anything opens the workspace: what a restore replaces is renamed into `.cockpit/before-restore/<time>/`, the restored files renamed in, `restore-pending/` removed; renames only, never deleted; a failing step is undone and the staged restore stays; a start after the computer stopped midway finishes the same plan. **Built** (`tests/test_restore_in_app.py`: the swap, renames only, a failing rename, a stopped swap, serving swaps first) |
+| Today (7.7) | None | `restore` lines: waiting for the restart (Restart now, Cancel in the menu), "Check your restored workspace (from <date>)" with Dismiss and Put back what was there before, and "The restore didn't happen" with why. **Built** (`tests/test_restore_in_app.py`: the lines; `RestoreLine.test.tsx`) |
+| Put back (5.0) | None | Stages the newest `before-restore/` folder the same way (its database's log folded in first), so each direction is reversible. **Built** (`tests/test_restore_in_app.py`: put back, the unfolded log) |
+| Synced folder (5.0) | n/a | A restore is refused while one is set up, with the reason: the next start would load the folder's newer copy over it. **Built** (`tests/test_restore_in_app.py`: the synced folder test; `BackupsPanel.test.tsx`) |
+
+- **API:** `POST /api/backups/restore`, `POST /api/backups/restore/cancel`, `POST /api/restore/put-back`, `POST /api/restore/dismiss`;
+  `GET /api/backups` gains `pending` and `restore_blocked`; the queue gains the kind `restore`.
+- **05 (5.0), 06 (6.14), 07 (7.9):** the restore, the swap and the page as above. The swap keeps this computer's own
+  settings (`storage.yaml`, `server.yaml`) in place, and a failed swap removes only its own plan from the kept folder.
+
 ## 312. The product's palette, faces and mark; night surfaces lift (2026-11-03; visual review VP16, VP06)
 
 | Where | Before | Now |

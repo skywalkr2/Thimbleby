@@ -533,11 +533,37 @@ class BackupCopyView(BaseModel):
     encrypted: bool
 
 
+class PendingRestoreView(BaseModel):
+    """A restore staged for the next start: the workspace goes back to how it was at `made_at` once the app restarts."""
+
+    made_at: str | None = Field(description="The moment the workspace goes back to (a copy's date), when known.")
+    kind: Literal["backup", "put_back"] = Field(
+        description="backup: one of the copies; put_back: the files an earlier restore set aside."
+    )
+    records: int = Field(description="How many records the restored workspace holds.")
+
+
+class RestoreCopyIn(BaseModel):
+    """POST /api/backups/restore: stage one of the copies the Backups page lists. `key` is the key of an encrypted copy;
+    it is used once, to open the copy, and never stored."""
+
+    path: str = Field(description="The copy's dated folder, as GET /api/backups lists it.")
+    key: str | None = Field(None, description="What an encrypted copy was sealed with.")
+
+
+class RestoreStaged(BaseModel):
+    """A restore is ready; it is swapped in at the next start, which the person chooses (POST /api/restart)."""
+
+    pending: PendingRestoreView
+    can_restart: bool = Field(description="The app can start itself again when the person asks.")
+
+
 class BackupsView(BaseModel):
     """Where backups go and how they stand, for Settings > Backups: the places, the last one made, the newest copies
-    found, and whether backups run on their own. Restoring a backup is
-    `cockpit restore --backup <dated folder> <new folder>`, which makes a new workspace and never changes this one;
-    restoring to a moment in time (`--as-of`) isn't built."""
+    found, whether backups run on their own, and a restore waiting for the next start. Restoring a copy is
+    POST /api/backups/restore: it stages the copy and the app restarts when the person chooses (nothing is replaced
+    until then, and what the workspace held is set aside, never deleted). `cockpit restore --backup <dated folder>
+    <new folder>` makes a new workspace instead; restoring to a moment in time (`--as-of`) isn't built."""
 
     state: BackupStatus
     message: ScreenText
@@ -547,6 +573,12 @@ class BackupsView(BaseModel):
         description="Backups are made on their own now: the setting is on and there is a place to put them."
     )
     switch: bool = Field(description="The setting itself, which stays on while there is no folder.")
+    pending: PendingRestoreView | None = Field(
+        None, description="A restore waiting for the next start, if there is one."
+    )
+    restore_blocked: ScreenText | None = Field(
+        None, description="Why a copy can't be restored from this screen right now, when something stops it."
+    )
 
 
 class RequestCounts(BaseModel):
@@ -3288,6 +3320,10 @@ class QueueLineView(BaseModel):
     workspace, `subject` the folder as it is named now, `text` as it would be named; Rename is POST
     /api/folder-offers/{state}/rename and Keep POST /api/folder-offers/{state}/keep; nothing moves without the
     person's yes, and the workspace folder is renamed the next time the app starts);
+    `restore` is a restore of a backup copy over the workspace (`state` pending, restored or not_restored, `at` the
+    moment the workspace goes back to or went back to, `text` the folder holding what was there before, or why the swap
+    didn't happen); Restart now is POST /api/restart, Cancel is POST /api/backups/restore/cancel, Put back what was
+    there before is POST /api/restore/put-back and Dismiss is POST /api/restore/dismiss;
     `intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with
     something to look over, `outcome` their results counted, `items` what needs a look), one line in place of a line
     for each; the list opens on Today and "All looks good" confirms it (POST /api/changesets/confirm); `batches` is
@@ -3462,6 +3498,7 @@ class QueueLineView(BaseModel):
         "pattern",
         "terms",
         "project_ending",
+        "restore",
     ]
     count: int
     fact: str | None = Field(
@@ -3696,6 +3733,9 @@ class QueueLineView(BaseModel):
             "stopped",
             "backups",
             "workspace",
+            "pending",
+            "restored",
+            "not_restored",
         ]
         | None
     ) = Field(
@@ -3716,7 +3756,9 @@ class QueueLineView(BaseModel):
         "line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: "
         "moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, "
         "moved the same way) or replies (the same person was owed `count` replies). For a folder_rename line: backups "
-        "or workspace, which folder is offered a rename.",
+        "or workspace, which folder is offered a rename. For a restore line: pending (a restore waits for the "
+        "restart that swaps it in), restored (the swap was made; `text` is the folder holding what was there before) "
+        "or not_restored (it wasn't; `text` says why and the workspace is as it was).",
     )
     choices: list[str] = Field(
         default_factory=list,

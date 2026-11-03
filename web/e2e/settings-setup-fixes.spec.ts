@@ -160,6 +160,51 @@ test.describe.serial("setup and settings fixes", () => {
     expect(((await long.json()) as { detail: string }).detail).toMatch(/at most \d+ characters/);
   });
 
+  test("X98, X04. Restore this copy asks first, then the restore waits for the restart a person starts, shown on the page and on Today, and Cancel leaves the workspace as it was", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const headers = { Authorization: `Bearer ${info.token}` };
+    // The folder removed by the test above is chosen again through the app's own route, which makes the first copy.
+    const fingerprint = ((await (await page.request.get("api/settings", { headers })).json()) as { fingerprint: string }).fingerprint;
+    const chosen = await page.request.post("api/setup/backup-folder", { headers, data: { path: info.backup_folder, label: "", fingerprint } });
+    expect(chosen.ok()).toBe(true);
+    expect((await page.request.post("api/backup", { headers })).ok()).toBe(true);
+    await page.goto(`?token=${info.token}`);
+    await go(page, "settings/backups");
+    const main = page.locator("main#main");
+    await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible(LOADED);
+    const copies = main.getByRole("list", { name: "Copies you can restore from" });
+    await expect(copies.getByRole("listitem").first()).toBeVisible(LOADED);
+    // The words say it can be done here, and no longer that it can't.
+    const restore = main.getByRole("group", { name: "Restore from a backup" });
+    await expect(restore).toContainText("set aside, not deleted");
+    await expect(restore).not.toContainText(/isn't a button|cockpit|--backup/);
+    // Restore asks first and says plainly what happens; the cursor is on the dialog's heading, as the copy has no key.
+    await copies.getByRole("button", { name: /^Restore the copy from / }).first().click();
+    const ask = page.getByRole("dialog", { name: /^Restore your workspace from / });
+    await expect(ask).toContainText("Changes made since then are set aside, not deleted.");
+    await expect(ask).toContainText("needs to restart to do this, and you choose when");
+    await ask.getByRole("button", { name: "Restore this copy" }).click();
+    // The restore waits for the restart: the page says so with Cancel, and nothing restarted by itself.
+    const waiting = main.locator("[data-restore-pending]");
+    await expect(waiting).toContainText(/Restores .+ at the next restart/, LOADED);
+    await expect(waiting.getByRole("button", { name: "Restart now" })).toBeVisible();
+    const status = (await (await page.request.get("api/status", { headers })).json()) as { restart_for: string[] };
+    expect(status.restart_for).toEqual(["restore"]);
+    // Today has a line for it, with the restart for the person to start. It is not started here.
+    await go(page, "today");
+    const line = page.locator('[data-queue-line="restore"]');
+    await expect(line).toContainText(/Restart to restore your workspace \(from /, LOADED);
+    await expect(line.getByRole("button", { name: "Restart now" })).toBeVisible();
+    // Cancel removes it, and the page goes back to how it was.
+    await go(page, "settings/backups");
+    await main.locator("[data-restore-pending]").getByRole("button", { name: "Cancel the restore" }).click();
+    await expect(main.locator("[data-restore-pending]")).toHaveCount(0, LOADED);
+    await expect(main.getByText("Okay. Nothing will be restored.")).toBeVisible();
+    expect(((await (await page.request.get("api/status", { headers })).json()) as { restart_for: string[] }).restart_for).toEqual([]);
+  });
+
   test("X99. the synced folder shows after Save with when it applies and Restart now, and a disabled Save says why", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto(`?token=${info.token}`);

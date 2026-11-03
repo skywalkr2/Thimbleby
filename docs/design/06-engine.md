@@ -2088,6 +2088,12 @@ started (a hash of the config files; the newest modification time of the program
   `tests/test_journeys.py::test_j9_work_held_for_a_restart_is_the_first_line_on_today_and_runs_after_the_restart_i_choose`): the
   first Decide line on Today (kind `restart`) says "Restart to run 7 waiting requests", with the count, for someone who opens the
   laptop and never looks at the header. It only asks: the restart starts when the person chooses Restart now.
+- **A restore of a backup copy is the one change swapped in at the start** (5.0; change log 314). `cockpit serve` runs
+  `engine/restore_in_app.py::swap_pending` first, before it reads the settings and before anything opens the workspace (the
+  store, the worker, the synced folder, the add-ons): when `.cockpit/restore-pending/READY` exists it renames what a restore
+  replaces into `.cockpit/before-restore/<time>/` and the restored files in, and undoes the renames and leaves the staged restore
+  when any step fails. Staging it names `restore` in the worker's `restart_for` and holds new work like any change that needs a
+  restart (cancelling the restore lifts the hold); the person's own Restart now is the only thing that restarts the app.
 - **Restart now** (`POST /api/restart`) restarts between requests, at once if none is running; locally the process re-executes
   itself. A copy that can't start itself again (it was not started by `cockpit serve`) says to close it and start it. The
   serve command stops its web server without a signal, so the restart cannot end the process by raising the stop signal

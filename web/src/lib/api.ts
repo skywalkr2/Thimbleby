@@ -372,6 +372,14 @@ export const api = {
     call<S["Noted"]>("POST", `followups/${id(person)}/actions/${id(action)}/finished`, note ? { note } : undefined),
   backup: () => call<S["Status"]>("POST", "backup"),
   backups: () => call<S["BackupsView"]>("GET", "backups"),
+  /** Makes ready the restore of one copy (an encrypted one with its key); nothing is replaced until the next start. */
+  restoreCopy: (body: S["RestoreCopyIn"]) => call<S["RestoreStaged"]>("POST", "backups/restore", body),
+  /** Cancels the restore that waits for the next start. */
+  cancelRestore: () => call<S["Ok"]>("POST", "backups/restore/cancel"),
+  /** Makes ready the return to what was there before the last restore. */
+  putBackRestore: () => call<S["RestoreStaged"]>("POST", "restore/put-back"),
+  /** Takes the line about the last restore off Today. */
+  dismissRestore: () => call<S["Ok"]>("POST", "restore/dismiss"),
 
   /** What the assistant learned from each correction that has something to show, for the line under its card. */
   learned: () => call<S["LearnedView"]>("GET", "knowledge/learned"),

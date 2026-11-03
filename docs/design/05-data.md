@@ -50,6 +50,26 @@ offered, and a passage both changed is the person's pick.
 - **A whole backup** (*phase A*): `cockpit restore --backup <backup folder> <new folder>` makes a workspace from one dated
   backup. It checks the database before copying, never writes into a folder that has files, and never touches the
   running workspace (decisions, 2026-10-12, "Phase A's design calls").
+- **A backup copy over this workspace, from the Backups page** (decisions, 2026-11-03, "Restore from a copy, staged and swapped
+  in at the next start"; change log 314; built, `tests/test_restore_in_app.py`). It is two steps, so the running app never has its
+  own files replaced under it. *Staging:* Restore this copy, after a confirmation (an encrypted copy asks for its key in the
+  same dialog), runs the same `restore_backup` into `<workspace>/.cockpit/restore-pending/` (a refused key or a damaged copy is
+  said in the dialog and leaves nothing), writes the marker `restore-pending/READY` last, and asks for a restart the usual way
+  (6.14): new work waits, and the person chooses Restart now. One restore waits at a time; a second replaces the first once it is
+  itself made, and Cancel removes it. *The swap* runs at the next start, in `cockpit serve`, before the settings are read and
+  before the store, the worker, the synced folder or any add-on opens the workspace: what the workspace holds that a restore
+  writes (the database with its `-wal` and `-shm` files, `config/`, `sources/`, `files/`, `texts/`, `plugin-data/`, `data/`,
+  and `.gitignore` and `.git` when the restored workspace has them) is renamed into `.cockpit/before-restore/<UTC time>/`, then
+  the restored ones are renamed in and `restore-pending/` goes. Only renames on one disk, so nothing is copied or deleted, and
+  `before-restore/` is never removed. This computer's own settings (`config/storage.yaml` and `config/server.yaml`, the files the synced folder's handover keeps per computer) stay as they were. The plan is written before the first rename; a step that fails is undone, the staged
+  restore stays as it was, the workspace starts as it was and Today says the restore didn't happen and why; a start after the
+  computer stopped midway finishes the same plan. Afterwards Today has one line, "Check your restored workspace (from <date>)",
+  which says what was kept aside and offers **Put back what was there before**: that stages the newest `before-restore/` folder
+  the same way (with the same confirmation and restart), so each direction can be taken back. What is not replaced: the private
+  folder `.cockpit/` (the install token, the keys the app keeps, the install id, the notes about the last checks) and anything
+  outside the workspace folder (the secrets an environment variable or the system's key store holds, the record of the last
+  workspace started, the add-ons installed in the app's own folders). With a synced folder set up the restore is refused with
+  the reason: the next start would find the restored history shorter than the folder's and load the folder's over it.
 - **Point in time** (*designed, not yet built*; roadmap, phase E): `cockpit restore --as-of <time>` imports the last export
   before that time and replays the ledger up to it. A restore is itself recorded in the ledger, so it can be undone.
 - **One record** (*designed, not yet built*; roadmap, phase L-more): the Admin tab can show any record as it was at a past time (from the ledger) and
@@ -69,7 +89,8 @@ offered, and a passage both changed is the person's pick.
   that can't be made stops the change before anything is written, with a plain message ("Nothing was changed, because the
   backup made first couldn't be made. ... Check where backups go in Settings, then try again."); with no place to back up
   to, or `storage.backups.before_changes` off, nothing is made and the change goes ahead. `cockpit restore --backup` writes
-  only into an empty new folder, so there is nothing of the person's to back up; `cockpit restore --as-of` (designed) takes
+  only into an empty new folder, and a restore from the Backups page sets what was there aside instead of deleting it, so there is
+  nothing of the person's to back up; `cockpit restore --as-of` (designed) takes
   one the same way when it is built. The two keys are files-only; the fictional workspaces turn the first off because their
   backup folder is made up.
 

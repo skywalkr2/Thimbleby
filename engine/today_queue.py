@@ -141,6 +141,11 @@ class Line:
     folder_rename (a folder made under the product's earlier name, found where the new default would be: `state` is
     backups or workspace, `subject` the folder as it is named now and `text` as it would be named; Rename is the
     person's own change and Keep stops the offer for good),
+    restore (a restore of a backup copy over the workspace: `state` pending while it waits for the restart that swaps it
+    in, restored for the first look after it was (`text` the folder that holds what was there before), or not_restored
+    when the swap didn't happen and the workspace is as it was (`text` says why); `at` is the moment the workspace
+    goes back to, or went back to; Restart now is POST /api/restart, Cancel POST /api/backups/restore/cancel, Put back
+    what was there before POST /api/restore/put-back and Dismiss POST /api/restore/dismiss),
     sent_check (a message the person copied that no sent message has matched, asked about once a sent folder is
     being read: its copy's id in `sent_copy`, who it was for in `person`, what it covered in `questions` and
     `actions`),
@@ -352,6 +357,56 @@ def _folder_lines(ws: Any, store: Any, cfg: Any, home: Path | None = None) -> li
                     text=folder_rename.shown(list(new)),
                 )
             )
+    return lines
+
+
+def _restore_lines(ws: Any, cfg: Any) -> list[Line]:
+    """Lines about restoring a backup copy over the workspace (design 5.0): one while a restore waits for the restart
+    that swaps it in, and one for how the last swap went (the workspace is back as it was then, or the swap didn't
+    happen and why), until the person dismisses it."""
+    from engine import restore_in_app
+
+    here = zone(cfg)
+
+    def local(stamp: str | None) -> str | None:
+        return datetime.fromisoformat(stamp).astimezone(here).isoformat() if stamp else None
+
+    lines: list[Line] = []
+    staged = restore_in_app.pending(ws)
+    if staged is not None:
+        lines.append(
+            Line(
+                key="restore:pending",
+                group="decide",
+                kind="restore",
+                state="pending",
+                at=local(staged.made_at),
+                since=staged.staged_at,
+            )
+        )
+    noted = restore_in_app.note(ws)
+    if noted is not None and noted.state == restore_in_app.RESTORED:
+        lines.append(
+            Line(
+                key="restore:restored",
+                group="review",
+                kind="restore",
+                state="restored",
+                at=local(noted.made_at),
+                text=noted.kept,
+            )
+        )
+    elif noted is not None:
+        lines.append(
+            Line(
+                key="restore:not_restored",
+                group="risk",
+                kind="restore",
+                state="not_restored",
+                at=local(noted.made_at),
+                text=noted.reason,
+            )
+        )
     return lines
 
 
@@ -925,6 +980,7 @@ def _everything(
 
     lines.extend(_model_lines(store, cfg))
     lines.extend(_folder_lines(ws, store, cfg))
+    lines.extend(_restore_lines(ws, cfg))
 
     # Decide: an account the person said "Not now" about reading their work mail and notes, until they allow it (the
     # line goes the moment the account may see the internal level, however that came about).
@@ -2017,6 +2073,7 @@ _KIND_ORDER = {
     "account_move": 2,
     "sent_folder": 2,
     "folder_rename": 3,
+    "restore": -1.5,
     "model_watch": 2,
     "model_moved": 2,
     "identity": 0,

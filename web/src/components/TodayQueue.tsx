@@ -30,6 +30,7 @@ import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, use
 import { useSideFilter, useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { HeldLine, isHeld } from "../shell/HeldLines";
+import { isRestoreLine, RestoreLine } from "./RestoreLine";
 import { useQuietChoices } from "./QuietLine";
 import { Button } from "../ui/Button";
 import { Panel } from "../ui/Panel";
@@ -137,7 +138,7 @@ export function TodayQueue(props: {
   const live = new Map(lines.map((line) => [line.key, line]));
   const ghostable = (key: string) => {
     const old = known.current.get(key);
-    return !!old && !touched.current.has(key) && !isHeld(old) && !isLearned(old);
+    return !!old && !touched.current.has(key) && !isHeld(old) && !isRestoreLine(old) && !isLearned(old);
   };
   // The keys on screen as of the last commit, which is what a hold keeps when the data changes under it.
   const shownKeys = useRef<string[]>([]);
@@ -263,7 +264,7 @@ export function TodayQueue(props: {
 
   // From 1680px the inspector shows one line from the moment Today opens: the line that has the cursor, or the one last
   // clicked, the remembered one when there is one. The lines it can show are the queue's own rows, in the order on screen.
-  const ordered = GROUPS.flatMap((group) => inGroup(display.map((d) => d.line), group)).filter((line) => !isHeld(line) && !isLearned(line));
+  const ordered = GROUPS.flatMap((group) => inGroup(display.map((d) => d.line), group)).filter((line) => !isHeld(line) && !isRestoreLine(line) && !isLearned(line));
   const selectedAt = props.selected ? ordered.findIndex((line) => line.key === props.selected!.key) : -1;
   useEffect(() => {
     if (!props.beside || !queue.data) return;
@@ -496,6 +497,13 @@ function LineItem(props: {
     return (
       <li className={styles.item}>
         <HeldLine line={line} onOpenAiAccounts={handlers.onOpenAiAccounts} onOpenHandover={handlers.onOpenHandover} onOpenRules={handlers.onOpenRules} onOpenKnowledge={handlers.onOpenKnowledge} onAddAccount={handlers.onAddAccount} onOpenSources={handlers.onOpenSources} />
+      </li>
+    );
+  }
+  if (isRestoreLine(line)) {
+    return (
+      <li className={styles.item}>
+        <RestoreLine line={line} />
       </li>
     );
   }
