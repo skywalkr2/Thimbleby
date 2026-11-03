@@ -1,0 +1,182 @@
+# Tracking: re-sweep at `8ebf3cf` (the host's working copy)
+
+Every row of the host's tracking copy (`docs/project/sweep-04ffc21e-tracking.md` at 083d820), checked against the running app at `8ebf3cf`.
+- **The Checked column:** ✓ pass, ◐ partly, ✗ fail, or — not checkable.
+- **Sources:** the sweep appendix (S1–S5) or visual report (V1–V5) that holds the evidence. Screenshots are named in those appendices.
+- **Merging:** where two sweeps checked the same row, the worse verdict counts.
+**Counts:** ✓ 26 · ◐ 69 · ✗ 23 · — 7, of 125 rows.
+
+
+| ID | Sev | Title | Host status | Checked at 8ebf3cf | What was seen | Source |
+|---|---|---|---|---|---|---|
+| X01 | P0 | Quick changes are silently lost | Fixed | ✗ Fail (partly) | S4: Three money edits 300ms apart, then a reload 3s later: the third was lost ("$203.00" typed, "$102.00" after the reload). With a 12s wait all three kept. Saves run one at a time, 2.5–3s apart. The fields show "Changed · Reset" at once with no "Saving" cue, and  | S4 |
+| X02 | P0 | Setup can't be left while a step is missing | Fixed | ✓ Pass | S1: "Finish later" from Welcome and all 8 steps lands on Today with the cursor on "Today"; reloads stay; "Continue setup" opens You on its heading (side effect: P1-1) | S1 |
+| X03 | P0 | "Paste a list" saves junk as people, and setup can't remove anyone | Fixed | ✓ Pass | S1: Junk left out ("Left out, since they don't read as a person"), and Remove on every row. "Maya", a single word, was added | S1 |
+| X04 | P0 | Backups has no backup folder, no Back up now and no restore | Fixed | ◐ Partly | S4: The folder chooser, Back up now and encrypted copies work. **There's no restore button:** "It isn't a button yet: it is done from the command line", with a "For developers: the steps" box | S4 |
+| X05 | P0 | "Choose what to read" makes duplicate sources that multiply items | Fixed | ◐ Partly | S4: Refusals work for a repeated inbox and a repeated folder. **The same folder with a trailing "/" is accepted**, giving two identical "source / A folder" rows / S5: A duplicate inbox is refused: "Your inbox already reads this. Change that one, or choose another folder." But with three inboxes it doesn't say which | S4, S5 |
+| X06 | P0 | An unsent to-do shows as "Sent today", and settles its own follow-up | Fixed | ✓ Pass | S3: An untold to-do for Maya shows "Maya Okafor · To send". After Mark sent, the Waiting tab shows "sent today" with "Mark their work done" | S3 |
+| X07 | P1 | "Your promises" says nothing was found when something was | Fixed | ✓ Pass | S1: Today shows "Look over what was found in Your inbox: 3 items" | S1 |
+| X08 | P1 | A mailbox, calendar or folder is added without a check, then fails with the wrong reason | Fixed | ✓ Pass | S1: A bad link is refused ("That isn't a web address…"); an unreachable one is refused; neither is added | S1 |
+| X09 | P1 | "Another mail or calendar" and "Add a connection" read like an admin console | Fixed | ◐ Partly | S1: The names are plain. A mailbox can be added two ways on one screen. The calendar form has an unlabeled password box (P1-5) | S1 |
+| X10 | P1 | The AI choices: broken wording, model names, dead-ends | Fixed | ◐ Partly | S1: No model names, and plain error wording. A stale OpenAI guide and a duplicate account card remain (P1-3, P1-4) | S1 |
+| X11 | P1 | Privacy is asked twice, in three vocabularies | Fixed | ◐ Partly | S1: Three vocabularies remain: "Allow / Not my private mail", "Normal / Confidential / Private", and the mail sides | S1 |
+| X12 | P1 | A reload loses typed setup answers | Fixed | ✓ Pass | S1: After a reload: "Picked up where you left off…". The AI key stays empty, with no line saying so (P2) | S1 |
+| X13 | P1 | Getting back to setup, and its counts | Fixed | ◐ Partly | S1: The setup line works as the way back, but it says "0 of 7 done" or "6 of 7 done" beside an 8-step rail | S1 |
+| X14 | P1 | Done and the setup checklist claim false things | Fixed | ✗ Fail | S1: "Your promises" shows Done after only Continue on an explainer whose own text says nothing is spent until Start. "People: No one added" | S1 |
+| X15 | P1 | Business and job editing in setup | Fixed | ✓ Pass | S1: The job banner, two businesses, a group with tick boxes, Remove | S1 |
+| X16 | P1 | Time zone | Fixed | ✗ Fail | S1: P1-2: Today's Schedule card and Came in show UTC beside "Now" in the person's zone. **Confirmed by the reviewer** | S1 |
+| X17 | P1 | The AI is marked untested after a harmless change | Fixed | — Not checked | S1:  | S1 |
+| X18 | P1 | The side filter has no effect | Fixed | ◐ Partly | S2: There's one side, so no side filter, which is correct. On To-dos the person filter changes the rows, but the footer still says "49 need you" / S5: The filter works on Today, Schedule, What changed and Follow-ups, at 1440 and 1024. It fails at 390 with long names, and it leaks on Today (P1-7, P1-8) | S2, S5 |
+| X19 | P1 | Reviews: rejected items stay, drafts aren't shown, and Undo leaves the list out of step | In progress | ◐ Partly | S2: "All looks good" removes the review at once, with "Reviewed and filed. Undo". "Not right" asks "What should Reginald do differently about: Bring the floor plan.?" (a stray ".?"). The redoing line isn't built / S3: "Not right" and Send back works, and the item leaves the batch. **The re-run adds copies:** the inbox review went from 3 to 4 items, and "Get a catering quote." appeared twice; after "All looks good" the To-dos list holds two identical rows. The redoing line w | S2, S3 |
+| X20 | P1 | "Move them?" asks once per side, and only Today warns | Fixed | — Not checkable | S2: One side only | S2 |
+| X21 | P1 | Asked to identify the person's own mailbox name, once per email | Fixed | ✓ Pass | S2: No "this is me" question for the person's own mailbox | S2 |
+| X22 | P1 | A question line repeats itself and is recorded as a note | Fixed | — Not checkable | S2: No question lines were produced | S2 |
+| X23 | P1 | The brief: counts, repeats, timing and the weekly message | Fixed | ◐ Partly | S2: From an earlier capture: "Get a catering quote by Wed, Nov 4., due Wed, Nov 4" (".," and the date said twice) | S2 |
+| X24 | P1 | The clash line | Fixed | ✗ Fail | S2: The opened clash shows When and Calendar, and only Close. No Move, no Open | S2 |
+| X25 | P1 | Today's count rises from the person's own actions, and counts disagree | Fixed | ◐ Partly | S2: 50 to-dos add no Today lines. But asking a question added "Answer / Read the answer…", taking Today from 4 to 5 while the answer was already on screen | S2 |
+| X26 | P1 | "Reginald is on it" while nothing runs | Fixed | ◐ Partly | S2: Start waits as it should. The toast "Asked. Reginald is on it." is still there when the answer shows | S2 |
+| X27 | P1 | The header search doesn't search, and the Ask pane squeezes Today | Fixed | ✓ Pass | S2: "/" focuses search, with results, "Nothing found", and Ask as an overlay. Caveats: "Send the venue list by 2026-11-02." shows with a raw date; "Maya", "Theo" and email subjects aren't found | S2 |
+| X28 | P1 | Came in rows don't open | Fixed | ◐ Partly | S2: Came in rows open, but the page is raw (P1-2) | S2 |
+| X29 | P1 | What changed is flooded, and shows wrong states | Fixed | ◐ Partly | S3: Five of the person's own due-date edits folded into one row, "You changed Send the headcount by Wed, Nov 4. 5 times". **But** four or five extra "After '…' moved" rows and a "Learning from a correction" row still appear. The pane shows raw ids (P0-2), and its  | S3 |
+| X30 | P1 | Handled for you contradicts itself | In progress | ◐ Partly | S3: Set aside is fine. "Read, nothing to do · 0" says "once a mailbox is connected and mail arrives" although the mailbox is connected. "Closed without you seeing" says "2 of 2 closed without you seeing them", then "Everything that was closed, you made or saw." | S3 |
+| X31 | P1 | Follow-ups lists the person's own to-dos, and its empty state is wrong | In progress | ◐ Partly | S3: The "Your own to-dos" row sits on top and opens To-dos. The message style is still a pattern editor with "Hi Ada,", not name chips. The due-soon band is wrong (P1-3) | S3 |
+| X32 | P1 | Outgoing messages use office wording and raw dates | Fixed | ✓ Pass | S3: Draft dates read "(due Tue, Nov 3)" | S3 |
+| X33 | P1 | The to-do page and to-do editing | Fixed | ✗ Fail | S2: The row menu's inline editing is good, but the to-do page's Edit details is a raw record form (P1-1) | S2 |
+| X34 | P1 | A long to-do fails with no reason | Fixed | ✓ Pass | S2: 400 characters: "That's 100 characters too long: a to-do can be 300 at most…" | S2 |
+| X35 | P1 | Reassigning makes the other person "promise" it and queues a send | Fixed | — Not checkable | S2: Reassigning wasn't done / S3: Reassigning wasn't exercised. A to-do given at creation is listed under To send | S2, S3 |
+| X36 | P1 | Hand-added to-dos are missing from the Personal page | Fixed | ✓ Pass | S2: Hand-added to-dos are on the Personal page | S2 |
+| X37 | P1 | Record pages show internal field names and raw values | Fixed | ✗ Fail | S2: Raw fields on Edit details and on the Came-in page | S2 |
+| X38 | P1 | Internal ids, JSON, raw dates and file names on screen | Fixed | ✗ Fail | S2: Raw dates in the Pause dropdown, search, the Because quote and the brief proposal. Ids in Edit details ("PRJ-1") and on the message page ("m-1", a content hash) | S2 |
+| X39 | P1 | Notes can't be found | Fixed | ◐ Partly | S2: The Notes list exists and opens. Notes aren't found by search, there's no search on Notes, and the list is cluttered (P1-3) | S2 |
+| X40 | P1 | People can't be given contact details or sides, and get work questions | Fixed | ◐ Partly | S3: Two emails and two phones, each with Remove and Add another. Mail from the second address matched ("Last contact: Mail from them on Mon, Nov 2 · Thanks"). The Remove buttons are 68x20 (P2) / S5: Two emails and two sides can be added. But "Last contact: Nothing yet" although two mails from those addresses had been read. The email wraps mid-address. "Who they are" is cut. The sides repeat on the page | S3, S5 |
+| X41 | P1 | The business has two pages | Fixed | ✓ Pass | S3: The organization row and the sidebar item open the same business page | S3 |
+| X42 | P1 | No "Add a business" or "Add a job" in Settings, and removal is limited | Fixed | ✓ Pass | S3: Add a business, Add a job, Rename and Remove. Remove asks "What happens to the projects and to-dos in …?" The wording is unclear (P2) | S3 |
+| X43 | P1 | The Projects screen and project form | In progress | ◐ Partly | S3: Sides are group headers. Empty columns (Status, Stage, Target, Group, Owner, Open questions) show at rest and hide only after a pane opens, so the columns jump. "2 items need a place · Sort them" isn't explained | S3 |
+| X44 | P1 | Work words on a personal-only workspace | Fixed | ✗ Fail | S2: Work words remain for a personal-only person (P1-11) | S2 |
+| X45 | P1 | The Schedule | Fixed except dragging, which stays deferred | ✗ Fail | S2: **Pass:** Place and Repeats with a last day, every view, Move or Cancel one or every date, Undo (5 to 4 to 5; 5 to 0 to 5), no dragging. **Fail:** the Timeline's work words, and 30-minute entries overlapping and clipped / S5: No calendar names, colours or legend. The same invitation shows twice. Clash lines don't name the calendars. Read-only wording is plain: "This is what your calendar says… Change it in your calendar app." | S2, S5 |
+| X46 | P1 | Files | Fixed | ✓ Pass | S2: Add, Rename, Edit description and Remove, each with Undo. The "Attachment" chip is on every row | S2 |
+| X47 | P1 | Small changes need a restart, and the warning is alarming | Fixed | ✓ Pass | S4: An amber "Restart to finish", then Restart now, then "Restarted with the new settings." | S4 |
+| X48 | P1 | Appearance changes need a reload, and the theme is set in two places | Fixed | ◐ Partly | S4: Dark and the accent apply at once. Undo takes about 2s to show. "Empty uses the app's indigo" makes no sense beside a colour picker | S4 |
+| X49 | P1 | Validation and save messages show raw values | Fixed | ◐ Partly | S4: Plain refusals. But a refused "-5" stays as "$-5.00", "0.0000001" shows as "1e-7", a lower-case fragment "the daily limit can't be above…" shows, and a 120-character list choice gives only "That didn't work." | S4 |
+| X50 | P1 | Reminder destinations dead-end | Fixed | ✓ Pass | S4: Destinations that can't be used are off, with a reason and links. The disabled radios are nearly invisible | S4 |
+| X51 | P1 | Compare › Measure | Fixed | ◐ Partly | S4: The price is on the button. The line says a test "counts toward your daily limit", which contradicts the host's note. A failure shows above "Nothing measured yet…" | S4 |
+| X52 | P1 | Add-ons: one add-on with three names, and no Remove | Fixed | ◐ Partly | S4: One name on Settings, but the Add drawer heading says "Journey mail". The add-on page asks for a "Client id" while signed in. Remove has no confirmation and doesn't mention its backup. After removal, Connections says "Turn on…" when it should say install | S4 |
+| X53 | P1 | Sign out has no confirm, and stale states follow | Fixed | ◐ Partly | S4: Sign out confirms clearly. Afterwards the rows say "Not read until you sign in" while the Status column shows a green "Read", and the header says "All good" | S4 |
+| X54 | P1 | Quick links aren't where the page says | Fixed | ✓ Pass | S4: The hint, the limit, https:// added, junk refused. The same link twice is allowed | S4 |
+| X55 | P1 | Settings search misses the words beginners use | Fixed | ✓ Pass | S4: "password", "dark mode" and "money" find the right places. Nonsense gives "No settings match." | S4 |
+| X56 | P1 | The logo and accent colour need expert input | Fixed | ◐ Partly | S4: Refusals and a contrast note in plain words. The toast shows "logo-843c1f97d8c5.png". A huge logo shows "can't be found" until a reload | S4 |
+| X57 | P1 | Phone layout in Settings | In progress | ◐ Partly | S4: "Signed in as … · Sign out" on one row, at 1440 and 390 / S5: The phone's Connections page is clean. The badge says "Signed in", with the address as plain text: no "Signed in as …" beside Sign out | S4, S5 |
+| X58 | P1 | The backup key and synced folder accept bad input | In progress | ◐ Partly | S4: Short keys and relative paths are refused. A 5000-character key is accepted. The chooser has no New folder or breadcrumbs, and browses "/". "/etc" is accepted as a backup folder | S4 |
+| X59 | P1 | "How Reginald is doing" points to a setting that doesn't exist, and is mostly empty | In progress | ◐ Partly | S3: Tiles, the weekly table, Mistakes and Your own count are there. No next step for any figure. "Counting from Oct 5 to Nov 2" sits over a last row "Nov 2 to Nov 8" | S3 |
+| X60 | P1 | A skipped install dead-ends | Fixed | ◐ Partly | S4: Today and Settings say there's no AI account. The header says "Reginald: needs a look", and Today still offers "Start the assistant… $0.09" | S4 |
+| X61 | P1 | Feedback and help | Fixed | ◐ Partly | S4: The subject is "Feedback on Thimbleby", and Details folds. The text promises "open it in your email app", but there's no button for that. The body is garbled ("Missed something? not used in the weeks counted") | S4 |
+| X62 | P1 | The user menu and the phone tabs | Fixed | ✓ Pass | S4: The user menu is named for the person, with every item | S4 |
+| X63 | P1 | Pages with no way back, and silent fallbacks | Fixed | ◐ Partly | S3: Handover says what it's for and has Back to Today. **Wrong fallbacks:** a missing person shows a blank title and "This page didn't load. Try again"; #records/foo/X1 titles itself "Foo"; #nonsense silently shows Today; #settings/nonsense silently shows You / S4: Unknown add-on pages say so. #settings/zzz and unknown addresses redirect silently. #settings/lists says "Lists isn't in Settings here", which is wrong. A missing person shows "didn't load" | S3, S4 |
+| X64 | P1 | Toasts stack and get in the way | Fixed | ◐ Partly | S4: One toast at a time, but toasts trail the saves ("Theme: Dark" while the page is Light) | S4 |
+| X65 | P1 | "Since yesterday" and the "changed" line | In progress | ◐ Partly | S2: Since yesterday has entries, but the wording chains colons. No Today line while two unseen entries existed | S2 |
+| X66 | P1 | The old name is still on screen, and setup writes it into the person's own folders | Fixed | ◐ Partly | S1: No "Cockpit" on screen, and the cards read "Backups › Thimbleby". **But:** `cockpit.db` inside the new folder; the window title never names the product; an old folder beside a fresh setup is ignored (P2, see the reviewer's correction); the upgrade path is unte / S2: No "Cockpit" anywhere. The window title is the workspace name ("Rosalind's"), so "Thimbleby" is shown nowhere (P2-20) / S4: No "Cockpit" on any screen text, and the subject says Thimbleby. **But the restore steps show `cockpit restore …`.** The tab title is the workspace name, so "Thimbleby" shows nowhere else. The workspace holds `cockpit.db` and `.cockpit/` | S1, S2, S4 |
+| X67 | P1 | "We copy it…" goes against the privacy promise | Fixed | ✓ Pass | S1: "The app copies it every day to a folder your cloud drive keeps." | S1 |
+| X68 | P2 | "Step 6 of 7" beside a rail of eight | Fixed | ✓ Pass (setup) | S1: The header and the rail both count 8. Today's line doesn't (X13) | S1 |
+| X69 | P1 | The "Your promises" step, as the owner saw it | In progress | ✗ Fail | S1: The wizard only explains, but says it twice. Today has a Start line with a cost. Long titles aren't shortened, and the email isn't named with a link (P1-8) / S2: P1-7 | S1, S2 |
+| X70 | P1 | Six more lines speak as "we" | Fixed | ✓ Pass | S1: No company voice anywhere in setup / S4: No company voice in Settings | S1, S4 |
+| Y01 | P2 | Setup polish | In progress | ◐ Partly | S1: **Done:** one primary, the banner, the wording. **Still open:** sides as plain checkboxes, "Set them separately" looking like plain text, Continue in the body, the phone gap and the phone People layout | S1 |
+| Y02 | P2 | Setup People polish | Fixed | ✓ Pass | S1: One-name rows, Remove, "Added 4 people" | S1 |
+| Y03 | P2 | Settings polish | In progress | ◐ Partly | S4: The wording is done; the postponed layout items remain | S4 |
+| Y04 | P2 | Empty states and small screens | Fixed | ◐ Partly | S4: Quality is a wall of empty boxes. Compare shows "Nothing measured yet" under a failure | S4 |
+| Y05 | P2 | People page polish | In progress | ◐ Partly | S3: Every job is listed. Remove and Add another are under 24px and misaligned. The People table has empty columns | S3 |
+| Y06 | P2 | Restart and status wording | Fixed | ✓ Pass | S4: The wording is clunky: "Restart to use: a change to the add-ons, Add-ons." | S4 |
+| VC01 | Visual | Row | Fixed | ◐ Partly | Optional lead slot built; a new square tag column before titles makes the left edge ragged (V2, V3, V4) | V1–V5 |
+| VC02 | Visual | PageHeader and filter bar | Fixed | ◐ Partly | PageHeader differs page to page (breadcrumb, bare Back, Back to Today); the side strip moves and wraps (V3, V4) | V1–V5 |
+| VC03 | Visual | Button | Fixed | ◐ Partly | Pills everywhere; two or three filled buttons on most screens (V2) | V1–V5 |
+| VC04 | Visual | EmptyState | Fixed | ◐ Partly | EmptyState used on Files, Knowledge, Handover, Rules; Quality bare boxes and Stages paragraph remain (V2, V3) | V1–V5 |
+| VC05 | Visual | FormField, Select, DateField, FileDrop, CheckboxGroup | Fixed | ✗ Fail | Native selects, "mm/dd/yyyy" and "--:-- --" inputs remain on To-dos, Schedule Add, Quality, Edit details (V2, V3) | V1–V5 |
+| VC06 | Visual | The overlay family | Fixed | ◐ Partly | Phone bottom sheets good; Ask is a docked pane with no scrim; Hand-in drawer not full height; Edit details inside a card (V1, V3) | V1–V5 |
+| VC07 | Visual | Toast | Fixed | ◐ Partly | One toast, icon, bottom centre; a warning shows a success check; toasts lag saves (V1, S4) | V1–V5 |
+| VC08 | Visual | Link and type tokens | Fixed | ◐ Partly | Row titles plain bold; group labels 12px sentence case; underlined links misused (V2, V3) | V1–V5 |
+| VC09 | Visual | Dark-mode accents and elevation | Fixed | ◐ Partly | Overlays lift; cards show only by hairline at night; selected nav solid at night (V3) | V1–V5 |
+| VC10 | Visual | Record-page parts | Fixed | ◐ Partly | DefinitionList, ActivityList and composer built; time column wraps; Edit details is a raw form (V3) | V1–V5 |
+| VC11 | Visual | RadioCard / choice card | Fixed | ◐ Partly | Choice cards built; AI "Something else" still nests three levels (V1) | V1–V5 |
+| VC12 | Visual | Wizard shell and StepFooter | Fixed | ◐ Partly | Wizard shell and rail built; footer misaligned and jumps; progress shown three times on a phone (V1) | V1–V5 |
+| VC13 | Visual | Header status | Fixed | ◐ Partly | One status pill; it contradicts Connections and a failing account turns its popover into a red wall (V1, V4, S5) | V1–V5 |
+| VS01 | Visual | Follow the `setup-ai` mockup: three top cards, a 3-step checklist panel, privacy as two ch | In progress | ◐ Partly | S1: Choice cards, numbered steps, one privacy question, one spend line. Not compared with the mockup. "Something else" misbehaves | S1 |
+| VS02 | Visual | A provider list with one Connect per row. Sides as one chip group with "Set separately". A | In progress | ✗ Fail | S1: Sides are four plain checkboxes, not a chip group | S1 |
+| VS03 | Visual | The warning banner under "A job". Promises as a list of sources plus a summary strip. A fo | In progress | ◐ Partly | S1: The job banner and People rows are built. The folder chooser has no breadcrumbs or New folder | S1 |
+| VS04 | Visual | A command-palette search with a fixed width. The user menu: profile, quality link, appeara | In progress | ◐ Partly | S4: The user menu is right. The shortcuts weren't opened | S4 |
+| VS05 | Visual | Follow the `today` mockup: group headers with counts, the opened line as an inset card wit | Fixed | ◐ Partly | S2: Group headers, the inset card and "Not right" match the mockup. Missing: Open both on the clash, the greeting and brief card, and a short review title ("Look over what was found in Your inbox: 3 items") | S2 |
+| VS06 | Visual | A 64px hour gutter with no clipped labels. Entries at least 28px tall. Opens scrolled to n | Fixed | ◐ Partly | S2: Hour labels, the now-dot, the toolbar and the month cells are there. 30-minute entries overlap and clip | S2 |
+| VS07 | Visual | Group by time. Collapse identical runs ("×4"). Learning shown as a muted line in its row.  | In progress | ✗ Fail | S3: No grouping by time, no "×4", learning shown as a boxed block, ids and JSON in the pane | S3 |
+| VS08 | Visual | Tabs with counts, a 280px search with an icon, "Group by" as a dropdown, one-line rows | In progress | ◐ Partly | S3: Tabs with counts and a search with an icon. Group by is three unlabeled buttons. Rows take two lines | S3 |
+| VS09 | Visual | The status tabs as the only tabs. One "Copy message". "You" as a link row. Message style i | To do | ✗ Fail | S3: Three stacked filter rows plus inner Message and Table tabs. Message style is inline, not in a drawer | S3 |
+| VS10 | Visual | Follow the `todos` mockup: a round checkbox, one meta line, an inline add row, filter chip | Fixed | ◐ Partly | S2: The round checkbox and the sectioned menu with a red Drop match. Missing: the inline add row, the one-line meta (rows take three lines), the "6 open · 1 overdue" subtitle and the footer hint | S2 |
+| VS11 | Visual | An EmptyState that says what a stage is | Fixed | ✓ Pass | S2: The empty Stages page says what a stage is, but in work words, and it's reachable only by URL | S2 |
+| VS12 | Visual | Hide columns that are empty for every row. Size columns by content. Sides as group headers | In progress | ◐ Partly | S3: Sides as group headers are done. Empty columns aren't hidden at rest | S3 |
+| VS13 | Visual | Follow the `person` mockup: PageHeader, overview tabs, a sticky details panel, a timeline, | Fixed | ◐ Partly | S3: The person page matches the mockup well, but the composer isn't at the bottom. The organization, business, project and to-do pages use a different, plainer layout | S3 |
+| VS14 | Visual | A drop-zone empty state. Knowledge as panels with inline add rows | To do | ✗ Fail | S2: The Files empty state is one line. No drop zone outside the Add dialog | S2 |
+| VS15 | Visual | Follow the `quality` mockup: 4 stat tiles, a weekly table, a "mistakes to look at" list, y | Fixed | ◐ Partly | S3: Built to the mockup. Eight sections are bare titles with no count | S3 |
+| VS16 | Visual | An EmptyState with an "In sync" pill, the last sync time and Check now | To do | ✗ Fail | S3: Only "Both copies match." with an icon. No "In sync" pill, last sync time or Check now | S3 |
+| VS17 | Visual | A grouped Settings menu (You / Assistant / Your data / More), with add-on pages under Add- | Fixed | ◐ Partly | S4: The grouped menu exists, but the label spacing is inverted, and "You / You / You" | S4 |
+| VS18 | Visual | Follow the `connections` mockup: an account card with a status pill and a sources table. A | Fixed | ◐ Partly | S4: An account card and a table, but no "For" or "Last checked" column. Sources sit outside the card. Folders say only "A folder" | S4 |
+| VS19 | Visual | Each card: name, publisher, one line, status pill, one action. Details in a disclosure | To do | ✗ Fail | S4: Add-on cards are walls of text with no status pill or disclosure. Available also lists an installed add-on | S4 |
+| VP01 | Visual B | One content grid | To do | ✗ Not built | Edges differ: footer vs column, rail longer than main, strip at x=340 vs 272 (V1, V2, V4) | V1–V5 |
+| VP02 | Visual B | Row anatomy v2 | To do | ✗ Not built | Square tags before titles; titles at x=327–583 (V2) | V1–V5 |
+| VP03 | Visual B | Type scale v2 | In progress | ◐ Partly | 16/15/13 built; 12px sentence-case group labels; 12px help (V1, V2) | V1–V5 |
+| VP04 | Visual B | Primary discipline | In progress | ◐ Partly | One primary per region guarded; two filled per viewport common (V2) | V1–V5 |
+| VP05 | Visual B | Status and state rows | In progress | ◐ Partly | Header status built; status as tags not dot-and-word; no warn/danger rows (V2, V4) | V1–V5 |
+| VP06 | Visual B | Night elevation and focus | In progress | ◐ Partly | Overlays lift; cards hairline only at night; first-row ring always on (V2) | V1–V5 |
+| VP07 | Visual B | State sheet per screen | To do | ✗ Not built | No state sheets; loading, error, offline, conflict states missing everywhere (V1–V4) | V1–V5 |
+| VP08 | Visual B | Phone shell | To do | ◐ Partly | Tab bar with icons, "+" circle and sheets; rows not stacked; side strip unusable at 390 (V1, V2, V4) | V1–V5 |
+| VP09 | Visual C | Interaction and motion | To do | — Not checkable | Motion and interaction are not visible in captures | V1–V5 |
+| VP10 | Visual C | Keyboard | To do | — Not checked | Keyboard not exercised in this round | V1–V5 |
+| VP11 | Visual C | Content resilience | In progress | ◐ Partly | S5: Settings › Business, Projects, the More sheet and setup wrap well. The sidebar clips names hard, chips clip at both edges at 390, and an email breaks mid-address | S5 |
+| VP12 | Visual C | In-between widths | To do | ✗ Not built | 1024: strip takes 3 rows, rail is five identical icons (V4) | V1–V5 |
+| VP13 | Visual C | Hit targets | To do | ✗ Not built | 18px circles, 14px "…", 68x20 Remove buttons (V2, V3) | V1–V5 |
+| VP14 | Visual B, C | Mockups v2 then v3 (reviewer) | To do | ◐ In progress | Reviewer: mockups-46 (ten pages plus state sheets), being scored cold | V1–V5 |
+| VP15 | Visual C | Design QA in the build | To do | — Not checkable | Process item; no screenshot comparisons seen | V1–V5 |
+| VP16 | Visual B | The brand in the app | In progress | ◐ Partly | Pills only; tokens, mark, fonts and state colours not built; brand scores 1–1.5 (V1–V4) | V1–V5 |
+| VP17 | Visual C | Brand moments | To do | ✗ Not built | No brand moments (V1–V3) | V1–V5 |
+
+## New items from the re-sweep (README section 3), added by the host
+
+The host fills **Host status** (Fixed with its commit and test, In progress with what is left, or To do) on every row, old and new; the reviewer's **Checked** column stays theirs.
+
+| ID | Sev | Title | Host status | Checked at 8ebf3cf | What was seen | Source |
+|---|---|---|---|---|---|---|
+| X71 | P0 | A to-do's **Edit details** is a raw 25-field form ("PRJ-1", "[object Object]", Reply owed, Date set by…), and **saving only the due date rewrote the title** so it contradicts the date. **Fix:** the same short editor as the row menu (what, due, who, side or project by name), saving only the fields touched | To do | new | | S3 P0-1 (confirmed), S2 P1-1, V3 |
+| X72 | P1 | Ids, code text and ISO dates on screen: What changed's pane ("FACT-2 … ACT-6 … (none)"), the Notes list (JSON, "PER-1"), the Came-in page (content hash, "Reference: m-1", "By us: No"), the Pause menu, search and quotes ("by 2026-11-02") | To do | new | | S3 P0-2 (confirmed), S2 P1-2/3/5 (confirmed) |
+| X73 | P1 | Today's Schedule card and Came in show UTC beside "Now" in the person's zone (reopens X16) | To do | new | | S1 P1-2 (confirmed) |
+| X74 | P1 | Sending one item back adds duplicates of the others ("Get a catering quote." twice) | To do | new | | S3 P1-1 |
+| X75 | P1 | Settings writes and reloads: quick edits wait 2.5–3s each with no "Saving" cue; a reload in that window loses the last (X01) | To do | new | | S4 F1 |
+| X76 | P1 | Removing the AI account doesn't confirm, its Undo vanishes on navigation, and Today still offers Start | To do | new | | S4 F9 |
+| X77 | P1 | One failing account shows all as "Failed"; nine identical red lines; no "Sign in again"; a green "Read" on rows not being read (also after sign-out); "All good" in the header | To do | new | | S5 P1-1/2 (confirmed on screen), S4 F2 |
+| X78 | P1 | The same invitation, and the same thread, show twice when in two accounts | To do | new | | S5 P1-5 (confirmed), P1-9 |
+| X79 | P1 | Calendars and mailboxes can't be told apart: no colours, legend or toggles; "Your inbox", "Your calendar" for every account; clash lines don't name the calendars | To do | new | | S5 P1-4/6/11 |
+| X80 | P1 | The side filter leaks on Today (personal clashes, and every Came-in item, under a business filter) | To do | new | | S5 P1-7/8 |
+| X81 | P1 | Mail from a mailbox serving two businesses is filed under Personal | To do | new | | S5 P1-10 |
+| X82 | P1 | There's nowhere to change which sides a mailbox serves after setup, and adding a business doesn't ask | To do | new | | S5 P1-12 |
+| X83 | P1 | Long side names: the side strip is unusable at 390, the sidebar clips with no ellipsis and scrolls sideways, and five identical icons at 1024 | To do | new | | S5 P1-3, V4 V-P1.1/4 |
+| X84 | P1 | Setup's mail step with three accounts: a nine-item run-on and a 1900px wall | To do | new | | S5 P1-13, V4 V-P1.5 |
+| X85 | P1 | Follow-up drafts don't say which mailbox they send from, and the message style contradicts the draft | To do | new | | S5 P2-17, S3 P1-6 |
+| X86 | P1 | Long titles aren't shortened: a pasted note becomes a three-sentence title; quotes are cut mid-word; ".," and the date twice | To do | new | | S2 P1-6, S1 P1-8 |
+| X87 | P1 | Counts disagree: 52, 49, 9 and 7 on one screen; "3 items" against "4 to-dos"; What changed 3 over 11 rows; the setup line "6 of 7" beside 8 | To do | new | | S2 P1-8, S3 P1-9, S1 |
+| X88 | P1 | "Who is Avery Lane?" is asked in three places on Today | To do | new | | S3 P1-2 |
+| X89 | P1 | Follow-ups' "due soon" band lists already-sent items | To do | new | | S3 P1-3 |
+| X90 | P1 | The Evening wrap-up's "Moved to tomorrow" lists items that weren't moved | To do | new | | S3 P1-8 |
+| X91 | P1 | Today says "Nothing needs you" while a setup session is open | To do | new | | S1 P1-1 |
+| X92 | P1 | Phone: Today's titles are cut; the opened review overlaps ("Nol right", "Tod do") | To do | new | | S2 P1-12, S1 P1-9, V2 |
+| X93 | P1 | A host and port stand in for an account name ("127.0.0.1:9355: 15 tasks", "Read by 127.0.0.1…") | To do | new | | S2 P1-10, S3, S5 |
+| X94 | P1 | The AI step keeps the previous choice's guide; back on the step after connecting, there are two cards for one account, plus jargon (Measure, Change AI models) | To do | new | | S1 P1-3/4 |
+| X95 | P1 | The calendar form: the cursor isn't in the first field; an unlabeled password-type box | To do | new | | S1 P1-5 |
+| X96 | P1 | "No time zone matches" is drawn in a 4px bar | To do | new | | S1 P1-6 |
+| X97 | P1 | The folder chooser: no New folder, no breadcrumb; it browses system folders and accepts /etc | To do | new | | S1 P1-7, S4 F6 |
+| X98 | P1 | Restore only from the command line, shown as `cockpit restore …` | To do | new | | S4 F3 |
+| X99 | P1 | The synced folder vanishes after Save until a restart; Save is disabled with no reason | To do | new | | S4 F4 |
+| X100 | P1 | A second backup folder is added instead of replacing the first; copies listed twice; no way to remove a folder | To do | new | | S4 F5 |
+| X101 | P1 | The Add-connection drawer won't close with Esc or X on step 2; "Choose what to read" opens the generic drawer | To do | new | | S4 F7, F15 |
+| X102 | P1 | Settings input: no length limits; engine words ("there is already a project called Personal"); "That didn't work."; "$-5.00", "1e-7" | To do | new | | S4 F10–12, X49 |
+| X103 | P1 | AI and spending is a wall of ten identical rows; Compare contradicts the daily-limit note | To do | new | | S4 F13–14 |
+| X104 | P1 | Add-on pages ask for unneeded keys, use jargon, and Remove doesn't confirm | To do | new | | S4 F16, X52 |
+| Y07 | P2 | setup polish | To do | new | | S1 P2 |
+| Y08 | P2 | daily polish | To do | new | | S2 P2 |
+| Y09 | P2 | business polish | To do | new | | S3 P2 |
+| Y10 | P2 | Settings polish | To do | new | | S4 F21–F35 |
+| Y11 | P2 | several-accounts polish | To do | new | | S5 P2 14–29 |

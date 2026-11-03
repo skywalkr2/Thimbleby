@@ -38,7 +38,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   1. **U2: every open P1 of the UI/UX sweep** (owner, 2026-11-02: "All open P1s first"): batches A (built), B (the
      partly-done ones) and C (Files, Compare › Measure, Settings search, logo and colour), then one full test run, the fixes
      it finds in one pass, and the push (CLAUDE.md: deliver the batch, test once, fix in one pass).
-  2. **The UI/UX re-review:** the hand-over to the reviewer with the reconciled sheet, every P1 Fixed or explained.
+  2. **The UI/UX re-review** (done 2026-11-03: the round didn't pass) **and U3,** its fixes and the visual rebuild to the reviewer's mockups, before the gate week (owner: "Everything, including visual").
   3. **AI account hardening** (gate I-0a), each fix checked on a low-cost model first, then the owner's re-run (B-10).
   4. **The owner's checks and the gate week** with its pass bar (P65; design 6.32): the laptop and phone exit checks
      (B-6a, B-6b), an add-on installed from a real release host (B-5), the guided Gmail mailbox (P67), the real-mail re-run (P46).
@@ -80,6 +80,10 @@ rough (half a day to two days; the batches from phase C on are sized when they a
 keep each item's full text.
 
 The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
+
+0b. **U3 The re-sweep of 8ebf3cf, function and look, before the gate week** (owner, 2026-11-03: "Everything, including visual"; P116; the list is `sweep-8ebf3cf-tracking.md`; size: about a week)
+    - *Covers:* R1 data and trust, R2 several accounts and sides, R3 Today and the work screens, R4 setup and Settings (with each screen's ◐ rows), V1 the brand, V2 the reviewer's 4.0 items in order, V3 the eight mockups-46 pages with their state sheets.
+    - *Exit:* the owner's hand-back rule (the reviewer's README section 6): every mockup page and state captured from the build beside its mockup with every difference fixed or explained, a CI guard named per shared rule, a browser test per fix, one full run green on CI; then the reviewer scores the build cold.
 
 0. **U2 Every open P1 of the UI/UX sweep, then the re-review** (the rows still open in `sweep-04ffc21e-tracking.md`, "Open after reconciliation"; size: about a day and a half)
     - *Covers:* batch A (X31, X48, X50, X52, X53, X54, X62, X63, X65; built), batch B (every P1 marked In progress), batch C (X46 Files, X51 Compare › Measure, X55 Settings search, X56 logo and colour); the core items of the designer's 11/2 lessons the owner took (P112: views, days off, dated to-dos, the follow-up line and band, the Timeline; built).
