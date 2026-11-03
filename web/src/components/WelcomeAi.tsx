@@ -1464,12 +1464,16 @@ export function WelcomeAi(props: {
               {guide && verdict.state === "works" && (
                 <CheckboxGroup legend={t("welcome.ai.allow.title")} className="allow-question" data-allow-question="">
                   <p className="hint">{t("welcome.ai.allow.private")}</p>
-                  <p className="hint">
-                    {verdict.identity
-                      ? t("welcome.ai.allow.account", { service: kind.name, identity: verdict.identity })
-                      : t("welcome.ai.allow.account_unknown", { service: kind.name })}
-                  </p>
-                  {!verdict.identity && verdict.unknown && <p className="hint">{t("welcome.ai.allow.unknown")}</p>}
+                  {/* Which account it is, and what the app can't tell, are one fold away: the question stays short. */}
+                  <details className="more-options" data-allow-account="">
+                    <summary>{t("welcome.ai.allow.more")}</summary>
+                    <p className="hint">
+                      {verdict.identity
+                        ? t("welcome.ai.allow.account", { service: kind.name, identity: verdict.identity })
+                        : t("welcome.ai.allow.account_unknown", { service: kind.name })}
+                    </p>
+                    {!verdict.identity && verdict.unknown && <p className="hint">{t("welcome.ai.allow.unknown")}</p>}
+                  </details>
                   <RadioCards>
                   {(["allow", "not_now"] as const).map((answer) => (
                     <RadioCard key={answer} name="ai-work-data" value={answer} checked={workData === answer} onChange={() => chooseWorkData(answer)} title={<>{t(`welcome.ai.allow.${answer}`)}</>} description={<>{t(`welcome.ai.allow.${answer}_note`)}</>} />

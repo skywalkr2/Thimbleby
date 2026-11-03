@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
+import { useIsNarrow } from "../lib/media";
 import { useSides } from "../lib/sides";
 import { useToastCount, useToasts } from "../lib/toasts";
 import { after, before, counted, SCREENS, standing, STEP_OF, stepOf, type Screen } from "../lib/walkthrough";
@@ -68,6 +69,7 @@ export function Walkthrough(
   const [adding, setAdding] = useState<{ plugin: string | null; kind?: string } | null>(null);
   // On a phone the list of steps is behind a Steps button; this is whether it is showing.
   const [listOpen, setListOpen] = useState(false);
+  const narrow = useIsNarrow();
   // What Continue does on this screen, as the screen says (see `useContinue`): kept in a ref and only drawn again when what
   // shows of it changes.
   const slot = useRef<ContinueSpec | null>(null);
@@ -253,6 +255,11 @@ export function Walkthrough(
   const numbered = railSteps.filter((step) => step.id !== "done");
   const railAt = numbered.findIndex((step) => step.id === current);
   const position = railAt >= 0 ? { n: railAt + 1, total: numbered.length } : null;
+  const stepsToggle = (
+    <Button size="sm" aria-expanded={listOpen} aria-controls="walkthrough-steps" onClick={() => setListOpen((open) => !open)}>
+      {t("walkthrough.steps")}
+    </Button>
+  );
   return (
     <ContinueSlotProvider value={register}>
       <WizardShell
@@ -262,9 +269,13 @@ export function Walkthrough(
         intro={t("walkthrough.intro")}
         banner={<OfflineBanner words={{ title: "walkthrough.offline.title", text: "walkthrough.offline.text" }} />}
         headAction={
-          <Button variant="quiet" onClick={() => void finishLater()}>
-            {t("walkthrough.later")}
-          </Button>
+          <>
+            {/* On a phone the Steps button sits in the header bar beside Finish later, not on a bar of its own. */}
+            {narrow && current !== "welcome" && stepsToggle}
+            <Button variant="quiet" onClick={() => void finishLater()}>
+              {t("walkthrough.later")}
+            </Button>
+          </>
         }
         rail={
           current !== "welcome" ? (
@@ -277,11 +288,7 @@ export function Walkthrough(
               listId="walkthrough-steps"
               steps={railSteps}
               onGo={(id) => go(id as Screen)}
-              toggle={
-                <Button size="sm" aria-expanded={listOpen} aria-controls="walkthrough-steps" onClick={() => setListOpen((open) => !open)}>
-                  {t("walkthrough.steps")}
-                </Button>
-              }
+              toggle={narrow ? null : stepsToggle}
             />
           ) : undefined
         }

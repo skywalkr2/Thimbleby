@@ -24,6 +24,8 @@ export interface PageHeaderProps {
   primary?: ReactNode;
   /** The other actions and menus, beside the primary. */
   actions?: ReactNode;
+  /** A "more" menu for the page itself: it stays at the right end of the title's row, where the actions wrap onto a row of their own on a phone. */
+  more?: ReactNode;
   /** Names the group of actions for a screen reader, when there are several. */
   actionsLabel?: string;
   /** A TabStrip. */
@@ -34,7 +36,7 @@ export interface PageHeaderProps {
 }
 
 export function PageHeader(props: PageHeaderProps) {
-  const { title, id, level = 1, headingRef, focusable, crumb, kind, subtitle, primary, actions, actionsLabel, tabs, filters, className } = props;
+  const { title, id, level = 1, headingRef, focusable, crumb, kind, subtitle, primary, actions, more, actionsLabel, tabs, filters, className } = props;
   const Heading = `h${level}` as const;
   return (
     <div className={[styles.header, className ?? ""].filter(Boolean).join(" ")} data-page-header="">
@@ -49,6 +51,7 @@ export function PageHeader(props: PageHeaderProps) {
           </div>
           {subtitle && <p className={styles.sub}>{subtitle}</p>}
         </div>
+        {more && <div className={styles.more}>{more}</div>}
         {(actions || primary) && (
           <div className={styles.actions} role={actionsLabel ? "group" : undefined} aria-label={actionsLabel}>
             {actions}

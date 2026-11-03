@@ -16,7 +16,7 @@ export function WizardShell(props: { title: ReactNode; titleId?: string; intro?:
           <h1 id={props.titleId}>{props.title}</h1>
           {props.intro && <p className={styles.intro}>{props.intro}</p>}
         </div>
-        {props.headAction}
+        <div className={styles.headActions}>{props.headAction}</div>
       </header>
       <div className={styles.banner}>{props.banner}</div>
       <div className={styles.layout} data-no-rail={props.rail ? undefined : ""}>

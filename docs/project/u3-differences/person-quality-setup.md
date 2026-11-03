@@ -41,7 +41,14 @@ Change log: section 317. Tracking rows: VS01, VS03, VS13, VS15, VC10, VC11, VC12
 | setup | Offline: no banner in the guide | The offline banner in setup's own words (section 321) |
 | setup | Mail rows "Your inbox and Your calendar" | "Your inbox and your calendar" (section 321) |
 | quality | First week: a page of zeros | One "Too early to tell" card; `dispatch.knowledge.quality_min_promises` (section 321) |
-| person | A save that failed was never captured | The drive changes a field first, since Save is off until something changed (section 321) |
+| person | A save that failed was never captured | The drive changes a field first, since Save is off until something changed (section 321); the capture now scrolls to the "Not saved" note and the picture shows it (section 322) |
+| setup | Phone: a header of about 170px and a footer of two rows | One header bar (title, Steps, Finish later) and one footer row; a waiting primary's reason is a line above it (section 322) |
+| setup | Accepted: the privacy block of five lines | The question and one line; "Which account is it?" opens the rest (section 322) |
+| setup | The first-account card was loose parts on the page | One centred card holding the services as rows and the mailbox folded inside it (section 322) |
+| setup | Mail rows without "Private to you", the sides as boxes with no chips or Change | Every account is a card with "Private to you", "For <side> chips Change"; the account needing sign-in is the same card with its edge and Sign in again (section 322) |
+| person | Phone: the menu alone at the left | The menu at the right of the title's row (section 322) |
+| person | Not found kept a "Not here" title and a chip | The card alone (section 322) |
+| quality | "Back to Today" button; week headers of three lines; own count open with a wrapping title; a bare red line when it couldn't load; a second panel in the too-early state | A "Today ›" crumb; Found, Done, False alerts, Looking over; the own count folded as "Count them yourself"; the shared failed-load row; the fold inside the too-early card (section 322) |
 
 ## Left, with the reason
 
@@ -52,20 +59,20 @@ Change log: section 317. Tracking rows: VS01, VS03, VS13, VS15, VC10, VC11, VC12
 | person | "Everything with <name> 14" as a tab | The tabs are Overview, Open with <name> and Activity; the count the mockup shows would be a new measure |
 | person | The details edited in place (Cancel and Save under the fields) | They open in the drawer the People screen uses; one form for both |
 | person | The tinted "owes you" row on the open list and a side mark on each row | The open list is the shared record rows; the mark by side belongs to the lists (step 4) |
+| person | Not found: "Undo is on the People page for 10 minutes." | No People-page Undo exists (a removal's Undo is its toast); writing the line would say what isn't true. A "recently removed" list with a configured window would be a new feature for the owner to decide |
 | person | A large count, a failed save | The fixtures tie no hundred items to a person, and the save's own banner is the shell's; listed as not driven by the capture |
 | person | The capture shows no side color on the avatar | The sample person is on no side; the disc takes the color when they are on one (`PersonPage.test.tsx`) |
 | person | The empty state's height | The shared empty state keeps its own padding |
 | quality | "Kept on time" as a percentage and its column | The data counts what was closed, not what was on time; no figure to make it from |
 | quality | A period chooser and "against the 4 before" | The window is the settings' `days`; the comparison is the last two weeks |
-| quality | "Count a sample" as a link in the card | The sample keeps its own section, folded |
+| quality | "Count a sample" as a link in the card | The card's fold is "Count them yourself"; the sample keeps its own section, folded |
 | quality | A highlighted current week | The last row is the week now; no mark for it yet |
 | quality | A worse period, long content and a large count | The fixtures hold no four weeks of history and no mistakes; the capture lists them as not driven |
 | setup-ai | A check disc on the chosen card, "Recommended" at the card's top right | `RadioCard` stays as it is; a ring and a tint show the choice, with its words |
 | setup-ai | A three-step checklist with "Done" on each, a key box with Show | The steps are four to do, not to tick; the key box has Show and Hide as it had |
 | setup-ai | The step's title "Which AI should Reginald use?" | The title is the step's name (the rail says it); the question is the group's label |
 | setup-mail | Continue in the footer; "I'll do this later" beside it | The step draws its Continue under its result (Y01); moving it would change the step's tests and the first screen's count of buttons |
-| setup-mail | "Private to you" and the card's menu | No such fact is held; a card has no menu |
-| setup-mail | "Change" after the chips | The chips are the tick boxes and change in place |
+| setup-mail | The card's menu | A card has no menu |
 | setup-mail | The sides in the capture | The stand-in account has no sides; the chips show when the person has a side beside Personal (`Walkthrough.test.tsx`) |
 | setup | "Thimbleby" mark and "About 10 minutes" in the header; "Step 3 of 8" | The header is the wizard's title and time; seven steps, not eight |
 | setup | Checking, offline and accepted states with the stand-in service | The capture drives "Another service", so the accepted line reads "Another service: Works…"; the mockup's key is Anthropic's |

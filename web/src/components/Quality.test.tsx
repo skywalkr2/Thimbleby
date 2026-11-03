@@ -158,10 +158,10 @@ test("the outcome weeks are a table with one row per week and one column per mea
   const table = screen.getByRole("table", { name: "Week by week" });
   expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
     "Week",
-    "Promises found",
-    "Promises closed as done",
+    "Found",
+    "Done",
     "False alerts",
-    "Time looking over",
+    "Looking over",
   ]);
   expect(within(table).getAllByRole("row")).toHaveLength(3);
   expect(within(table).getByRole("row", { name: /Oct 19 to Oct 25.*5.*4.*2.*15 min/ })).toBeInTheDocument();
@@ -500,7 +500,7 @@ test("a load that fails says so with Try again, and Back goes back", async () =>
   const user = userEvent.setup();
   const back = vi.fn();
   show(quality(), { "GET quality": () => new Refuse(500, "broken") }, back);
-  expect(await screen.findByText("This page didn't load.")).toBeInTheDocument();
+  expect(await screen.findByText("These numbers couldn't be worked out. The rest of the app is fine.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Back to Today" }));
   expect(back).toHaveBeenCalledTimes(1);
@@ -565,7 +565,7 @@ test("the weeks are also a list for a narrow window, each week a block with its 
   expect(items).toHaveLength(2);
   expect(items[1]).toHaveTextContent("Oct 19 to Oct 25");
   expect(within(items[1]).getByText("Promises found").nextElementSibling).toHaveTextContent("5");
-  expect(within(items[1]).getByText("Time looking over").nextElementSibling).toHaveTextContent("15 min");
+  expect(within(items[1]).getByText("Looking over").nextElementSibling).toHaveTextContent("15 min");
 });
 
 test("a mistake is a row with its mark and its own action: Review opens the person's page", async () => {
@@ -595,4 +595,12 @@ describe("Too early to tell", () => {
     expect(screen.queryByRole("region", { name: /Week by week/ })).toBeNull();
     expect(screen.queryByText("Promises found")).toBeNull();
   });
+});
+
+test("their own count is folded closed under one line, and the too-early card holds it as a fold, not a second panel", async () => {
+  show(FULL);
+  await loaded();
+  const fold = document.querySelector<HTMLDetailsElement>("[data-own-count]")!;
+  expect(fold.open).toBe(false);
+  expect(within(fold).getByText("Count them yourself")).toBeInTheDocument();
 });

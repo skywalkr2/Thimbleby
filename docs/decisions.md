@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The last fixes from the final side-by-side review: setup on a phone, the mail step's account cards, a person's page, Quality (final review, group f5c; section 322)
+
+**Decided:** (owner: nothing is left undone before the hand-back; design by the main session.) Setup's header on a phone is one bar and its
+footer one row; the mail step's first-account card is centred and every account is a card with "Private to you" and "For <side> chips Change"
+(the Connections chips, in a small shared component of its own, `AccountSidesLine`); the accepted AI step folds the privacy detail behind
+one line; a person's "more" menu sits at the right of the title's row; a person who isn't there is the card alone; Quality has a breadcrumb,
+short week headers, the person's own count folded ("Count them yourself", also inside the too-early card) and the shared failed-load row
+(an edge, the words, a filled Try again), which every screen that uses it now shares. **Not built:** the mockup's line "Undo is on the People page for
+10 minutes." for a person who is gone: no People-page Undo exists (a removal's Undo is its toast), and writing it would say what isn't true; it
+would be a "recently removed" list with a configured window, a new feature the owner would decide. **Impact:** wording keys only, no config or
+API change, `PageHeader.more`, `LoadFailed` look. Change log: section 322.
+
 ## 2026-11-03: Setup's mail step is one first-account card, the setup guide shows the offline banner, Quality says "Too early to tell" instead of zeros (final review, group f5b; section 321)
 
 **Decided:** (owner: the screens match the reviewer's mockups; design by the main session.) The mail step with no account yet is one card

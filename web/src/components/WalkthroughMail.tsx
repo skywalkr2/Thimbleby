@@ -21,7 +21,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
 import { addonOfSignIn } from "./SignIns";
 import { Icon } from "../ui/Icon";
-import { AccountRow } from "./AccountRow";
+import { SetupAccountRow } from "./SetupAccountRow";
 import { accountStates } from "../lib/connections";
 import { MailServiceConnect, OTHER_MAILBOX } from "./MailServiceConnect";
 import { useSourceSave } from "./Sources";
@@ -31,6 +31,7 @@ import { useContinue } from "../lib/walkthrough-continue";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { SOURCES, SourceSides, listOf } from "./SourceSides";
+import styles from "./WalkthroughMail.module.css";
 import { Row } from "../ui/Row";
 
 type Pack = S["PackView"];
@@ -277,6 +278,7 @@ export function WalkthroughMail(props: {
   // Nothing to sign in to and nothing read: the step says so once, with one button for what can be connected now.
   const nothingYet = services.length === 0 && read.length === 0;
   const folded = hasResult && !revealed;
+  const firstCard = !folded && !hasResult && services.length > 0;
   const hasSides = (business.data?.sides ?? []).length > 0;
 
   return (
@@ -306,46 +308,31 @@ export function WalkthroughMail(props: {
                   <ul className="account-rows" aria-label={t("walkthrough.mail.accounts_label")} data-account-rows="">
                     {groups.map((account) => {
                       const mine = reads.filter((s) => (s.account ?? "") === account);
-                      // An account the service no longer lets in is the shared row that says since when and offers Sign in again.
+                      // An account the service no longer lets in says since when and offers Sign in again, in the same row.
                       const needing = accountStates(mine).find((a) => a.need !== null);
-                      if (needing) return <AccountRow key={account ?? ""} account={needing} />;
                       return (
-                        <li key={account ?? ""} className="account-row" data-account-row={account ?? ""}>
-                          <span className="account-icon" aria-hidden="true">
-                            <Icon name="inbox" size={18} />
-                          </span>
-                          <div className="account-main">
-                            <span className="account-name">
-                              <strong title={account || undefined}>{account || title}</strong>
-                              <span className="hint">{listOf(mine.map(shortOf).map((n, i) => midSentence(n, i)))}</span>
-                            </span>
-                            <span className="account-state">
-                              <span>{title}</span>
-                              <span aria-hidden="true">·</span>
-                              <span className="account-ok">
-                                <Icon name="check" size={14} />
-                                <span>{t("walkthrough.mail.account.connected")}</span>
-                              </span>
-                            </span>
-                            {hasSides && (
-                              <div className="account-for">
-                                <span className="account-for-word" aria-hidden="true">
-                                  {t("walkthrough.mail.account.for")}
-                                </span>
-                                <SignInSides
-                                  sources={mine}
-                                  what={listOf(mine.map(labelOf))}
-                                  account={account || undefined}
-                                  labelOf={labelOf}
-                                  personal={business.data?.personal ?? null}
-                                  sides={business.data?.sides ?? []}
-                                  compact
-                                  hintId={hintId}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </li>
+                        <SetupAccountRow
+                          key={account ?? ""}
+                          address={account ?? ""}
+                          service={title}
+                          reads={listOf(mine.map(shortOf).map((n, i) => midSentence(n, i)))}
+                          sources={mine}
+                          need={needing}
+                          sidesEditor={
+                            hasSides ? (
+                              <SignInSides
+                                sources={mine}
+                                what={listOf(mine.map(labelOf))}
+                                account={account || undefined}
+                                labelOf={labelOf}
+                                personal={business.data?.personal ?? null}
+                                sides={business.data?.sides ?? []}
+                                compact
+                                hintId={hintId}
+                              />
+                            ) : undefined
+                          }
+                        />
                       );
                     })}
                   </ul>
@@ -382,13 +369,16 @@ export function WalkthroughMail(props: {
           </div>
         </FormBlock>
       )}
+      {/* With no account yet the services, the restart note and the plain mailbox are one centred card: the services as rows to sign in
+          with, the mailbox the quieter choice under them. */}
+      <div className={firstCard ? styles.first : styles.plain} data-first-card={firstCard ? "" : undefined}>
       {!folded && services.length > 0 && (
         <>
           {!hasResult ? (
-            <div data-first-account="">
-              <p className="what" id="mail-services">
+            <div className={styles.lead} data-first-account="">
+              <h3 className={styles.leadTitle} id="mail-services">
                 {t("walkthrough.mail.none_title")}
-              </p>
+              </h3>
               <p className="hint">{t("walkthrough.mail.first_account")}</p>
             </div>
           ) : (
@@ -470,6 +460,7 @@ export function WalkthroughMail(props: {
           </FormBlock>
         </details>
       )}
+      </div>
       {!folded && (hasResult || services.length === 0) && <MailServiceConnect selectId={MAIL_GUIDE_PICK} onPick={(id) => id === OTHER_MAILBOX && props.onChooseSource(null, "mailbox")} />}
       {!folded && hasResult && services.length > 0 && (
         <FormBlock>

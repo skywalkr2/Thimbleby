@@ -66,7 +66,7 @@ export function Button(props: ButtonProps) {
   );
   if (!hint) return button;
   return (
-    <span className={styles.wrap}>
+    <span className={styles.wrap} data-reason-wrap="">
       {button}
       <p id={hintId} className={styles.reason}>
         {hint}

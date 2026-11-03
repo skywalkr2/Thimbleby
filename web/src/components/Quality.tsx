@@ -193,6 +193,29 @@ function CountForm(props: { view: View }) {
   );
 }
 
+/** The person's own count, folded closed: what has been counted so far, and the form to count a day. */
+function OwnCount(props: { view: View; tn?: (key: string, count: number, values?: Record<string, string | number>) => string }) {
+  const { t } = useWords();
+  const { view, tn } = props;
+  return (
+    <details className={styles.fold} data-own-count="">
+      <summary>{t("quality.counts.fold")}</summary>
+      <div className={styles.foldBody}>
+        {tn &&
+          (view.counts.entered === 0 ? (
+            <Empty text={t("quality.counts.empty")} />
+          ) : (
+            <>
+              <p className={styles.sum}>{tn("quality.counts.sum", view.counts.present, { missed: view.counts.missed })}</p>
+              <Days label={t("quality.day_list")} rows={view.counts.days.map((d) => tn("quality.counts.day", d.present, { day: monthDay(d.day), missed: d.missed }))} />
+            </>
+          ))}
+        <CountForm view={view} />
+      </div>
+    </details>
+  );
+}
+
 function SampleRow(props: { sample: NonNullable<View["sample"]>; item: NonNullable<View["sample"]>["items"][number] }) {
   const { t } = useWords();
   const act = useAct();
@@ -353,9 +376,13 @@ export function Quality(props: { onBack: () => void }) {
         focusable
         title={t("quality.open")}
         crumb={
-          <Button size="sm" variant="quiet" onClick={props.onBack}>
-            {t("quality.back")}
-          </Button>
+          <>
+            <Button size="sm" variant="quiet" aria-label={t("quality.back")} onClick={props.onBack}>
+              {t("quality.crumb")}
+            </Button>
+            <span aria-hidden="true">›</span>
+            <span aria-hidden="true">{t("quality.open")}</span>
+          </>
         }
       />
       {page.isPending ? (
@@ -368,9 +395,8 @@ export function Quality(props: { onBack: () => void }) {
           <Panel title={t("quality.early.title")}>
             <p>{tn("quality.early.text", view.min_promises, { found: view.outcome.promises_found })}</p>
             <p className="hint">{t("quality.window", { from: monthDay(view.since), to: monthDay(view.until) })}</p>
-          </Panel>
-          <Panel title={t("quality.counts.own_title")} actions={<span className={styles.cardHint}>{t("quality.counts.own_hint")}</span>}>
-            <CountForm view={view} />
+            {/* Their own count is one fold inside this card, not a second panel under it. */}
+            <OwnCount view={view} />
           </Panel>
         </div>
       ) : (
@@ -424,9 +450,9 @@ export function Quality(props: { onBack: () => void }) {
                   <thead>
                     <tr>
                       <th scope="col">{t("quality.weeks.week")}</th>
-                      <th scope="col">{t("quality.stat.found")}</th>
-                      <th scope="col">{t("quality.stat.kept")}</th>
-                      <th scope="col">{t("quality.stat.alerts")}</th>
+                      <th scope="col">{t("quality.weeks.found")}</th>
+                      <th scope="col">{t("quality.weeks.kept")}</th>
+                      <th scope="col">{t("quality.weeks.alerts")}</th>
                       <th scope="col">{t("quality.weeks.review")}</th>
                     </tr>
                   </thead>
@@ -506,19 +532,9 @@ export function Quality(props: { onBack: () => void }) {
               </div>
 
               <div data-quality-section="quality-counts">
-                <Panel title={t("quality.counts.own_title")} actions={<span className={styles.cardHint}>{t("quality.counts.own_hint")}</span>}>
-                  {view.counts.entered === 0 ? (
-                    <Empty text={t("quality.counts.empty")} />
-                  ) : (
-                    <>
-                      <p className={styles.sum}>{tn("quality.counts.sum", view.counts.present, { missed: view.counts.missed })}</p>
-                      <Days
-                        label={t("quality.day_list")}
-                        rows={view.counts.days.map((d) => tn("quality.counts.day", d.present, { day: monthDay(d.day), missed: d.missed }))}
-                      />
-                    </>
-                  )}
-                  <CountForm view={view} />
+                <Panel title={t("quality.counts.own_title")}>
+                  <p className={styles.cardHint}>{t("quality.counts.own_hint")}</p>
+                  <OwnCount view={view} tn={tn} />
                 </Panel>
               </div>
             </div>

@@ -1,0 +1,13 @@
+/* One account on setup's mail step: a card with its address, how it stands, who it is for (chips and Change), and, when the
+   service no longer lets it in, an edge and the one button that fixes it. */
+.row[data-need] { position: relative; overflow: hidden; grid-template-columns: 40px minmax(0, 1fr) auto; }
+.row[data-need]::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--danger); }
+.row[data-need="signed_out"]::before { background: var(--warn); }
+.acts { display: flex; align-items: flex-start; gap: var(--space-2); }
+.privacy { color: var(--text-muted); }
+.sides { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-1); min-width: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.chip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--target-min); padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text); font-size: var(--text-meta); font-weight: var(--weight-medium); max-width: 100%; min-width: 0; }
+.chipName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor { grid-column: 1 / -1; min-width: 0; display: grid; gap: var(--space-2); justify-items: start; }
+:global([data-narrow]) .row[data-need] { grid-template-columns: 40px minmax(0, 1fr); }
+:global([data-narrow]) .row[data-need] .acts { grid-column: 2; }

@@ -62,16 +62,26 @@
 :global(html[data-toasts]) .root { padding-bottom: 0; }
 
 :global([data-narrow]) .layout { grid-template-columns: minmax(0, 1fr); padding: var(--space-4) var(--space-4) calc(var(--space-12) * 2); gap: var(--space-4); }
-:global([data-narrow]) .head { padding: var(--space-3) var(--space-4); }
+:global([data-narrow]) .head { flex-wrap: nowrap; gap: var(--space-2); padding: var(--space-2) var(--space-4); }
+/* On a phone the header is one bar: the title and, at the right, the Steps button and the way to finish later. The intro and the
+   "step n of m" line wait out of sight, since the step's own eyebrow says where the person is. */
+:global([data-narrow]) .title { flex-wrap: nowrap; overflow: hidden; }
+:global([data-narrow]) .title h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:global([data-narrow]) .intro { display: none; }
+.headActions { display: flex; flex: none; align-items: center; gap: var(--space-2); }
 :global([data-narrow]) .rail { position: static; }
-:global([data-narrow]) .place { display: flex; }
+:global([data-narrow]) .place { display: none; }
 :global([data-narrow]) .steps { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 /* On a phone the list is behind the Steps button, so the first field of a step is near the top of the window. */
 :global([data-narrow]) .steps[data-open="false"] { display: none; }
 :global([data-narrow]) .stepButton { width: auto; border: 1px solid var(--border); }
 /* On a phone the footer is a bar across the bottom with the buttons the width they need. */
 :global([data-narrow]) .footerInner { grid-template-columns: minmax(0, 1fr); padding: var(--space-2) var(--space-4); }
-:global([data-narrow]) .footerButtons { grid-column: 1; flex-wrap: wrap; }
+:global([data-narrow]) .footerButtons { grid-column: 1; flex-wrap: wrap; row-gap: var(--space-1); }
+/* A waiting primary button's reason goes on a line of its own above the row, so the buttons stay in one row: Back and the primary
+   on the column's edges. */
+:global([data-narrow]) .footerButtons > :global([data-reason-wrap]) { display: contents; }
+:global([data-narrow]) .footerButtons > :global([data-reason-wrap]) > p { order: -1; flex: 1 0 100%; max-width: none; }
 @media (max-width: 1023.98px) {
   .layout { grid-template-columns: minmax(0, 680px); }
   .footerInner { grid-template-columns: minmax(0, 680px); }

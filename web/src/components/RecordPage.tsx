@@ -412,6 +412,13 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
+      {/* A person who is gone has no page to head: the card says so, and the heading is kept for a screen reader. */}
+      {gone && isPerson && (
+        <h1 id="record-title" className="sr" tabIndex={-1}>
+          {t("record.not_found.title")}
+        </h1>
+      )}
+      {!(gone && isPerson) && (
       <PageHeader
         id="record-title"
         title={heading || (gone ? t("record.not_found.title") : heading)}
@@ -469,11 +476,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   {t("record.edit")}
                 </Button>
               )}
-              {isPerson && person && !isSelf && <RowMenu label={heading} actions={menuOf(person).filter((entry) => entry.id !== "edit")} />}
             </>
           ) : undefined
         }
+        more={data && isPerson && person && !isSelf ? <RowMenu label={heading} actions={menuOf(person).filter((entry) => entry.id !== "edit")} /> : undefined}
       />
+      )}
       {data && kind === "question" && questionMenu.form}
       {data && message.form}
       {data && versions.form}

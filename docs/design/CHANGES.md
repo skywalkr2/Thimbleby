@@ -1027,6 +1027,21 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 322. The last fixes to setup, a person's page and Quality from the final side-by-side review (2026-11-03; final review group f5c)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup on a phone (7.8) | A header of about 170px (title, intro, Finish later, then a Steps bar); the footer wrapped to two rows | One header bar: title, Steps, Finish later; one footer row, a waiting primary's reason on a line above it. **Built** (`Walkthrough.test.tsx`; measured in the capture) |
+| Setup, accepted (7.8) | The privacy question with three lines of hints | The question and one line; "Which account is it?" opens the rest. **Built** (`WelcomeAi.test.tsx`) |
+| Setup mail, no account yet (7.8) | The services and the mailbox loose on the page | One centred card holding the services as rows to sign in with and the mailbox folded as the quieter choice. **Built** (`Walkthrough.test.tsx`) |
+| Setup mail, account rows (7.8) | Tick boxes in the row; the account needing sign-in drawn by another row | One card for every account: "Private to you", "For <side> chips Change", and for an account that needs signing in an edge and Sign in again. **Built** (`Walkthrough.test.tsx`) |
+| A person's page on a phone (7.12) | The "more" menu alone at the left under the title | The menu at the right of the title's row (`PageHeader.more`). **Built** (`PersonPage.test.tsx`) |
+| A person who isn't there (7.12) | A "Not here" title and a Person chip over the card | The card alone; the heading is kept for a screen reader. **Built** (`RecordPageRecords.test.tsx`) |
+| Quality (6.20, 7.12) | "Back to Today" as a button; week headers of three lines; "Your own count" open with a wrapping title; a bare red line when it couldn't load; too-early card with a second panel | A "Today ›" crumb; headers Found, Done, False alerts, Looking over; the own count folded as "Count them yourself", its hint under a one-line title; the shared failed-load row (an edge, the words, a filled Try again); the own count folded inside the too-early card. **Built** (`Quality.test.tsx`) |
+
+- **Left:** the person-not-found line "Undo is on the People page for 10 minutes." is not written: no such Undo exists (a removal's Undo is its toast), and the line would say what isn't true. See `docs/project/u3-differences/person-quality-setup.md`.
+- **No config key, no API change.**
+
 ## 321. Setup's mail step as one first-account card, the offline banner in the setup guide, Quality's "Too early to tell" (2026-11-03; final review group f5b)
 
 | Where | Before | Now |

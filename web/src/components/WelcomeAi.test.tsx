@@ -585,6 +585,10 @@ test("the question says exactly what Allow covers, names the account and its sig
   // Private mail is covered and said so; the words "work mail" never appear on the step, whoever it is for.
   expect(within(question).getByText("Your personal mail is private. Only accounts you allow can read it.")).toBeInTheDocument();
   expect(within(question).getByText("The service is Service A, signed in as sam@example.com.")).toBeInTheDocument();
+  // Which account it is waits behind one line, folded closed.
+  const fold = question.querySelector<HTMLDetailsElement>("[data-allow-account]")!;
+  expect(fold.open).toBe(false);
+  expect(within(fold).getByText("Which account is it?")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/work mail/i);
   const allow = within(question).getByRole("radio", { name: /^Allow/ });
   const notPrivate = within(question).getByRole("radio", { name: /^Not my private mail/ });

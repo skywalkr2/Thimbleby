@@ -2284,6 +2284,11 @@ describe("Mail and calendar", () => {
     const fold = document.querySelector("[data-mailbox-choice]") as HTMLDetailsElement;
     expect(fold.open).toBe(false);
     expect(within(fold).getByText("Use a mailbox with an app password instead")).toBeInTheDocument();
+    // The services and the mailbox are inside the one card.
+    const card = document.querySelector("[data-first-card]") as HTMLElement;
+    expect(card.contains(fold)).toBe(true);
+    expect(card.querySelector("[data-first-account]")).not.toBeNull();
+    expect(card.querySelector("[data-service]")).not.toBeNull();
   });
 
   test("the set-aside choice is one line with Change, which shows the switch in place", async () => {
@@ -2677,6 +2682,8 @@ describe("Mail and calendar", () => {
     expect(pat).not.toHaveTextContent("Connected");
     expect(pat).toHaveTextContent(/Needs sign-in/);
     expect(within(pat).getByRole("button", { name: /Sign in again/ })).toBeInTheDocument();
+    // Its sides are said in the same row, as for the others.
+    expect(within(pat).getByText("For")).toBeInTheDocument();
   });
 
   test("three accounts are three rows, each address cut with the full address on hover, and the sides are ticked in the row", async () => {
@@ -2702,9 +2709,13 @@ describe("Mail and calendar", () => {
       const state = item.querySelector<HTMLElement>(".account-state")!;
       expect(within(state).getByText("Connected")).toBeInTheDocument();
       expect(state.querySelector(".account-ok svg")).not.toBeNull();
-      expect(within(item.querySelector<HTMLElement>(".account-for")!).getByText("For")).toHaveAttribute("aria-hidden", "true");
-      // The chips are the ticks: a chip for each side, each a checkbox that can be changed in the row.
-      expect(item.querySelectorAll(".account-for .side-chip input[type=checkbox]").length).toBeGreaterThan(0);
+      // "For" and the sides said so far as chips (none yet: "No side picked"), with Change; while none is said the boxes are open
+      // in the row, so the first ticks are made there.
+      const line = item.querySelector<HTMLElement>("[data-account-sides]")!;
+      expect(within(line).getByText("For")).toBeInTheDocument();
+      expect(within(line).getByText("No side picked")).toBeInTheDocument();
+      expect(within(line).getByRole("button", { name: /^Change the sides/ })).toHaveAttribute("aria-expanded", "true");
+      expect(item.querySelectorAll("[data-account-sides-editor] .side-chip input[type=checkbox]").length).toBeGreaterThan(0);
     }
   });
 

@@ -90,6 +90,11 @@ test("the page has a crumb back to People, says who they are under the name, and
   const card = document.querySelector<HTMLElement>("[data-contact-card]")!;
   expect(within(card).getByRole("button", { name: "Edit" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Edit details" })).toBeNull();
+  // The page's menu is at the end of the title's row, apart from the actions that wrap under it on a phone.
+  const header = document.querySelector<HTMLElement>("[data-page-header]")!;
+  const menu = within(header).getByRole("button", { name: /^More actions for / });
+  expect(menu.closest("[role=group]")).toBeNull();
+  expect(header.querySelector("h1")!.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test("the details panel says each fact once: how to reach them, who they are, the sides, the last contact, dates and what matters", async () => {

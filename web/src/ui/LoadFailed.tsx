@@ -14,7 +14,7 @@ export function LoadFailed(props: { message: string; onRetry: () => void; detail
           <Icon name="alert" size={16} />
           {props.message}
         </p>
-        <Button size="sm" icon="refresh" onClick={props.onRetry}>
+        <Button size="sm" variant="primary" icon="refresh" onClick={props.onRetry}>
           {t("action.try_again")}
         </Button>
       </div>
