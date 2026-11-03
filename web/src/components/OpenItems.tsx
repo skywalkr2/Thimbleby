@@ -62,7 +62,7 @@ import { NotesTitle } from "./ActionNotes";
 import { dateAndTime, useRemindMe } from "./ReminderLine";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
-import { shortTitle } from "../lib/title-dates";
+import { plainTitle, shortTitle } from "../lib/title-dates";
 
 import { EmptyState } from "../ui/EmptyState";
 import { FilterChip } from "../ui/FilterChip";
@@ -385,7 +385,7 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean; onDone?: 
     <Row
       ref={ref}
       onKeyDown={escape}
-      clamp={shortTitle(a.text, a.due, 2) !== a.text ? a.text : undefined}
+      clamp={shortTitle(a.text, a.due, 2) !== plainTitle(a.text) ? plainTitle(a.text) : undefined}
       lead={
         unowned ? undefined : <RoundCheck label={t("followups.mark_done")} data-key="primary" onClick={() => void done()} />
       }
@@ -406,7 +406,7 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean; onDone?: 
       }
       menu={
         <RowMenu
-          label={a.text}
+          label={plainTitle(a.text)}
           actions={menu}
           groups={[
             { id: "timing", entries: timing },
@@ -454,7 +454,7 @@ function DoneRow(props: { action: OpenAction; onUndone: (id: string) => void }) 
     <Row
       data-done-row=""
       lead={<Icon name="check" size={18} />}
-      title={<span className={styles.doneTitle}>{a.text}</span>}
+      title={<span className={styles.doneTitle}>{plainTitle(a.text)}</span>}
       meta={t("open.done_just_now")}
       primary={
         <Button variant="quiet" size="sm" onClick={undo} aria-label={t("open.undo_named", { text: a.text })}>
