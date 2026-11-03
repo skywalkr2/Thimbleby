@@ -1,7 +1,7 @@
 // A labelled choice from a value list. It offers the list's values and "Not set"; a value the record still holds but the
 // list no longer offers stays shown, marked, so editing other fields never loses it. "Add to the list…" opens a small
 // field that adds the value at once (with Undo) and selects it.
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { offers, useListChange, useValueLists } from "../lib/lists";
 import { useWords } from "../lib/wording";
@@ -33,11 +33,17 @@ export function ValueSelect(props: {
   const id = props.id ?? own;
   const select = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
+  const newField = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
 
   const found = lists.data?.find((l) => l.name === props.list);
+  // Choosing "Add…" opens a field and the cursor goes into it. The list that was just closed gives the cursor back to its button
+  // in its own effect, which runs first, so the field takes it afterwards.
+  useEffect(() => {
+    if (adding && found) newField.current?.focus();
+  }, [adding, !!found]);
   const values = found?.values ?? [];
   const { value, required } = props;
   // Held but not offered: shown as an extra choice, marked once the list is known to have dropped it.
@@ -114,7 +120,7 @@ export function ValueSelect(props: {
             id={`${id}-new`}
             type="text"
             value={text}
-            autoFocus
+            ref={newField}
             autoComplete="off"
             placeholder={t("lists.add_placeholder")}
             aria-describedby={problem ? `${id}-problem` : undefined}

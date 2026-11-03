@@ -1408,6 +1408,13 @@ describe("several accounts", () => {
     expect((await row(`Inbox, ${CASEY}`)).querySelector("[data-state-mark]")).toHaveTextContent(/^Read /);
   });
 
+  test("a source with no account that the service refused says why in its own row, since no account card tells it", async () => {
+    const refused = run({ outcome: "failed", error_kind: "auth", started_at: "2026-03-04T11:00:00+00:00" });
+    open([source("plain", { label: "Plain mailbox", connector: "mailbox", last: refused, problem: "The service refused the password." })]);
+    const item = await row("Plain mailbox");
+    expect(item.querySelector(".problem-note")).toHaveTextContent("The service refused the password.");
+  });
+
   test("an account that is signed out says it is not being read, and nothing says Read for it", async () => {
     openAccounts([mailSource("a", ALEX, { account_state: "signed_out" }), mailSource("c", CASEY)]);
     const card = await screen.findByRole("region", { name: ALEX });

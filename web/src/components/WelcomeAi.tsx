@@ -1141,7 +1141,7 @@ export function WelcomeAi(props: {
                 )}
                 {apps.length > 0 && (
                   <FormBlock role="group" aria-labelledby="ai-apps-title">
-                    <h4 id="ai-apps-title">{t("welcome.ai.apps")}</h4>
+                    <h3 id="ai-apps-title">{t("welcome.ai.apps")}</h3>
                     <RadioCards>{apps.map(underElse)}</RadioCards>
                   </FormBlock>
                 )}
@@ -1290,7 +1290,7 @@ export function WelcomeAi(props: {
                 <section className="key-step" aria-labelledby="ai-key-steps">
                   {guide && kind.needs_key ? (
                     <>
-                      <h4 id="ai-key-steps">{t("welcome.ai.steps_title", { name: kind.name })}</h4>
+                      <h3 id="ai-key-steps">{t("welcome.ai.steps_title", { name: kind.name })}</h3>
                       <ol className="plain-list numbered-steps">
                         {step(
                           1,
@@ -1606,7 +1606,7 @@ export function WelcomeAi(props: {
       )}
       {guide && (
         <>
-          {(accounts.data ?? []).length > 0 && <AiAccounts local={props.local} level={4} compact />}
+          {(accounts.data ?? []).length > 0 && <AiAccounts local={props.local} level={3} compact />}
           <div className="guide-test">
             <div role="status" aria-live="polite">
               {testing && <p className="hint">{t("welcome.ai.testing")}</p>}

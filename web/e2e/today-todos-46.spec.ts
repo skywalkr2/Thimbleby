@@ -101,7 +101,7 @@ test.describe("To-dos", () => {
     expect(grouped + (await needsDateCount(page))).toBe(tabCount);
     await expect(page.locator("[data-need-count]")).toContainText(`of these ${tabCount} to-dos`);
     // The groups come in the mockup's order.
-    const names = (await page.locator("[data-todo-group]").allInnerTexts()).map((t) => t.replace(/\d+$/, "").trim());
+    const names = (await page.locator("[data-todo-group]").allTextContents()).map((t) => t.replace(/\d+$/, "").trim());
     const order = ["Overdue", "Today", "Coming up", "Waiting on others"];
     expect(names).toEqual(order.filter((o) => names.includes(o)));
   });

@@ -266,7 +266,7 @@ export function Select(props: SelectProps) {
       }}
       onFocus={onFocus}
     >
-      <span className={styles.value}>{picked?.label ?? ""}</span>
+      <span className={styles.value} title={picked?.label || undefined}>{picked?.label ?? ""}</span>
     </button>
   );
   return (

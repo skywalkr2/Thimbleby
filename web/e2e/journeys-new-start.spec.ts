@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   collectProblems,
+  expectFoundLine,
   fakeAddress,
   pressStart,
   revealNewLines,
@@ -296,21 +297,11 @@ test.describe.serial("journey: new start", () => {
     // Today until I open the list.
     const found = page.locator('[data-queue-line="intake_review"]');
     // Only what needs a look is counted: a thank-you, an agreement or a plain announcement is filed quietly.
-    const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
     await revealNewLines(page, found, 3);
-    await expect(found.filter({ hasText: "Your inbox" })).toContainText(
-      `Look over what was found in Your inbox: ${items(mailToCheck.length)}`,
-      { timeout: 60_000 },
-    );
-    await expect(found.filter({ hasText: "Your calendar" })).toContainText(
-      `Look over what was found in Your calendar: ${items(eventsToCheck.length)}`,
-      { timeout: 60_000 },
-    );
+    await expectFoundLine(found.filter({ hasText: "Your inbox" }), "your inbox", mailToCheck.length);
+    await expectFoundLine(found.filter({ hasText: "Your calendar" }), "your calendar", eventsToCheck.length);
     // The sent mail is its own source, so it has its own line.
-    await expect(found.filter({ hasText: "Your sent mail" })).toContainText(
-      `Look over what was found in Your sent mail: ${sent.length} ${sent.length === 1 ? "item" : "items"}`,
-      { timeout: 60_000 },
-    );
+    await expectFoundLine(found.filter({ hasText: "Your sent mail" }), "your sent mail", sent.length);
     await expect(found).toHaveCount(3);
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     await visit(page);

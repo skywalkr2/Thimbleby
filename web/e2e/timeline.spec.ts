@@ -8,7 +8,9 @@ import { FIRST_SCREEN } from "./journey-helpers";
 const SIZES = [
   { width: 1280, height: 900, mode: "wide" },
   { width: 900, height: 900, mode: null },
-  { width: 600, height: 900, mode: "list" },
+  // On a phone the window has no side menu (a bar at the bottom instead), so the timeline has all the width: the two weeks the
+  // test server shows (`ui.schedule.timeline_range`) fit down to a phone's narrowest, where the list by week takes over.
+  { width: 320, height: 700, mode: "list" },
 ];
 
 /** A long title with no break in it, made here so no outside text is written out. */
@@ -87,7 +89,7 @@ test.describe("the timeline", () => {
   });
 
   test("the range can be picked and is remembered, and the list by week names each week", async ({ page }) => {
-    await page.setViewportSize({ width: 600, height: 900 });
+    await page.setViewportSize({ width: 320, height: 700 });
     await seed(page);
     await open(page);
     await page.getByRole("radio", { name: "2 weeks" }).click();

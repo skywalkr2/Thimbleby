@@ -5,6 +5,9 @@
 .single { grid-template-columns: minmax(0, 1fr); }
 .item:focus { outline: none; }
 .item:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* The keyboard ring every row has (styles.css) is drawn inside the row; an item holds its words to its own edge, so its ring stays
+   outside, as above. */
+:global(:root[data-input="keyboard"]) .item[data-row]:focus-visible { box-shadow: none; }
 /* In the detail pane an item uses the pane's full width, with its buttons under its words, as Today's detail does. */
 .list[data-pane] .item { grid-template-columns: minmax(0, 1fr); }
 .list[data-pane] .item > :global([data-actions]) { justify-content: flex-end; }

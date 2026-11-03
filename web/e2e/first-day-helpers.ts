@@ -57,7 +57,7 @@ export async function openScreen(page: Page, hash: string, heading: string | Reg
     window.location.hash = h;
   }, hash);
   await expect(page).toHaveURL(new RegExp(`#${hash.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
-  await expect(page.getByRole("main").getByRole("heading", { level: 1, ...(typeof heading === "string" ? { name: heading, exact: true } : {}) }).first()).toBeVisible(LOADED);
+  await expect(page.getByRole("main").getByRole("heading", { level: 1, name: heading, ...(typeof heading === "string" ? { exact: true } : {}) }).first()).toBeVisible(LOADED);
   await expect(page.locator("main [data-skeleton]")).toHaveCount(0, LOADED);
 }
 

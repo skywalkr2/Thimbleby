@@ -36,9 +36,10 @@ test.describe("Today and the work screens", () => {
     const total = Number(said?.[2] ?? said?.[3]);
     const tab = await page.getByRole("button", { name: /^To-dos\b/ }).first().innerText();
     expect(Number(/(\d+)\s*$/.exec(tab)?.[1])).toBe(total);
-    // The line under the title says the same open count.
+    // The line under the title counts the rows of both tabs, the to-dos and the questions (design 7.7).
+    const questionsTab = await page.getByRole("button", { name: /^Questions\b/ }).first().innerText();
     const opened = await page.getByText(/^\d+ open\b/).first().innerText();
-    expect(Number(/^(\d+)/.exec(opened)?.[1])).toBe(total);
+    expect(Number(/^(\d+)/.exec(opened)?.[1])).toBe(total + Number(/(\d+)\s*$/.exec(questionsTab)?.[1]));
   });
 
   test("setup's count is the seven steps on Today's line and in the walkthrough alike (X87)", async ({ page }) => {
@@ -94,7 +95,7 @@ test.describe("Today and the work screens", () => {
     await expect(page.getByText(/^Step \d of 7$/)).toBeVisible(LOADED);
   });
 
-  test("on a phone every line shows its whole title under its mark, and the opened review has nothing over anything (X92)", async ({ page }) => {
+  test("on a phone every line shows its whole title with its mark after the words, and the opened review has nothing over anything (X92)", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("?token=e2e-token");
     await expect(page.locator("[data-queue-line]").first()).toBeVisible(LOADED);
@@ -109,18 +110,20 @@ test.describe("Today and the work screens", () => {
             found.push(`${row.getAttribute("data-queue-line")}: ${(el.textContent ?? "").slice(0, 30)} is cut`);
           }
         }
-        // The mark is above the words, not beside them in a narrow column.
+        // The mark follows the title's words and wraps with them (design 7.14); it is never drawn over any of them.
         const pill = row.querySelector("[data-pill]");
         if (pill) {
+          const box = pill.getBoundingClientRect();
           const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
           for (let node = walker.nextNode(); node; node = walker.nextNode()) {
             if (pill.contains(node) || !(node.textContent ?? "").trim() || (node.parentElement as HTMLElement).closest("button")) continue;
             const range = document.createRange();
             range.selectNodeContents(node);
-            if (range.getBoundingClientRect().top < pill.getBoundingClientRect().bottom - 1 && row.getAttribute("data-queue-line") !== "backup") {
-              found.push(`${row.getAttribute("data-queue-line")}: words beside the mark`);
+            for (const rect of Array.from(range.getClientRects())) {
+              const across = Math.min(rect.right, box.right) - Math.max(rect.left, box.left);
+              const down = Math.min(rect.bottom, box.bottom) - Math.max(rect.top, box.top);
+              if (across > 1 && down > 1) found.push(`${row.getAttribute("data-queue-line")}: words under the mark`);
             }
-            break;
           }
         }
       }
@@ -187,9 +190,10 @@ test.describe("Today and the work screens", () => {
     await expect(row).toBeVisible(LOADED);
     await row.getByRole("button", { name: /More|menu/i }).click();
     await page.getByRole("menuitem", { name: "Look closer" }).click();
-    const first = page.getByRole("group", { name: "Site visit" });
-    await expect(first.getByRole("link", { name: "Open" })).toHaveAttribute("href", /calendar-event/);
+    // (The line's own group is named "Site visit and Supplier call overlap": each event's group is matched by its whole name.)
+    const first = page.getByRole("group", { name: "Site visit", exact: true });
+    await expect(first.getByRole("link", { name: "Open", exact: true })).toHaveAttribute("href", /calendar-event/);
     await expect(first).toContainText("Change it in your calendar app");
-    await expect(page.getByRole("group", { name: "Supplier call" }).getByRole("link", { name: "Open" })).toHaveAttribute("href", /calendar-event/);
+    await expect(page.getByRole("group", { name: "Supplier call", exact: true }).getByRole("link", { name: "Open", exact: true })).toHaveAttribute("href", /calendar-event/);
   });
 });

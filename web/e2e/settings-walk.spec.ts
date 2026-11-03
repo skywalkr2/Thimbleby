@@ -113,7 +113,9 @@ const CODE_ID = /\b[A-Za-z_]+:(?!\/\/)/;
 const JUST_ME_WORDS = /\b(work|project|stage|organization|owner|template)s?\b/i;
 // What a fresh workspace counts on its pages: the working hours, the quiet hours and the one notices switch make room for
 // Your name. Where reminders go is one row, drawn by a part of its own that is no `.setting`.
-const BASIC_ROWS = 17;
+// Appearance adds three to it: how times of day are written, the minutes between the times a time box lists, and the rows of
+// Today's side column (change log 319).
+const BASIC_ROWS = 20;
 // The rarely changed settings sit in each page's closed "More settings" fold, and under the topics of Advanced that have no
 // page. The chat or phone app's address and the pick list of the app it belongs to are two parts of one card, neither a
 // `.setting`, so they are two rows more than the `.setting` rows. The synced folder and its sharing choice live in their own
@@ -122,7 +124,7 @@ const MORE_ROWS = 27;
 const SHOWN = ".setting:not(details.more-settings .setting)";
 const FOLDED = "details.more-settings .setting";
 
-test("the settings walk counts 17 shown and 27 more rows, each labelled in plain words once, with a hint in plain words", async ({ page }) => {
+test("the settings walk counts 20 shown and 27 more rows, each labelled in plain words once, with a hint in plain words", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/you");

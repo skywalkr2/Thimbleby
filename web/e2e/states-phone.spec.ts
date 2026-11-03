@@ -70,7 +70,10 @@ test.describe("States of the list screens", () => {
       await expect(alert).toBeVisible(LOADED);
       await expect(alert).toContainText(/couldn't be loaded|didn't load/);
       await failing.unroute();
-      await alert.getByRole("button", { name: "Try again" }).click();
+      // A list the page reads again by itself once the server answers (the live stream tells it) may already be back; otherwise
+      // Try again is what brings it.
+      const retry = alert.getByRole("button", { name: "Try again" });
+      if (await retry.isVisible()) await retry.click({ timeout: 5_000 }).catch(() => undefined);
       await expect(page.locator("main [data-skeleton]")).toHaveCount(0, LOADED);
       await expect(page.locator('main [role="alert"]', { hasText: /couldn't be loaded|didn't load/ })).toHaveCount(0, LOADED);
     });
@@ -193,10 +196,10 @@ test.describe("The phone shell at 390", () => {
     await page.goto("?token=e2e-token#work/open");
     await expect(page.locator("main [data-skeleton]")).toHaveCount(0, LOADED);
     await expect(page.getByRole("radiogroup", { name: "Show" })).toHaveCount(0);
-    const row = page.locator("main [data-row]").filter({ has: page.locator('[aria-haspopup="menu"]') }).first();
+    const row = page.locator("main [data-row]").filter({ has: page.locator('[aria-haspopup]') }).first();
     await expect(row).toBeVisible(LOADED);
     const box = (await row.boundingBox())!;
-    const menu = (await row.locator('[aria-haspopup="menu"]').first().boundingBox())!;
+    const menu = (await row.locator('[aria-haspopup]').first().boundingBox())!;
     // At the top right of the row: inside its right edge and within the first line.
     expect(menu.x + menu.width).toBeLessThanOrEqual(box.x + box.width + 1);
     expect(menu.x + menu.width).toBeGreaterThanOrEqual(box.x + box.width - 16);

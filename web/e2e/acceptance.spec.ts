@@ -483,7 +483,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(dialog).toBeVisible();
     await dialog.getByLabel("What happened, or what would help?").fill("The page was slow");
     await expect(dialog.getByLabel("Subject")).toHaveValue("Feedback on Thimbleby");
-    await expect(dialog.getByLabel("Message")).toHaveValue(/^The page was slow\n\nScreen: Settings(\n\nMissed something\?[^]*)?$/);
+    await expect(dialog.getByLabel("Message")).toHaveValue(/^The page was slow\n\nScreen: Settings(\n\n[“"]?Missed something\?[^]*)?$/);
     // The version is a technical line, kept under "Details for the makers" (collapsed), and goes with the message.
     await expect(dialog.getByLabel("Details for the makers")).toHaveValue(/^App version: .+/);
     await expect(dialog.getByRole("link", { name: "Open in your email app" })).toHaveAttribute("href", /^mailto:/);
@@ -956,7 +956,9 @@ test.describe.serial("acceptance scenario", () => {
     const sources = page.getByRole("list", { name: "Connections", exact: true }).first();
     // One row per source in its card, each saying it reads by itself and when it last did, with its status beside it.
     const rows = sources.getByRole("listitem").filter({ has: page.getByRole("button", { name: /^More actions for / }) });
-    await expect(rows.first()).toContainText(/Read every \d+ minutes · /);
+    // A source that is turned off says so, (its state is "Off") and reads nothing; every other one says how often it is read.
+    const reading = rows.filter({ hasNotText: /Off$/ });
+    await expect(reading.first()).toContainText(/Read every \d+ minutes · /);
     await page.getByRole("button", { name: "Add mail, calendar or folder" }).click();
     const form = page.getByRole("dialog", { name: "Add mail, calendar or folder" }).getByRole("form", { name: "Add mail, calendar or folder" });
     await expect(form).toBeVisible();
@@ -1174,7 +1176,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(form.getByRole("textbox", { name: "Name", exact: true })).toBeFocused();
     await form.getByRole("textbox", { name: "Name", exact: true }).fill("Listed project");
     const status = form.getByRole("combobox", { name: "Status" });
-    expect((await choicesOf(status)).map((c) => c.label)).toEqual(expect.arrayContaining(["Not set", "Add to the list…"]));
+    // The list's values are read when the form opens, so the choices are waited for.
+    await expect.poll(async () => (await choicesOf(status)).map((c) => c.label)).toEqual(expect.arrayContaining(["Not set", "Add to the list…"]));
     await choose(status, { label: "Add to the list…" });
     const field = form.getByRole("textbox", { name: "Add a choice to Project status" });
     await expect(field).toBeFocused();

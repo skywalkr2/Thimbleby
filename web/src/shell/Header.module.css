@@ -54,6 +54,9 @@
 }
 :global([data-narrow]) .header { gap: var(--space-2); padding: 0 var(--space-3); }
 :global([data-narrow]) .brand { font-size: var(--text-md); line-height: var(--lh-md); flex: 0 1 auto; }
+/* On a phone the logo, the Demo mark, the status chip, the search icon and the menu share one row: the chip gives up its width (its
+   word is cut with an ellipsis; the full words are its name and its popover) before any button leaves the window. */
+:global([data-narrow]) .status { flex: 0 1 auto; min-width: 0; }
 
 
 /* The phone's search field opens in a strip under the header, over the page; its results open downward from it. */

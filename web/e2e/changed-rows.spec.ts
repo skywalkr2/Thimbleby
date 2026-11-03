@@ -4,7 +4,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const LOADED = { timeout: 20_000 };
-const LONG = "a first part of a title that runs on and on, so that it needs a second line in a list this wide and then some more words after it";
+// A row's title is cut to its first words (design 7.7, "Titles are short"), so a title only takes a second line when its words are long
+// ones: seven long words fill more than the width of the list at both widths.
+const LONG = "Extraordinarily comprehensive internationalization documentation reorganization recommendations considerations implementations";
 
 /** A change the assistant stopped on, titled by a note with a long topic: its row has a two-line title and a meta line. */
 const change = (n: number) => ({

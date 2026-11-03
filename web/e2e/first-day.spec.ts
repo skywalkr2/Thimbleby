@@ -105,7 +105,7 @@ test.describe("the first day, read as a person reads it", () => {
   // F4: with no mailbox and no calendar, Today's side column still has the Schedule card, so the queue is not left in two
   // thirds of the width with a blank column beside it.
   test("at 1440 Today's queue and its side column fill the width, with a Schedule card that says nothing is on and offers a calendar", async ({ page }) => {
-    await openScreen(page, "today", "Today");
+    await openScreen(page, "today", /^Good (morning|afternoon|evening)/);
     const rail = page.getByRole("group", { name: "Briefing, schedule and mail" });
     const schedule = rail.getByRole("region", { name: "Schedule" });
     await expect(schedule).toBeVisible(LOADED);

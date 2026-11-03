@@ -109,7 +109,10 @@ export function SettingsNav(props: {
   // On a phone the sections are behind one line that names the open one, so the page's own content is not pushed down the
   // screen by a list of every section.
   // Below 1100px of window the list of sections folds too: the page's content has the room, not a column of section names.
-  const narrow = useIsNarrow() || useMediaQuery("(max-width: 1100px)");
+  // Both are read on every render (a hook is never behind `||`), so the window changing width keeps the hooks in order.
+  const phone = useIsNarrow();
+  const folded = useMediaQuery("(max-width: 1100px)");
+  const narrow = phone || folded;
   const [picking, setPicking] = useState(false);
   const label = (s: SettingsSection) =>
     s.startsWith("addon/")
@@ -516,6 +519,16 @@ export function Settings(props: {
     if (!parsed.ok) return;
     // This device shows the choice at once, even when the workspace's saved value is already the same.
     applyAppearanceChanges([{ key: item.key, after: parsed.value }]);
+    // A repeat of what is saved and nothing is waiting to save (Enter, then the cursor leaving, as when the cursor goes to the
+    // Reset beside it) sends nothing and shows no Saving cue, which would take that button away from under the press.
+    const heldNow = client.getQueryData<S["SettingsView"]>(["settings"])?.items.find((i) => i.key === item.key);
+    if (heldNow && !saving.includes(item.key)) {
+      const stored = fromDraft(heldNow, toDraft(heldNow));
+      if (stored.ok && JSON.stringify(stored.value) === JSON.stringify(parsed.value)) {
+        drop(item.key, draft);
+        return;
+      }
+    }
     enqueue(async () => {
       // What is saved now, so a repeat (Enter, then the cursor leaving) or an edit put back as it was sends nothing.
       const now =

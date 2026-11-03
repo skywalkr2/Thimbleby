@@ -41,7 +41,8 @@ async function open(page: Page) {
   });
   await expect(page.getByRole("main").getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
   await expect(page.locator("main [data-skeleton]")).toHaveCount(0, { timeout: 15_000 });
-  await expect(page.locator("main [data-grid], main [data-month]").first()).toBeVisible();
+  // The calendar's grid, or on a phone its list by day.
+  await expect(page.locator("main [data-grid], main [data-month], main [data-schedule-list]").first()).toBeVisible();
 }
 
 /** Picks a view with its key, which works while the cursor is on no control. */
@@ -120,7 +121,7 @@ test.describe("the calendar page", () => {
     await expect(page.locator("main ul[data-day]")).toHaveCount(5);
     await expect(page.locator("main [data-weekdays-only]")).toBeVisible();
     // The tab still says Week; nothing is wider than the window.
-    await expect(page.getByRole("radio", { name: "Week" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: "Week", exact: true })).toHaveAttribute("aria-checked", "true");
     const narrow = await measure(page);
     expect(narrow.page).toBeLessThanOrEqual(narrow.window);
     await page.setViewportSize({ width: 1280, height: 900 });

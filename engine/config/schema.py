@@ -260,8 +260,7 @@ class WorkspaceFile(FileModel):
     name: str = Field(
         "Workspace",
         max_length=80,
-        description="The workspace's name, shown in the window's tab and at the top of your menu. Setup names it after "
-        "you.",
+        description="The name shown in the window's tab and at the top of your menu. Setup names it after you.",
     )
     assistant_name: str = Field(
         "Reginald",
@@ -2932,7 +2931,7 @@ class UiFile(FileModel):
     )
     time_format: Literal["auto", "12h", "24h"] = Field(
         "auto",
-        description="How times of day are written. Automatic follows the language of this workspace, and the other two "
+        description="How times of day are written. Automatic follows your language, and the other two "
         "are always the 12-hour clock (9:30 AM) or the 24-hour clock (09:30).",
     )
     time_step: int = Field(

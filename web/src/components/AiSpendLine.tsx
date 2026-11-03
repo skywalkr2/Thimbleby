@@ -103,9 +103,9 @@ export function useSpendLine(enabled = true): SpendLine {
   const node =
     enabled && confirm && day ? (
       <section className="spend" aria-labelledby={`${base}-title`}>
-        <h4 id={`${base}-title`} className="sr">
+        <h3 id={`${base}-title`} className="sr">
           {t("welcome.spend.title")}
-        </h4>
+        </h3>
         {editing ? (
           <>
             <p className="hint">{t("welcome.spend.intro")}</p>

@@ -57,8 +57,14 @@ export function Addons(props: { onBack?: () => void }) {
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
   const [tab, setTab] = useState("available");
   const [removed, setRemoved] = useState<Set<string>>(() => new Set());
-  useEffect(() => setRemoved(new Set()), [restarts]);
+  // An add-on installed from the list stays in it, with its note and Restart now, until the restart it asks for has happened.
+  const [kept, setKept] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    setRemoved(new Set());
+    setKept(new Set());
+  }, [restarts]);
   const hideRemoved = (id: string) => setRemoved((current) => new Set(current).add(id));
+  const keepInstalled = (id: string) => setKept((current) => new Set(current).add(id));
   return (
     <section className="panel-section" aria-labelledby="addons-title">
       <div className="heading">
@@ -82,7 +88,7 @@ export function Addons(props: { onBack?: () => void }) {
           </Tab>
         </TabList>
         <TabPanel id="available" className="tab-panel">
-          <Loaded query={packs}>{(view) => <Available view={view} removed={removed} onRemove={hideRemoved} />}</Loaded>
+          <Loaded query={packs}>{(view) => <Available view={view} removed={removed} onRemove={hideRemoved} kept={kept} onKeep={keepInstalled} />}</Loaded>
         </TabPanel>
         <TabPanel id="installed" className="tab-panel">
           <Loaded query={packs}>{(view) => <InstalledList items={view.installed} removed={removed} onRemove={hideRemoved} />}</Loaded>
@@ -130,6 +136,7 @@ export function usePackChange(
   focusRow: () => void,
   nameOf: (id: string) => string = (id) => id,
   onRemoved?: () => void,
+  onInstalled?: () => void,
 ) {
   const { t } = useWords();
   const client = useQueryClient();
@@ -158,6 +165,7 @@ export function usePackChange(
     try {
       const result = await (what === "install" ? api.installPack : api.removePack)(packId);
       if (what === "remove") onRemoved?.();
+      else onInstalled?.();
       if (result.file_kept) {
         // Only this add-on went: the file stays while others of the same file use it, and nothing needs a restart.
         push({ message: t("addons.removed_kept_note", { name, others: (result.still_used_by ?? []).map(nameOf).join(", ") }) });
@@ -261,12 +269,12 @@ export function emptyReason(view: S["PacksView"], t: (key: string) => string): s
   return view.feeds.every((feed) => feed.error) ? t("addons.no_packs_failed") : t("addons.no_packs");
 }
 
-function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; onRemove: (id: string) => void }) {
+function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; onRemove: (id: string) => void; kept: ReadonlySet<string>; onKeep: (id: string) => void }) {
   const { t } = useWords();
   const { view } = props;
   // An add-on that is installed is listed under Installed, not here again; one with an update on offer, or one waiting for
   // the restart the person just asked for, stays, so the row they acted on does not vanish.
-  const available = view.available.filter((pack) => !props.removed.has(pack.id) && (!view.installed.some((i) => i.name === pack.id) || updateOffered(pack) || restartNeeded(pack, view.installed)));
+  const available = view.available.filter((pack) => !props.removed.has(pack.id) && (!view.installed.some((i) => i.name === pack.id) || updateOffered(pack) || restartNeeded(pack, view.installed) || props.kept.has(pack.id)));
   const [getting, setGetting] = useState<number | null>(null);
   const empty = emptyReason({ ...view, available }, t);
   return (
@@ -284,6 +292,7 @@ function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; 
                 restartNeeded={restartNeeded(slots[0].item, view.installed)}
                 onGet={() => setGetting(slots[0].index)}
                 onRemoved={() => props.onRemove(slots[0].item.id)}
+                onInstalled={() => props.onKeep(slots[0].item.id)}
               />
             ) : (
               <PackGroup
@@ -293,6 +302,7 @@ function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; 
                 nameOf={(id) => available.find((p) => p.id === id)?.name ?? id}
                 onGet={(i) => setGetting(i)}
                 onRemove={props.onRemove}
+                onKeep={props.onKeep}
               />
             ),
           )}
@@ -362,6 +372,7 @@ function PackRow(props: {
   restartNeeded: boolean;
   onGet: () => void;
   onRemoved: () => void;
+  onInstalled?: () => void;
   group?: { anyInstalled: boolean; nameOf: (id: string) => string };
 }) {
   const { t } = useWords();
@@ -389,6 +400,7 @@ function PackRow(props: {
     () => restoreFocus(() => document.getElementById(`pack-row-${index}`) ?? document.getElementById("addons-title")),
     props.group?.nameOf,
     props.onRemoved,
+    props.onInstalled,
   );
   const problem = change.problem || power.problem;
   const [confirming, setConfirming] = useState(false);
@@ -537,6 +549,7 @@ function PackGroup(props: {
   nameOf: (id: string) => string;
   onGet: (index: number) => void;
   onRemove: (id: string) => void;
+  onKeep: (id: string) => void;
 }) {
   const { t } = useWords();
   const price = usePrice();
@@ -545,8 +558,13 @@ function PackGroup(props: {
   const names = slots.map((s) => s.pack.name);
   const base = `pack-group-${first.index}`;
   const anyInstalled = slots.some((s) => s.pack.installed_version != null);
-  const change = usePackChange(first.pack.id, names.join(", "), () =>
-    restoreFocus(() => document.getElementById(`${base}-row`)),
+  const change = usePackChange(
+    first.pack.id,
+    names.join(", "),
+    () => restoreFocus(() => document.getElementById(`${base}-row`)),
+    undefined,
+    undefined,
+    () => slots.forEach((slot) => props.onKeep(slot.pack.id)),
   );
   const amount = (value: number, currency: string) => price(value, currency);
   const pack = first.pack;
@@ -604,6 +622,7 @@ function PackGroup(props: {
                 restartNeeded={restartNeeded(slot.pack, props.installed)}
                 onGet={() => props.onGet(slot.index)}
                 onRemoved={() => props.onRemove(slot.pack.id)}
+                onInstalled={() => props.onKeep(slot.pack.id)}
                 group={{ anyInstalled, nameOf: props.nameOf }}
               />
             ))}

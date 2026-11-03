@@ -34,7 +34,7 @@ test.describe("the brand", () => {
     await expect(night).toBeHidden();
     await expect(day).toHaveAttribute("alt", "");
     // The picture loaded (it has a size), from the app's own address.
-    expect(await day.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    await expect.poll(() => day.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
     // The name is text beside it, in the display face: the product's own name from the wording sheet, not the workspace's.
     const name = brand.locator("span").filter({ hasText: /\S/ }).first();
     await expect(name).toBeVisible();

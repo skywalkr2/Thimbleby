@@ -48,8 +48,8 @@ test("a to-do's Edit details is the short editor, and saving only the day leaves
   const before = await heading.innerText();
   await page.getByRole("button", { name: "Edit details" }).click();
   await expect(page.getByLabel("Title")).toBeVisible(LOADED);
-  // A short editor, not a form of the record's own fields.
-  for (const raw of ["Reply owed", "Reported by", "Date set by", "Where it came from", "Status", "Wording"]) await expect(page.getByLabel(raw)).toHaveCount(0);
+  // A short editor, not a form of the record's own fields (a label is matched whole: the header's "App status" is not a field).
+  for (const raw of ["Reply owed", "Reported by", "Date set by", "Where it came from", "Status", "Wording"]) await expect(page.getByLabel(raw, { exact: true })).toHaveCount(0);
   await expect(page.getByRole("main")).not.toContainText(/PRJ-\d|PER-\d|SRC-\d|\[object Object\]/);
   await page.getByLabel("Due", { exact: true }).fill(ahead(6));
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -63,7 +63,7 @@ test("a to-do's Edit details is the short editor, and saving only the day leaves
 
 test("the Schedule card and Came in write times on the person's own clock, the one Now is on, not in UTC", async ({ page }) => {
   await page.goto("?token=e2e-token");
-  const { timezone } = (await (await page.request.get("api/runtime-config", { headers: AUTH })).json()) as { timezone: string };
+  const { timezone, time_format: format } = (await (await page.request.get("api/runtime-config", { headers: AUTH })).json()) as { timezone: string; time_format: "auto" | "12h" | "24h" };
   const sent = new Date(Date.now() + 90 * 60_000);
   const received = new Date();
   const day = (zone: string) => new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -78,8 +78,16 @@ test("the Schedule card and Came in write times on the person's own clock, the o
     }),
   );
   await page.goto("?token=e2e-token#today");
+  // The clock is written as the setting `ui.time_format` says (the language's own, 12-hour or 24-hour with two digits).
   const clock = (when: Date, zone: string) =>
-    page.evaluate(([iso, z]) => new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: z }).format(new Date(iso)), [when.toISOString(), zone] as const);
+    page.evaluate(
+      ([iso, z, how]) => {
+        const options: Intl.DateTimeFormatOptions =
+          how === "24h" ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } : how === "12h" ? { hour: "numeric", minute: "2-digit", hour12: true } : { hour: "numeric", minute: "2-digit" };
+        return new Intl.DateTimeFormat(undefined, { ...options, timeZone: z }).format(new Date(iso));
+      },
+      [when.toISOString(), zone, format] as const,
+    );
   const [mine, utc, mineReceived, utcReceived] = [await clock(sent, timezone), await clock(sent, "UTC"), await clock(received, timezone), await clock(received, "UTC")];
   const schedule = page.getByRole("region", { name: "Schedule" });
   await expect(schedule.getByText("Venue walk")).toBeVisible(LOADED);
@@ -289,6 +297,8 @@ test("removing the account the assistant's work runs on asks first, and Today of
   await expect(page.getByText("2 items are waiting for an AI account")).toBeVisible(LOADED);
   await expect(page.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add an AI account" }).first()).toBeVisible(LOADED);
+  // The page's reads still in flight when the test ends are let go, so a closing page is not a failure of a route's own fetch.
+  await page.unrouteAll({ behavior: "ignoreErrors" });
 });
 
 test("five quick due-date edits to one to-do leave one What changed row of the edits and no note from a follow-on run", async ({ page }) => {

@@ -206,7 +206,8 @@ test.describe("no screen is wider than the window", () => {
         // Past the panel's right edge, or a box whose own content is wider than it (clipped or scrolling inside it).
         const wide = all.filter((el) => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().right > box.right + 1).map((el) => `${name(el)} right ${Math.round(el.getBoundingClientRect().right)}`);
         const inside = all
-          .filter((el) => !["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName) && el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0)
+          // Text that ends in an ellipsis, with its whole value as the title, is shortened on purpose and not cut off.
+          .filter((el) => !["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName) && el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && !(getComputedStyle(el).textOverflow === "ellipsis" && el.closest("[title]")))
           .map((el) => `${name(el)} content ${el.scrollWidth} in ${el.clientWidth}`);
         const widest = all.map((el) => ({ el, w: el.getBoundingClientRect().width })).sort((x, y) => y.w - x.w).slice(0, 3).map(({ el, w }) => `${name(el)} ${Math.round(w)}`);
         const found = { label, window: window.innerWidth, panel: Math.round(box.width), panelScroll: dialog.scrollWidth - dialog.clientWidth, page: document.documentElement.scrollWidth, widest, wide: wide.slice(0, 6), inside: inside.slice(0, 6) };

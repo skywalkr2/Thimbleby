@@ -44,6 +44,8 @@ test("adding an organization posts its name, then selects it", async () => {
   const select = await screen.findByRole("combobox", { name: "Organization" });
   await waitFor(async () => expect(await names(select)).toContain("Org one"));
   await user.selectOptions(select, "Add an organization…");
+  // The cursor is in the new field, not back on the list's button.
+  await waitFor(() => expect(screen.getByRole("textbox", { name: "Name of the new organization" })).toHaveFocus());
   await user.type(screen.getByRole("textbox", { name: "Name of the new organization" }), "Org nine");
   await user.click(screen.getByRole("button", { name: "Add" }));
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("ORG-9"));

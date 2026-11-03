@@ -210,7 +210,7 @@ test.describe.serial("journeys", () => {
     await page.getByRole("button", { name: /Add mail, calendar or folder/ }).first().click();
     await page.getByRole("radio", { name: /^A folder on this computer/ }).check();
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByLabel(/^The folder/).fill(info.source_folder);
+    await page.getByLabel("Folder", { exact: true }).fill(info.source_folder);
     // With no name typed, the connection is named after what it reads: the folder's own name.
     const name = info.source_folder.split(/[\\/]/).filter(Boolean).pop() ?? "";
     await visit(page);
@@ -538,14 +538,17 @@ test.describe.serial("journeys", () => {
     await connectedAgain(page);
     await visit(page);
 
-    // After the restart the row says it is installed and off; turning it on waits for another restart.
-    await expect(row).toContainText("Installed (version 0.1.0) and off");
-    await row.getByRole("button", { name: "Turn on Example panel" }).click();
-    // The row still carries the install note ("ready after a restart"), so that text proves nothing about Turn on. Wait
-    // for the row to say what was saved: a restart asked for before then can reach the app ahead of the request.
-    await expect(row).toContainText("Installed (version 0.1.0) and on after a restart");
+    // After the restart the add-on is listed under Installed, off; turning it on waits for another restart. (Available leaves out
+    // what is installed.)
+    await page.getByRole("tab", { name: "Installed" }).click();
+    const onList = page.locator("[data-row-list] > li", { hasText: "Example panel" });
+    await expect(onList.getByText("Off", { exact: true }).first()).toBeVisible();
+    await onList.getByRole("button", { name: "Turn on Example panel" }).click();
+    // The row still carries the install note, so that text proves nothing about Turn on. Wait for the row to say what was saved:
+    // a restart asked for before then can reach the app ahead of the request.
+    await expect(onList).toContainText("On after a restart");
     await expect(page.getByRole("link", { name: /Example overview/ })).toHaveCount(0);
-    await row.getByRole("button", { name: "Restart now" }).first().click();
+    await onList.getByRole("button", { name: "Restart now" }).first().click();
     await expect(page.getByRole("region", { name: "Notifications" }).getByText(/^Restarted with the new settings\./)).toBeVisible({ timeout: 90_000 });
     await connectedAgain(page);
 
@@ -571,6 +574,8 @@ test.describe.serial("journeys", () => {
     await installed.getByRole("button", { name: "More actions for Example panel" }).click();
     const removed = page.waitForResponse((r) => r.url().endsWith("/uninstall") && r.request().method() === "POST");
     await page.getByRole("menuitem", { name: "Remove" }).click();
+    // Removing asks first; the backup is made and the removal goes ahead when the person says so.
+    await page.getByRole("dialog").getByRole("button", { name: "Remove it" }).click();
     // The restart below must come after the removal has been answered, not race it.
     expect((await removed).ok()).toBe(true);
     await expect(installed.getByRole("alert")).toHaveCount(0);

@@ -132,7 +132,16 @@ test.describe('"Just me" sees no work words', () => {
 
   test("the side menu has no Work heading and no Stages or Projects, and Personal is a page of its own", async ({ page }) => {
     const nav = page.getByRole("navigation", { name: "Views" });
-    const labels = (await nav.getByRole("link").allInnerTexts()).map((text) => text.replace(/\s*\d+$/, "").trim());
+    // A side's mark (its first letter, drawn for the eye and hidden from a screen reader) is not part of its name.
+    const labels = (
+      await nav.getByRole("link").evaluateAll((links) =>
+        links.map((link) => {
+          const copy = link.cloneNode(true) as HTMLElement;
+          copy.querySelectorAll("[aria-hidden='true']").forEach((el) => el.remove());
+          return copy.innerText ?? copy.textContent ?? "";
+        }),
+      )
+    ).map((text) => text.replace(/\s*\d+$/, "").trim());
     expect(labels).toEqual([
       "Today",
       "Schedule",
@@ -408,7 +417,8 @@ test.describe('"Just me" sees no work words', () => {
     await expect(page.getByRole("radio", { name: "Weekdays" })).toBeVisible(LOADED);
     await scan("Schedule");
     await page.getByRole("radio", { name: "Timeline" }).click();
-    await expect(page.getByText(/Not filed under an area|Nothing with a date/).first()).toBeVisible(LOADED);
+    // The timeline has drawn: its lanes when an item has a day, else the words that say there is none.
+    await expect(page.getByRole("group", { name: "Lanes by area" }).or(page.getByText(/Not filed under an area|Nothing with a date/)).first()).toBeVisible(LOADED);
     await scan("Timeline");
     for (const hash of ["work/stages", "handover", "quality", "settings/ai"]) {
       await go(page, hash);

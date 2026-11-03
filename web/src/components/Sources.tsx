@@ -388,8 +388,10 @@ function SourcePart(props: {
   const { source } = props;
   const titleId = `source-${source.id}`;
   const menuId = `${titleId}-menu`;
-  // An account that has to sign in is told once for the account, in its card, and not as a problem under each of its rows.
-  const problem = signInNeed(source) ? null : problemOf(source, t, has);
+  // An account that has to sign in is told once for the account, in its card, and not as a problem under each of its rows. A source
+  // with no account (a mailbox read with a password) that the service refused has no card, so its row says why.
+  const accountTold = source.account_state === "signed_out" || source.account_state === "expired";
+  const problem = signInNeed(source) && accountTold ? null : problemOf(source, t, has);
   const lastWhen = source.read_at ? when(source.read_at) : "";
   const lastWords = lastReadText(source, t);
   // Told from this connection's own state and its account's: a row that is not being read (its account is signed out, or

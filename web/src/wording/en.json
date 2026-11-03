@@ -2069,6 +2069,7 @@
   "refreshed.line_no_time": "refreshed: {label} is now {value}, changed elsewhere",
   "settings.changed_since_opened": "This was changed since you opened it. What you typed is still here; check it against what is saved now, then save again.",
   "settings.key.workspace.name": "Workspace name",
+  "settings.key.workspace.name.just_me": "Name at the top of the menu",
   "settings.key.workspace.assistant_name": "Your assistant's name",
   "settings.key.workspace.user.full_name": "Your full name",
   "settings.key.workspace.user.aliases": "Your other names",

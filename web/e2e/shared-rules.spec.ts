@@ -273,7 +273,7 @@ test.describe("no browser date, time or list controls (VC05)", () => {
     });
   }
 
-  test("none in the Add to-do form, the Schedule's Add form, Quality's count form or a to-do's Edit details; each has the app's own date box with its calendar", async ({ page, request }) => {
+  test("none in the Add to-do form, the Schedule's Add form, Quality's count form or a to-do's Edit details; the day in each is the app's own box (typed words, with a calendar where there is a date to pick)", async ({ page, request }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -284,8 +284,9 @@ test.describe("no browser date, time or list controls (VC05)", () => {
     const todo = page.getByRole("dialog", { name: "Add a to-do" });
     await expect(todo).toBeVisible(LOADED);
     await expect(native(page)).toHaveCount(0);
-    await expect(todo.locator('[data-ui="date"]').first()).toBeVisible();
-    await expect(todo.getByRole("button", { name: /^Choose a date/ }).first()).toBeVisible();
+    // Its day is the person's own words, read by rules and said back ("Friday", "next Tuesday"): a text box, not a date control.
+    await expect(todo.getByRole("textbox", { name: "Due (optional)" })).toBeVisible();
+    await expect(todo.getByRole("combobox", { name: "How long it takes" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: "Add a to-do" })).toHaveCount(0);
 

@@ -151,6 +151,19 @@ export async function revealNewLines(page: Page, line: Locator, expected: number
     .toBe(expected);
 }
 
+/** A source's review line on Today counts the things it made (design 7.7): its title's number and the words under it ("4 items"
+ * over "4 to-dos") are one count, and it is never less than the taken-in items that needed a look. */
+export async function expectFoundLine(line: Locator, source: string, atLeast: number, timeout = 60_000) {
+  const pattern = new RegExp(`Look over what was found in ${source}: (\\d+) items?`);
+  await expect(line).toContainText(pattern, { timeout });
+  const text = (await line.innerText()).replace(/\s+/g, " ");
+  const title = Number(pattern.exec(text)?.[1]);
+  const words = text.slice(text.indexOf(`${title} item`) + `${title} item`.length);
+  const listed = [...words.matchAll(/(\d+) (?:to-dos?(?: closed)?|questions?|notes?|things? recorded|people|persons?|projects?|drafts?|other changes?)/g)].reduce((n, m) => n + Number(m[1]), 0);
+  expect(title, `the line's title and the words under it (${words.slice(0, 80)}) are one count`).toBe(listed);
+  expect(title).toBeGreaterThanOrEqual(atLeast);
+}
+
 /** On a phone the step list is behind a Steps button; open it so a step can be chosen. Nothing happens on a wider window. */
 export async function showSteps(page: Page) {
   const button = page.getByRole("button", { name: "Steps", exact: true });

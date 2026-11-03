@@ -703,6 +703,35 @@ test("an add-on with a release has Install as its one action: it installs, then 
   await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
 });
 
+test("an add-on that is installed (and off) stays in Available with its note and Restart now until the restart, though the list now holds it as installed", async () => {
+  const user = userEvent.setup();
+  let done = false;
+  const installedTool: Packs["installed"] = [
+    { name: "tool", version: "1.0.0", description: "", enabled: false, state: "off", reason: null, removable: true, what: summary() },
+  ];
+  const calls = fakeApi({
+    "GET packs": () =>
+      view({ available: [pack("tool", { installable: true, installed_version: done ? "1.0.0" : null })], installed: done ? installedTool : [] }),
+    "GET status": () => ({ restart_needed: done ? "add-ons" : null, can_restart: true, restart_for: done ? ["add-ons"] : [] }),
+    "POST packs/tool/install": () => {
+      done = true;
+      return INSTALLED("tool");
+    },
+    "POST restart": () => ({ restarting: true }),
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <Addons onBack={() => undefined} />
+    </RestartProvider>,
+  );
+  const tool = await row("Name of tool");
+  await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET packs").length).toBeGreaterThan(1));
+  const stays = await row("Name of tool");
+  expect(await within(stays).findByText(/Name of tool is installed\. Restart, then turn it on\./)).toBeInTheDocument();
+  expect(within(stays).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+});
+
 test("the install note and its Restart now go once the app has restarted, and stay while the restart is still to come", async () => {
   const user = userEvent.setup();
   let installed = false;

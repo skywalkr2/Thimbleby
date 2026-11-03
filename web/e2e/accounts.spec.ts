@@ -108,7 +108,8 @@ test.describe.serial("several accounts", () => {
     await expect(third).toHaveAttribute("aria-pressed", "true");
     // The entry's page says which calendars hold it.
     await review.first().click();
-    await expect(page.getByText("Also in").first()).toBeVisible();
+    // (The row names them too, in words for a screen reader; the page's own label is the whole text of its term.)
+    await expect(page.getByText("Also in", { exact: true }).first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 
@@ -118,6 +119,9 @@ test.describe.serial("several accounts", () => {
     await go(page, "today");
     const came = page.getByRole("region", { name: /Came in/ });
     await expect(came).toBeVisible(LOADED);
+    // The card lists the first rows of what came in (`ui.today.rail_rows`) and folds the rest behind "N more".
+    const more = came.getByRole("button", { name: /^\d+ more$/ });
+    if (await more.count()) await more.click();
     const thread = came.getByText("Joint lease renewal");
     await expect(thread.first()).toBeVisible(LOADED);
     await expect(thread).toHaveCount(1);
@@ -140,6 +144,17 @@ test.describe.serial("several accounts", () => {
     await group.getByRole("checkbox", { name: `Your inbox, ${addresses[1]}` }).check();
     await group.getByRole("checkbox", { name: `Your calendar, ${addresses[1]}` }).check();
     await expect(group.getByRole("checkbox", { name: `Your inbox, ${addresses[1]}` })).toBeChecked();
+    // Each tick is saved as it is made, one after the other; both are in the settings before the drawer is closed.
+    await expect
+      .poll(
+        async () => {
+          const read = (await (await page.request.get("api/settings", { headers: { Authorization: `Bearer ${info.token}` } })).json()) as { items: Array<{ key: string; value: unknown }> };
+          const held = read.items.find((i) => i.key === "watch.sources")!.value as Array<{ label: string; sides?: string[] }>;
+          return held.filter((x) => x.label.endsWith(addresses[1]) && (x.sides ?? []).length > 1).length;
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(2);
     await ask.getByRole("button", { name: "Done" }).click();
     // Later, the same sides are in the connection's own change form, beside the rest of its settings.
     await go(page, "settings/connections");
@@ -159,14 +174,23 @@ test.describe.serial("several accounts", () => {
     const filter = page.getByRole("radiogroup", { name: "Show" }).first();
     await expect(filter).toBeVisible(LOADED);
     const came = page.getByRole("region", { name: /Came in/ });
+    // The card lists the first rows of what came in (`ui.today.rail_rows`) and folds the rest behind "N more": opened before a row is looked for.
+    const all = async () => {
+      await expect(came).toBeVisible(LOADED);
+      const more = came.getByRole("button", { name: /^\d+ more$/ });
+      if (await more.count()) await more.click();
+    };
+    await all();
     await expect(came.getByText("Question for account 1")).toBeVisible(LOADED);
     await filter.getByRole("radio", { name: /^Harborview/ }).click();
+    await all();
     // The first account serves only Personal: its own mail is not shown under the business, the second account's (which serves both) is.
     await expect(came.getByText("Question for account 1")).toHaveCount(0);
     await expect(came.getByText("Question for account 2")).toBeVisible();
     // The clash between the first and the second account's meetings is between Personal and the business: it shows under the business.
     await expect(page.locator('[data-queue-line="clash"]').first()).toBeVisible(LOADED);
     await filter.getByRole("radio", { name: "Personal" }).click();
+    await all();
     await expect(came.getByText("Question for account 1")).toBeVisible();
     await filter.getByRole("radio", { name: "All" }).click();
   });
@@ -206,10 +230,13 @@ test.describe.serial("several accounts", () => {
     await expect(rows.filter({ hasText: failing })).toContainText("Needs sign-in");
     await expect(dialog.locator("[data-coverage='unread']")).toHaveCount(0);
     await page.keyboard.press("Escape");
-    // Today holds one line for the account, not one for each of its connections.
+    // A failure becomes a line on Today only once it has lasted longer than the connection's read interval since its last good read
+    // (`watch.unread_gap_factor`, never less than one interval of five minutes or more); this one is minutes old, so Today holds none
+    // yet, and never one for each of the account's connections (`tests/test_several_accounts.py` makes it old and counts one).
     await go(page, "today");
-    await expect(page.locator('[data-queue-line="source_unread"]')).toHaveCount(1, LOADED);
-    await expect(page.locator('[data-queue-line="source_unread"]')).toContainText(failing);
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible(LOADED);
+    await expect(page.locator("main [data-skeleton]")).toHaveCount(0, LOADED);
+    await expect(page.locator('[data-queue-line="source_unread"]')).toHaveCount(0);
   });
 
   test("VC13. with one of three accounts failing the header says 1 account needs you, and its popover is one state row for each account, not a wall of red lines", async ({ page }) => {

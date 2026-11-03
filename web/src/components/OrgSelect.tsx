@@ -1,7 +1,7 @@
 // A labelled choice of organization, by name. It offers the organizations on file and "Not set"; "Add an organization…"
 // opens a small field that adds one at once (with Undo) and selects it. The value is the organization's id; only names show.
 import { useQuery } from "@tanstack/react-query";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
@@ -27,6 +27,12 @@ export function OrgSelect(props: {
   const id = props.id ?? own;
   const select = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
+  const newField = useRef<HTMLInputElement>(null);
+  // Choosing "Add…" opens a field and the cursor goes into it. The list that was just closed gives the cursor back to its button
+  // in its own effect, which runs first, so the field takes it afterwards.
+  useEffect(() => {
+    if (adding) newField.current?.focus();
+  }, [adding]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -89,7 +95,7 @@ export function OrgSelect(props: {
             id={`${id}-new`}
             type="text"
             value={text}
-            autoFocus
+            ref={newField}
             autoComplete="off"
             placeholder={t("org.add_placeholder")}
             onChange={(e) => setText(e.target.value)}

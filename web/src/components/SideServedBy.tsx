@@ -45,7 +45,9 @@ export function SideServedBy(props: { side: { id: string; name: string } }) {
       }),
     };
     const saved = await api.saveSettings({ changes, reset: [], fingerprint: current.fingerprint });
-    await afterSave(saved, { quiet: true });
+    // The screens are read again in the background: the next tick reads the settings itself and does not wait for every screen to
+    // answer (a slow one would hold the ticks made after it, which are lost when the drawer closes first).
+    void afterSave(saved, { quiet: true });
   };
   const change = (id: string, on: boolean) => {
     setProblem("");
@@ -53,7 +55,16 @@ export function SideServedBy(props: { side: { id: string; name: string } }) {
     // One save at a time, in the order the ticks were made.
     chain.current = chain.current.then(async () => {
       try {
-        await save(id, on);
+        // A save refused because the settings moved on (another save landed between the read and the write) is made again from
+        // what is there now, so a tick is never lost to a race.
+        for (let attempt = 1; ; attempt += 1) {
+          try {
+            await save(id, on);
+            break;
+          } catch (err) {
+            if (!(err instanceof ApiError && err.status === 409) || attempt >= 3) throw err;
+          }
+        }
       } catch (err) {
         setProblem(err instanceof ApiError && err.detail && err.status < 500 ? err.detail : t("side.serves.failed", { name: props.side.name }));
       }

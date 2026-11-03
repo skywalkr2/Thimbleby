@@ -85,7 +85,7 @@ function StatTile(props: { title: string; value: string; change?: string; delta?
   const judged = dir && props.better ? ((props.better === "more") === (dir === "up") ? "better" : "worse") : null;
   return (
     <article className={styles.tile} aria-labelledby={id}>
-      <h3 id={id}>{props.title}</h3>
+      <h2 id={id}>{props.title}</h2>
       <p className={styles.value}>{props.value}</p>
       {props.change && (
         <p className={styles.change} data-judged={judged ?? undefined}>

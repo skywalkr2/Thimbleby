@@ -56,9 +56,11 @@ test.describe.serial("setup and settings fixes", () => {
     // X94: choosing a service, then Something else, lets the first one go: its guide leaves and one card is selected.
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByRole("radio").first().click();
-    await expect(main.getByText(/^Connect /).first()).toBeVisible();
+    // The guide of the chosen service is titled "Connect <service>"; the step's own line, "Connect an AI account", is not it.
+    const guide = main.getByText(/^Connect (?!an AI account)/);
+    await expect(guide.first()).toBeVisible();
     await main.getByRole("radio", { name: /Something else/ }).click();
-    await expect(main.getByText(/^Connect /)).toHaveCount(0);
+    await expect(guide).toHaveCount(0);
     await expect(main.getByRole("radio", { name: /Something else/ })).toBeChecked();
     expect(await main.locator('input[type="radio"][name^="ai-kind"]:checked').count()).toBe(1);
     await main.getByRole("button", { name: /^Another service/ }).click();
@@ -129,14 +131,16 @@ test.describe.serial("setup and settings fixes", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible(LOADED);
     // Making a new folder in the chooser and choosing it replaces the folder backups went to.
     const where = main.getByRole("region", { name: "Where backups go" });
-    await expect(where.locator("ul.plain-list li").first()).toContainText("offsite");
+    // The folders backups go to are the rows with a Remove; the region's other lists (the last backup, the copies) are not them.
+    const folders = where.locator("ul.plain-list li").filter({ has: page.getByRole("button", { name: /^Remove / }) });
+    await expect(folders.first()).toContainText("offsite");
     await where.getByRole("radio", { name: /Choose another folder/ }).check();
     await where.getByLabel("Folder", { exact: true }).fill(`${info.backup_folder}/second`);
     const made = await page.request.post("api/setup/folders/new", { headers: { Authorization: `Bearer ${info.token}` }, data: { inside: info.backup_folder, name: "second" } });
     expect(made.ok()).toBe(true);
     await where.getByRole("button", { name: /Use this folder for backups/ }).first().click();
-    await expect(where.locator("ul.plain-list li")).toHaveCount(1, LOADED);
-    await expect(where.locator("ul.plain-list li").first()).toContainText("second");
+    await expect(folders).toHaveCount(1, LOADED);
+    await expect(folders.first()).toContainText("second");
     // Every copy is listed once.
     const copies = main.getByRole("list", { name: "Copies you can restore from" });
     const paths = await copies.getByRole("listitem").allTextContents();
@@ -150,10 +154,10 @@ test.describe.serial("setup and settings fixes", () => {
     const ask = page.getByRole("dialog", { name: /^Stop backing up to / });
     await expect(ask).toContainText("Copies already there stay where they are.");
     await ask.getByRole("button", { name: "Cancel" }).click();
-    await expect(where.locator("ul.plain-list li")).toHaveCount(1);
+    await expect(folders).toHaveCount(1);
     await where.getByRole("button", { name: /^Remove / }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Stop backing up here" }).click();
-    await expect(where.locator("ul.plain-list li")).toHaveCount(0, LOADED);
+    await expect(folders).toHaveCount(0, LOADED);
     // X58: a backup key over the most is refused with the maximum named.
     const long = await page.request.post("api/backup-key", { headers: { Authorization: `Bearer ${info.token}` }, data: { value: "k".repeat(5000), fingerprint: (await (await page.request.get("api/settings", { headers: { Authorization: `Bearer ${info.token}` } })).json()).fingerprint } });
     expect(long.status()).toBe(400);
@@ -279,17 +283,19 @@ test.describe.serial("setup and settings fixes", () => {
     // An amount typed as 0.0000001 is never written as an exponent.
     await go(page, "settings/ai");
     const main = page.locator("main#main");
-    await expect(main.getByRole("heading", { level: 2, name: "AI and spending" })).toBeVisible(LOADED);
-    const day = main.getByLabel(/^Stop starting anything new for the day/);
+    await expect(main.getByRole("heading", { level: 2, name: /^AI accounts/ })).toBeVisible(LOADED);
+    const day = main.getByLabel("Most to spend in a day", { exact: true });
     await day.fill("0.0000001");
     await day.blur();
     await expect(day).not.toHaveValue(/e-/);
     await day.fill("-5");
     await day.blur();
     await expect(main.getByRole("alert").or(main.getByText(/-\$5\.00/)).first()).not.toContainText("$-5.00");
-    // The kinds of work come in folded groups, one line each.
+    // The kinds of work come in groups, one line each, behind the closed disclosure under the accounts; a group is folded unless a
+    // kind in it was changed (an earlier scenario on this workspace may have changed one).
+    await main.getByText("Choose which account does each kind of work", { exact: true }).click();
     const groups = main.locator("details[data-kind-group]");
-    await expect(groups.first()).toBeVisible(LOADED);
-    expect(await groups.evaluateAll((els) => els.every((el) => !(el as HTMLDetailsElement).open))).toBe(true);
+    await expect(groups.first().locator("summary")).toBeVisible(LOADED);
+    expect(await groups.evaluateAll((els) => els.some((el) => !(el as HTMLDetailsElement).open))).toBe(true);
   });
 });

@@ -4,3 +4,6 @@
 .item { list-style: none; min-width: 0; }
 .item:focus { outline: none; }
 .item:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* The keyboard ring every row has (styles.css) is drawn inside the row; a detail item holds its words to its own edge, so its ring
+   stays outside, as above. */
+:global(:root[data-input="keyboard"]) .item[data-row]:focus-visible { box-shadow: none; }

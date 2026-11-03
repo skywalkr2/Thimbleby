@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { project } from "../lib/records-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, Refuse, renderApp } from "../test-utils";
 import { BusinessSides } from "./BusinessSides";
 
 // Removing a business after setup (design 7.8, 6.32): Remove is offered whenever there is a business, asks each time whether
@@ -225,6 +225,73 @@ test("adding a business with mailboxes and calendars already connected asks whic
   expect(saved[0].changes["watch.sources"].find((s) => s.id === "inbox-a")?.sides).toEqual(["PRJ-personal"]);
   await user.click(within(next).getByRole("button", { name: "Done" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+test("two ticks made in a row are both saved, even when a screen is slow to read again after the first, and Done closes with them still going", async () => {
+  const user = userEvent.setup();
+  const item = (id: string, label: string): S["WatchSourceView"] => ({ id, label, connector: "k", connector_label: "Mail", enabled: true, every_minutes: 15, items: 1, last: null, read_at: null, failures: 0, problem: null, reads: ["mail"] });
+  const saved: Array<{ changes: Record<string, Array<{ id: string; sides?: string[] }>> }> = [];
+  const held = [
+    { id: "inbox-a", settings: {}, sides: ["PRJ-personal"] },
+    { id: "calendar-a", settings: {}, sides: ["PRJ-personal"] },
+  ];
+  let slow = false;
+  fakeApi({
+    "GET setup/business": () => ({ business: false, name: "", personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+    // Once the first tick is saved, a read of another screen never answers.
+    "GET watch": () => (slow ? new Promise(() => undefined) : [item("inbox-a", "Inbox, alex@example.com"), item("calendar-a", "Calendar, alex@example.com")]),
+    "GET settings": () => ({ fingerprint: "fp-1", items: [{ key: "watch.sources", file: "watch", group: "", description: "", type: "other", options: [], value: held, default: [], source: "file", locked: false, basic: false, editable: false }] }),
+    "POST settings": (body) => {
+      saved.push(body as (typeof saved)[number]);
+      slow = true;
+      return { changes: [], fingerprint: `fp-${saved.length + 1}`, needs_restart: false };
+    },
+    "POST setup/business": () => ({ project: "PRJ-new", name: "Quarry Studio", kind: "business", created: true, changeset: "CS-20" }),
+  });
+  renderApp(<BusinessSides />);
+  await user.click(await screen.findByRole("button", { name: "Add a business" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a business" });
+  await user.type(within(dialog).getByRole("textbox", { name: /^Business name/ }), "Quarry Studio");
+  await user.click(within(dialog).getByRole("button", { name: "Add the business" }));
+  const next = await screen.findByRole("dialog", { name: "Which of your connections serve Quarry Studio?" });
+  const group = within(next).getByRole("group", { name: "Serve Quarry Studio" });
+  await user.click(within(group).getByRole("checkbox", { name: "Inbox, alex@example.com" }));
+  await user.click(within(group).getByRole("checkbox", { name: "Calendar, alex@example.com" }));
+  await user.click(within(next).getByRole("button", { name: "Done" }));
+  await waitFor(() => expect(saved).toHaveLength(2));
+  expect(saved[1].changes["watch.sources"].find((s) => s.id === "calendar-a")?.sides).toEqual(["PRJ-personal", "PRJ-new"]);
+});
+
+test("a tick refused because the settings moved on is made again from what is there now, so it is not lost", async () => {
+  const user = userEvent.setup();
+  const item = (id: string, label: string): S["WatchSourceView"] => ({ id, label, connector: "k", connector_label: "Mail", enabled: true, every_minutes: 15, items: 1, last: null, read_at: null, failures: 0, problem: null, reads: ["mail"] });
+  const saved: Array<{ changes: Record<string, Array<{ id: string; sides?: string[] }>>; fingerprint: string }> = [];
+  let tries = 0;
+  fakeApi({
+    "GET setup/business": () => ({ business: false, name: "", personal: "PRJ-personal", sides: [], chosen: "me" }),
+    "GET projects": () => [project("PRJ-personal", "Personal")],
+    "GET watch": () => [item("inbox-a", "Inbox, alex@example.com")],
+    "GET settings": () => ({ fingerprint: `fp-${tries + 1}`, items: [{ key: "watch.sources", file: "watch", group: "", description: "", type: "other", options: [], value: [{ id: "inbox-a", settings: {}, sides: ["PRJ-personal"] }], default: [], source: "file", locked: false, basic: false, editable: false }] }),
+    "POST settings": (body) => {
+      tries += 1;
+      if (tries === 1) return new Refuse(409, "Changed since you opened it.");
+      saved.push(body as (typeof saved)[number]);
+      return { changes: [], fingerprint: "fp-9", needs_restart: false };
+    },
+    "POST setup/business": () => ({ project: "PRJ-new", name: "Quarry Studio", kind: "business", created: true, changeset: "CS-20" }),
+  });
+  renderApp(<BusinessSides />);
+  await user.click(await screen.findByRole("button", { name: "Add a business" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a business" });
+  await user.type(within(dialog).getByRole("textbox", { name: /^Business name/ }), "Quarry Studio");
+  await user.click(within(dialog).getByRole("button", { name: "Add the business" }));
+  const next = await screen.findByRole("dialog", { name: "Which of your connections serve Quarry Studio?" });
+  await user.click(within(within(next).getByRole("group", { name: "Serve Quarry Studio" })).getByRole("checkbox", { name: "Inbox, alex@example.com" }));
+  await waitFor(() => expect(saved).toHaveLength(1));
+  expect(tries).toBe(2);
+  expect(saved[0].fingerprint).toBe("fp-2");
+  expect(saved[0].changes["watch.sources"].find((s) => s.id === "inbox-a")?.sides).toEqual(["PRJ-personal", "PRJ-new"]);
 });
 
 test("adding a business with nothing connected closes at once and asks nothing more", async () => {

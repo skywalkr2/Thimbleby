@@ -33,6 +33,12 @@ async function readScreen(page: Page): Promise<string> {
   });
   let text = read;
   for (const long of outside) text = text.split(long).join(" ").split(long.slice(0, 200)).join(" ");
+  // A row shows the first words of a long title cut with an ellipsis (design 7.7), so a piece of the outside text is no longer the
+  // whole of it: what starts like one of them, up to the next space, is the same outside text, shown as it came.
+  for (const long of outside) {
+    const head = long.slice(0, 40);
+    if (head.trim().length >= 20) text = text.replace(new RegExp(head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\S*", "g"), " ");
+  }
   return text;
 }
 

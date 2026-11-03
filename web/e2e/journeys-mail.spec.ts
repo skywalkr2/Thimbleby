@@ -11,6 +11,7 @@ import {
   checkAccessibility,
   collectProblems,
   dismissToasts,
+  expectFoundLine,
   fakeAddress,
   openView,
   pressStart,
@@ -195,9 +196,13 @@ test.describe.serial("journey: mail", () => {
     // Connections says what is read without my having chosen it, and who is signed in.
     await openView(page, "Connections");
     await expect(page.getByRole("heading", { level: 2, name: "Connections" })).toBeVisible();
-    await expect(page.getByText(/Signed in as .+@example\.com/)).toBeVisible();
-    await expect(page.getByText("Your inbox").first()).toBeVisible();
-    await expect(page.getByText("Your calendar").first()).toBeVisible();
+    // The account is one card named by its address, saying it is connected (Connections, design 7.9).
+    const card = page.getByRole("region", { name: /@example\.com$/ });
+    await expect(card.getByRole("heading", { level: 3, name: /.+@example\.com/ })).toBeVisible();
+    await expect(card.getByText("Connected", { exact: true })).toBeVisible();
+    // Its parts are rows under it, each named by what it reads ("Your inbox", "Your calendar"; drawn as Inbox and Calendar).
+    await expect(card.getByRole("listitem", { name: "Your inbox" })).toBeVisible();
+    await expect(card.getByRole("listitem", { name: "Your calendar" })).toBeVisible();
     await visit(page);
 
     // What was found is one line for each source, not a line for each item: none of the items' own review lines is on
@@ -207,10 +212,9 @@ test.describe.serial("journey: mail", () => {
     const inbox = found.filter({ hasText: "Your inbox" });
     const calendar = found.filter({ hasText: "Your calendar" });
     // Only what needs a look is counted: a thank-you, an agreement or a plain announcement is filed quietly.
-    const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
     await revealNewLines(page, found, 2);
-    await expect(inbox).toContainText(`Look over what was found in Your inbox: ${items(mailToCheck.length)}`, { timeout: 60_000 });
-    await expect(calendar).toContainText(`Look over what was found in Your calendar: ${items(eventsToCheck.length)}`, { timeout: 60_000 });
+    await expectFoundLine(inbox, "your inbox", mailToCheck.length);
+    await expectFoundLine(calendar, "your calendar", eventsToCheck.length);
     await expect(found).toHaveCount(2);
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     await visit(page);

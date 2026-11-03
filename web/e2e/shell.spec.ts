@@ -299,17 +299,17 @@ test.describe("screen use and the shell", () => {
       await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^(Done|Where things stand)/ }).click();
       await page.getByRole("main").getByRole("button", { name: "Go to Today" }).click();
       const line = page.locator('[data-queue-line="first_go"]');
-      await expect(line).toBeFocused();
+      // The cursor goes to the line once Today has drawn it, which a busy computer takes longer over than the default wait.
+      await expect(line).toBeFocused(FIRST_SCREEN);
       await expect(line).toBeInViewport({ ratio: 1 });
       await expect(line.getByRole("button", { name: "Start", exact: true })).toBeInViewport({ ratio: 1 });
       await shoot(page, `first-go-${width}`);
     });
   }
 
-  // The pill's words are long ("Waiting for you to start it"): the pill stays inside the row and clear of the title, beside it or
-  // above it once it wraps, whatever the window width or theme.
+  // The pill's words are long ("Waiting for you to start it"): the pill stays inside the row and clear of the title's words (it follows them and wraps with them), whatever the window width or theme.
   for (const scheme of ["light", "dark"] as const) {
-    test(`the first-go line's pill stays inside the row and clear of the title in ${scheme}, at every width`, async ({ page }) => {
+    test(`the first-go line's pill stays inside the row and clear of the title's words in ${scheme}, at every width`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.route("**/api/today/queue", async (route) => {
         if (route.request().method() !== "GET") return route.fallback();
@@ -326,15 +326,26 @@ test.describe("screen use and the shell", () => {
         await expect(async () => {
           const m = await line.evaluate((row) => {
             const pill = row.querySelector("[data-pill]")!.getBoundingClientRect();
-            // The title's first line (a title that wraps has one box for each line).
-            const title = row.querySelector('[id$="-title"]')!.getClientRects()[0];
+            // The title's words: the mark follows them (design 7.14), on the same line or the one under; no word is drawn under it.
+            const words = row.querySelector('[id$="-title"]')!;
+            let overlap = 0;
+            const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              if (!(node.textContent ?? "").trim() || (node.parentElement as HTMLElement).closest("[data-pill]")) continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              for (const rect of Array.from(range.getClientRects())) {
+                const across = Math.min(rect.right, pill.right) - Math.max(rect.left, pill.left);
+                const down = Math.min(rect.bottom, pill.bottom) - Math.max(rect.top, pill.top);
+                if (across > 1 && down > 1) overlap += 1;
+              }
+            }
             const box = row.getBoundingClientRect();
-            return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, titleLeft: title.left, titleTop: title.top, rowLeft: box.left, rowRight: box.right };
+            return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, overlap, rowLeft: box.left, rowRight: box.right };
           });
           const note = `${scheme} ${width}: ${JSON.stringify(m)}`;
           if (process.env.E2E_MEASURE) console.log(note);
-          // Beside the title, or (on a phone, where the row stacks) above it.
-          expect(m.pillRight <= m.titleLeft || m.pillBottom <= m.titleTop, note).toBe(true);
+          expect(m.overlap, note).toBe(0);
           expect(m.pillLeft, note).toBeGreaterThanOrEqual(m.rowLeft);
           expect(m.pillRight, note).toBeLessThanOrEqual(m.rowRight);
         }).toPass({ timeout: 5000 });
@@ -460,6 +471,8 @@ test.describe("screen use and the shell", () => {
       const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
       return [header, brand, nav].map((b) => [b.x, b.y, b.width, b.height]);
     };
+    // The product's faces are loaded before anything is measured: the name in the header is wider in its own face than in the first.
+    await page.evaluate(() => document.fonts.ready);
     const first = await frame();
     for (const label of [/^Stages/, /^People/, /^Settings/]) {
       await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: label }).click();
@@ -656,7 +669,8 @@ test.describe("screen use and the shell", () => {
       expect(entry, fragment).toBeDefined();
       const fresh = await context.newPage();
       await fresh.goto(new URL(entry!.href, page.url()).toString());
-      await expect(fresh.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
+      // Today's heading is the greeting (design 7.7); the others are their names.
+      await expect(fresh.getByRole("heading", { level: 1, ...(fragment === "#today" ? { name: /^Good (morning|afternoon|evening)/ } : { name: title, exact: true }) })).toBeVisible();
       await expect(fresh.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", entry!.href);
       await fresh.close();
     }

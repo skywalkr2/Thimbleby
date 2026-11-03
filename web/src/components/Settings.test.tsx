@@ -142,6 +142,20 @@ test("on a phone the sections are behind one line that names the open section, a
   }
 });
 
+test("the window turning narrow while Settings is open keeps the page drawn (the hooks stay in order)", async () => {
+  api([...ITEMS, item("ui.theme", { group: "ui" })], BUSINESS);
+  open();
+  expect(await screen.findByRole("navigation", { name: "Settings sections" })).toBeInTheDocument();
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+    expect(await within(nav).findByText("Section: You")).toBeInTheDocument();
+    expect(screen.getByLabelText("The display name.")).toBeInTheDocument();
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
+});
+
 test("the section list sits down the side: the pages, Your business (where a job or business is added), and no Quality; the open one is marked", async () => {
   api(
     [
@@ -1924,3 +1938,16 @@ test("a save under way says Saving, then Saved, on the page and on the row", asy
   await waitFor(() => expect(document.querySelector("[data-save-status]")).toHaveTextContent("Saved"));
 });
 
+
+test("a setting saved with Enter can be reset at once after, each save going out on the fingerprint the one before answered with", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  const box = await screen.findByLabelText("The display name.");
+  await user.clear(box);
+  await user.type(box, "Second{Enter}");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  await user.click(await screen.findByRole("button", { name: "Reset: The display name." }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[1]).toEqual({ changes: {}, reset: ["demo.title"], fingerprint: "fp-2" });
+});

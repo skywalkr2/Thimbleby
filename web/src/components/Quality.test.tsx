@@ -119,7 +119,8 @@ test("the screen has a section for each measure and shows the window's dates", a
   expect(screen.queryByRole("heading", { level: 1, name: "Quality" })).toBeNull();
   expect(await screen.findByText("Counting from Sep 21 to Oct 19.")).toBeInTheDocument();
   const titles = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-  expect(titles).toEqual(["Week by week", "Mistakes to look at", "Your own count"]);
+  // The four figures at the top are headed at the same level as the sections (the page goes from its title to them with none skipped).
+  expect(titles).toEqual(["Promises found", "Promises closed as done", "False alerts", "Time spent looking over", "Week by week", "Mistakes to look at", "Your own count"]);
   expect(screen.getAllByText(/Nothing yet\./).length).toBeGreaterThan(0);
 });
 

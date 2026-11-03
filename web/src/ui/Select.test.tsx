@@ -165,3 +165,29 @@ test("the cursor going into the list is not the control losing it", async () => 
   await user.tab();
   expect(left).toEqual(["blur"]);
 });
+
+test("the shown choice carries its whole text as a title, since a long one is cut with an ellipsis", () => {
+  renderApp(<Pick />);
+  const box = screen.getByRole("combobox", { name: "Fruit" });
+  expect(box.querySelector("span[title]")).toHaveAttribute("title", "Banana");
+});
+
+test("a choice that opens a field of its own leaves the cursor in that field, not back on the button", async () => {
+  const user = userEvent.setup();
+  function Adds() {
+    const [adding, setAdding] = useState(false);
+    return (
+      <FormField id="org" label="Organization">
+        <Select id="org" value="" onChange={(e) => setAdding(e.target.value === "add")}>
+          <option value="">Not set</option>
+          <option value="add">Add one…</option>
+        </Select>
+        {adding && <input aria-label="Name of the new one" autoFocus />}
+      </FormField>
+    );
+  }
+  renderApp(<Adds />);
+  await user.click(screen.getByRole("combobox", { name: "Organization" }));
+  await user.click(screen.getByRole("option", { name: "Add one…" }));
+  expect(await screen.findByRole("textbox", { name: "Name of the new one" })).toHaveFocus();
+});
