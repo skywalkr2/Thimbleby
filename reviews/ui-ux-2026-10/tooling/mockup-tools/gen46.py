@@ -43,7 +43,19 @@ def tabbar(on="today"):
     return f'<div class="tabbar">{out}</div>'
 
 
+import re as _re
+
+
+def _meta(m):
+    inner = m.group(2)
+    parts = [p.strip() for p in inner.split(SEP)]
+    if len(parts) < 2:
+        return m.group(0)
+    return m.group(1) + ''.join(f'<span class="mp">{p}</span>' for p in parts) + '</div>'
+
+
 def page(name, title, body, on="today", status=None, primary_in_header=False, tab="today"):
+    body = _re.sub(r'(<div class="m">)(.*?)</div>', _meta, body)
     head = top(status) if status else top(primary=primary_in_header)
     html = (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             f'<title>{title}</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="m46.css"></head><body>'
@@ -83,13 +95,14 @@ today_main = f'''
 rail = f'''
 <div class="rail">
  <div class="card"><h3>Today's schedule<a class="act link">Open</a></h3>
-  <div class="ev c3"><div class="tm">2:30 PM</div><div><div class="tt">Venue walk-through</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span> · Studio calendar</div></div></div>
-  <div class="ev c2"><div class="tm">2:45 PM</div><div><div class="tt">Budget check-in</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span> · Clinic calendar</div></div></div>
+  <div class="ev c3"><div class="tm">2:30 PM</div><div><div class="tt">Venue walk-through</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span>&nbsp;· Studio calendar</div></div></div>
+  <div class="ev c2"><div class="tm">2:45 PM</div><div><div class="tt">Budget check-in</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span>&nbsp;· Clinic calendar</div></div></div>
   <div class="ev c1"><div class="tm">6:00 PM</div><div><div class="tt">Choir practice</div><div class="mm">St Anne's hall · Home calendar</div></div></div>
  </div>
  <div class="card"><h3>Came in <span class="group" style="padding:0"><span class="n">3</span></span><a class="act link">See all</a></h3>
   <div class="ci"><span class="dot s3"></span><div><div class="tt">Venue list</div><div class="mm">Maya Okafor · Studio inbox</div></div><span class="tm">1:22 PM</span></div>
   <div class="ci"><span class="dot s2"></span><div><div class="tt">Catering quote</div><div class="mm">Theo Brandt · Clinic inbox</div></div><span class="tm">10:22 AM</span></div>
+  <a class="link" style="font-size:13px">1 more, from this morning</a>
  </div>
 </div>'''
 
@@ -164,7 +177,7 @@ todos = f'''
 <div class="tabs"><a class="on">To-dos<span class="n">10</span></a><a>Questions<span class="n">2</span></a><a>Done<span class="n">31</span></a></div>
 <div class="filters"><span class="chip"><span class="k">Who</span><span class="v">Everyone</span>{ic("chevron", "i s16")}</span><span class="chip"><span class="k">Side</span><span class="v">All sides</span>{ic("chevron", "i s16")}</span></div>
 <div class="panel" style="margin-top:16px">
- <div class="inlineadd"><span class="plus">{ic("plus")}</span>Add a to-do… try "call the landlord by Friday"</div>
+ <div class="inlineadd"><span class="plus">{ic("plus")}</span><span><span class="hide-phone">Add a to-do… try "call the landlord by Friday"</span><span class="show-phone">Add a to-do…</span></span></div>
  <div class="group danger">Overdue <span class="n">1</span></div>
  {todo("Pay the deposit for the venue", f'<span class="state danger">{ic("alert", "i s16")}Due Mon, Oct 26</span> {SEP} Maya Okafor asked {SEP} {side(2)}', "danger")}
  <div class="group">Today <span class="n">2</span></div>
@@ -209,7 +222,7 @@ for d, name in enumerate(days):
                    f'<b>{tt}</b><span>{fmt(st)} · {pl}</span></div>')
     if d == 2:
         blocks += (f'<div class="calclash" style="top:{6.5 * 64}px;min-height:{1.25 * 64}px"><div class="ch">{ic("alert", "i s16")}Clash</div>'
-                   f'<div class="cr"><span class="dot" style="background:var(--cal-3)"></span>2:30 Venue walk-through</div><div class="cr"><span class="dot" style="background:var(--cal-2)"></span>2:45 Budget check-in</div></div>')
+                   f'<div class="cr"><span class="dot" style="background:var(--cal-3)"></span>Venue walk‑through</div><div class="cr"><span class="dot" style="background:var(--cal-2)"></span>Budget check‑in</div></div>')
     now = '<div class="now" style="top:410px"></div>' if d == 2 else ''
     dn = name.split()[0] + (f' <span class="todaydot">{name.split()[1]}</span>' if d == 2 else " " + name.split()[1])
     cols += f'<div class="day{" today" if d == 2 else ""}{" we" if d >= 5 else ""}"><div class="dh">{dn}</div><div class="dg">{blocks}{now}</div></div>'
@@ -217,19 +230,21 @@ hours = ''.join(f'<div class="hr">{h if h <= 12 else h - 12} {"AM" if h < 12 els
 allday = '<div class="allday"><span class="ad-l">All day</span><span class="adchip"><span class="dot" style="background:var(--cal-2)"></span>Due: revised budget</span><span class="adchip more">+2 more</span></div>'
 sched = f'''
 <div class="ph"><div><h1>Schedule</h1><div class="sub">This week · <b>1 clash</b> on Wednesday</div></div><div class="spacer"></div>
-<a class="btn secondary sm hide-phone">Today</a><a class="btn primary sm hide-phone">{ic("plus", "i s16")}Add to schedule</a></div>
+<a class="btn secondary sm">Today</a><a class="btn primary sm hide-phone">{ic("plus", "i s16")}Add to schedule</a></div>
 <div class="tabs"><a class="on">Week</a><a>Day</a><a>Month</a><a>Timeline</a></div>
 <div class="filters"><span class="k" style="font-size:13px;color:var(--text-muted)">Calendars</span>{legend}</div>
 <div class="panel cal hide-phone" style="margin-top:16px">{allday}<div class="grid"><div class="hours"><div class="dh"></div>{hours}</div>{cols}</div></div>
-<div class="panel agenda show-phone" style="margin-top:16px"><div class="group">Wednesday, today</div>
+<div class="panel agenda show-phone" style="margin-top:16px"><div class="group">Wednesday, Oct 28 · today</div>
+<div class="row"><div class="lead"><span class="dot" style="background:var(--cal-2)"></span></div><div><div class="t">Due: revised budget</div><div class="m">All day · Clinic calendar · and 2 more due this week</div></div><div></div></div>
 <div class="row" data-state="danger"><div class="lead" style="color:var(--danger)">{ic("alert")}</div><div><div class="t">Clash · 30 min short</div><div class="m"><span class="dot" style="background:var(--cal-3)"></span>2:30 Venue walk-through</div><div class="m"><span class="dot" style="background:var(--cal-2)"></span>2:45 Budget check-in</div></div><div class="acts"><a class="btn secondary sm">Open both</a></div></div>
 <div class="row"><div class="lead"><span class="dot" style="background:var(--cal-1)"></span></div><div><div class="t">Choir practice</div><div class="m">6:00–7:30 PM · St Anne's hall · Home calendar</div></div><div></div></div>
-<div class="group">Thursday</div>
+<div class="group">Thursday, Oct 29</div>
 <div class="row"><div class="lead"><span class="dot" style="background:var(--cal-2)"></span></div><div><div class="t">Quarterly review</div><div class="m">10:00–11:00 AM · in 2 calendars</div></div><div></div></div>
-<div class="group">Friday</div>
+<div class="group">Friday, Oct 30</div>
 <div class="row"><div class="lead"><span class="dot" style="background:var(--cal-1)"></span></div><div><div class="t">Dentist</div><div class="m">8:00–8:30 AM · Main St · Home calendar</div></div><div></div></div>
-<div class="group">Saturday</div>
-<div class="row"><div class="lead"><span class="dot" style="background:var(--cal-1)"></span></div><div><div class="t">Market with Sam</div><div class="m">10:00 AM–12:00 PM · Harbour Sq · Home calendar</div></div><div></div></div></div>
+<div class="group">Saturday, Oct 31</div>
+<div class="row"><div class="lead"><span class="dot" style="background:var(--cal-1)"></span></div><div><div class="t">Market with Sam</div><div class="m">10:00 AM–12:00 PM · Harbour Sq · Home calendar</div></div><div></div></div>
+<div class="group">Sunday, Nov 1</div><div class="closing" style="border-top:0">Nothing on Sunday</div></div>
 '''
 page("schedule", "Schedule", sched, on="sched", tab="sched")
 
@@ -268,7 +283,7 @@ person = f'''
 <div class="crumb">People {ic("chevron", "i s16")}</div>
 <div class="ph"><div><h1>Maya Okafor</h1><div class="sub">Customer at Calloway Upholstery, and a friend</div></div><div class="spacer"></div>
 <a class="btn secondary sm">Draft a message</a><a class="btn primary sm">{ic("plus", "i s16")}Add a to-do for Maya</a><a class="more">{ic("more")}</a></div>
-<div class="tabs"><a class="on">Overview</a><a>Open with Maya<span class="n">3</span></a><a>Activity</a></div>
+<div class="tabs"><a class="on">Overview</a><a>Everything with Maya<span class="n">14</span></a><a>Files<span class="n">2</span></a></div>
 <div class="layout">
 <div>
 <div class="panel"><div class="group">Open with Maya <span class="n">3</span></div>
@@ -282,7 +297,7 @@ person = f'''
 <div class="row"><div class="lead">{ic("calendar")}</div><div><div class="t" style="font-weight:500">You met at <b>Fitting appointment</b></div><div class="m">Tue, Oct 27</div></div><div></div></div>
 <div class="closing"><a class="link">Show all activity</a></div></div>
 </div>
-<div class="rail"><div class="card"><div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><span class="avatar" style="width:48px;height:48px;font-size:16px">MO</span><div><div style="font-weight:600">Maya Okafor</div><div style="font-size:13px;color:var(--text-muted)">Last contact today, by email</div></div><a class="link" style="margin-left:auto;font-size:13px">Edit</a></div>
+<div class="rail"><div class="card"><div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><span class="avatar" style="width:48px;height:48px;font-size:16px">MO</span><div><div style="font-size:13px;color:var(--text-muted)">Last contact</div><div style="font-weight:600">Today, by email</div></div><a class="link" style="margin-left:auto;font-size:13px">Edit</a></div>
 <dl class="dl"><dt>Work email</dt><dd class="wrap">maya.okafor.orders<wbr>@example.com</dd><dt>Home email</dt><dd>maya@example.com</dd>
 <dt>Phone</dt><dd>+1 555 0142</dd><dt>Sides</dt><dd><span class="sidechip"><span class="dot s3"></span>Calloway Upholstery</span></dd>
 <dt>Birthday</dt><dd>Mar 14</dd></dl></div>
@@ -362,6 +377,12 @@ wizard("setup-states", "Setup: its states", 2, f'''
 {keyst("Not recognized", 'sk-ant-••••••••••••0000', f'<div class="help" style="color:var(--danger);font-weight:600;display:flex;gap:6px;align-items:center">{ic("alert", "i s16")}Anthropic didn\'t accept this key. Check it was copied whole, or make a new one.</div>')}
 <div class="group" style="padding:36px 0 0">Mail: no account yet</div>
 <div class="panel" style="margin-top:12px"><div class="empty" style="padding:32px 24px"><h2 style="font-size:20px;line-height:26px">Connect your first account</h2><p>Reginald reads its mail and calendar, and nothing else, only for the sides you pick.</p><a class="btn secondary sm">{ic("plus", "i s16")}Connect an account</a></div></div>
+<div class="group" style="padding:28px 0 0">Key valid, but no credit</div>
+<div class="banner" style="margin-top:12px"><span class="bi">{ic("alert")}</span><div class="tx"><b>The key works, but the account has no credit.</b> Add a little credit, then come back; nothing is lost.</div><a class="btn primary sm">Add credit</a></div>
+<div class="group" style="padding:28px 0 0">Mail: one account needs sign-in</div>
+{acct("studio@calloway.example", "Example mail", [("Calloway Upholstery", "s3")], "", fail=True)}
+<div class="group" style="padding:28px 0 0">Offline during setup</div>
+<div class="banner" style="margin-top:12px"><span class="bi">{ic("refresh")}</span><div class="tx"><b>You’re offline.</b> Your answers are kept; checking the key waits until you’re back.</div></div>
 <div class="group" style="padding:28px 0 0">Mail: waiting for the sign-in window</div>
 <div class="banner" style="margin-top:12px"><span class="bi">{ic("external")}</span><div class="tx"><b>Finish signing in in the window that opened.</b> This page carries on by itself when you're done.</div><a class="btn secondary sm">Cancel</a></div>''', primary="Continue", waiting=True)
 print("all pages written")
@@ -378,8 +399,18 @@ def skel(n=3):
         for w in (58, 44, 66)[:n]) + '</div>'
 
 
-def states_page(name, title, on, blocks, tab="more", status=None):
-    body = f'<div class="ph"><div><h1>{title}: its states</h1></div></div>' + ''.join(sheet_block(l, h) for l, h in blocks)
+def common_states(item, long_title, count, edits=True):
+    out = [("Offline", f'<div class="banner"><span class="bi">{ic("refresh")}</span><div class="tx"><b>You’re offline.</b> What you see was saved on this computer at 10:42 AM.</div><a class="btn secondary sm">Try now</a></div>')]
+    if edits:
+        out.append(("A save that failed", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>“{item}” wasn’t saved.</b> Your change is kept here until it saves.</div><a class="btn primary sm">Try again</a></div>'))
+    out.append(("Long content", f'<div class="panel"><div class="row"><div class="lead">{ic("inbox")}</div><div><div class="t">{long_title}</div><div class="m">Two lines at most, then an ellipsis; the full text is on its own page</div></div><div class="acts"><a class="more" aria-label="More">{ic("more")}</a></div></div></div>'))
+    out.append(("A large count", f'<div class="panel"><div class="group">{count[0]} <span class="n">{count[1]}</span></div><div class="row"><div class="lead">{ic("check")}</div><div><div class="t">The first of {count[1]}</div><div class="m">Sorted by what needs you first</div></div><div></div></div><div class="showmore">Show {count[1] - 1} more</div></div>'))
+    return out
+
+
+def states_page(name, title, on, blocks, tab="more", status=None, item="this change", long_title="", count=("Open", 140), edits=True):
+    blocks = blocks + common_states(item, long_title or "Print, sign and mail the unclaimed property claim forms to the State Treasurer, P.O. Box 1004, before the end of the month 🗂️", count, edits)
+    body = f'<div class="ph"><div><h1>{title}</h1><div class="sub">States: how this page looks in each case a real install meets</div></div></div>' + ''.join(sheet_block(l, h) for l, h in blocks)
     page(name, f"{title}, its states", body, on=on, tab=tab, status=status)
 
 
@@ -391,25 +422,33 @@ states_page("todos-states", "To-dos", "todos", [
      + todo("Is the offsite on Friday or Saturday?", f'Theo Brandt asked you {SEP} Oct 27', q=True, act='<a class="btn secondary sm">Answer</a>') + '</div>'),
     ("Loading", skel()),
     ("Ticked, with Undo", '<div class="panel"><div class="row"><div class="lead" style="color:var(--ok)">' + ic("check") + '</div><div><div class="t" style="text-decoration:line-through;color:var(--text-muted)">Get a catering quote</div><div class="m">Done just now</div></div><div class="acts"><a class="btn quiet sm">Undo</a></div></div></div>'),
-], tab="work")
+], tab="work", item="Pay the deposit for the venue", count=("Open", 140))
 states_page("schedule-states", "Schedule", "sched", [
     ("A week with nothing in it", empty("Nothing on this week", "Your three calendars are clear. Add something, or look at next week.", "Next week")),
     ("One calendar can't be read", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>The Studio calendar isn’t up to date.</b> studio@calloway.example needs you to sign in again. Entries shown are from 10:51 AM.</div><a class="btn primary sm">Sign in again</a></div>'),
     ("Three meetings at once", f'<div class="calclash" style="position:relative;max-width:300px"><div class="ch">{ic("alert", "i s16")}3 at once · 2:30 PM</div><div class="cr"><span class="dot" style="background:var(--cal-3)"></span>Venue walk-through</div><div class="cr"><span class="dot" style="background:var(--cal-2)"></span>Budget check-in</div><div class="cr"><span class="dot" style="background:var(--cal-1)"></span>School pickup</div></div>'),
     ("Loading", skel(2)),
-], tab="sched", status=FAIL_STATUS)
+    ("Studio entries shown while its calendar can’t be read", f'<div class="calev c3" style="position:relative;max-width:260px;opacity:.75;border-left-style:dashed"><b>Fitting appointment</b><span>1:00 PM · may be out of date</span></div>'),
+], tab="sched", status=FAIL_STATUS, item="Choir practice, moved to 6:30", long_title="Annual general meeting of the Harborview Community Support Partnership, with the board and volunteers", count=("This week", 46))
 states_page("connections-states", "Connections", "settings", [
     ("No accounts yet", empty("Connect your mail and calendar", "Reginald reads only what you connect, and only for the sides you pick.", "Add a connection").replace("btn secondary sm", "btn primary sm")),
     ("Signing in again", f'<div class="acct"><div class="hd"><div class="av">{ic("inbox")}</div><div><div class="nm">studio@calloway.example</div><div class="sv"><span class="spin"></span>Waiting for the sign-in window…</div></div><div class="acts"><a class="btn secondary sm">Cancel</a></div></div></div>'),
     ("All healthy", acct("robin@example.com", "Example mail", [("Personal", "s1")], part("inbox", "Inbox", "Mail sent to you", "", "Read 5 min ago"))),
-], status=FAIL_STATUS)
+    ("Sign-in refused", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>That was a different account.</b> You signed in as robin@example.com; this connection is for studio@calloway.example.</div><a class="btn primary sm">Try again</a></div>'),
+    ("Removing an account asks first", '<div class="card" style="max-width:460px;box-shadow:var(--shadow-pop)"><h3>Remove studio@calloway.example?</h3><p style="margin:0 0 16px;color:var(--text-muted);font-size:14px">Reginald stops reading its mail and calendar. Nothing already filed is deleted.</p><div style="display:flex;gap:8px;justify-content:flex-end"><a class="btn secondary sm">Keep it</a><a class="btn danger sm">Remove</a></div></div>'),
+], status=FAIL_STATUS, item="Calloway Upholstery added to this account", long_title="maya.okafor.upholstery-and-restoration-orders@calloway-and-whitfield.example", count=("Calendars", 24))
 states_page("person-states", "A person", "people", [
     ("Someone just added, with nothing yet", empty("Nothing with Theo yet", "To-dos, questions and messages with Theo Brandt show up here.", "Add a to-do for Theo")),
     ("A long name and no email", '<div class="card"><dl class="dl"><dt>Name</dt><dd class="wrap">Bartholomew Featherstonehaugh-Winterbottom</dd><dt>Email</dt><dd><a class="link">Add an email</a></dd></dl></div>'),
     ("Loading", skel(2)),
-])
+    ("Person not found", empty("This person isn’t here any more", "They may have been merged with someone else or removed. Undo is on the People page for 10 minutes.", "Back to People")),
+    ("Editing the details", '<div class="card"><div class="field" style="margin-top:0"><label>Work email</label><div class="input">maya.okafor.orders@example.com</div></div><div class="field"><label>Birthday</label><div class="input">March 14</div></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><a class="btn secondary sm">Cancel</a><a class="btn primary sm">Save</a></div></div>'),
+], item="Maya’s birthday", long_title="Bartholomew Featherstonehaugh-Winterbottom", count=("Open with Bartholomew", 61))
 states_page("quality-states", "How Reginald is doing", "", [
     ("First week, not enough to measure", empty("Too early to tell", "After a week of mail, this page shows how often Reginald keeps your promises on time.", "")),
     ("Loading", '<div class="tiles" style="margin-top:0">' + ''.join('<div class="card tile"><div class="skel" style="width:60%"></div><div class="skel" style="width:40%;height:28px;margin-top:12px"></div></div>' for _ in range(4)) + '</div>'),
-])
+    ("Nothing to look at", '<div class="card"><h3>Mistakes to look at <span class="group" style="padding:0"><span class="n">0</span></span></h3><div style="font-size:14px;color:var(--text-muted)">No false alerts in the last 4 weeks.</div></div>'),
+    ("A worse period, said plainly", tile("Promises kept on time", "71%", "▼ 18 points worse", False, [])),
+    ("Couldn’t load", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>These numbers couldn’t be worked out.</b> The rest of the app is fine.</div><a class="btn primary sm">Try again</a></div>'),
+], edits=False, count=("Mistakes to look at", 37))
 print("state sheets written")

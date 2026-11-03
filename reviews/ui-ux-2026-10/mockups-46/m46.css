@@ -408,3 +408,27 @@ table.t th:first-child, table.t td:first-child { padding-left: 20px; }
   .cards3 .choice .tag { position: static; display: inline-block; margin-left: 8px; }
   .cards3 .choice.on::after { width: 20px; height: 20px; top: 11px; bottom: auto; right: 12px; }
 }
+
+/* ---------- fifth pass ---------- */
+.mp + .mp::before { content: "·"; margin: 0 6px; color: var(--text-subtle); }
+.mp { display: inline; }
+.layout { align-items: start; }
+.layout > .rail > :last-child, .layout > div:first-child:not(.panel) > :last-child { flex: none; }
+.calclash .ch { white-space: nowrap; }
+.acct .hd { align-items: start; } .acct .hd .av { margin-top: 2px; }
+.acct .hd .acts:not(:has(.btn)) { display: flex !important; height: 0; }
+@media (max-width: 600px) {
+  .row .m { display: block; } .row .m .mp { display: block; } .row .m .mp::before { content: none; }
+  .row .m .mp:not(:first-child):not(:last-child) { display: none; }
+  .show-tablet { display: inline-flex !important; }
+  .top .status { display: inline-flex; height: 30px; padding: 0 10px; font-size: 12px; } .top .status:not(.warnpill) .sl { display: inline; }
+  .row .acts .btn.quiet { padding-left: 0; }
+  .cards3 .choice .cd { display: block; } .cards3 .choice .tag { display: block; margin: 4px 0 0; }
+  .cards3 { gap: 10px; }
+  .closing svg { display: none; }
+  .word { font-size: 17px; } .word img { width: 26px; height: 26px; }
+}
+.calclash .cr { white-space: normal !important; display: flex !important; overflow: visible; font-size: 12.5px; }
+.calclash .cr .dot { margin: 5px 6px 0 0; flex: none; }
+.inlineadd .show-phone { display: none; }
+@media (max-width: 600px) { .inlineadd .show-phone { display: inline; } }
