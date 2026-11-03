@@ -7,6 +7,8 @@ import { joinPath } from "./FolderPicker";
 import { WelcomeBackup } from "./WelcomeBackup";
 
 const enc = encodeURIComponent;
+const ME = { name: "me", path: "/home/me", home: true };
+const DRIVE = { name: "Drive", path: "/home/me/Drive", home: false };
 const TARGETS = {
   key: "storage.backups.targets",
   file: "storage",
@@ -109,10 +111,15 @@ test("an app that is not on this computer has no folder list to choose from", as
 test("choosing a folder: open folders, go up, use the one shown, and it is checked", async () => {
   const user = userEvent.setup();
   const calls = api({
-    "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["Documents", "Drive"], home: true }),
-    [`GET setup/folders?path=${enc("/home/me/Drive")}`]: () => ({ path: "/home/me/Drive", parent: "/home/me", folders: ["Backups"] }),
-    [`GET setup/folders?path=${enc("/home/me")}`]: () => ({ path: "/home/me", parent: "/home", folders: ["Documents", "Drive"], home: true }),
-    [`GET setup/folders?path=${enc("/home/me/Drive/Backups")}`]: () => ({ path: "/home/me/Drive/Backups", parent: "/home/me/Drive", folders: [] }),
+    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: ["Documents", "Drive"], home: true, trail: [ME] }),
+    [`GET setup/folders?path=${enc("/home/me/Drive")}`]: () => ({ path: "/home/me/Drive", parent: "/home/me", folders: ["Backups"], trail: [ME, DRIVE] }),
+    [`GET setup/folders?path=${enc("/home/me")}`]: () => ({ path: "/home/me", parent: null, folders: ["Documents", "Drive"], home: true, trail: [ME] }),
+    [`GET setup/folders?path=${enc("/home/me/Drive/Backups")}`]: () => ({
+      path: "/home/me/Drive/Backups",
+      parent: "/home/me/Drive",
+      folders: [],
+      trail: [ME, DRIVE, { name: "Backups", path: "/home/me/Drive/Backups", home: false }],
+    }),
     [`GET setup/folder-check?path=${enc("/home/me/Drive/Backups")}`]: () => ({ path: "/home/me/Drive/Backups", ok: true, problem: null, free_mb: 500 }),
   });
   open();
@@ -124,10 +131,17 @@ test("choosing a folder: open folders, go up, use the one shown, and it is check
   expect(await within(dialog).findByText("Your home folder")).toBeInTheDocument();
   expect(within(dialog).queryByText(/\/home\/me$/)).toBeNull();
   await user.click(within(dialog).getByRole("button", { name: "Drive" }));
-  const here = await within(dialog).findByText("You are in /home/me/Drive");
-  await waitFor(() => expect(here).toHaveFocus());
+  const crumbs = await within(dialog).findByRole("navigation", { name: "Where you are" });
+  // The way down is a breadcrumb: the home folder named in words, then each folder, the last one plain.
+  expect(within(crumbs).getByRole("button", { name: "Your home folder" })).toBeInTheDocument();
+  expect(within(crumbs).getByText("Drive")).toHaveAttribute("aria-current", "location");
+  await waitFor(() => expect(dialog.querySelector("[data-folder-here]")).toHaveFocus());
   await user.click(within(dialog).getByRole("button", { name: "Go up one folder" }));
   expect(await within(dialog).findByText("Your home folder")).toBeInTheDocument();
+  await user.click(within(dialog).getByRole("button", { name: "Drive" }));
+  // A step of the breadcrumb goes back to that folder at once.
+  await user.click(await within(await within(dialog).findByRole("navigation", { name: "Where you are" })).findByRole("button", { name: "Your home folder" }));
+  expect(await within(dialog).findByRole("button", { name: "Drive" })).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Drive" }));
   await user.click(await within(dialog).findByRole("button", { name: "Backups" }));
   expect(await within(dialog).findByText("There are no folders here.")).toBeInTheDocument();
@@ -137,7 +151,7 @@ test("choosing a folder: open folders, go up, use the one shown, and it is check
   expect(await screen.findByText("That folder works. 500 MB free.")).toBeInTheDocument();
   await waitFor(() => expect(choose).toHaveFocus());
   expect(calls.filter((c) => c.route.startsWith("GET setup/folders?path=")).map((c) => c.route.split("=")[1])).toEqual(
-    ["/home/me/Drive", "/home/me", "/home/me/Drive", "/home/me/Drive/Backups"].map(enc),
+    ["/home/me/Drive", "/home/me", "/home/me/Drive", "/home/me", "/home/me/Drive", "/home/me/Drive/Backups"].map(enc),
   );
 });
 
@@ -146,13 +160,13 @@ test("a folder that did not check out is not where the list starts", async () =>
   api({
     [`GET setup/folder-check?path=${enc("/nowhere")}`]: () => ({ path: "/nowhere", ok: false, problem: "No such folder.", free_mb: null }),
     [`GET setup/folders?path=${enc("/nowhere")}`]: () => new Refuse(400, "That folder doesn't exist."),
-    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [] }),
+    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [], home: true, trail: [ME] }),
   });
   open();
   await user.type(await folderBox(user), "/nowhere");
   await user.click(screen.getByRole("button", { name: "Choose…" }));
   // A folder that isn't a good one is not where the list starts.
-  expect(await screen.findByText("You are in /home/me")).toBeInTheDocument();
+  expect(await screen.findByText("Your home folder")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Go up one folder" })).toBeDisabled();
 });
 
@@ -161,7 +175,7 @@ test("when a folder can't be listed the reason shows, and Start from the beginni
   api({
     [`GET setup/folder-check?path=${enc("/gone")}`]: () => ({ path: "/gone", ok: true, problem: null, free_mb: 10 }),
     [`GET setup/folders?path=${enc("/gone")}`]: () => new Refuse(400, "That folder doesn't exist."),
-    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [] }),
+    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [], home: true, trail: [ME] }),
   });
   open();
   await user.type(await folderBox(user), "/gone");
@@ -170,7 +184,7 @@ test("when a folder can't be listed the reason shows, and Start from the beginni
   await user.click(screen.getByRole("button", { name: "Choose…" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("That folder doesn't exist.");
   await user.click(screen.getByRole("button", { name: "Start from the beginning" }));
-  expect(await screen.findByText("You are in /home/me")).toBeInTheDocument();
+  expect(await screen.findByText("Your home folder")).toBeInTheDocument();
 });
 
 test("folder addresses are joined with the separator the address already uses", () => {
@@ -278,4 +292,62 @@ describe("the cloud drives found on this computer", () => {
     await user.click(screen.getByRole("button", { name: "Back up now" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("That drive isn't on this computer.");
   });
+});
+
+test("New folder makes a folder inside the one shown and goes into it", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [], home: true, trail: [ME] }),
+    [`GET setup/folders?path=${enc("/home/me/Backups")}`]: () => ({
+      path: "/home/me/Backups",
+      parent: "/home/me",
+      folders: [],
+      trail: [ME, { name: "Backups", path: "/home/me/Backups", home: false }],
+    }),
+    "POST setup/folders/new": () => ({ path: "/home/me/Backups" }),
+  });
+  open();
+  await folderBox(user);
+  await user.click(await screen.findByRole("button", { name: "Choose…" }));
+  const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
+  await user.click(await within(dialog).findByRole("button", { name: "New folder" }));
+  // The form the person opened has the cursor in its first field.
+  const name = await within(dialog).findByLabelText("Folder name");
+  await waitFor(() => expect(name).toHaveFocus());
+  await user.type(name, "Backups");
+  await user.click(within(dialog).getByRole("button", { name: "Make folder" }));
+  const crumbs = await within(dialog).findByRole("navigation", { name: "Where you are" });
+  expect(within(crumbs).getByText("Backups")).toHaveAttribute("aria-current", "location");
+  expect(calls.find((c) => c.route === "POST setup/folders/new")?.body).toEqual({ inside: "/home/me", name: "Backups" });
+});
+
+test("a refused folder (a system one) says why in the dialog", async () => {
+  const user = userEvent.setup();
+  api({
+    "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: ["etc"], home: true, trail: [ME] }),
+    [`GET setup/folders?path=${enc("/home/me/etc")}`]: () => new Refuse(400, "That folder belongs to the computer itself. Choose one of your own folders."),
+  });
+  open();
+  await folderBox(user);
+  await user.click(await screen.findByRole("button", { name: "Choose…" }));
+  const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
+  await user.click(await within(dialog).findByRole("button", { name: "etc" }));
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("belongs to the computer itself");
+});
+
+test("each folder backups go to is listed once with Remove, which asks first and says the copies stay", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "DELETE setup/backup-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
+  open();
+  const list = await screen.findByText(/Old drive/);
+  expect(list).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Remove Old drive" }));
+  const dialog = await screen.findByRole("dialog", { name: "Stop backing up to Old drive?" });
+  expect(dialog).toHaveTextContent("Copies already there stay where they are.");
+  expect(calls.some((c) => c.route === "DELETE setup/backup-folder")).toBe(false);
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(calls.some((c) => c.route === "DELETE setup/backup-folder")).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Remove Old drive" }));
+  await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Stop backing up here" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "DELETE setup/backup-folder")?.body).toEqual({ path: "/mnt/first", fingerprint: "fp-1" }));
 });

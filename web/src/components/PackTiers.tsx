@@ -9,7 +9,7 @@ import { accountName, type Account } from "../lib/ai-accounts";
 import { useAccountActs } from "../lib/ai-account-acts";
 import { useTierName } from "../lib/ai-routing";
 import { problemText } from "../lib/problem";
-import { addonLabel } from "../lib/settings";
+import { useAddonName } from "../lib/addon-names";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Actions } from "../ui/Actions";
@@ -23,7 +23,8 @@ export function PackTiers(props: {
   /** Only this add-on's tiers; every add-on's when left out. */
   plugin?: string;
 }) {
-  const { t, has } = useWords();
+  const { t } = useWords();
+  const addonName = useAddonName();
   const tiers = useQuery({ queryKey: ["pack-tiers"], queryFn: api.packTiers });
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
   if (tiers.isPending || accounts.isPending) return null;
@@ -36,7 +37,7 @@ export function PackTiers(props: {
   return (
     <>
       {plugins.map((plugin) => {
-        const addon = addonLabel(plugin, t, has);
+        const addon = addonName(plugin);
         const id = `pack-tiers-${plugin}`;
         return (
           <section key={plugin} className="pack-tiers" aria-labelledby={`${id}-title`} data-pack-tiers={plugin}>

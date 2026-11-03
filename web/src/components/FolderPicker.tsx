@@ -5,12 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api, ApiError } from "../lib/api";
+import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
 import { ModalPanel, DialogFooter } from "./ModalPanel";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { Actions } from "../ui/Actions";
+import { FormField } from "../ui/FormField";
+
 /** A folder's address inside another, using the separator the address already uses. */
 export function joinPath(base: string, name: string): string {
   const sep = base.includes("\\") && !base.includes("/") ? "\\" : "/";
@@ -54,6 +57,27 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
     moved.current = true;
   }, [here]);
 
+  // The form for a new folder, opened by the person: the cursor starts in its field.
+  const [naming, setNaming] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [makeProblem, setMakeProblem] = useState("");
+  const nameField = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (naming) nameField.current?.focus();
+  }, [naming]);
+  const makeFolder = async () => {
+    if (!folders.data) return;
+    setMakeProblem("");
+    try {
+      const made = await api.makeFolder({ inside: folders.data.path, name: newName });
+      setNaming(false);
+      setNewName("");
+      setPath(made.path);
+    } catch (err) {
+      setMakeProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    }
+  };
+
   const problem =
     folders.error instanceof ApiError && folders.error.detail ? folders.error.detail : folders.isError ? t("folders.failed") : "";
   return (
@@ -76,17 +100,62 @@ export function FolderPicker(props: { start?: string; files?: string[]; onPick: 
       {folders.isPending && <Skeleton />}
       {folders.data && (
         <>
-          <p className="path" ref={heading} tabIndex={-1}>
-            {folders.data.home ? t("folders.home") : t("folders.here", { path: folders.data.path })}
-          </p>
+          <div className="path" ref={heading} tabIndex={-1} data-folder-here="">
+            <nav aria-label={t("folders.crumbs")}>
+              <ol className="crumbs">
+                {(folders.data.trail ?? []).map((step, i, all) => (
+                  <li key={step.path}>
+                    {i === all.length - 1 ? (
+                      <span aria-current="location">{step.home ? t("folders.home") : step.name}</span>
+                    ) : (
+                      <button type="button" className="link-button" onClick={() => setPath(step.path)}>
+                        {step.home ? t("folders.home") : step.name}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </div>
           <Actions align="end">
-            <Button
-              disabled={!folders.data.parent}
-              onClick={() => setPath(folders.data?.parent ?? undefined)}
-            >
+            <Button disabled={!folders.data.parent} onClick={() => setPath(folders.data?.parent ?? undefined)}>
               {t("folders.up")}
             </Button>
+            {!picksFile && (
+              <Button onClick={() => setNaming(true)} disabled={naming}>
+                {t("folders.new")}
+              </Button>
+            )}
           </Actions>
+          {naming && (
+            <form
+              className="inline-field"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newName.trim()) void makeFolder();
+              }}
+            >
+              <FormField id="folder-new-name" label={t("folders.new_name")}>
+                <input
+                  id="folder-new-name"
+                  ref={nameField}
+                  type="text"
+                  value={newName}
+                  maxLength={100}
+                  autoComplete="off"
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </FormField>
+              <Button variant="primary" type="submit" disabled={!newName.trim()}>
+                {t("folders.new_make")}
+              </Button>
+              {makeProblem && (
+                <p className="problem-note" role="alert">
+                  {makeProblem}
+                </p>
+              )}
+            </form>
+          )}
           {folders.data.folders.length === 0 && (!picksFile || (folders.data.files ?? []).length === 0) ? (
             <EmptyState text={t(picksFile ? "folders.no_files" : "folders.none")} />
           ) : (

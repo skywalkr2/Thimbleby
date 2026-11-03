@@ -384,8 +384,12 @@ test("an account that is signed out is not read, so the chip is not all good and
   show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
     "GET watch": () => [account("a", "alex@example.com", { account_state: "signed_out" }), account("c", "casey@example.com")],
   });
-  await chipIs("connection_failed");
+  // The person's own sign-out is a warning that says so, never "All good" and never "Connection failed".
+  await chipIs("connection_signed_out");
   expect(chipNow()).not.toHaveTextContent("All good");
+  expect(chipNow()).toHaveTextContent("Signed out");
+  expect(chipNow()).not.toHaveTextContent("Connection failed");
+  expect(chipNow()).not.toHaveAttribute("data-tone", "danger");
   const dialog = await open(user);
   expect(within(dialog).getByText("alex@example.com is signed out, so it isn't being read")).toBeInTheDocument();
 });

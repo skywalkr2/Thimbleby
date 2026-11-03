@@ -837,6 +837,8 @@ Built keys:
     before it is saved.
   - `every_hours` (24), `keep` (14: older backups in each target are removed) and `retry_minutes` (60, at least 5: after a
     failed backup, how long before trying again).
+  - `key_min_chars` (12, 8 to 128) and `key_max_chars` (256, 16 to 4096): the fewest and most characters a backup key typed on a
+    screen may have; one outside them is refused in words naming the number (change log 310). Files-only.
   - `before_changes` (true) and `bulk_change_records` (25, at least 1): a backup is made first before a change that is hard
     to take back, and a removal touching at least that many records counts as one (5.0; change log 233). Files-only.
   - `cloud_folders` (the app's shipped list, `engine/defaults/cloud_folders.yaml`): the cloud drives the setup guide

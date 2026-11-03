@@ -85,3 +85,9 @@ test("'1.5' and '$1.50' are the same amount, in any language", () => {
     expect(parseAmount("1.5", locale)).toBe(parseAmount("$1.50", locale));
   }
 });
+
+test("a negative amount puts its minus before the sign: -$5.00, never $-5.00", () => {
+  const { result } = renderHook(() => useWriteAmount(), { wrapper: wrap("en-US") });
+  expect(result.current(-5)).toBe("-$5.00");
+  expect(result.current(5)).toBe("$5.00");
+});

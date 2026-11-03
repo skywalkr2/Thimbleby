@@ -52,19 +52,20 @@ function api(backups: () => S["BackupsView"], targets: unknown[] = [{ path: "/mn
 
 const open = () => renderApp(<BackupsPanel local />);
 
-test("it shows where backups go, the last backup, the copies, and how to restore from the newest", async () => {
+test("it shows where backups go, the last backup, the copies, and says restoring isn't a button, with no command", async () => {
   api(() => view());
   open();
   const where = await screen.findByRole("region", { name: "Where backups go" });
-  expect(within(where).getByText("/mnt/drive", { exact: false })).toBeInTheDocument();
+  expect(await within(where).findByText("/mnt/drive", { exact: false })).toBeInTheDocument();
   expect(await within(where).findByText(/Backed up/)).toBeInTheDocument();
   expect(within(where).getByRole("button", { name: "Back up now" })).toBeEnabled();
   expect(within(where).getByRole("list", { name: "Copies you can restore from" })).toHaveTextContent("Drive");
   const restore = within(where).getByRole("group", { name: "Restore from a backup" });
   // The command is behind a disclosure for developers, with the newest copy's folder filled in; the plain words say it isn't a button yet.
-  expect(restore).toHaveTextContent("It isn't a button yet");
-  expect(restore.querySelector("details")).toHaveTextContent('cockpit restore --backup "/mnt/drive/ws-20261028-090000" "a new empty folder"');
-  expect(restore).toHaveTextContent("Nothing in this workspace is changed, so no backup is needed first.");
+  expect(restore).toHaveTextContent("isn't a button in the app yet");
+  // No command shows on screen, for a beginner or anyone else.
+  expect(restore).not.toHaveTextContent(/cockpit|--backup/);
+  expect(restore.querySelector("details")).toBeNull();
   expect(restore).toHaveTextContent("Going back to a chosen moment isn't available yet.");
 });
 

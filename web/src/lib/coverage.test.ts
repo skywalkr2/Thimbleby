@@ -54,3 +54,15 @@ test("a time is said by itself today, with yesterday named, and with its day bef
   expect(whenWords(iso(new Date(2026, 9, 18, 18, 0)), NOW, t)).toBe(`yesterday ${time(new Date(2026, 9, 18, 18, 0))}`);
   expect(whenWords(iso(new Date(2026, 9, 12, 18, 0)), NOW, t)).toMatch(/12/);
 });
+
+test("a person's own sign-out is its own kind, and a sign-in the service refused or let run out is a failure", () => {
+  const signedOut = source("s", { account_state: "signed_out", last: ran("ok", new Date(2026, 9, 19, 8, 0)), read_at: iso(new Date(2026, 9, 19, 8, 0)) });
+  const expired = source("x", { account_state: "expired", last: ran("ok", new Date(2026, 9, 19, 8, 0)), read_at: iso(new Date(2026, 9, 19, 8, 0)) });
+  const refused = source("r", { last: { ...ran("failed", new Date(2026, 9, 19, 8, 0))!, error_kind: "auth" } });
+  const found = coverage([signedOut, expired, refused]);
+  expect(found.unread.map((u) => [u.source.id, u.kind])).toEqual([
+    ["s", "signed_out"],
+    ["x", "failed"],
+    ["r", "failed"],
+  ]);
+});

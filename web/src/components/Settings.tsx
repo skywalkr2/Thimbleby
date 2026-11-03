@@ -861,6 +861,7 @@ export function Settings(props: {
         {section === "links" && <PageLinks />}
         {section.startsWith("addon/") && (
           <AddonSecrets
+            unlessSignedIn
             plugin={section.slice("addon/".length)}
             name={label(section)}
           />

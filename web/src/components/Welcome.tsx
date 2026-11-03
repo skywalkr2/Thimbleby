@@ -10,7 +10,8 @@ import { useDraftState, useRestored } from "../lib/draft";
 import { problemText } from "../lib/problem";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
-import { addonLabel, labelOf } from "../lib/settings";
+import { useAddonName } from "../lib/addon-names";
+import { labelOf } from "../lib/settings";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
@@ -53,6 +54,7 @@ export function StepList(props: {
   onChooseSource: (plugin: string | null) => void;
 }) {
   const { t, has } = useWords();
+  const addonName = useAddonName();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const { start, review } = useActionReview();
   const focused = useRef<number | null>(null);
@@ -79,7 +81,7 @@ export function StepList(props: {
         {shown.map((step) => {
           // A sign-in's step is worded by the list from the service's label; its explanation lists what is asked.
           // A step the core adds for an add-on (its kinds of files, its own models) is worded by the list, with the add-on's name.
-          const addon = step.plugin ? addonLabel(step.plugin, t, has) : "";
+          const addon = step.plugin ? addonName(step.plugin) : "";
           const label = step.sign_in
             ? t("welcome.sign_in.title", { label: step.label || step.sign_in })
             : step.kind
@@ -181,7 +183,8 @@ function SignInStep(props: { name: string; label: string; done: boolean; onChoos
 
 /** The add-ons installed here and turned off, by name, with one button that opens the Add-ons screen. */
 function AddonsStep(props: { onOpen: () => void }) {
-  const { t, has } = useWords();
+  const { t } = useWords();
+  const addonName = useAddonName();
   const act = useAct();
   const [busy, setBusy] = useState(false);
   const leaveOff = async () => {
@@ -209,7 +212,7 @@ function AddonsStep(props: { onOpen: () => void }) {
           </span>
           <ul className="plain-list" aria-labelledby="guide-addons-off">
             {off.map((p) => (
-              <li key={p.name}>{addonLabel(p.name, t, has)}</li>
+              <li key={p.name}>{addonName(p.name)}</li>
             ))}
           </ul>
         </FormBlock>

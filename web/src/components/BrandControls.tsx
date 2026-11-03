@@ -1,7 +1,7 @@
 // The two appearance settings that are not text: the accent color is picked from the browser's own color control with a
 // plain-words note on how easy it is to see, and the logo is a picture uploaded from the person's computer, kept with the
 // settings, never a file name typed in (design 7.9, 7.12).
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { accentContrast, contrast, parseHex } from "../lib/theme";
@@ -86,6 +86,18 @@ export function LogoControl(props: {
   const [problem, setProblem] = useState("");
   const [lost, setLost] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A picture just kept may be asked for before the setting naming it is saved, and then it is not found yet: it is asked
+  // for again a few times before the line says it can't be found.
+  const [tries, setTries] = useState(0);
+  useEffect(() => {
+    setLost(false);
+    setTries(0);
+  }, [props.value]);
+  useEffect(() => {
+    if (tries === 0) return;
+    const timer = window.setTimeout(() => setLost(false), 400);
+    return () => window.clearTimeout(timer);
+  }, [tries]);
   const upload = async (file: File | undefined) => {
     if (!file) return;
     setProblem("");
@@ -103,8 +115,18 @@ export function LogoControl(props: {
   };
   return (
     <div className="logo-control">
-      {props.value !== "" && !lost ? (
-        <img className="logo-preview" src={`api/brand/logo?v=${encodeURIComponent(props.value)}`} alt={t("settings.brand.logo_alt")} onError={() => setLost(true)} />
+      {props.value !== "" && lost && tries < 3 ? (
+        <p className="hint">{t("settings.brand.logo_keeping")}</p>
+      ) : props.value !== "" && !lost ? (
+        <img className="logo-preview" src={`api/brand/logo?v=${encodeURIComponent(props.value)}&t=${tries}`}
+          alt={t("settings.brand.logo_alt")}
+          onError={() => {
+            if (tries < 3) {
+              setLost(true);
+              setTries(tries + 1);
+            } else setLost(true);
+          }}
+        />
       ) : (
         <p className="hint">{t(props.value !== "" ? "settings.brand.logo_missing" : "settings.brand.logo_none")}</p>
       )}

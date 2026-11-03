@@ -430,6 +430,29 @@ export function WelcomeAi(props: {
     setProblem("");
   };
 
+  /** "Something else" opened over a chosen service: the chosen service is let go, with what was typed for it, so the guide
+   * on screen is never the previous choice's and only one card is selected. */
+  const chooseSomethingElse = () => {
+    if (kind && featured.includes(kind)) {
+      lookup.current += 1;
+      verifying.current += 1;
+      setKindId("");
+      setKey("");
+      setShowKey(false);
+      setKeyRef("");
+      setModels(null);
+      setListProblem("");
+      setListing(false);
+      setEveryday("");
+      setHarder(HARDER_SAME);
+      setLevels(["open"]);
+      setWorkData(null);
+      setVerdict({ state: "idle" });
+      setProblem("");
+    }
+    setElseOpen(true);
+  };
+
   const choose = (id: string) => {
     const picked = endpoints.data?.find((e) => e.id === id);
     if (!picked) return;
@@ -607,11 +630,11 @@ export function WelcomeAi(props: {
             if (forBackup) {
               const bad = await acts.standIn(accountId, plan, t("ai_accounts.backup_set", { name: shown }), step(accountId));
               ended(accountId, bad);
-              if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
+              if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }), tone: "warn" });
             } else if (asWork) {
               const bad = await acts.failing(accountId, plan, step(accountId));
               ended(accountId, bad);
-              if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
+              if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }), tone: "warn" });
               // The account it replaces stays as its backup when it passes its own check, so the work is never left with nothing.
               for (const prev of replaced) {
                 const prevPlan = planFor(prev, prev.used_for);
@@ -631,7 +654,7 @@ export function WelcomeAi(props: {
           } catch (err) {
             // Nothing is left on the row that would say a check is still running.
             for (const name of [accountId, ...replaced.map((a) => a.name)]) setAccountCheck(name, null);
-            push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }) });
+            push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }), tone: "warn" });
           }
           await client.invalidateQueries({ queryKey: ["ai-accounts"] });
           await client.invalidateQueries({ queryKey: ["setup"] });
@@ -1060,7 +1083,7 @@ export function WelcomeAi(props: {
             {gated && (
               <RadioCards ref={firstKind}>
                 {featured.map((e) => kindChoice(e))}
-                <RadioCard name="ai-kind" value="" checked={elseShown} onChange={() => setElseOpen(true)} title={t("welcome.ai.else")} description={t("welcome.ai.else_note")} />
+                <RadioCard name="ai-kind" value="" checked={elseShown} onChange={chooseSomethingElse} title={t("welcome.ai.else")} description={t("welcome.ai.else_note")} />
               </RadioCards>
             )}
             {elseShown && gated && (
@@ -1566,7 +1589,7 @@ export function WelcomeAi(props: {
       )}
       {guide && (
         <>
-          {(accounts.data ?? []).length > 0 && <AiAccounts local={props.local} level={4} />}
+          {(accounts.data ?? []).length > 0 && <AiAccounts local={props.local} level={4} compact />}
           <div className="guide-test">
             <div role="status" aria-live="polite">
               {testing && <p className="hint">{t("welcome.ai.testing")}</p>}

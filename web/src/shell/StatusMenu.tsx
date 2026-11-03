@@ -52,6 +52,7 @@ const CHIP_WORD: Record<StatusKind, string> = {
   assistant_stopped: "status.chip_assistant_stopped",
   assistant_held: "status.chip_assistant_held",
   connection_failed: "status.chip_connection_failed",
+  connection_signed_out: "status.chip_connection_signed_out",
   connection_retrying: "status.chip_connection_retrying",
   backup: "status.chip_backup",
   spend: "status.chip_spend",
@@ -148,7 +149,7 @@ export function StatusMenu(props: {
               </li>
             )}
             {found && (
-              <li className={[styles.state, kind === "connection_failed" || kind === "connection_retrying" ? styles.warn : ""].join(" ")} data-state="connections">
+              <li className={[styles.state, kind === "connection_failed" || kind === "connection_signed_out" || kind === "connection_retrying" ? styles.warn : ""].join(" ")} data-state="connections">
                 <p className={styles.name}>{t("status.connections")}</p>
                 <div className={styles.full}>
                   <CoverageLine />

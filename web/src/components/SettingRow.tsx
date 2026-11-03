@@ -418,6 +418,8 @@ export function ItemFields(props: {
   onEdit: (key: string, draft: Draft) => void;
   disabled?: boolean;
   idPrefix: string;
+  /** A short label for a setting, by item; one that returns nothing keeps the sheet's. */
+  labelFor?: (item: Item) => string | undefined;
   /** Lets secret settings be typed (a source's form); left out, they are plain text boxes for where they are kept. */
   secret?: SecretInput;
   /** What a refused save said about a setting, by its key, shown on that setting's own row. */
@@ -445,6 +447,7 @@ export function ItemFields(props: {
           secret={props.secret}
           problem={props.problems?.[item.key] ?? null}
           plain={props.plain}
+          label={props.labelFor?.(item)}
           beside
         />
       );

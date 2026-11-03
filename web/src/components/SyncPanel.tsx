@@ -7,6 +7,7 @@ import { problemText } from "../lib/problem";
 import { inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { useRestart } from "../lib/restart";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
 import { useTextReview } from "./TextReview";
@@ -103,7 +104,7 @@ function SyncUnset() {
           >
             {t("setup.sync_shared_back")}
           </Button>
-          <Button variant="primary" type="submit" disabled={busy || shared === null}>
+          <Button variant="primary" type="submit" disabled={busy || shared === null} reason={shared === null ? t("setup.sync_save_why") : undefined}>
             {t("setup.sync_shared_save")}
           </Button>
         </Actions>
@@ -203,6 +204,7 @@ export function SyncPanel() {
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 4000),
   });
   const { open, dialog } = useTextReview();
+  const restart = useRestart();
   const data = sync.data;
   return (
     <section className="panel-section" aria-labelledby="sync-title">
@@ -218,7 +220,15 @@ export function SyncPanel() {
       ) : sync.isError || !data ? (
         <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void sync.refetch() }} />
       ) : !data.folder ? (
-        <EmptyState text={t("setup.sync_off")} />
+        // A folder saved after the app started: the running app keeps what it started with until it restarts.
+        <div className="sync-body">
+          <p role="status">{t("setup.sync_pending", { folder: typeof saved === "string" ? saved : "" })}</p>
+          <Actions align="end">
+            <Button variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+              {t("restart.now")}
+            </Button>
+          </Actions>
+        </div>
       ) : (
         <div className="sync-body">
           <p>{t("setup.sync_in", { folder: data.folder })}</p>

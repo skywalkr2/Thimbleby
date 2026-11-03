@@ -252,9 +252,12 @@ export function useOutgoing() {
       const what = actPhrase(a, t);
       try {
         const r = await api.takeBackAct(a.id);
-        push({ message: r.status === "undone" ? t("outgoing.take_back.done", { what }) : t("outgoing.take_back.failed", { reason: r.reason ?? t("outgoing.toast.no_reason") }) });
+        push({
+          message: r.status === "undone" ? t("outgoing.take_back.done", { what }) : t("outgoing.take_back.failed", { reason: r.reason ?? t("outgoing.toast.no_reason") }),
+          ...(r.status === "undone" ? {} : { tone: "warn" as const }),
+        });
       } catch (err) {
-        push({ message: t("outgoing.take_back.failed", { reason: err instanceof ApiError && err.detail ? err.detail : t("outgoing.toast.no_reason") }) });
+        push({ message: t("outgoing.take_back.failed", { reason: err instanceof ApiError && err.detail ? err.detail : t("outgoing.toast.no_reason") }), tone: "warn" });
       }
       await client.invalidateQueries();
     },

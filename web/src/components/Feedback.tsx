@@ -93,7 +93,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const tooLong = ready && tooLongForLink(props.to, subject, body);
   const noAddress = !props.to?.trim();
   // The mail link is the main action when there is one; otherwise copying is.
-  const mailIsMain = !noAddress && !tooLong;
+  const mailIsMain = !tooLong;
 
   const copy = async () => {
     if ((await copyMessage(mailText(subject, body))) === "blocked") {

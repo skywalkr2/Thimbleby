@@ -234,4 +234,28 @@ test.describe.serial("several accounts", () => {
     await pick.selectOption(addresses[2]);
     await expect(pick).toHaveValue(addresses[2]);
   });
+
+  test("X53. after a person's own sign-out the rows and the status say signed out, and the header says so as a warning: not Read, not All good, not Connection failed", async ({ page }) => {
+    test.setTimeout(180_000);
+    const auth = { Authorization: `Bearer ${info.token}` };
+    await page.goto(`?token=${info.token}`);
+    const listed = (await (await page.request.get("api/sign-ins", { headers: auth })).json()) as Array<{ name: string; accounts: Array<{ key: string; address: string | null }> }>;
+    const signIn = listed.find((l) => l.accounts.some((a) => a.address === addresses[1]))!;
+    const account = signIn.accounts.find((a) => a.address === addresses[1])!;
+    // Signing out the account that was failing leaves only a deliberate sign-out: nothing was refused any more.
+    const out = await page.request.delete(`api/sign-ins/${signIn.name}?account=${encodeURIComponent(account.key)}`, { headers: auth });
+    expect(out.ok()).toBe(true);
+    await go(page, "settings/connections");
+    for (const label of [`Your inbox, ${addresses[1]}`, `Your calendar, ${addresses[1]}`]) {
+      const row = connections(page).getByRole("row", { name: label });
+      await expect(row).toContainText("Signed out", LOADED);
+      await expect(row).not.toContainText(/\bRead\b(?! every)/);
+    }
+    const chip = page.locator("[data-status]").first();
+    await expect(chip).toHaveAttribute("data-status", "connection_signed_out", LOADED);
+    await expect(chip).toContainText("Signed out");
+    await expect(chip).not.toContainText("All good");
+    await expect(chip).not.toContainText("Connection failed");
+    await expect(chip).toHaveAttribute("data-tone", "warn");
+  });
 });

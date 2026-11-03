@@ -57,6 +57,10 @@ def reason_of(error: Mapping[str, Any]) -> str:
             return "That isn't a setting."
         case "value_error" | "assertion_error":
             text = str(error.get("msg", "")).removeprefix("Value error, ").removeprefix("Assertion failed, ").strip()
-            return text if text else "That value can't be used."
+            # A sentence of its own: it starts with a capital and ends with a full stop, never a lower-case fragment.
+            if not text:
+                return "That value can't be used."
+            text = text[:1].upper() + text[1:]
+            return text if text[-1] in ".!?" else f"{text}."
         case _:
             return "That value can't be used."

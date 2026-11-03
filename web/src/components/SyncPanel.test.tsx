@@ -266,3 +266,40 @@ test("switching who can change the folder is saved through the one line that kee
   await user.click(await within(sync).findByRole("checkbox", { name: "Mark this folder as editable by others" }));
   await waitFor(() => expect(ordered.runs).toBe(1));
 });
+
+test("a disabled Save says why beside it, and after Save the folder shows as applying after a restart with Restart now", async () => {
+  const user = userEvent.setup();
+  let saved = "";
+  const calls = others(
+    {
+      "GET jobs": () => [],
+      // The running app still holds no folder: what was saved applies after a restart.
+      "GET sync": () => syncView({ folder: "" }),
+      "GET settings": () => ({ fingerprint: "fp-1", items: [folderItem(saved), languageItem()] }),
+      "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [], trail: [] }),
+      "POST settings": () => {
+        saved = "/home/me";
+        return { changes: [{ key: "storage.sync.folder", before: "", after: "/home/me", was_default: true, is_default: false }], fingerprint: "fp-2", needs_restart: true };
+      },
+    },
+    "",
+  );
+  renderApp(
+    <RestartProvider hellos={1}>
+      <SyncPanel />
+    </RestartProvider>,
+  );
+  const sync = await section("Synced folder");
+  await user.click(await within(sync).findByRole("button", { name: "Choose a folder" }));
+  await user.click(await screen.findByRole("button", { name: "Use this folder" }));
+  const save = within(sync).getByRole("button", { name: "Save the folder" });
+  expect(save).toBeDisabled();
+  expect(within(sync).getByText("Choose one of the two answers first.")).toBeInTheDocument();
+  await user.click(within(sync).getByRole("radio", { name: "No, only I use it" }));
+  await user.click(within(sync).getByRole("button", { name: "Save the folder" }));
+  // The folder does not vanish: it shows, with when it applies, and the existing Restart now.
+  await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+  expect(await within(sync).findByText("Saved: /home/me. It applies after a restart.")).toBeInTheDocument();
+  expect(within(sync).queryByText(/isn't kept in a synced folder/)).toBeNull();
+  expect(within(sync).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+});

@@ -42,8 +42,11 @@ export function coverage(sources: Source[]): Coverage {
   const stale: Source[] = [];
   for (const source of on) {
     const outcome = source.last?.outcome;
-    if (outcome === "failed" || outcome === "offline") unread.push({ source, kind: outcome });
-    else if (signInNeed(source)) unread.push({ source, kind: "signed_out" });
+    const need = signInNeed(source);
+    // The person's own sign-out is its own kind (a warning); a sign-in the service refused or let run out is a failure.
+    if (need === "signed_out") unread.push({ source, kind: "signed_out" });
+    else if (need === "again" || outcome === "failed") unread.push({ source, kind: "failed" });
+    else if (outcome === "offline") unread.push({ source, kind: "offline" });
     else if (source.read_at && source.stale) stale.push(source);
     else if (source.read_at) read.push(source);
     else pending.push(source);

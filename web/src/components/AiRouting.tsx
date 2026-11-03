@@ -149,23 +149,46 @@ function Kinds(props: { view: Routing; model: (tier: string) => string }) {
     if (!done.ok) setProblems((all) => ({ ...all, [k.name]: done.problem }));
   };
 
+  // The kinds of work come in groups, one for each kind of work they start from (everyday, harder), folded to one line each
+  // with the choices inside; a group opens by itself when something in it was changed or failed. When no kind has a test
+  // yet that is said once above, not under each row.
+  const groups: Array<{ tier: string; kinds: WorkKind[] }> = [];
+  for (const k of props.view.kinds) {
+    const found = groups.find((g) => g.tier === k.default_tier);
+    if (found) found.kinds.push(k);
+    else groups.push({ tier: k.default_tier, kinds: [k] });
+  }
+  const untested = (k: WorkKind) => k.fits.length > 0 && k.fits.every((f) => f.skills === 0);
+  const allUntested = props.view.kinds.length > 0 && props.view.kinds.every((k) => k.fits.length === 0 || untested(k)) && props.view.kinds.some(untested);
   return (
     <div className={styles.group} role="group" aria-labelledby="ai-routing-kinds">
       <h4 id="ai-routing-kinds">{t("ai_routing.kinds")}</h4>
-      {props.view.kinds.map((k) => (
-        <KindRow
-          key={k.name}
-          kind={k}
-          label={label(k)}
-          tiers={props.view.tiers}
-          model={props.model}
-          value={chosen[k.name] ?? k.tier}
-          own={own}
-          problem={problems[k.name]}
-          onChoose={(tier) => void choose(k, tier)}
-          onReset={() => void reset(k)}
-          skipWhy={SKIP_WHY}
-        />
+      {allUntested && <p className="hint">{t("ai_routing.fit.none_all")}</p>}
+      {groups.map((g) => (
+        <details
+          key={g.tier}
+          className="more-options"
+          data-kind-group={g.tier}
+          open={g.kinds.some((k) => k.custom || problems[k.name]) || undefined}
+        >
+          <summary>{t("ai_routing.group", { work: tierName(g.tier), n: g.kinds.length })}</summary>
+          {g.kinds.map((k) => (
+            <KindRow
+              key={k.name}
+              kind={k}
+              label={label(k)}
+              tiers={props.view.tiers}
+              model={props.model}
+              value={chosen[k.name] ?? k.tier}
+              own={own}
+              problem={problems[k.name]}
+              onChoose={(tier) => void choose(k, tier)}
+              onReset={() => void reset(k)}
+              skipWhy={SKIP_WHY}
+              quietNone={allUntested}
+            />
+          ))}
+        </details>
       ))}
     </div>
   );
@@ -183,6 +206,8 @@ function KindRow(props: {
   onChoose: (tier: string) => void;
   onReset: () => void;
   skipWhy: string[];
+  /** The note that no test covers this work is said once above the rows, so not under each. */
+  quietNone?: boolean;
 }) {
   const { t } = useWords();
   const id = useId();
@@ -223,7 +248,7 @@ function KindRow(props: {
         )}
       </div>
       <div className="setting-help">
-        <Measured kind={kind} label={props.label} model={props.model} />
+        <Measured kind={kind} label={props.label} model={props.model} quietNone={props.quietNone} />
         {suggested && suggested !== kind.tier && (
           <p className={styles.suggest} data-suggestion="">
             <span>{t("ai_routing.suggest", { model: props.model(suggested) })}</span>
@@ -248,12 +273,12 @@ function KindRow(props: {
 
 /** What was measured for a kind of work, for the model each tier uses: counts with their denominators, never a bare
  * percentage, and an out-of-date or missing result said as such. */
-function Measured(props: { kind: WorkKind; label: string; model: (tier: string) => string }) {
+function Measured(props: { kind: WorkKind; label: string; model: (tier: string) => string; quietNone?: boolean }) {
   const { t } = useWords();
   const small = useSmallMoney();
   const fits = props.kind.fits;
   if (!fits.length) return null;
-  if (fits.every((f) => f.skills === 0)) return <p className="hint">{t("ai_routing.fit.none")}</p>;
+  if (fits.every((f) => f.skills === 0)) return props.quietNone ? null : <p className="hint">{t("ai_routing.fit.none")}</p>;
   const result = (f: Fit) => {
     const cost = f.cost_per_pass_usd == null || f.passes === 0 ? "" : t("ai_routing.fit.cost", { amount: small(f.cost_per_pass_usd) });
     const counts = { passes: f.passes, runs: f.runs, measured: f.measured, skills: f.skills };

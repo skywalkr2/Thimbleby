@@ -866,6 +866,8 @@ def set_business(
         op = {"op": "record.set", "kind": "project", "id": same.project, "field": "summary", "value": summary}
         link_sides(store, cfg)
         return Business(same.project, False, apply_as_person(store, cfg, [op], f"Described {name}"), same.kind)
+    if name.lower() in {str(p.data["name"]).strip().lower() for p in view.list("project")}:
+        raise StoreError(f"You already have something called {name}. Choose a different name.")
     # The side is also an organization of the same name (one with that name is linked, else made), and the person works
     # for it when their record names no organization: all in the one changeset, so Undo takes them together.
     add: dict[str, Any] = {"op": "project.add", "name": name, "organization": name}

@@ -49,9 +49,12 @@ def test_choosing_a_backup_folder_makes_the_first_backup(tmp_path):
     assert backup["configured"] is True and backup["needs_attention"] is False and backup["last_error"] is None
     copies = [p for p in folder.iterdir() if p.is_dir()]
     assert len(copies) == 1 and (copies[0] / "cockpit.db").is_file() and (copies[0] / "config").is_dir()
-    # A folder added after a backup succeeded makes no extra backup.
+    # A folder chosen after that replaces the first (backups go to one place), and the new place gets its first copy.
     assert _choose(c, api, second).status_code == 200
-    assert started[1:] == [None] and list(second.iterdir()) == []
+    [_, again] = started
+    again.join(timeout=15)
+    assert [t["path"] for t in c.get(f"{api}/backups").json()["targets"]] == [str(second)]
+    assert len([p for p in second.iterdir() if p.is_dir()]) == 1
     assert len([p for p in folder.iterdir() if p.is_dir()]) == 1
 
 

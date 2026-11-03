@@ -6190,6 +6190,27 @@
         "title": "BackupFolderAdd",
         "type": "object"
       },
+      "BackupFolderRemove": {
+        "additionalProperties": false,
+        "description": "DELETE /api/setup/backup-folder: take one place out of where backups go. Copies already made stay.",
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "path": {
+            "description": "The place to take out, as the settings list it.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "fingerprint"
+        ],
+        "title": "BackupFolderRemove",
+        "type": "object"
+      },
       "BackupKeyIn": {
         "additionalProperties": false,
         "properties": {
@@ -11481,6 +11502,14 @@
           "path": {
             "title": "Path",
             "type": "string"
+          },
+          "trail": {
+            "description": "The folders from where the person can start down to this one, for the breadcrumb: never a folder the computer keeps for itself.",
+            "items": {
+              "$ref": "#/components/schemas/FolderStepView"
+            },
+            "title": "Trail",
+            "type": "array"
           }
         },
         "required": [
@@ -11488,6 +11517,42 @@
           "folders"
         ],
         "title": "FolderListView",
+        "type": "object"
+      },
+      "FolderMade": {
+        "properties": {
+          "path": {
+            "description": "Where the new folder is.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "FolderMade",
+        "type": "object"
+      },
+      "FolderMake": {
+        "additionalProperties": false,
+        "description": "POST /api/setup/folders/new: a new folder inside the one being looked at.",
+        "properties": {
+          "inside": {
+            "description": "The folder to make it in, as the chooser lists it.",
+            "title": "Inside",
+            "type": "string"
+          },
+          "name": {
+            "description": "The new folder's name: one plain name.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inside",
+          "name"
+        ],
+        "title": "FolderMake",
         "type": "object"
       },
       "FolderRenameIn": {
@@ -11532,6 +11597,31 @@
           "renamed"
         ],
         "title": "FolderRenamed",
+        "type": "object"
+      },
+      "FolderStepView": {
+        "description": "One step of the way down to the folder being looked at.",
+        "properties": {
+          "home": {
+            "default": false,
+            "description": "This step is the person's home folder, which the screen names in words.",
+            "title": "Home",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ],
+        "title": "FolderStepView",
         "type": "object"
       },
       "FollowedUp": {
@@ -47059,6 +47149,43 @@
       }
     },
     "/api/setup/backup-folder": {
+      "delete": {
+        "description": "Stop backing up to one place. The copies already there are left alone.",
+        "operationId": "backup_folder_remove_api_setup_backup_folder_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupFolderRemove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backup Folder Remove"
+      },
       "post": {
         "operationId": "backup_folder_api_setup_backup_folder_post",
         "requestBody": {
@@ -47347,6 +47474,45 @@
           }
         },
         "summary": "Folders"
+      }
+    },
+    "/api/setup/folders/new": {
+      "post": {
+        "description": "Make a folder inside the one the chooser is showing, so a place for backups can be made while choosing it.",
+        "operationId": "folder_new_api_setup_folders_new_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderMake"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderMade"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folder New"
       }
     },
     "/api/setup/people-add": {

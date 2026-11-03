@@ -149,6 +149,42 @@ test("adding a connection is a two-step drawer", async () => {
   expect(within(drawer).getByLabelText("Name")).toBeInTheDocument();
 });
 
+test("on the second step Escape and the close button close the drawer at once, with nothing typed to lose; typed text asks first", async () => {
+  const user = userEvent.setup();
+  open([]);
+  for (const how of ["Escape", "Close"]) {
+    await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+    const drawer = await screen.findByRole("dialog");
+    await user.click(within(drawer).getByRole("radio", { name: /A folder/ }));
+    await user.click(within(drawer).getByRole("button", { name: "Continue" }));
+    // The cursor moved to the new step's first field, not left on the page behind.
+    const name = within(drawer).getByLabelText("Name");
+    await waitFor(() => expect(name).toHaveFocus());
+    if (how === "Escape") await user.keyboard("{Escape}");
+    else await user.click(within(drawer).getByRole("button", { name: /^Close/ }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  }
+  // Text typed in it is worth keeping: Escape asks first.
+  await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+  const drawer = await screen.findByRole("dialog");
+  await user.click(within(drawer).getByRole("radio", { name: /A folder/ }));
+  await user.click(within(drawer).getByRole("button", { name: "Continue" }));
+  await user.type(within(drawer).getByLabelText("Name"), "My notes");
+  await user.keyboard("{Escape}");
+  expect((await screen.findAllByText(/Keep editing|Discard/)).length).toBeGreaterThan(0);
+});
+
+test("each kind's fields have a short label of their own, never a sentence", async () => {
+  const user = userEvent.setup();
+  open([], {}, {});
+  await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+  const drawer = await screen.findByRole("dialog");
+  await user.click(within(drawer).getByRole("radio", { name: /A folder/ }));
+  await user.click(within(drawer).getByRole("button", { name: "Continue" }));
+  expect(within(drawer).getByLabelText("Folder")).toBeInTheDocument();
+  expect(within(drawer).getByLabelText("Files to read")).toBeInTheDocument();
+});
+
 test("a source whose mail the assistant couldn't sort says so on its row, with why, and says nothing when all of it was sorted", async () => {
   open([
     source("a", { last: run({ new: 2, unsorted: "2 messages weren't sorted by the assistant (it is paused until 3:00), so they were handed in as work." }) }),
@@ -361,10 +397,10 @@ describe("adding a source", () => {
     expect(within(form).getByText("Make one.")).toBeInTheDocument();
     expect(within(form).getByLabelText("Your address")).toHaveFocus();
     expect(within(form).getByLabelText("App password")).toBeInTheDocument();
-    expect(within(form).queryByLabelText("About host")).toBeNull();
+    expect(within(form).queryByLabelText("Mail server")).toBeNull();
     expect(within(form).queryByRole("button", { name: "Add" })).toBeNull();
     await user.selectOptions(within(form).getByLabelText("Mail service"), "other");
-    expect(within(form).getByLabelText("About host")).toBeInTheDocument();
+    expect(within(form).getByLabelText("Mail server")).toBeInTheDocument();
     expect(within(form).queryByLabelText("Your address")).toBeNull();
     expect(calls.some((c) => c.route === "POST watch/sources")).toBe(false);
   });
@@ -432,9 +468,9 @@ describe("adding a source", () => {
     const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
     await user.click(within(form).getByRole("radio", { name: /^A folder on this computer/ }));
     await continueAdd(user, form);
-    await user.type(within(form).getByLabelText("About path"), "docs");
-    await user.clear(within(form).getByLabelText("About max_kb"));
-    await user.type(within(form).getByLabelText("About max_kb"), "100");
+    await user.type(within(form).getByLabelText("Folder"), "docs");
+    await user.clear(within(form).getByLabelText("Largest file, in KB"));
+    await user.type(within(form).getByLabelText("Largest file, in KB"), "100");
     expect(within(form).queryByText("Changed")).toBeNull();
     expect(within(form).queryByText(/^Default:/)).toBeNull();
     expect(within(form).queryByRole("button", { name: /^Reset/ })).toBeNull();
@@ -527,7 +563,7 @@ describe("adding a source", () => {
     await user.click(within(dialog).getByRole("button", { name: "Calendars" }));
     await user.click(await within(dialog).findByRole("button", { name: "Use work.ics" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Choose a file" })).toBeNull());
-    expect(screen.getByLabelText("About file")).toHaveValue("/home/me/Calendars/work.ics");
+    expect(screen.getByLabelText("Calendar file")).toHaveValue("/home/me/Calendars/work.ics");
     await user.click(screen.getByRole("button", { name: "Add connection" }));
     await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
     expect(post(calls, "POST watch/sources")).toMatchObject({
@@ -547,7 +583,7 @@ describe("adding a source", () => {
     await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await user.click(await screen.findByRole("radio", { name: /^A calendar\s*Your events/ }));
     await continueAdd(user);
-    expect(await screen.findByLabelText("About file")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Calendar file")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("button", { name: /Choose a file/ })).toBeNull());
   });
 
@@ -630,9 +666,11 @@ describe("adding a source", () => {
       own_app_steps: [],
       not_reading: [],
     };
-    open([source("a")], { "GET sign-ins": () => [signedIn] });
+    open([source("a")], { "GET sign-ins": () => [{ ...signedIn, account: "ann@example.com" }] });
     await user.click(await screen.findByRole("button", { name: "Choose what to read from Demo service" }));
-    const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
+    // The drawer opens at that account's sources, and names the account.
+    const drawer = await screen.findByRole("dialog", { name: "Choose what to read from ann@example.com" });
+    const form = within(drawer).getByRole("form", { name: "Choose what to read from ann@example.com" });
     expect(form).toBeInTheDocument();
     // Nothing on the screen is the registration's return address: it is only for someone making their own registration.
     expect(screen.queryByLabelText("Address to allow")).toBeNull();
@@ -681,13 +719,13 @@ describe("a mailbox's folders", () => {
     });
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    const sent = await within(form).findByRole("combobox", { name: "About sent_folder" });
-    const archive = within(form).getByRole("combobox", { name: "About archive_folder" });
+    const sent = await within(form).findByRole("combobox", { name: "Sent folder" });
+    const archive = within(form).getByRole("combobox", { name: "Archive folder" });
     await waitFor(() => expect(within(archive).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Archive", "Inbox", "Sent", "Receipts"]));
     expect(sent).toHaveValue("Sent");
     expect(archive).toHaveValue("");
     // the folder it reads stays as it was: a text box, not part of this
-    expect(within(form).getByRole("textbox", { name: "About folder" })).toHaveValue("INBOX");
+    expect(within(form).getByRole("textbox", { name: "Folder to read" })).toHaveValue("INBOX");
     await user.selectOptions(archive, "Archive");
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
@@ -703,7 +741,7 @@ describe("a mailbox's folders", () => {
     });
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    const sent = await within(form).findByRole("combobox", { name: "About sent_folder" });
+    const sent = await within(form).findByRole("combobox", { name: "Sent folder" });
     expect(within(sent).getAllByRole("option").map((o) => o.textContent)).toContain("Old sent");
     expect(sent).toHaveValue("Old sent");
   });
@@ -717,8 +755,8 @@ describe("a mailbox's folders", () => {
     });
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    expect(await within(form).findByRole("textbox", { name: "About sent_folder" })).toHaveValue("Sent");
-    expect(within(form).queryByRole("combobox", { name: "About sent_folder" })).toBeNull();
+    expect(await within(form).findByRole("textbox", { name: "Sent folder" })).toHaveValue("Sent");
+    expect(within(form).queryByRole("combobox", { name: "Sent folder" })).toBeNull();
   });
 });
 
@@ -747,15 +785,15 @@ describe("a source's menu", () => {
     expect(within(form).queryByRole("radio")).toBeNull();
     expect(within(form).getByLabelText("Name")).toHaveValue("Source a");
     expect(within(form).getByLabelText("How often to read")).toHaveValue("30");
-    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await waitFor(() => expect(within(form).getByLabelText("Folder")).toHaveValue("inbox"));
     // A list of words is chips with a box for the next one.
-    expect(within(form).getByLabelText("About patterns")).toHaveValue("");
-    expect(within(form).getByRole("list", { name: "Words in About patterns" })).toHaveTextContent("*.md");
+    expect(within(form).getByLabelText("Files to read")).toHaveValue("");
+    expect(within(form).getByRole("list", { name: "Words in Files to read" })).toHaveTextContent("*.md");
     await user.clear(within(form).getByLabelText("Name"));
     await user.type(within(form).getByLabelText("Name"), "Renamed");
     await user.selectOptions(within(form).getByLabelText("How often to read"), "240");
-    await user.clear(within(form).getByLabelText("About path"));
-    await user.type(within(form).getByLabelText("About path"), "docs");
+    await user.clear(within(form).getByLabelText("Folder"));
+    await user.type(within(form).getByLabelText("Folder"), "docs");
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
     expect(body(calls, "POST watch/sources/a")).toEqual({
@@ -780,7 +818,7 @@ describe("a source's menu", () => {
     });
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await waitFor(() => expect(within(form).getByLabelText("Folder")).toHaveValue("inbox"));
     await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
     // Another form saved a new schedule after this one opened.
     fingerprint = "fp-2";
@@ -794,7 +832,7 @@ describe("a source's menu", () => {
     expect(sent).toHaveLength(1);
     expect((sent[0].body as { fingerprint: string }).fingerprint).toBe("fp-1");
     expect(within(form).getByLabelText("Name")).toHaveValue("Renamed");
-    expect(within(form).getByLabelText("About path")).toHaveValue("inbox");
+    expect(within(form).getByLabelText("Folder")).toHaveValue("inbox");
     // Nothing was saved behind the person's back, and the form is still open.
     expect(screen.queryByText("Saved Renamed.")).toBeNull();
     // Saving again is the person's own choice, made after the message, and then goes through on what is saved now.
@@ -824,16 +862,16 @@ describe("a source's menu", () => {
     });
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await waitFor(() => expect(within(form).getByLabelText("Folder")).toHaveValue("inbox"));
     await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
     await user.clear(within(form).getByLabelText("Name"));
     await user.type(within(form).getByLabelText("Name"), "Renamed");
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     const lines = await within(form).findByRole("status", { name: "Refreshed from what is saved now" });
     expect(lines).toHaveTextContent(/refreshed: How often to read is now every 4 hours, changed elsewhere at .*\d/);
-    expect(lines).toHaveTextContent(/refreshed: About path is now elsewhere, changed elsewhere at/);
+    expect(lines).toHaveTextContent(/refreshed: Folder is now elsewhere, changed elsewhere at/);
     expect(lines).not.toHaveTextContent("Name");
-    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("elsewhere"));
+    await waitFor(() => expect(within(form).getByLabelText("Folder")).toHaveValue("elsewhere"));
     expect(within(form).getByLabelText("How often to read")).toHaveValue("240");
     expect(within(form).getByLabelText("Name")).toHaveValue("Renamed");
     await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
@@ -879,7 +917,7 @@ describe("a source's menu", () => {
       "Design team",
     ]);
     await user.selectOptions(pick, "p1");
-    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await waitFor(() => expect(within(form).getByLabelText("Folder")).toHaveValue("inbox"));
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
     expect(body(calls, "POST watch/sources/a")).toMatchObject({ author: "p1" });
@@ -952,7 +990,7 @@ describe("a source's menu", () => {
     });
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
-    expect(within(form).queryByLabelText("About path")).toBeNull();
+    expect(within(form).queryByLabelText("Folder")).toBeNull();
     await user.selectOptions(within(form).getByLabelText("How often to read"), "60");
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
@@ -1103,14 +1141,14 @@ describe("a secret setting typed on the screen", () => {
   test("a calendar's private address is a password box beside the file choice, and what is typed goes apart from the settings", async () => {
     const user = userEvent.setup();
     const CALENDAR = kind("calendar", "A calendar", null, [
-      field("address", "text", { secret: true, description: "The calendar's link." }),
+      field("address", "text", { secret: true, description: "Calendar link" }),
       field("file", "text", { picker: "file", file_types: [".ics"], description: "A calendar file on this computer." }),
     ]);
     const address = "https" + "://calendar.example.com/private/token-9.ics";
     const calls = open([], { ...routes(), "GET watch/kinds": () => [CALENDAR] }).calls;
     await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
     await continueAdd(user);
-    const box = await screen.findByLabelText("The calendar's link.");
+    const box = await screen.findByLabelText("Calendar link");
     expect(box).toHaveAttribute("type", "password");
     await user.type(box, address);
     await user.click(screen.getByRole("button", { name: "Add connection" }));

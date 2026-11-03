@@ -6,6 +6,19 @@ import { useState } from "react";
 import { parseAmount, useWriteAmount } from "../lib/money";
 import { useWords } from "../lib/wording";
 
+/** An amount as plain digits, never in the exponent form a tiny number takes ("1e-7"). */
+function plainDigits(n: number): string {
+  const text = String(n);
+  return /e/i.test(text) ? n.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 }) : text;
+}
+
+/** How many decimals an amount needs to be written exactly, at most ten. */
+function decimalsOf(n: number): number {
+  const text = plainDigits(n);
+  const at = text.indexOf(".");
+  return at < 0 ? 0 : Math.min(10, text.length - at - 1);
+}
+
 export function MoneyField(props: {
   id: string;
   /** The draft: the amount as plain digits ("0.1"), or what was typed when it isn't an amount. */
@@ -23,11 +36,12 @@ export function MoneyField(props: {
   const [typed, setTyped] = useState<string | null>(null);
   const draftOf = (text: string) => {
     const n = parseAmount(text, locale);
-    return n === null ? text : String(n);
+    return n === null ? text : plainDigits(n);
   };
   const written = (draft: string) => {
     const n = draft.trim() === "" ? null : parseAmount(draft, locale);
-    return n === null ? draft : write(n);
+    // An amount with more than the two usual decimals is written with the ones it has, so it never reads as zero.
+    return n === null ? draft : write(n, 2, Math.max(2, decimalsOf(n)));
   };
   return (
     <input

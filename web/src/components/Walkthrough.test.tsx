@@ -2786,7 +2786,7 @@ describe("Mail and calendar", () => {
     open();
     await user.selectOptions(await screen.findByLabelText("Mail service"), "other");
     const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
-    expect(within(form).getByLabelText("The mail server's name.")).toBeInTheDocument();
+    expect(within(form).getByLabelText("Mail server")).toBeInTheDocument();
     expect(within(form).queryByRole("radio")).toBeNull();
     expect(within(form).queryByLabelText("Mail service")).toBeNull();
     expect(within(form).getByText("About the mailbox")).toBeInTheDocument();

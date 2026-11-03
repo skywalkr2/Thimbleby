@@ -47,8 +47,6 @@ export function BackupsPanel(props: { local: boolean }) {
   if (!found.data) return found.isError ? <EmptyState text={t("settings.failed")} /> : <Skeleton rows={2} />;
   const view: S["BackupsView"] = found.data;
   const there = view.targets.length > 0;
-  const newest = view.copies[0];
-  const restoreFrom = newest?.path ?? t("backups.restore.folder_placeholder");
   return (
     <section className="panel-section" aria-labelledby="backups-where-title" data-backups="">
       <div className="heading">
@@ -98,13 +96,6 @@ export function BackupsPanel(props: { local: boolean }) {
       <div aria-labelledby="backups-restore-title" role="group" data-restore="">
         <p>{t("backups.restore.how")}</p>
         <p className="hint">{t("backups.restore.safe")}</p>
-        <details className="more-options" data-restore-steps="">
-          <summary>{t("backups.restore.developers")}</summary>
-          <p>{t("backups.restore.steps")}</p>
-          <p>
-            <code className="path">{t("backups.restore.command", { backup: restoreFrom, folder: t("backups.restore.new_folder_placeholder") })}</code>
-          </p>
-        </details>
         {view.copies.some((c) => c.encrypted) && <p className="hint">{t("backups.restore.key")}</p>}
         <p className="hint">{tn("backups.restore.not_built", 1)}</p>
       </div>

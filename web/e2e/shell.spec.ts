@@ -990,7 +990,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await expect(table).toContainText("Cheapest that passes");
       await expect(table).toContainText("Below 80%");
       await expect(table).toContainText("(old)");
-      await expect(table.getByRole("button", { name: "Measure Main account · everyday" })).toContainText("Measure (about $0.12)");
+      await expect(table.getByRole("button", { name: "Check skills of Main account · everyday" })).toContainText("Check skills (about $0.12)");
       if (scheme === "light") await shoot(page, "grid-1440");
       await expectNoViolations(page);
       await page.setViewportSize({ width: 390, height: 844 });

@@ -740,6 +740,8 @@ export const api = {
     return call<S["FolderListView"]>("GET", `setup/folders${asked.length > 0 ? `?${asked.join("&")}` : ""}`);
   },
   saveBackupFolder: (body: S["BackupFolderAdd"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder", body),
+  removeBackupFolder: (body: S["BackupFolderRemove"]) => call<S["SettingsSaved"]>("DELETE", "setup/backup-folder", body),
+  makeFolder: (body: S["FolderMake"]) => call<S["FolderMade"]>("POST", "setup/folders/new", body),
   cloudFolders: () => call<S["CloudFoldersView"]>("GET", "setup/backup-folders"),
   backupToCloudFolder: (body: S["CloudFolderChoice"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder/cloud", body),
   endpoints: () => call<S["EndpointView"][]>("GET", "ai/endpoints"),

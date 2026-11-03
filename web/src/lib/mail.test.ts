@@ -12,10 +12,8 @@ test("the subject and body are encoded, with line breaks the way mail links writ
   expect(url.searchParams.get("body")).toBe("Line one\r\nLine two #1 100%");
 });
 
-test("there is no link without an address", () => {
-  expect(mailtoLink(null, "S", "B")).toBeNull();
-  expect(mailtoLink(undefined, "S", "B")).toBeNull();
-  expect(mailtoLink("  ", "S", "B")).toBeNull();
+test("without an address the link still opens the person's mail program, which asks who it goes to", () => {
+  for (const to of [null, undefined, "  "]) expect(mailtoLink(to, "S", "B")).toBe("mailto:?subject=S&body=B");
   expect(tooLongForLink(null, "S", "B")).toBe(false);
 });
 

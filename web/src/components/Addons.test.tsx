@@ -762,11 +762,14 @@ test("after an install and its restart, Turn on on the same row says a restart i
       <Addons onBack={() => undefined} />
     </RestartProvider>,
   );
+  // An add-on installed in an earlier start is listed under Installed, not again under Available.
+  expect(screen.queryByRole("listitem", { name: "Name of tool" })).toBeNull();
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
   const tool = await row("Name of tool");
-  // The add-on was installed in an earlier start; nothing waits for a restart yet.
+  // Nothing waits for a restart yet.
   expect(within(tool).queryByRole("button", { name: "Restart now" })).toBeNull();
   await user.click(within(tool).getByRole("button", { name: "Turn on Name of tool" }));
-  await waitFor(() => expect(tool).toHaveTextContent("Installed (version 1.0.0) and on after a restart"));
+  await waitFor(() => expect(tool).toHaveTextContent("On after a restart"));
   expect(within(tool).queryByText(/is installed\. It is ready after a restart/)).toBeNull();
   // Turning on is not a restart: nothing restarted by itself, and the row has its own way to ask for one.
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
@@ -852,6 +855,7 @@ test("after Remove succeeds, the refreshed add-on list no longer contains its ro
   const before = calls.calls.filter((call) => call.route === "GET packs").length;
   await user.click(within(mine).getByRole("button", { name: "More actions for Name of mine" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await user.click(await screen.findByRole("button", { name: "Remove it" }));
   await waitFor(() => expect(calls.calls.filter((call) => call.route === "GET packs").length).toBeGreaterThan(before));
   await waitFor(() => expect(screen.queryByRole("listitem", { name: "Name of mine" })).toBeNull());
 });
@@ -880,6 +884,7 @@ test("on Installed, Remove is offered for an add-on the app installed that is of
   const before = calls.calls.filter((call) => call.route === "GET packs").length;
   await user.click(within(await row("Mine")).getByRole("button", { name: "More actions for Mine" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await user.click(await screen.findByRole("button", { name: "Remove it" }));
   await waitFor(() => expect(calls.calls.filter((call) => call.route === "GET packs").length).toBeGreaterThan(before));
   await waitFor(() => expect(screen.queryByRole("listitem", { name: "mine" })).toBeNull());
 });
@@ -1123,6 +1128,7 @@ test("removing one entry of a shared file says the file stays while another uses
   const a = await row("Name of a");
   await user.click(within(a).getByRole("button", { name: "More actions for Name of a" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await user.click(await screen.findByRole("button", { name: "Remove it" }));
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/a/uninstall")).toBe(true));
   expect(await screen.findByText("Name of a is removed. The file stays because it is still in use by Name of b.")).toBeInTheDocument();
   expect(screen.queryByText(/Restart to finish/)).toBeNull();
@@ -1148,6 +1154,7 @@ test("on Installed, entries of one file are one row too, each with its own switc
   expect(within(await row("A")).queryByRole("button", { name: /More actions/ })).toBeNull(); // on, so not removable
   await user.click(within(await row("B")).getByRole("button", { name: "More actions for B" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await user.click(await screen.findByRole("button", { name: "Remove it" }));
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/b/uninstall")).toBe(true));
   expect(await screen.findByText("B is removed. The file stays because it is still in use by A.")).toBeInTheDocument();
 });
@@ -1201,4 +1208,50 @@ test("an add-on that is on but not signed in is asked for its keys", async () =>
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
   await row("Alpha");
   await waitFor(() => expect(document.querySelector(".kept-secrets")).not.toBeNull());
+});
+
+test("each card is a name, one line, a status pill and one action, with the rest folded under Details; Available leaves out an add-on that is installed", async () => {
+  const user = userEvent.setup();
+  open(
+    view({
+      available: [pack("fresh", { summary: "Reads your calendar." }), pack("mine", { installed_version: "1.0.0", enabled: true })],
+      installed: [{ ...installedRows(true)[0], name: "mine", state: "enabled" }],
+    }),
+  );
+  const fresh = await row("Name of fresh");
+  expect(within(fresh).getByText("Not installed")).toBeInTheDocument();
+  expect(within(fresh).getByText("Reads your calendar.")).toBeInTheDocument();
+  // What it adds, reaches and keeps are inside a disclosure, closed until opened.
+  const details = fresh.querySelector("details[data-pack-details]") as HTMLDetailsElement;
+  expect(details).not.toBeNull();
+  expect(details.open).toBe(false);
+  expect(within(details).getByText("Details")).toBeInTheDocument();
+  // The installed add-on is not listed again under Available.
+  expect(screen.queryByRole("listitem", { name: "Name of mine" })).toBeNull();
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const mine = await row("Name of mine");
+  expect(within(mine).getByText("On")).toBeInTheDocument();
+});
+
+test("Remove asks first, says what stays, and only removes when the person goes on", async () => {
+  const user = userEvent.setup();
+  const { calls } = open(
+    view({
+      available: [pack("mine", { installed_version: "1.0.0", enabled: false, removable: true })],
+      installed: [{ ...installedRows(false)[0], name: "mine", state: "disabled", removable: true }],
+    }),
+    { "POST packs/mine/uninstall": () => ({ file_kept: false, still_used_by: [] }) },
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const mine = await row("Name of mine");
+  await user.click(within(mine).getByRole("button", { name: "More actions for Name of mine" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  const dialog = await screen.findByRole("dialog", { name: "Remove Name of mine?" });
+  expect(dialog).toHaveTextContent("A backup is made first if backups are set up");
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(false);
+  await user.click(within(mine).getByRole("button", { name: "More actions for Name of mine" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await user.click(await screen.findByRole("button", { name: "Remove it" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
 });

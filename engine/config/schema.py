@@ -257,7 +257,11 @@ class PluginSettings(ConfigModel):
 
 
 class WorkspaceFile(FileModel):
-    name: str = Field("Workspace", description="The name shown at the top of every screen. Setup names it after you.")
+    name: str = Field(
+        "Workspace",
+        max_length=80,
+        description="The name shown at the top of every screen. Setup names it after you.",
+    )
     assistant_name: str = Field(
         "Reginald",
         max_length=40,
@@ -474,6 +478,13 @@ class BackupSettings(ConfigModel):
         le=128,
         description="The fewest characters a backup key typed on a screen may have. A key the app makes is longer than "
         "this, and a key kept in a file or a variable is the person's own.",
+    )
+    key_max_chars: int = Field(
+        256,
+        ge=16,
+        le=4096,
+        description="The most characters a backup key typed on a screen may have; a longer one is refused with this "
+        "number named.",
     )
 
     @field_validator("encrypt")
@@ -1001,7 +1012,7 @@ class Budgets(ConfigModel):
     def _day_within_month(self) -> Budgets:
         if self.per_day_usd > self.per_month_usd:
             raise ValueError(
-                "the daily limit can't be above the monthly limit: raise the monthly limit or lower the daily one"
+                "The daily limit can't be above the monthly limit. Raise the monthly limit or lower the daily one."
             )
         return self
 
@@ -2636,8 +2647,7 @@ class BrandSettings(ConfigModel):
         None,
         pattern=r"^#[0-9a-fA-F]{6}$",
         description="The accent color for buttons, links and the selected view. Lighter and darker shades are worked "
-        "out from it; Settings warns when it would be hard to see. Empty uses the app's own colors (burgundy by day, "
-        "brass by night).",
+        "out from it; Settings warns when it would be hard to see.",
         json_schema_extra={"widget": "color"},
     )
     logo: str | None = Field(

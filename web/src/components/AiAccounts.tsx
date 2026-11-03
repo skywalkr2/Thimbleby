@@ -77,6 +77,9 @@ export function AiAccounts(props: {
   onAdd?: () => void;
   /** Opens the grid of what each account can do; the button and each row's "See all" show only when given. */
   onCompare?: () => void;
+  /** The short form for a step of the setup guide: one card for each account, with what the person does there. The
+   * summary of who does the work and who stands in, the skills line and the expert items of the menu are left to Settings. */
+  compact?: boolean;
 }) {
   const { t, tn } = useWords();
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
@@ -120,7 +123,7 @@ export function AiAccounts(props: {
         <p className="hint">{t("ai_accounts.none")}</p>
       ) : (
         <>
-          <Summary accounts={list} kindOf={kindOf} onAddOne={props.onAdd} />
+          {!props.compact && <Summary accounts={list} kindOf={kindOf} onAddOne={props.onAdd} />}
           <ul className={styles.list}>
             {orderAccounts(list).map((account) => (
               <AccountRow
@@ -130,8 +133,9 @@ export function AiAccounts(props: {
                 kind={kindOf(account)}
                 kindOf={kindOf}
                 local={local}
-                skills={skills.data?.accounts.find((a) => a.name === account.name)}
+                skills={props.compact ? undefined : skills.data?.accounts.find((a) => a.name === account.name)}
                 onCompare={props.onCompare}
+                compact={props.compact}
               />
             ))}
           </ul>
@@ -223,6 +227,7 @@ function AccountRow(props: {
   local: boolean;
   skills?: S["AiAccountSkills"];
   onCompare?: () => void;
+  compact?: boolean;
 }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
@@ -437,7 +442,7 @@ function AccountRow(props: {
     if (offersHarderBackup && moveHarder) {
       try {
         const bad = await acts.standIn(account.name, [["deep", HARDER]], t("ai_accounts.harder_backup_set", { name }));
-        if (bad) push({ message: t("ai_accounts.harder_backup_failed", { detail: bad.detail }) });
+        if (bad) push({ message: t("ai_accounts.harder_backup_failed", { detail: bad.detail }), tone: "warn" });
       } catch (err) {
         fail(err);
         return;
@@ -642,7 +647,7 @@ function AccountRow(props: {
       await client.invalidateQueries({ queryKey: ["ai-skills"] });
       push({ message: started.started.length ? t("ai_compare.started") : t("ai_compare.nothing") });
     } catch (err) {
-      push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }) });
+      push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }), tone: "warn" });
     }
   };
 
@@ -713,9 +718,9 @@ function AccountRow(props: {
     ...(backsUp ? [{ id: "backup", label: t("ai_accounts.use_as_backup"), note: backupNote, run: () => guard(account.check_usd, () => void useAsBackup()), disabled: testing || busy }] : []),
     ...(canUseAnyway ? [{ id: "use-anyway", label: t("ai_check.use_anyway"), note: t("ai_check.use_anyway_hint"), run: useAnyway, disabled: busy }] : []),
     ...(role === "backup" ? [{ id: "stop-backup", label: t("ai_accounts.stop_backup"), run: stopBackup, disabled: busy }] : []),
-    { id: "models", label: t("ai_accounts.change_models"), run: () => open("models") },
+    ...(props.compact ? [] : [{ id: "models", label: t("ai_accounts.change_models"), run: () => open("models") }]),
     { id: "key", label: t("ai_accounts.replace_key"), run: () => open("key") },
-    { id: "expires", label: t("ai_accounts.key_ends_set"), run: () => open("expires") },
+    ...(props.compact ? [] : [{ id: "expires", label: t("ai_accounts.key_ends_set"), run: () => open("expires") }]),
     { id: "name", label: t("ai_accounts.rename"), run: () => open("name") },
     { id: "remove", danger: true, label: onlyMain ? t("ai_accounts.remove_no_account") : t("ai_accounts.remove"), run: remove, disabled: busy },
   ];

@@ -19,6 +19,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
@@ -259,6 +260,17 @@ def create_app(
             log.error("Refused to send an error message: %s", problem)
             return JSONResponse({"detail": problem}, status_code=500)
         return await http_exception_handler(request, err)
+
+    @inner.exception_handler(RequestValidationError)
+    async def say_what_is_allowed(request: Request, err: RequestValidationError) -> Any:
+        """A request the schema refused (a value too long, a wrong kind) answers in plain words: what is allowed, from
+        the kind of the error and its limits, never the validation library's own message."""
+        from engine.plain_errors import reason_of
+
+        errors = err.errors()
+        return JSONResponse(
+            {"detail": reason_of(errors[0]) if errors else "That value can't be used."}, status_code=422
+        )
 
     @inner.exception_handler(Exception)
     async def keep_unexpected_error(request: Request, err: Exception) -> Any:

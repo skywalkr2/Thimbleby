@@ -104,6 +104,20 @@ class Saved:
 
 PLUGIN_PREFIX = "plugins/"
 
+#: The most characters a text setting takes when its schema names no limit of its own: a backstop so no box accepts a
+#: whole document. A setting that holds a path or a reference may be longer.
+TEXT_MAX_CHARS = 500
+PATH_MAX_CHARS = 1000
+
+
+def text_limit(setting: Setting) -> int | None:
+    """The most characters a text setting takes: its schema's own limit, else the backstop. None if it isn't text."""
+    if setting.type != "text":
+        return None
+    if setting.max_length is not None:
+        return setting.max_length
+    return PATH_MAX_CHARS if setting.picker or setting.secret else TEXT_MAX_CHARS
+
 
 def screen_name(setting: Setting | None) -> str:
     """What to call a setting in a message the screen shows: the first sentence of its description, without a
@@ -296,9 +310,18 @@ def _walk(
                 topic=levels.place_of(dotted)[1],
                 file_types=[str(x) for x in extra.get("file_types") or [] if isinstance(x, str)],
                 money=extra.get("money") is True,
-                max_length=next((m.max_length for m in info.metadata if hasattr(m, "max_length")), None)
-                if kind == "text"
-                else None,
+                max_length=(
+                    next((m.max_length for m in info.metadata if hasattr(m, "max_length")), None)
+                    or (
+                        (
+                            PATH_MAX_CHARS
+                            if extra.get("picker") or isinstance(info.description, SecretHint)
+                            else TEXT_MAX_CHARS
+                        )
+                        if kind == "text"
+                        else None
+                    )
+                ),
                 widget=extra.get("widget") if isinstance(extra.get("widget"), str) else None,
             )
         )
@@ -557,6 +580,7 @@ def save(
     for key in [*changes, *reset]:
         _check_key(key, shown, cfg, allow, models)
     changes = _amounts(changes, shown)
+    _lengths(changes, shown)
     try:
         # Records the watch settings name are held by id; a name typed here is resolved, or refused with its own words.
         changes = join_watch_changes(store.read(), changes)
@@ -648,15 +672,28 @@ def save(
 def _synced_folder_problem(ws: Any, cfg: Any) -> str | None:
     """Why a synced folder the person just chose can't be used, in plain words, or None: it has to be a full path to a
     folder that is there, outside the app's own data and not another workspace's folder."""
+    from engine import folder_rules
     from engine.sync import folder_problem, placement_problem
 
     raw = cfg.storage.sync.folder.strip()
     if raw and not Path(raw).expanduser().is_absolute():
         return "The synced folder has to be a full path to a folder, such as one you picked with Choose."
+    if raw and (named := folder_rules.system_folder_problem(Path(raw).expanduser().resolve())):
+        return named
     found = placement_problem(ws, cfg) or folder_problem(ws, cfg)
     if found is None:
         return None
     return found[:1].upper() + found[1:] + "."
+
+
+def _lengths(changes: dict[str, Any], shown: dict[str, Setting]) -> None:
+    """A text typed into a setting is refused, in plain words, when it is longer than the setting takes."""
+    for key, value in changes.items():
+        setting = shown.get(key)
+        limit = text_limit(setting) if setting is not None else None
+        if limit is not None and isinstance(value, str) and len(value) > limit:
+            reason = f"Use at most {limit} characters."
+            raise SettingsRefused(f"{screen_name(setting)} can have at most {limit} characters.", reason)
 
 
 def _amounts(changes: dict[str, Any], shown: dict[str, Setting]) -> dict[str, Any]:

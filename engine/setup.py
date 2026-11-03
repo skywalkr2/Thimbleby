@@ -25,6 +25,7 @@ from typing import Any
 
 import yaml
 
+from engine import folder_rules
 from engine.ai.presets import clean_presets
 from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN
 from engine.connectors import CORE, declared_reads, reads
@@ -100,6 +101,7 @@ class FolderList:
     folders: list[str] = field(default_factory=list)
     files: list[str] = field(default_factory=list)
     home: bool = False  # the folder is the person's home folder, which the screen names in words
+    trail: list[tuple[str, str, bool]] = field(default_factory=list)  # (name, path, is home): the way down to here
 
 
 # ---- steps -----------------------------------------------------------------------------------------------------------
@@ -579,6 +581,8 @@ def check_backup_folder(ws: Any, raw: str) -> FolderCheck:
     if not folder.is_absolute():
         return FolderCheck(raw, False, "Give the folder's full path.")
     folder = folder.resolve()
+    if problem := folder_rules.system_folder_problem(folder):
+        return FolderCheck(str(folder), False, problem)
     root = ws.root.resolve()
     if folder == root or folder.is_relative_to(root) or root.is_relative_to(folder):
         return FolderCheck(str(folder), False, "Choose a folder somewhere else, so the backup is a real copy.")
@@ -602,6 +606,8 @@ def list_folders(raw: str | None, files: str | None = None) -> FolderList:
     endings = tuple(e.strip().lower() for e in (files or "").split(",") if e.strip())
     try:
         folder = folder.resolve(strict=True)
+        if problem := folder_rules.system_folder_problem(folder):
+            raise StoreError(problem)
         inside = [p for p in folder.iterdir() if not p.name.startswith(".")]
         names = sorted((p.name for p in inside if p.is_dir()), key=str.lower)
         found = sorted(
@@ -609,12 +615,38 @@ def list_folders(raw: str | None, files: str | None = None) -> FolderList:
         )
     except OSError as err:
         raise StoreError(f"that folder can't be opened: {err.strerror or err}") from None
-    parent = str(folder.parent) if folder.parent != folder else None
+    way = folder_rules.trail(folder)
+    # Up is the step before this one in the way down, so it never leads into a folder the computer keeps for itself.
+    parent = way[-2][1] if len(way) > 1 else None
     try:
         at_home = folder == Path.home().resolve()
     except (OSError, RuntimeError):
         at_home = False
-    return FolderList(str(folder), parent, names[:500], found[:500], at_home)
+    return FolderList(str(folder), parent, names[:500], found[:500], at_home, way)
+
+
+def make_folder(inside: str, name: str) -> Path:
+    """A new folder with this name inside another the person is looking at, which must be one the chooser can show. The
+    name is one plain folder name, without separators or a dot at the start. Raises StoreError, in plain words."""
+    cleaned = name.strip()
+    if not cleaned or cleaned in (".", "..") or any(c in cleaned for c in '/\\:*?"<>|\0') or cleaned.startswith("."):
+        raise StoreError("Give the folder a plain name, without slashes or a dot at the start.")
+    if len(cleaned) > 100:
+        raise StoreError("A folder's name can have at most 100 characters.")
+    try:
+        base = Path(inside).expanduser().resolve(strict=True)
+    except OSError:
+        raise StoreError("That folder can't be opened.") from None
+    if problem := folder_rules.system_folder_problem(base):
+        raise StoreError(problem)
+    target = base / cleaned
+    if target.exists():
+        raise StoreError("There is already a folder or file with that name there.")
+    try:
+        target.mkdir()
+    except OSError as err:
+        raise StoreError(f"A folder couldn't be made there: {err.strerror or err}") from None
+    return target
 
 
 # ---- AI accounts -----------------------------------------------------------------------------------------------------

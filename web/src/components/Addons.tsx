@@ -44,6 +44,8 @@ import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
+import { Pill } from "../ui/Pill";
+import { ConfirmRemove } from "./ConfirmRemove";
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
 type Installed = S["InstalledPackView"];
@@ -262,7 +264,9 @@ export function emptyReason(view: S["PacksView"], t: (key: string) => string): s
 function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; onRemove: (id: string) => void }) {
   const { t } = useWords();
   const { view } = props;
-  const available = view.available.filter((pack) => !props.removed.has(pack.id));
+  // An add-on that is installed is listed under Installed, not here again; one with an update on offer, or one waiting for
+  // the restart the person just asked for, stays, so the row they acted on does not vanish.
+  const available = view.available.filter((pack) => !props.removed.has(pack.id) && (!view.installed.some((i) => i.name === pack.id) || updateOffered(pack) || restartNeeded(pack, view.installed)));
   const [getting, setGetting] = useState<number | null>(null);
   const empty = emptyReason({ ...view, available }, t);
   return (
@@ -311,6 +315,16 @@ function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; 
 }
 
 /** What a pack adds, reaches and keeps, as three short labelled lists. Used by both tabs. */
+/** Removing an add-on asks first: what goes, and what stays (the backup is made first, and its sign-ins and settings stay). */
+function ConfirmAddonRemove(props: { name: string; busy: boolean; onGo: () => void; onCancel: () => void }) {
+  const { t } = useWords();
+  return (
+    <ConfirmRemove title={t("addons.remove_title", { name: props.name })} go={t("addons.remove_go")} busy={props.busy} onGo={props.onGo} onCancel={props.onCancel}>
+      <p>{t("addons.remove_text", { name: props.name })}</p>
+    </ConfirmRemove>
+  );
+}
+
 function WhatLines(props: { what: Summary; base: string }) {
   const { t, tn } = useWords();
   const adds = addsLines(props.what.adds, t, tn);
@@ -377,6 +391,7 @@ function PackRow(props: {
     props.onRemoved,
   );
   const problem = change.problem || power.problem;
+  const [confirming, setConfirming] = useState(false);
   // In a group, the file is installed from the group's row; this row offers it only once the others are installed.
   const offerInstall = !props.group || props.group.anyInstalled;
 
@@ -387,7 +402,7 @@ function PackRow(props: {
     actions.push({ id: "update", label: t("addons.get_update"), run: props.onGet });
   }
   if (installed && !pack.enabled && pack.removable) {
-    actions.push({ id: "remove", danger: true, label: t("addons.remove"), run: () => void change.remove() });
+    actions.push({ id: "remove", danger: true, label: t("addons.remove"), run: () => setConfirming(true) });
   }
   if (safeHomepage) {
     actions.push({
@@ -396,8 +411,21 @@ function PackRow(props: {
       href: safeHomepage,
     });
   }
+  const pill = !installed ? (
+    <Pill tone="neutral">{t("addons.pill.not_installed")}</Pill>
+  ) : props.restartNeeded ? (
+    <Pill tone="warn">{t("addons.pill.restart")}</Pill>
+  ) : pack.enabled ? (
+    <Pill tone="ok">{t("addons.pill.on")}</Pill>
+  ) : (
+    <Pill tone="neutral">{t("addons.pill.off")}</Pill>
+  );
+  const details = [
+    !props.group && <p key="facts" className="hint">{facts.join(" · ")}</p>,
+    !props.group && <p key="price" className="hint">{priceText(pack.price, amount, t)}</p>,
+  ];
   return (
-    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} metaLines={[(!props.group ? <>{facts.join(" · ")}</> : null), (!props.group ? <>{priceText(pack.price, amount, t)}</> : null)]} actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
+    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} pill={pill} actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
             <Button variant="primary"
               id={`pack-install-${index}`}
               data-key="primary"
@@ -423,6 +451,29 @@ function PackRow(props: {
           )}
           <RowMenu label={pack.name} actions={actions} /></>}>
 {pack.summary && <p className="pack-summary">{pack.summary}</p>}
+{installed && props.restartNeeded && !change.note && (
+            <p className="hint" id={`${base}-state`}>
+              {t("addons.state.restart_version", { version: pack.installed_version ?? "" })}
+              <RestartNowButton />
+            </p>
+          )}
+{change.note && <RestartLine text={change.note} />}
+{problem && (
+            <p className="problem-note" role="alert">
+              {problem}
+            </p>
+          )}
+{change.needsToken && pack.release_host && (
+            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
+          )}
+{change.tokenSaved && (
+            <p className="hint" role="status">
+              {t("addons.token.saved_note")}
+            </p>
+          )}
+<details className="more-options" data-pack-details="">
+<summary>{t("addons.details")}</summary>
+{details}
 <WhatLines what={pack.what} base={base} />
 {(pack.libraries ?? []).length > 0 && (
             <div className="pack-part">
@@ -451,12 +502,9 @@ function PackRow(props: {
               <p className="hint">{t("addons.costs_hint")}</p>
             </div>
           )}
-{installed && (
-            <p className="hint" id={`${base}-state`}>
-              {t(props.restartNeeded ? "addons.state.restart_version" : pack.enabled ? "addons.state.on_version" : "addons.state.off_version", {
-                version: pack.installed_version ?? "",
-              })}
-              {props.restartNeeded && !change.note && <RestartNowButton />}
+{installed && !props.restartNeeded && (
+            <p className="hint" id={`${base}-state-plain`}>
+              {t(pack.enabled ? "addons.state.on_version" : "addons.state.off_version", { version: pack.installed_version ?? "" })}
             </p>
           )}
 {installed && pack.enabled && pack.signed_in != null && (
@@ -467,22 +515,20 @@ function PackRow(props: {
               {t("addons.update", { from: pack.installed_version ?? "", to: pack.version })}
             </p>
           )}
-{change.note && <RestartLine text={change.note} />}
-{problem && (
-            <p className="problem-note" role="alert">
-              {problem}
-            </p>
-          )}
-{change.needsToken && pack.release_host && (
-            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
-          )}
-{change.tokenSaved && (
-            <p className="hint" role="status">
-              {t("addons.token.saved_note")}
-            </p>
-          )}
 {safeHomepage && (
             <span className="hint">{t("addons.homepage_line", { domain: pack.homepage_domain ?? "" })}</span>
+          )}
+</details>
+{confirming && (
+            <ConfirmAddonRemove
+              name={pack.name}
+              busy={change.busy === "remove"}
+              onGo={() => {
+                setConfirming(false);
+                void change.remove();
+              }}
+              onCancel={() => setConfirming(false)}
+            />
           )}
 </Row>
   );
@@ -896,8 +942,9 @@ function InstalledRow(props: { item: Installed; index: number; onRemoved: () => 
   );
   const problem = change.problem || power.problem;
   const actions: MenuAction[] = [];
+  const [confirming, setConfirming] = useState(false);
   if (!item.enabled && item.removable) {
-    actions.push({ id: "remove", danger: true, label: t("addons.remove"), run: () => void change.remove() });
+    actions.push({ id: "remove", danger: true, label: t("addons.remove"), run: () => setConfirming(true) });
   }
   const isOn = item.enabled;
   const pending = waitsForRestart(item);
@@ -908,23 +955,48 @@ function InstalledRow(props: { item: Installed; index: number; onRemoved: () => 
       : item.reason
         ? t("addons.state.because", { reason: item.reason })
         : t("addons.state.off");
+  const pill = pending ? (
+    <Pill tone="warn">{t("addons.pill.restart")}</Pill>
+  ) : item.state === "enabled" ? (
+    <Pill tone="ok">{t("addons.pill.on")}</Pill>
+  ) : (
+    <Pill tone="neutral">{t("addons.pill.off")}</Pill>
+  );
   return (
-    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} meta={(item.version ? <>{t("addons.version", { version: item.version })}</> : null)} actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
+    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} pill={pill} actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
           <RowMenu label={name} actions={actions} /></>}>
 {item.description && <p className="pack-summary">{item.description}</p>}
-<p className="hint">
-            {statusText}
-            {pending && <RestartNowButton />}
-          </p>
-{isOn && item.signed_in != null && <p className="hint">{t(item.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>}
+{pending && (
+            <p className="hint">
+              {statusText}
+              <RestartNowButton />
+            </p>
+          )}
 {change.note && <RestartLine text={change.note} />}
 {problem && (
             <p className="problem-note" role="alert">
               {problem}
             </p>
           )}
+<details className="more-options" data-pack-details="">
+<summary>{t("addons.details")}</summary>
+{!pending && <p className="hint">{statusText}</p>}
+{item.version && <p className="hint">{t("addons.version", { version: item.version })}</p>}
+{isOn && item.signed_in != null && <p className="hint">{t(item.signed_in ? "addons.signed_in" : "addons.not_signed_in")}</p>}
 <WhatLines what={item.what} base={base} />
+</details>
 {item.state === "enabled" && item.signed_in !== true && <AddonSecrets plugin={item.name} name={name} />}
+{confirming && (
+            <ConfirmAddonRemove
+              name={name}
+              busy={change.busy === "remove"}
+              onGo={() => {
+                setConfirming(false);
+                void change.remove();
+              }}
+              onCancel={() => setConfirming(false)}
+            />
+          )}
 </Row>
   );
 }

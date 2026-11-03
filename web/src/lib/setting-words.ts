@@ -54,7 +54,13 @@ export function settingChoices(item: Pick<Item, "key" | "choices" | "options">, 
 }
 
 /** A setting's value in words. */
-export function settingValue(item: Pick<Item, "key" | "type" | "choices" | "options" | "money">, value: unknown, c: SettingWordsContext): string {
+export function settingValue(
+  item: Pick<Item, "key" | "type" | "choices" | "options" | "money"> & { widget?: Item["widget"] },
+  value: unknown,
+  c: SettingWordsContext,
+): string {
+  // A picture is kept under a file name of the app's own, which is never shown: only that there is one.
+  if (item.widget === "image") return c.t(value ? "settings.brand.logo_value" : "settings.brand.logo_none_value");
   if (item.type === "choice" && value !== null && value !== undefined && value !== "") {
     return settingChoices(item, c).find((o) => o.tag === String(value))?.label ?? formatValue(value, c.t);
   }
@@ -71,7 +77,8 @@ export function useSettingWords(personName: (id: string) => string) {
     const context: SettingWordsContext = { t, has, writeAmount, tierName, personName };
     return {
       choices: (item: Pick<Item, "key" | "choices" | "options">) => settingChoices(item, context),
-      value: (item: Pick<Item, "key" | "type" | "choices" | "options" | "money">, value: unknown) => settingValue(item, value, context),
+      value: (item: Pick<Item, "key" | "type" | "choices" | "options" | "money"> & { widget?: Item["widget"] }, value: unknown) =>
+        settingValue(item, value, context),
     };
   }, [t, has, writeAmount, tierName, personName]);
 }

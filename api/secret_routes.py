@@ -95,6 +95,14 @@ def build_secret_router(ws: Workspace, cfg: Config, store: Store, events: Events
                     detail=f"A backup key needs at least {least} characters, or it is easy to guess. Make a strong one "
                     "for me instead, or type a longer one.",
                 )
+        if name == BACKUP_KEY_NAME and typed:
+            most = current().storage.backups.key_max_chars
+            if len((value or "").strip()) > most:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"A backup key can have at most {most} characters. Make a strong one for me instead, or "
+                    "type a shorter one.",
+                )
         kept = setup.unused_secret_name(ws, name)
         made = secrets.token_urlsafe(MADE_KEY_BYTES) if make else None
         try:

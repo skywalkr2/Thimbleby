@@ -712,7 +712,7 @@ test("each row ends with one line of what it can do and See all opens the grid",
   renderApp(<AiAccounts local onCompare={onCompare} />);
   const main = await row("Main account");
   // Dates passes (on either model), Using a term is below the minimum, Owners is old and Quoting has no measurement.
-  await waitFor(() => expect(main).toHaveTextContent("Good at 1 of 4 kinds of work · 1 below the minimum · 2 not measured · See all"));
+  await waitFor(() => expect(main).toHaveTextContent("Good at 1 of 4 kinds of work · 1 below the minimum · 2 not checked yet · See all"));
   // The model's own id is never shown.
   expect(main).not.toHaveTextContent("model-a");
   expect(main).not.toHaveTextContent("What it can do");
@@ -726,7 +726,7 @@ const NONE_YET: S["AiSkillsView"] = {
   accounts: [{ name: "main", models: [{ model: "everyday", skills: [skill("dates", "Dates"), skill("owners", "Owners")] }] }],
 };
 
-test("an account with no result yet says Not measured yet with a Measure button, never Good at 0 of 2", async () => {
+test("an account with no result yet says Not checked yet with a Measure button, never Good at 0 of 2", async () => {
   const user = userEvent.setup();
   const calls = api({
     "GET ai/skills": () => NONE_YET,
@@ -735,10 +735,10 @@ test("an account with no result yet says Not measured yet with a Measure button,
   });
   renderApp(<AiAccounts local onCompare={vi.fn()} />);
   const main = await row("Main account");
-  await waitFor(() => expect(main).toHaveTextContent("Not measured yet"));
+  await waitFor(() => expect(main).toHaveTextContent("Not checked yet"));
   expect(main).not.toHaveTextContent("Good at");
-  expect(main).not.toHaveTextContent("not measured ·");
-  await user.click(within(main).getByRole("button", { name: "Measure Main account" }));
+  expect(main).not.toHaveTextContent("not checked yet ·");
+  await user.click(within(main).getByRole("button", { name: "Check the skills of Main account" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(true));
 });
 
@@ -750,7 +750,7 @@ test("Measure on a row goes to the compare page to ask first when the cost is ov
     "POST ai/skills/main/estimate": () => ({ models: ["everyday"], level: "internal", cases: 4, skipped: 0, runs: 3, usd: 0.9, confirm_above_usd: 0.1, needs_go: true }),
   });
   renderApp(<AiAccounts local onCompare={onCompare} />);
-  await user.click(await within(await row("Main account")).findByRole("button", { name: "Measure Main account" }));
+  await user.click(await within(await row("Main account")).findByRole("button", { name: "Check the skills of Main account" }));
   await waitFor(() => expect(onCompare).toHaveBeenCalledTimes(1));
   expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(false);
 });
@@ -800,4 +800,19 @@ test("an agent account says which sign-in it runs as, or that it can't tell and 
   expect(within(await row("Third account")).getByText(/^It works, but it doesn't say which account it's signed in to \(this program has no way to say\)\. Open the program/)).toBeInTheDocument();
   expect(within(await row("Fourth account")).getByText("Now runs as sam@example.com; answer on Today")).toBeInTheDocument();
   expect(within(await row("Main account")).queryByText(/Runs as|Can't tell/)).toBeNull();
+});
+
+test("in a step of the setup guide each account is one card: no summary of who does the work, no skills line, no expert menu items", async () => {
+  const user = userEvent.setup();
+  api();
+  renderApp(<AiAccounts local level={4} compact />);
+  const card = await row("Main account");
+  expect(screen.queryByRole("group", { name: "Who does the work" })).toBeNull();
+  expect(screen.queryByText(/Not checked yet|Check skills/)).toBeNull();
+  expect(screen.getAllByRole("listitem", { name: "Main account" })).toHaveLength(1);
+  await user.click(within(card).getByRole("button", { name: "More actions for Main account" }));
+  const found = (await screen.findAllByRole("menuitem")).map((i) => i.textContent);
+  expect(found).toEqual(expect.arrayContaining(["Replace access key", "Rename", "Remove"]));
+  expect(found).not.toContain("Change AI models");
+  expect(found).not.toContain("Set the access key's expiry date");
 });

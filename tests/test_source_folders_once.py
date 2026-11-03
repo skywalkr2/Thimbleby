@@ -119,3 +119,13 @@ def test_a_message_two_sources_of_one_account_both_list_is_one_item(signing):  #
         assert second.new == [], "the twin handed in the same messages again"
     finally:
         store.close()
+
+
+def test_a_folder_with_a_slash_or_spaces_at_the_end_is_the_same_folder(signing):  # noqa: F811
+    ws, c, api = _signed_in(signing)
+    assert _add(c, api, ws, "Archive").status_code == 200
+    before = len(sources(ws))
+    for spelled in ("Archive/", " Archive ", "Archive//"):
+        again = _add(c, api, ws, spelled, label="Archive once more")
+        assert again.status_code == 400 and "Another folder" in again.json()["detail"], spelled
+    assert len(sources(ws)) == before

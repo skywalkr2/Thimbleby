@@ -32,7 +32,7 @@ export const addonOfSignIn = (name: string): string | null => (name.includes("/"
 export function SignIns(props: {
   onOpenAddons: () => void;
   /** Opens the form that adds a source, on the kinds of this add-on (null: all kinds). */
-  onChooseSource: (plugin: string | null) => void;
+  onChooseSource: (plugin: string | null, kind?: string, account?: string) => void;
 }) {
   const { t } = useWords();
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
@@ -72,7 +72,7 @@ export function SignIns(props: {
 
 /** One sign-in: where it stands in words, with its actions. Once signed in, the next step is the primary action
  * (choosing what to read); signing out and signing in again are in the menu. */
-export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string | null) => void }) {
+export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string | null, kind?: string, account?: string) => void }) {
   const { t } = useWords();
   const act = useAct();
   const [signingOut, setSigningOut] = useState(false);
@@ -189,9 +189,11 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
       () => ({ message: t("sign_in.started_reading_toast", { list: notReading.join(", ") }) }),
     );
 
+  // "Choose what to read" opens at the account's own sources: the only account signed in, else the one the row stands for.
+  const chooseAt = (item.accounts ?? []).length === 1 ? ((item.accounts ?? [])[0].address ?? undefined) : (item.account ?? undefined);
   const actions: MenuAction[] = [];
   if (signedIn && notReading.length > 0) {
-    actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name)), disabled: busy });
+    actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name), undefined, chooseAt), disabled: busy });
   }
   if (signedIn && !several) {
     actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => askToSignOut(null), disabled: busy });
@@ -238,7 +240,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
             notReading.length > 0
               ? startReading()
               : signedIn
-                ? props.onChooseSource(addonOfSignIn(item.name))
+                ? props.onChooseSource(addonOfSignIn(item.name), undefined, chooseAt)
                 : void start()
           }
         >

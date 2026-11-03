@@ -141,8 +141,8 @@ test("an old measurement says so and counts as unknown; one never measured offer
   expect(old).toHaveTextContent("Result unknown");
   expect(old).not.toHaveTextContent("Cheapest");
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  expect(none).toHaveTextContent("Not measured yet");
-  await waitFor(() => expect(within(none).getByRole("button", { name: "Measure Main account · everyday" })).toHaveTextContent("Measure (about $0.12)"));
+  expect(none).toHaveTextContent("Not checked yet");
+  await waitFor(() => expect(within(none).getByRole("button", { name: "Check skills of Main account · everyday" })).toHaveTextContent("Check skills (about $0.12)"));
 });
 
 test("Measure starts the measuring of that model with the person's go only when it was asked for, and the grid says it is measuring", async () => {
@@ -157,7 +157,7 @@ test("Measure starts the measuring of that model with the person's go only when 
   });
   renderApp(<AiCompare onBack={() => undefined} />);
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  await user.click(await within(none).findByRole("button", { name: "Measure Main account · everyday" }));
+  await user.click(await within(none).findByRole("button", { name: "Check skills of Main account · everyday" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/skills/main/measure")?.body).toEqual({ model: "everyday", confirmed: false }));
   expect(await screen.findByText("Testing. Results appear as each test finishes.")).toBeInTheDocument();
   expect(await within(await cellOf("Write an update in your voice", "Main account · everyday")).findByText("Testing…")).toBeInTheDocument();
@@ -171,7 +171,7 @@ test("a measuring above the amount the person set asks first, with the cost, and
   });
   renderApp(<AiCompare onBack={() => undefined} />);
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  await user.click(await within(none).findByRole("button", { name: "Measure Main account · everyday" }));
+  await user.click(await within(none).findByRole("button", { name: "Check skills of Main account · everyday" }));
   expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(false);
   expect(within(await cellOf("Write an update in your voice", "Main account · everyday")).getByRole("alert")).toHaveTextContent("This would cost about $0.50, more than the $0.10 you set for asking first.");
   await user.click(screen.getByRole("button", { name: "Test anyway" }));
@@ -238,7 +238,7 @@ test("a cell that was never measured says so and never counts zero tries", async
   api();
   renderApp(<AiCompare onBack={() => undefined} />);
   const c = await cellOf("Write an update in your voice", "Main account · everyday");
-  expect(c).toHaveTextContent("Not measured yet");
+  expect(c).toHaveTextContent("Not checked yet");
   expect(c).not.toHaveTextContent(/\b0 of 0\b/);
 });
 
@@ -255,10 +255,10 @@ test("with accounts but nothing measured the page says so and offers Measure wit
   const user = userEvent.setup();
   const calls = api({}, UNMEASURED);
   renderApp(<AiCompare onBack={() => undefined} />);
-  expect(await screen.findByText(/Nothing measured yet\./)).toBeInTheDocument();
+  expect(await screen.findByText(/Nothing checked yet\./)).toBeInTheDocument();
   expect(screen.queryByText("There is nothing to compare yet. Add an account first.")).toBeNull();
   expect(screen.queryByRole("table")).toBeNull();
-  const measure = await screen.findByRole("button", { name: "Measure (about $0.48)" });
+  const measure = await screen.findByRole("button", { name: "Check skills (about $0.48)" });
   expect(measure).toBeEnabled();
   await user.click(measure);
   // About $0.48 is more than the amount the person asked to be asked above, so it asks first.
@@ -271,13 +271,13 @@ test("with no account at all the page asks for one first", async () => {
   api({ "GET ai/accounts": () => [] }, UNMEASURED);
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByText("There is nothing to compare yet. Add an account first.")).toBeInTheDocument();
-  expect(screen.queryByText(/Nothing measured yet/)).toBeNull();
+  expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
 });
 
 test("the price is on the button before any click, with the amount that is asked about first and how much of the daily limit is left", async () => {
   api({}, UNMEASURED);
   renderApp(<AiCompare onBack={() => undefined} />);
-  const measure = await screen.findByRole("button", { name: "Measure (about $0.48)" });
+  const measure = await screen.findByRole("button", { name: "Check skills (about $0.48)" });
   const note = "You are asked first above $0.10. A test is paid for on your own account and counts toward your daily limit: $1.40 of $2.00 left today.";
   expect(await screen.findByText(note)).toBeInTheDocument();
   expect(measure).toHaveAccessibleDescription(note);
@@ -290,7 +290,7 @@ test("the button says the price is being worked out and waits, and says when no 
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByRole("button", { name: "Working out the price…" })).toBeDisabled();
   release();
-  expect(await screen.findByRole("button", { name: "Measure (price unknown)" })).toBeEnabled();
+  expect(await screen.findByRole("button", { name: "Check skills (price unknown)" })).toBeEnabled();
 });
 
 test("while a test runs and nothing is measured yet the page says what is being tested instead of nothing measured", async () => {
@@ -303,10 +303,10 @@ test("while a test runs and nothing is measured yet the page says what is being 
   const progress = await screen.findByRole("status", { name: "" });
   expect(progress).toHaveTextContent("Testing now: Main account · everyday. This page fills in as each test finishes, which can take a few minutes.");
   expect(progress).toHaveTextContent("Waiting its turn: Second account · everyday.");
-  expect(screen.queryByText(/Nothing measured yet\./)).toBeNull();
+  expect(screen.queryByText(/Nothing checked yet\./)).toBeNull();
 });
 
-test("a test that didn't finish says so and why even while nothing is measured yet", async () => {
+test("a test that didn't finish says so and why in place of 'Nothing checked yet', never above it", async () => {
   const failed: S["AiSkillsView"] = {
     ...UNMEASURED,
     accounts: UNMEASURED.accounts.map((a) => (a.name === "main" ? { ...a, models: a.models.map((m) => ({ ...m, measure: "failed" as const, measure_why: "The key was refused." })) } : a)),
@@ -314,7 +314,7 @@ test("a test that didn't finish says so and why even while nothing is measured y
   api({}, failed);
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByText("Main account · everyday didn't finish: The key was refused.")).toBeInTheDocument();
-  expect(screen.getByText(/Nothing measured yet\./)).toBeInTheDocument();
+  expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
 });
 
 test("each kind of work says what it means, in the words its list gives", async () => {
@@ -342,7 +342,7 @@ test("a test that would cost more than is left of the daily limit asks first and
   );
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByText(/counts toward your daily limit: \$0\.20 of \$2\.00 left today\./)).toBeInTheDocument();
-  await user.click(await screen.findByRole("button", { name: "Measure (about $0.48)" }));
+  await user.click(await screen.findByRole("button", { name: "Check skills (about $0.48)" }));
   expect(await screen.findByText("This would cost about $0.48, more than the $0.20 left of your daily limit. It stops when the limit is reached and keeps what it measured.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route.endsWith("/measure"))).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "Test anyway" }));

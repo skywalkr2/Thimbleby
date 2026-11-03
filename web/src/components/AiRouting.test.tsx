@@ -418,3 +418,16 @@ test("a kind of work that uses an add-on's own tier shows it as the model it use
   await waitFor(() => expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account", "Long reading"]));
   expect(select).toHaveValue("ex/long");
 });
+
+test("the kinds of work come in folded groups, and when no test covers any of them that is said once, not under each row", async () => {
+  const none = [fit("routine", { skills: 0, measured: 0, runs: 0, passes: 0, cost_per_pass_usd: null, status: "not_measured" }), fit("deep", { skills: 0, measured: 0, runs: 0, passes: 0, cost_per_pass_usd: null, status: "not_measured" })];
+  server(start({ kinds: [kind("notes", "Notes", { fits: none }), kind("sort-mail", "Sort mail", { fits: none }), kind("ask", "Ask", { fits: none })] }));
+  renderApp(<AiRouting />);
+  await screen.findByLabelText(NOTES);
+  expect(screen.getAllByText("No tests cover these kinds of work yet, so nothing is checked for any of them.")).toHaveLength(1);
+  expect(screen.queryByText("No tests cover this kind of work yet, so nothing is measured for it.")).toBeNull();
+  const groups = Array.from(document.querySelectorAll<HTMLDetailsElement>("details[data-kind-group]"));
+  expect(groups.length).toBeGreaterThan(0);
+  expect(groups.every((g) => !g.open)).toBe(true);
+  expect(groups[0].querySelector("summary")?.textContent).toMatch(/\d kinds of work$/);
+});

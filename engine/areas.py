@@ -276,7 +276,7 @@ def keep(store: Any, cfg: Any, word: str, name: str | None = None) -> Kept:
         raise StoreError("That offer no longer stands: fewer items share the word now, or the area is already there.")
     chosen = " ".join((name or "").split()) or offer.name
     if chosen.lower() in {str(p.data["name"]).strip().lower() for p in view.list("project")}:
-        raise StoreError(f"There is already a project called {chosen}.")
+        raise StoreError(f"You already have something called {chosen}. Choose a different name.")
     personal = sides.personal_project(view, cfg)
     started = apply_as_person(
         store,

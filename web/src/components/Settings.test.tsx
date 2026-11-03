@@ -166,7 +166,7 @@ test("the section list sits down the side: the pages, Your business (where a job
     "Add-ons",
     "Advanced",
   ]);
-  expect(within(nav).getByRole("heading", { name: "You" })).toBeInTheDocument();
+  expect(within(nav).getByRole("heading", { name: "About you" })).toBeInTheDocument();
   expect(within(nav).getByRole("heading", { name: "Assistant" })).toBeInTheDocument();
   expect(within(nav).getByRole("heading", { name: "Your data" })).toBeInTheDocument();
   expect(within(nav).getByRole("heading", { name: "More" })).toBeInTheDocument();
@@ -340,7 +340,8 @@ test("a logo whose picture is gone says so, and its initials can be asked for ag
   const calls = api([...ITEMS, logoItem("old.png")]);
   open("appearance");
   await user.click(await screen.findByText("More settings"));
-  fireEvent.error(await screen.findByRole("img", { name: "Your logo" }));
+  // A picture just kept may not be served yet, so it is asked for again a few times before the line says it is gone.
+  for (let n = 0; n < 4; n += 1) fireEvent.error(await screen.findByRole("img", { name: "Your logo" }, { timeout: 3000 }));
   expect(await screen.findByText("The logo picture can't be found. Choose it again, or go back to your initials.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Use my initials instead/ }));
   await waitFor(() => expect(posted(calls)).toEqual([{ changes: {}, reset: ["ui.brand.logo"], fingerprint: "fp-1" }]));
@@ -1381,6 +1382,9 @@ test("a time zone typed that is no place in the list is not silently dropped: th
   await user.click(select);
   await user.keyboard("Narnia");
   expect(screen.getByText("No time zone matches. Try another spelling.")).toBeInTheDocument();
+  // No empty bordered box is drawn over the note (it was a bare bar that hid the words).
+  expect(document.querySelector("ul.time-zone-list")).toBeNull();
+  expect(select).toHaveAttribute("aria-expanded", "false");
   await user.tab();
   expect(await screen.findByRole("alert")).toHaveTextContent("Narnia isn't a place in the list, so your time zone is still Los Angeles (Pacific time). Pick a city from the list.");
   expect(select).toHaveValue("Narnia");
@@ -1919,3 +1923,4 @@ test("a save under way says Saving, then Saved, on the page and on the row", asy
   release();
   await waitFor(() => expect(document.querySelector("[data-save-status]")).toHaveTextContent("Saved"));
 });
+

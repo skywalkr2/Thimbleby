@@ -9,7 +9,8 @@ import { useAct } from "../lib/act";
 import { firstField } from "../lib/cursor";
 import { problemText } from "../lib/problem";
 import { PlaceOptions } from "./PlaceOptions";
-import { addonLabel, changedValues, type Draft } from "../lib/settings";
+import { useAddonName } from "../lib/addon-names";
+import { changedValues, type Draft } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { Preview } from "./ActionReview";
@@ -74,7 +75,8 @@ export function DataForms(props: { level?: 2 | 3 }) {
 }
 
 function FormFiles(props: { form: Form; project: string }) {
-  const { t, has } = useWords();
+  const { t } = useWords();
+  const addonName = useAddonName();
   const { form, project } = props;
   const base = useId();
   const files = useQuery({
@@ -90,7 +92,7 @@ function FormFiles(props: { form: Form; project: string }) {
 
   return (
     <section className="data-forms-kind" aria-labelledby={titleId}>
-      <h4 id={titleId}>{t("dataform.form_title", { addon: addonLabel(form.plugin, t, has), label: form.label })}</h4>
+      <h4 id={titleId}>{t("dataform.form_title", { addon: addonName(form.plugin), label: form.label })}</h4>
       {form.description && <p className="hint">{form.description}</p>}
       {files.isPending ? (
         <Skeleton />

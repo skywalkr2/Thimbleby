@@ -9,17 +9,17 @@ export function mailText(subject: string, body: string): string {
   return `${subject}\n\n${body}`;
 }
 
-/** A mail link to the address with the subject and body filled in, or null when there is no address or the link
- * would be longer than the limit. Line breaks are written the way mail links define them. */
+/** A mail link with the subject and body filled in (to the address when there is one, else the person's mail program asks
+ * who it goes to), or null when the link would be longer than the limit. Line breaks are written the way mail links
+ * define them. */
 export function mailtoLink(to: string | null | undefined, subject: string, body: string): string | null {
   const address = (to ?? "").trim();
-  if (!address) return null;
   const lines = (text: string) => encodeURIComponent(text.replace(/\r?\n/g, "\r\n"));
   const link = `mailto:${encodeURIComponent(address).replace(/%40/g, "@")}?subject=${lines(subject)}&body=${lines(body)}`;
   return link.length > MAIL_LINK_MAX ? null : link;
 }
 
-/** True when an address was given but its link is too long to offer: the person copies the message instead. */
+/** True when the link is too long to offer: the person copies the message instead. */
 export function tooLongForLink(to: string | null | undefined, subject: string, body: string): boolean {
-  return !!(to ?? "").trim() && mailtoLink(to, subject, body) === null;
+  return mailtoLink(to, subject, body) === null;
 }

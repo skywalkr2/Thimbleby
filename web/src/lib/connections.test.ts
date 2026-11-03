@@ -57,11 +57,11 @@ test("one failing account among three is one group naming its address, however m
   ]);
 });
 
-test("a source not being read is a connection that failed, so the header never says all good beside it", () => {
+test("a source not being read is never all good: a person's own sign-out is a warning of its own, a refused sign-in is a failure", () => {
   const signedOut = coverage([source("a", { account: "a@example.com" }), source("b", { account: "b@example.com", account_state: "signed_out" })]);
   expect(signedOut.unread.map((u) => [u.source.id, u.kind])).toEqual([["b", "signed_out"]]);
   expect(signedOut.complete).toBe(false);
-  expect(connectionState(signedOut)).toBe("failed");
+  expect(connectionState(signedOut)).toBe("signed_out");
   // Every account signed in and read: nothing to say.
   expect(connectionState(coverage([source("a"), source("b")]))).toBe("ok");
   // One account's refusal marks only that account's sources.

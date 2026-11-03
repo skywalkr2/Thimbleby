@@ -59,6 +59,8 @@ const firstDay = { port: 8764 + offset };
 // And quick edits in a row: a server of its own, so a save refused as "changed since you opened it" can only be the
 // screen's own race and never another scenario writing Settings at the same moment.
 const quickEdits = { port: 8766 + offset };
+// The data-and-trust checks edit records (several quick edits, a follow-on), so they have a server of their own.
+const dataTrust = { port: 8775 + offset };
 
 // And a person with several businesses whose names are long: Personal beside a job and three businesses (the many-sides seed),
 // read at a phone, a tablet and a desktop width.
@@ -80,6 +82,9 @@ const journeys = pair(8783, 8790, 8791);
 const mail = pair(8784, 8792, 8793);
 const newStart = pair(8785, 8794, 8795);
 const evening = pair(8760, 8761, 8762);
+// The setup and Settings fixes of the re-sweep (X94 to X104): the app with the add-ons on, beside the fake services, in a
+// workspace the journey makes as a person does (AI step, folder chooser, backup folder, Add connection, Esc).
+const settingsFixes = pair(8772, 8773, 8774);
 // A person with three accounts of one mail and calendar service: the app with the mail add-on on, beside fake services that play
 // three people (`--accounts 3`), signed in one after the other through the service's own page.
 const accounts = pair(8768, 8769, 8770);
@@ -89,6 +94,7 @@ process.env.JOURNEY_FAKE_PORT = String(journeys.fakePort);
 process.env.JOURNEY_MAIL_FAKE_PORT = String(mail.fakePort);
 process.env.JOURNEY_NEW_START_FAKE_PORT = String(newStart.fakePort);
 process.env.JOURNEY_EVENING_FAKE_PORT = String(evening.fakePort);
+process.env.JOURNEY_SETTINGS_FAKE_PORT = String(settingsFixes.fakePort);
 process.env.JOURNEY_ACCOUNTS_FAKE_PORT = String(accounts.fakePort);
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
@@ -140,7 +146,7 @@ export default defineConfig({
         ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /settings-walk\.spec\.ts/, use, dependencies: [s.name] }] : []),
         ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
         // The schedule at a phone, a tablet and a desktop width, and moving through its days (once, at the root).
-        ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /schedule\.spec\.ts/, use, dependencies: [s.name] }] : []),
+        ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /(schedule|timeline)\.spec\.ts/, use, dependencies: [s.name] }] : []),
         // The tables beside the detail pane at 1440px (once, at the root).
         ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
       ];
@@ -158,6 +164,7 @@ export default defineConfig({
     { name: "people-records", testMatch: /people-records\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${peopleRecords.port}/` } },
     { name: "first-day", testMatch: /first-day.*\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${firstDay.port}/` } },
     { name: "quick-edits", testMatch: /quick-edits\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${quickEdits.port}/` } },
+    { name: "data-and-trust", testMatch: /data-and-trust\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${dataTrust.port}/` } },
     { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
     {
       name: "journeys",
@@ -181,6 +188,11 @@ export default defineConfig({
       name: "accounts",
       testMatch: /accounts\.spec\.ts/,
       use: { baseURL: `http://127.0.0.1:${accounts.port}/`, ignoreHTTPSErrors: true },
+    },
+    {
+      name: "settings-fixes",
+      testMatch: /settings-setup-fixes\.spec\.ts/,
+      use: { baseURL: `http://127.0.0.1:${settingsFixes.port}/`, ignoreHTTPSErrors: true },
     },
     {
       name: "journeys-owner-evening",
@@ -274,6 +286,13 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
+      command: `uv run python -m tests.e2e_server --port ${dataTrust.port} --base-path /`,
+      cwd: "..",
+      url: `http://127.0.0.1:${dataTrust.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
       command: `uv run python -m tests.e2e_server --port ${firstDay.port} --base-path / --first-day --plain-stages`,
       cwd: "..",
       url: `http://127.0.0.1:${firstDay.port}/api/health`,
@@ -312,6 +331,8 @@ export default defineConfig({
     freshServer(newStart, "--add-ons --catalog-by-environment --log"),
     fakeServices(newStart, "--catalog journey_mail --sent-mail"),
     // The owner's first evening: the same start as the new-start journey, with the fake services' evening mail and model list.
+    freshServer(settingsFixes, "--add-ons"),
+    fakeServices(settingsFixes),
     freshServer(evening, "--add-ons --catalog-by-environment --log --no-sent-mail"),
     fakeServices(evening, "--catalog journey_mail --evening"),
   ],

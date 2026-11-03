@@ -41,6 +41,54 @@ to-do's day made five runs and five notes, one of them echoing the run's packet;
 nothing to ask, and no run should cost money or the person's attention for that. *Impact:* one new field on the request record
 (`follows_also`, so `docs/plugin-guide.md` is regenerated), no setting, no API model changed, no new op; the applier's checks are unchanged. Change log: section 311.
 
+## 2026-11-03: Setup and Settings fixes: a choice can be let go, one card for an account, a folder chooser with a breadcrumb and New folder that never browses the computer's own folders, one backup place that is replaced or removed after asking, the synced folder shown after Save, Add connection that closes, plain refusals with limits, groups instead of a wall, add-on cards with a pill, a signed-out account as a warning (X94 to X97, X99 to X104, X53, X58, X66 and the setup and Settings rows left partly)
+
+**Decided:** The re-sweep's setup-and-Settings items (the owner wants all of them fixed before their gate week). (1) X94: choosing
+"Something else" after a service lets that service go, so its guide leaves and one card is selected; back on the AI step each
+account is one card (no summary of who does the work, no skills line, no expert menu items; those stay in Settings). (2) X95:
+every field of a kind of source has a short label (`sources.field.<kind>.<key>` in the wording sheet), and moving between the
+form's two steps puts the cursor in the new step's first field. (3) X96: the time zone list is not drawn while nothing matches,
+since the empty box lay over the note. (4) X97 and X58: the folder chooser shows a breadcrumb, makes a folder
+(`POST /api/setup/folders/new`), starts at home, and never browses into or accepts the computer's own folders (one rule,
+`engine/folder_rules.py`, used by the chooser, the backup folder check and the synced folder save, with the home folder always
+allowed); a typed backup key has a most (`storage.backups.key_max_chars`, default 256) as well as a least. (5) X100: choosing a
+backup folder replaces where backups go (one place), each place is listed once with Remove, which asks first
+(`DELETE /api/setup/backup-folder`) and leaves the copies; a copy reached through two places is listed once and a folder named
+twice gets one copy. (6) X98: **not built**, see below. The page no longer shows a command; it says restoring is not a button
+yet. (7) X99: a synced folder saved after the app started shows with "applies after a restart" and Restart now, and a disabled
+Save says why. (8) X101: Add connection asks before closing only when text was typed (choosing a kind is not text), so Escape
+and Close work at every step; "Choose what to read" opens it headed with the account. (9) X102 and X49: every text setting has a
+length limit (the schema's own, else 500 characters, 1000 for a path or reference) refused as "Use at most N characters.", a
+request the schema refuses answers with what is allowed and never the library's words, a refusal from the product's own check
+is a whole sentence, a business named like an existing thing is refused as a sentence with none of the engine's words, a 400
+shows the server's own words and a bare failure says what to do, a negative amount is "-$5.00", and a tiny amount is never
+"1e-7". (10) X103 and X51: the kinds of work come in folded groups, "no tests cover these kinds of work" is said once, a
+failed test replaces "Nothing checked yet", and "Measure" reads "Check skills" (a test counts toward the limits, as
+`engine/ai/measure.py` does). (11) X104, X52 and VS19: an add-on's page asks for no keys while it is signed in, a key has a plain
+label, one name for an add-on everywhere, Remove asks first and says a backup is made, and a card is a name, a line, a status
+pill and one action with the rest under Details; Available leaves out an installed add-on. (12) X53: a person's own sign-out
+is "Signed out" as a warning in the header, a refused or expired sign-in stays a danger. (13) Rows left partly: X05 (a folder
+with a slash at the end is the same folder), X48 (no "indigo" sentence), X56 (the toast says "the picture you chose"; a picture
+just kept is asked for again before it is called missing), X61 (Open in your email app works with no address; the counts read as
+sentences), X64 and VC07 (a failure toast is a warning), X66 (the tab says "<workspace> · Thimbleby"), VS17 (the menu group is
+"About you"). **Not done:** `cockpit.db` and `.cockpit/` keep their names until phase I.
+
+**Decided by:** the owner, 2026-11-03 (open-promises P116: everything in the re-sweep's list, before the gate week).
+
+**Why:** the AI step kept the last choice's guide and showed two cards; the calendar form had an unlabeled box and left the
+cursor behind; the time zone note was hidden by an empty box; the folder chooser could not make a folder and accepted `/etc`;
+a second backup folder was added by accident and every copy listed twice; the synced folder vanished after Save; Add connection
+asked "discard?" for nothing; refusals said "That didn't work." or "$-5.00"; AI and spending was ten identical rows; an add-on
+page asked a signed-in person for keys; and a deliberate sign-out read as "Connection failed".
+
+**Impact:** design 7.8, 7.9 and 7.15 (`07-ui.md`), 4.0 (`04-config.md`: `storage.backups.key_max_chars`), 5.0. API:
+`POST /api/setup/folders/new`, `DELETE /api/setup/backup-folder`, `FolderListView.trail`; `POST /api/setup/backup-folder` and
+`/cloud` replace the places; a request the schema refuses answers 422 with a plain `detail`. One new setting, `key_max_chars`,
+with a schema entry, a default, a description and demo values in both workspaces. **X98 is not built:** restoring in a running
+app would replace the database, the lease and the settings under a process that holds them open, so it can't be done safely
+there; a safe design is a restore staged to a folder beside the workspace (what `restore --backup` makes) and swapped in at the
+next start, with the old data kept, which is a change to start-up the owner decides. Change log: section 310.
+
 ## 2026-11-03: The re-sweep's Today and work screens: short titles, one count, one question, the band and the wrap-up told straight, setup said on Today, a phone that shows every word, accounts named as people know them (X86 to X93, X14, X24, X44, X69, and the open rows of these screens; section 309)
 
 **Decided:** (1) X86: a row's title is short, by `ui.title_words` (default 12): the first sentence when it fits, else the first

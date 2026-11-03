@@ -35,8 +35,8 @@ export function TimeZoneSelect(props: {
         id={props.id}
         type="text"
         role="combobox"
-        aria-expanded={open}
-        aria-controls={listId}
+        aria-expanded={open && shown.length > 0}
+        aria-controls={open && shown.length > 0 ? listId : undefined}
         aria-autocomplete="list"
         aria-activedescendant={open && shown[active] ? `${listId}-${active}` : undefined}
         aria-describedby={props.describedBy}
@@ -89,7 +89,8 @@ export function TimeZoneSelect(props: {
           }
         }}
       />
-      {open && (
+      {/* An empty list is never drawn: it would be a bare bordered bar lying over the note that nothing matches. */}
+      {open && shown.length > 0 && (
         <ul id={listId} role="listbox" aria-label={t("timezone.find")} className="time-zone-list">
           {shown.map((c, i) => (
             <li

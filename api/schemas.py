@@ -4565,12 +4565,38 @@ class FolderCheckView(BaseModel):
     free_mb: float | None = None
 
 
+class FolderStepView(BaseModel):
+    """One step of the way down to the folder being looked at."""
+
+    name: str
+    path: str
+    home: bool = Field(False, description="This step is the person's home folder, which the screen names in words.")
+
+
+class FolderMake(BaseModel):
+    """POST /api/setup/folders/new: a new folder inside the one being looked at."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    inside: str = Field(description="The folder to make it in, as the chooser lists it.")
+    name: str = Field(description="The new folder's name: one plain name.")
+
+
+class FolderMade(BaseModel):
+    path: str = Field(description="Where the new folder is.")
+
+
 class FolderListView(BaseModel):
     path: str
     parent: str | None = None
     folders: list[str]
     files: list[str] = Field(default_factory=list, description="With a file ending asked for: the files that match.")
     home: bool = Field(False, description="The folder is the person's home folder, which the screen names in words.")
+    trail: list[FolderStepView] = Field(
+        default_factory=list,
+        description="The folders from where the person can start down to this one, for the breadcrumb: never a folder "
+        "the computer keeps for itself.",
+    )
 
 
 class CloudFolderView(BaseModel):
@@ -4604,6 +4630,15 @@ class BackupFolderAdd(BaseModel):
 
     path: str
     label: str = ""
+    fingerprint: str
+
+
+class BackupFolderRemove(BaseModel):
+    """DELETE /api/setup/backup-folder: take one place out of where backups go. Copies already made stay."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(description="The place to take out, as the settings list it.")
     fingerprint: str
 
 

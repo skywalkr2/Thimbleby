@@ -49,6 +49,7 @@ from api.schemas import (
     AiTierView,
     AiWorkKindView,
     BackupFolderAdd,
+    BackupFolderRemove,
     BusinessIn,
     BusinessState,
     BusinessView,
@@ -61,8 +62,11 @@ from api.schemas import (
     FingerprintIn,
     FolderCheckView,
     FolderListView,
+    FolderMade,
+    FolderMake,
     FolderRenamed,
     FolderRenameIn,
+    FolderStepView,
     LocalServerView,
     LogoUploaded,
     MailFoldersView,
@@ -686,7 +690,19 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if not local:
             raise HTTPException(status_code=403, detail="Folders on the server can't be browsed; type the path.")
         try:
-            return FolderListView(**vars(setup.list_folders(path, files)))
+            listed = setup.list_folders(path, files)
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
+        fields = {**vars(listed), "trail": [FolderStepView(name=n, path=p, home=h) for n, p, h in listed.trail]}
+        return FolderListView(**fields)
+
+    @r.post("/setup/folders/new")
+    def folder_new(body: FolderMake) -> FolderMade:
+        """Make a folder inside the one the chooser is showing, so a place for backups can be made while choosing it."""
+        if not local:
+            raise HTTPException(status_code=403, detail="Folders on the server can't be made from here; type the path.")
+        try:
+            return FolderMade(path=str(setup.make_folder(body.inside, body.name)))
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
 
@@ -723,9 +739,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         check = setup.check_backup_folder(ws, str(made))
         if not check.ok:
             raise HTTPException(status_code=400, detail=check.problem)
-        targets = [t.model_dump() for t in backups.targets]
-        if not any(os.path.realpath(os.path.expanduser(t["path"])) == check.path for t in targets):
-            targets.append({"path": check.path, "label": drive.name})
+        # Choosing where backups go replaces where they went: one place, never two by accident.
+        targets = [{"path": check.path, "label": drive.name}]
         result = saved(save({"storage.backups.targets": targets}, [], body.fingerprint, allow=("storage.backups.",)))
         thread = worker.first_backup_soon()
         if thread is not None:
@@ -737,14 +752,21 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         check = setup.check_backup_folder(ws, body.path)
         if not check.ok:
             raise HTTPException(status_code=400, detail=check.problem)
-        targets = [t.model_dump() for t in current().storage.backups.targets]
-        if any(os.path.realpath(os.path.expanduser(t["path"])) == check.path for t in targets):
-            raise HTTPException(status_code=409, detail="Backups already go to that folder.")
-        targets.append({"path": check.path, "label": body.label.strip()})
+        # Choosing where backups go replaces where they went: one place, never two by accident.
+        targets = [{"path": check.path, "label": body.label.strip()}]
         result = saved(save({"storage.backups.targets": targets}, [], body.fingerprint, allow=("storage.backups.",)))
         # The first backup is made now, in the background, so choosing where doesn't leave a request to back up.
         worker.first_backup_soon()
         return result
+
+    @r.delete("/setup/backup-folder")
+    def backup_folder_remove(body: BackupFolderRemove) -> SettingsSaved:
+        """Stop backing up to one place. The copies already there are left alone."""
+        targets = [t.model_dump() for t in current().storage.backups.targets]
+        kept = [t for t in targets if t["path"] != body.path]
+        if len(kept) == len(targets):
+            raise HTTPException(status_code=404, detail="Backups don't go to that folder.")
+        return saved(save({"storage.backups.targets": kept}, [], body.fingerprint, allow=("storage.backups.",)))
 
     # ---- AI accounts ---------------------------------------------------------------------------------------------
 
@@ -1143,9 +1165,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return None
         where = folder_setting(connector) or (("folder", False) if connector == "mailbox" else None)
 
+        def alike(a: Any, b: Any) -> bool:
+            """The same settings, a folder's path being the same with or without a slash at the end."""
+            x, y = a.model_dump(), b.model_dump()
+            for key in ("path",):
+                if isinstance(x.get(key), str) and isinstance(y.get(key), str):
+                    x[key], y[key] = x[key].strip().rstrip("/") or "/", y[key].strip().rstrip("/") or "/"
+            return x == y
+
         def held(model: Any) -> set[str]:
             value = getattr(model, where[0], None) if where else None
-            return {str(v) for v in (value if isinstance(value, list) else [value]) if v}
+            # A folder is the same folder with or without a slash at the end, and with stray spaces around it.
+            return {str(v).strip().rstrip("/") or "/" for v in (value if isinstance(value, list) else [value]) if v}
 
         try:
             mine = kind.settings.model_validate(settings)
@@ -1166,7 +1197,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if where is not None:
                 if held(mine) & held(theirs):
                     return other
-            elif mine == theirs:
+            elif alike(mine, theirs):
                 return other
         return None
 

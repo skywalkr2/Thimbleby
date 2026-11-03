@@ -459,7 +459,7 @@ describe("a sign-in step that is done", () => {
     const mine = section("demo/mail");
     expect(await within(mine).findByText("Signed in as pat@example.com")).toBeInTheDocument();
     await user.click(within(mine).getByRole("button", { name: "Choose what to read from Demo Mail" }));
-    expect(onChooseSource).toHaveBeenCalledWith("demo");
+    expect(onChooseSource).toHaveBeenCalledWith("demo", undefined, "pat@example.com");
     await user.click(within(mine).getByRole("button", { name: "More actions for Demo Mail" }));
     expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Sign out", "Sign in again"]);
   });

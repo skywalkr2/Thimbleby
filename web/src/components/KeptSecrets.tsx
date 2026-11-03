@@ -108,20 +108,23 @@ export function KeptSecretRow(props: {
 }
 
 /** The keys one add-on says it needs, each a password box. Nothing is shown for an add-on that needs none. */
-export function AddonSecrets(props: { plugin: string; name?: string }) {
+export function AddonSecrets(props: { plugin: string; name?: string; /** Nothing is asked for an add-on that is signed in: it has what it needs. */ unlessSignedIn?: boolean }) {
   const { t, has } = useWords();
   const afterSave = useAfterSave();
   const fingerprint = useFreshFingerprint();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const all = useQuery({ queryKey: ["addon-secrets"], queryFn: api.addonSecrets });
   const base = useId();
+  const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs, enabled: !!props.unlessSignedIn });
   const mine = all.data?.find((a) => a.plugin === props.plugin);
   if (!mine || mine.secrets.length === 0) return null;
+  if (props.unlessSignedIn && packs.data?.installed.find((i) => i.name === props.plugin)?.signed_in === true) return null;
   const local = setup.data?.local ?? true;
   const addon = props.name ?? readable(props.plugin);
   const labelOf = (secret: string) => {
     const key = `secrets.addon.${props.plugin}.${secret}`;
-    return has(key) ? t(key) : readable(secret);
+    // The add-on's own words, else the plain words for a common kind of key, else its name made readable.
+    return has(key) ? t(key) : has(`secrets.kind.${secret}`) ? t(`secrets.kind.${secret}`) : readable(secret);
   };
   return (
     <section className="kept-secrets" aria-labelledby={`${base}-title`}>

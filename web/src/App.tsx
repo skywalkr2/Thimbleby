@@ -161,9 +161,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   );
   const keys = rc.shortcuts;
   useShortcuts(keys, handlers);
+  // The tab says whose workspace it is and what the app is called, from the wording sheet, so the product's name shows there.
   useEffect(() => {
-    document.title = rc.workspace_name;
-  }, [rc.workspace_name]);
+    document.title = t("app.tab_title", { workspace: rc.workspace_name, app: t("app.name") });
+  }, [rc.workspace_name, t]);
 
   // After going to another view (not on the first load), focus moves to the new view's heading.
   const first = useRef(true);

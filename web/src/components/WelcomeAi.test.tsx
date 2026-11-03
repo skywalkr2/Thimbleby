@@ -233,6 +233,22 @@ test("the service the data recommends has the tag, the alternative is beside it,
   expect(screen.queryByText(/need a technical setup/)).toBeNull();
 });
 
+test("choosing Something else after a service lets that service go: its guide leaves and only one card is selected", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  const first = await screen.findByRole("radio", { name: /Service A/ });
+  await user.click(first);
+  expect(await screen.findByText(/^Connect Service A/)).toBeInTheDocument();
+  await user.click(screen.getByRole("radio", { name: /Something else/ }));
+  await waitFor(() => expect(screen.queryByText(/^Connect Service A/)).toBeNull());
+  expect(screen.getByRole("radio", { name: /Something else/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Service A/ })).not.toBeChecked();
+  // The line that opens a list of kinds shows no guide either, until a kind is chosen.
+  await user.click(await screen.findByRole("button", { name: /^Another service/ }));
+  expect(screen.queryByText(/^Connect Service/)).toBeNull();
+});
+
 test("a card shows an entry's short summary, and the full note appears once the kind is chosen", async () => {
   const user = userEvent.setup();
   api();

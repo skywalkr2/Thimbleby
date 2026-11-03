@@ -276,10 +276,10 @@ test("Choose what to read opens the form that adds a source, on the kinds of tha
   fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { status: "signed_in" }), signIn("plain", { status: "signed_in" })] });
   open(onChooseSource);
   await user.click(await screen.findByRole("button", { name: "Choose what to read from Service demo/one" }));
-  expect(onChooseSource).toHaveBeenLastCalledWith("demo");
+  expect(onChooseSource).toHaveBeenLastCalledWith("demo", undefined, undefined);
   // A sign-in whose name has no add-on part offers every kind.
   await user.click(screen.getByRole("button", { name: "Choose what to read from Service plain" }));
-  expect(onChooseSource).toHaveBeenLastCalledWith(null);
+  expect(onChooseSource).toHaveBeenLastCalledWith(null, undefined, undefined);
 });
 
 test("a signed-in row's menu has Sign out and Sign in again; Sign in again starts the sign-in", async () => {

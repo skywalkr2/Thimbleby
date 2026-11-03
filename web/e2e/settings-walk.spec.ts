@@ -58,7 +58,7 @@ test("the Settings menu groups its sections and keeps each section address", asy
   const nav = bar(page);
   await expect(nav.getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
   await expect(nav.getByRole("heading", { level: 3 })).toHaveText([
-    "You",
+    "About you",
     "Assistant",
     "Your data",
     "More",

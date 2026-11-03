@@ -61,7 +61,11 @@ export function parseAmount(text: string, locale?: string): number | null {
  * other formatter here, and every screen, goes through it. */
 export function useWriteAmount() {
   const { t, locale } = useWords();
-  return (usd: number, least = 2, most = least) => t("money.usd", { amount: formatNumber(usd, locale, least, most) });
+  // A negative amount puts its minus before the sign, "-$5.00", never between the sign and the number.
+  return (usd: number, least = 2, most = least) => {
+    const written = t("money.usd", { amount: formatNumber(Math.abs(usd), locale, least, most) });
+    return usd < 0 ? `-${written}` : written;
+  };
 }
 
 /** An amount to two decimals, or "less than a cent" when it would round to nothing. */

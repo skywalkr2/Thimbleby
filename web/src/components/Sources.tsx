@@ -12,7 +12,8 @@ import { startCursor } from "../lib/cursor";
 import { PlaceOptions } from "./PlaceOptions";
 import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
-import { addonLabel, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
+import { useAddonName } from "../lib/addon-names";
+import { formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { signInGroups, signInNeed, sourceState, type SignInGroup } from "../lib/connections";
@@ -98,7 +99,7 @@ export function problemOf(source: Source, t: T, has: (key: string) => boolean): 
   return failureText(source, t, has) || t("sources.problem_generic");
 }
 
-type Form = { type: "add"; plugin: string | null } | { type: "change"; id: string };
+type Form = { type: "add"; plugin: string | null; account?: string } | { type: "change"; id: string };
 
 /** How often a source can be read, in minutes. */
 const EVERY_CHOICES = [15, 30, 60, 240];
@@ -135,7 +136,7 @@ export function useSourceSave() {
         return true;
       } catch (err) {
         const detail = err instanceof ApiError ? err.detail : "";
-        push({ message: err instanceof ApiError && err.status === 401 ? t("error.signed_out") : t("error.failed", { detail }) });
+        push({ message: err instanceof ApiError && err.status === 401 ? t("error.signed_out") : t("error.failed", { detail }), tone: "warn" });
         return false;
       }
     },
@@ -253,14 +254,14 @@ export function Sources(props: {
       </p>
       <SignIns
         onOpenAddons={() => props.onOpenAddons?.()}
-        onChooseSource={(plugin) => {
+        onChooseSource={(plugin, _kind, account) => {
           setAddDirty(false);
-          setForm({ type: "add", plugin });
+          setForm({ type: "add", plugin, account });
         }}
       />
       <Drawer
         open={form?.type === "add"}
-        title={t("sources.add_title")}
+        title={form?.type === "add" && form.account ? t("sources.add_title_for", { account: form.account }) : t("sources.add_title")}
         titleId={addTitleId}
         dirty={addDirty}
         wide
@@ -269,7 +270,7 @@ export function Sources(props: {
         {form?.type === "add" && (
           <SourceForm
             key={`add-${seen}-${form.plugin ?? ""}`}
-            mode={{ type: "add", plugin: form.plugin }}
+            mode={{ type: "add", plugin: form.plugin, account: form.account }}
             kinds={kinds.data}
             kindsFailed={kinds.isError}
             twoStep
@@ -592,7 +593,7 @@ export function AddConnection(props: { plugin: string | null; kind?: string; onC
 }
 
 /** `kind` is a kind already chosen (the mailbox of "Another mailbox"): its fields show at once, with no list of kinds. */
-type Mode = { type: "add"; plugin: string | null; kind?: string } | { type: "change"; source: Source };
+type Mode = { type: "add"; plugin: string | null; kind?: string; account?: string } | { type: "change"; source: Source };
 
 /** The form for adding a source or changing one: the kind (adding only), a name, how often, a project (adding only)
  * and the settings that kind takes, as the Settings screen shows them. */
@@ -613,6 +614,7 @@ function SourceForm(props: {
   // What a setting changed to is said as the setting says it everywhere, not as the file holds it.
   const settingWords = useSettingWordsFromCache();
   const base = useId();
+  const addonName = useAddonName();
   const heading = useRef<HTMLHeadingElement>(null);
   const { mode } = props;
   const adding = mode.type === "add";
@@ -646,7 +648,7 @@ function SourceForm(props: {
   const [every, setEvery] = useState(String(source?.every_minutes ?? 60));
   const [project, setProject] = useState("");
   const [author, setAuthor] = useState(source?.author ?? "");
-  const [account, setAccount] = useState(source?.account ?? "");
+  const [account, setAccount] = useState(source?.account ?? (mode.type === "add" ? (mode.account ?? "") : ""));
   const [color, setColor] = useState<string>(source?.color ?? "");
   // A mail source can hold the person's own capture: a folder or label of it, or mail to an address of theirs.
   const [capture, setCapture] = useState<boolean>(source?.capture ?? false);
@@ -677,9 +679,29 @@ function SourceForm(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Moving between the two steps puts the cursor in the new step's first field, never leaves it on the page behind.
+  const stepSeen = useRef(step);
   useEffect(() => {
-    props.onDirty?.(false);
-  }, [props.onDirty]);
+    if (stepSeen.current === step) return;
+    stepSeen.current = step;
+    const frame = window.requestAnimationFrame(() => {
+      const root = formEl.current;
+      if (!root) return;
+      (firstField(root) ?? document.getElementById(props.titleId ?? `${base}-title`))?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+  // Only text the person typed makes the form worth asking about before it closes; choosing a kind or a list item is not.
+  const touched =
+    label !== shown.current.label ||
+    Object.keys(edits).length > 0 ||
+    Object.values(pasted).some((v) => v.trim() !== "") ||
+    (adding && project !== "") ||
+    (capture && captureAddress.trim() !== "");
+  useEffect(() => {
+    props.onDirty?.(touched);
+  }, [props.onDirty, touched]);
 
   useEffect(() => {
     let live = true;
@@ -745,7 +767,7 @@ function SourceForm(props: {
       const id = k.plugin ?? "";
       let group = order.find((g) => g.id === id);
       if (!group) {
-        group = { id, label: k.plugin ? addonLabel(k.plugin, t, has) : t("sources.kind_core"), kinds: [] };
+        group = { id, label: k.plugin ? addonName(k.plugin) : t("sources.kind_core"), kinds: [] };
         order.push(group);
       }
       group.kinds.push(k);
@@ -801,7 +823,7 @@ function SourceForm(props: {
           const before = valueAt(storedWas.current ?? {}, item.key);
           const after = valueAt(storedNow, item.key);
           if (item.key in edits || JSON.stringify(before ?? null) === JSON.stringify(after ?? null)) continue;
-          lines.push({ label: labelOf(item, t, has), value: settingWords.value(item, after) });
+          lines.push({ label: kind && has(`sources.field.${kind.name}.${item.key}`) ? t(`sources.field.${kind.name}.${item.key}`) : labelOf(item, t, has), value: settingWords.value(item, after) });
         }
         storedWas.current = storedNow;
       }
@@ -878,7 +900,6 @@ function SourceForm(props: {
       className="panel source-form"
       data-add-connection={adding ? "" : undefined}
       aria-labelledby={titleId}
-      onChange={() => props.onDirty?.(true)}
       onSubmit={(e) => {
         e.preventDefault();
         if (showingDetails) void submit();
@@ -984,7 +1005,7 @@ function SourceForm(props: {
           )}
           {items.length > 0 && (
             <CheckboxGroup legend={has(`sources.details.${kind.name}`) ? t(`sources.details.${kind.name}`) : t("sources.details")}>
-              <ItemFields items={items} edits={edits} onEdit={(key, draft) => {
+              <ItemFields labelFor={(item) => (has(`sources.field.${kind.name}.${item.key}`) ? t(`sources.field.${kind.name}.${item.key}`) : undefined)} items={items} edits={edits} onEdit={(key, draft) => {
                   setEdits((all) => ({ ...all, [key]: draft }));
                   setFieldProblems((all) => (key in all ? {} : all));
                 }}

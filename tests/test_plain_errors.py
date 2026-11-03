@@ -68,7 +68,7 @@ def test_a_product_check_keeps_its_own_sentence():
 
     with pytest.raises(ValidationError) as caught:
         Rule(word="x")
-    assert reason_of(caught.value.errors()[0]) == "a word of the product's own refusing"
+    assert reason_of(caught.value.errors()[0]) == "A word of the product's own refusing."
 
 
 def test_a_setting_refused_for_its_limit_says_the_limit_beside_its_field(tmp_path):

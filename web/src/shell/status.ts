@@ -16,6 +16,7 @@ export type StatusKind =
   | "assistant_stopped"
   | "assistant_held"
   | "connection_failed"
+  | "connection_signed_out"
   | "connection_retrying"
   | "backup"
   | "spend"
@@ -23,11 +24,13 @@ export type StatusKind =
 export type StatusTone = "ok" | "warn" | "danger";
 
 /** How the connections stand: one that failed to be read is failed; one that found no network, or was not read within the
- * configured hours, is retrying; read ones, and ones not tried yet, are fine. A source whose account is signed out, or has to
- * sign in again, is not being read: that is failed too, never fine. */
-export function connectionState(found: Coverage | null): "ok" | "retrying" | "failed" {
+ * configured hours, is retrying; read ones, and ones not tried yet, are fine. A source whose account the person signed out of
+ * is signed out (a warning); one whose sign-in was refused or ran out is failed. Neither is ever fine. */
+export function connectionState(found: Coverage | null): "ok" | "retrying" | "failed" | "signed_out" {
   if (!found) return "ok";
-  if (found.unread.some((u) => u.kind === "failed" || u.kind === "signed_out")) return "failed";
+  if (found.unread.some((u) => u.kind === "failed")) return "failed";
+  // An account the person signed out of is not a failure: it says so, as a warning, until they sign in again.
+  if (found.unread.some((u) => u.kind === "signed_out")) return "signed_out";
   if (found.unread.length > 0 || found.stale.length > 0) return "retrying";
   return "ok";
 }
@@ -38,7 +41,7 @@ export function worstState(input: {
   /** The restart notice's phase (lib/restart): asking, waiting, stuck, refused, done or idle. */
   restartPhase: string;
   /** How the connections stand (`connectionState`); unknown counts as fine. */
-  connections?: "ok" | "retrying" | "failed";
+  connections?: "ok" | "retrying" | "failed" | "signed_out";
   /** A problem the assistant's own state names that no other state here already says (a failing account, a failed or stuck run, a paused account): "bad" when it can't do its work, "warn" when work is held. */
   assistant?: "warn" | "bad";
 }): StatusKind {
@@ -50,6 +53,7 @@ export function worstState(input: {
   if (input.restartPhase === "asking" || input.status?.restart_needed) return "restart";
   if (input.assistant === "bad") return "assistant_stopped";
   if (input.connections === "failed") return "connection_failed";
+  if (input.connections === "signed_out") return "connection_signed_out";
   if (input.assistant === "warn") return "assistant_held";
   if (input.connections === "retrying") return "connection_retrying";
   if (input.status?.backup.needs_attention) return "backup";

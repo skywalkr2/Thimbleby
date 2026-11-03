@@ -130,3 +130,14 @@ test("each side gets a mark of its own, never two the same, even when the names 
   expect(distinctMarks(names)).toEqual(marks);
   expect(new Set(distinctMarks(["A", "A", "", ""])).size).toBe(4);
 });
+
+test("after a person's own sign-out the chip says signed out as a warning, never all good and never a danger; a refused sign-in stays a danger", () => {
+  const src = (over: object) => ({ id: "a", label: "A", connector: "k", connector_label: "K", enabled: true, every_minutes: 15, items: 0, last: null, read_at: null, failures: 0, problem: null, ...over });
+  const cover = (kind: string) => ({ enabled: 1, read: [], last: null, unread: [{ source: src({}), kind }], pending: [], stale: [], complete: false }) as never;
+  expect(connectionState(cover("signed_out"))).toBe("signed_out");
+  expect(connectionState(cover("failed"))).toBe("failed");
+  const kind = worstState({ live: "live", status: status(), restartPhase: "idle", connections: "signed_out" });
+  expect(kind).toBe("connection_signed_out");
+  expect(toneOf(kind)).toBe("warn");
+  expect(toneOf(worstState({ live: "live", status: status(), restartPhase: "idle", connections: "failed" }))).toBe("danger");
+});

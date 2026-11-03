@@ -9,7 +9,7 @@ export const FIRST_SCREEN = { timeout: 15_000 };
 
 export const fakeAddress = (
   variable: "JOURNEY_FAKE_PORT" | "JOURNEY_MAIL_FAKE_PORT" | "JOURNEY_NEW_START_FAKE_PORT"
-    | "JOURNEY_EVENING_FAKE_PORT",
+    | "JOURNEY_EVENING_FAKE_PORT" | "JOURNEY_SETTINGS_FAKE_PORT",
   fallback: number,
 ) =>
   `http://127.0.0.1:${process.env[variable] ?? fallback}`;

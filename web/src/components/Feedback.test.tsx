@@ -113,13 +113,12 @@ test("a message too long for a mail link has no link and says to copy it", async
   expect(screen.getByRole("button", { name: "Copy" })).toHaveAttribute("data-variant", "primary");
 });
 
-test("without an address Copy is the main action and the hint says who to send it to", async () => {
+test("without an address the email app still opens, and the hint says who to send it to", async () => {
   const { user } = open({ to: null });
   await user.type(message(), "Hello");
-  expect(screen.queryByRole("link")).toBeNull();
-  expect(screen.queryByText("Open in your email app")).toBeNull();
-  expect(screen.getByRole("button", { name: "Copy" })).toHaveAttribute("data-variant", "primary");
-  expect(screen.getByText("Send it to whoever gave you the app.")).toBeInTheDocument();
+  const link = screen.getByRole("link", { name: "Open in your email app" });
+  expect(link.getAttribute("href")).toMatch(/^mailto:\?subject=/);
+  expect(screen.getByText(/send it to whoever gave you the app/)).toBeInTheDocument();
 });
 
 test("Copy puts the subject, a blank line and the body on the clipboard, and says so", async () => {
@@ -261,10 +260,10 @@ test("the form shows how often Missed something? was used each week, and the mes
   const user = openWithMissed([missedRow("PER-1", "2026-10-12", "2026-10-18", 4), missedRow("PER-1", "2026-10-19", "2026-10-25", 1)]);
   const box = await screen.findByLabelText("Add how often I used “Missed something?”, week by week");
   expect(box).toBeChecked();
-  expect(box).toHaveAccessibleDescription(/Only the counts are added, never what you said\..*Oct 12 to Oct 18: 4.*Oct 19 to Oct 25: 1/);
+  expect(box).toHaveAccessibleDescription(/Only the counts are added, never what you said\..*4 from Oct 12 to Oct 18.*1 from Oct 19 to Oct 25/);
   await user.type(message(), "It missed my call notes");
   expect(preview().value).toBe(
-    "It missed my call notes\n\nScreen: Files\n\nMissed something? used Oct 12 to Oct 18: 4\nMissed something? used Oct 19 to Oct 25: 1",
+    "It missed my call notes\n\nScreen: Files\n\n“Missed something?” was used 4 from Oct 12 to Oct 18.\n“Missed something?” was used 1 from Oct 19 to Oct 25.",
   );
   await user.click(box);
   expect(preview().value).toBe("It missed my call notes\n\nScreen: Files");
@@ -274,14 +273,14 @@ test("the counts of the people in one week are added, and a week with none used 
   const user = openWithMissed([missedRow("PER-1", "2026-10-12", "2026-10-18", 2), missedRow("PER-2", "2026-10-12", "2026-10-18", 3)]);
   await screen.findByLabelText("Add how often I used “Missed something?”, week by week");
   await user.type(message(), "x");
-  expect(preview().value).toMatch(/Missed something\? used Oct 12 to Oct 18: 5$/);
+  expect(preview().value).toMatch(/“Missed something\?” was used 5 from Oct 12 to Oct 18\.$/);
 });
 
 test("with nothing counted yet the form still says so", async () => {
   const user = openWithMissed([]);
   await screen.findByLabelText("Add how often I used “Missed something?”, week by week");
   await user.type(message(), "x");
-  expect(preview().value).toMatch(/Missed something\? not used in the weeks counted$/);
+  expect(preview().value).toMatch(/“Missed something\?” was not used in the weeks counted\.$/);
 });
 
 test("when the counts can't be read the form offers nothing about them", async () => {

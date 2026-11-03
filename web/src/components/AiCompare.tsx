@@ -283,7 +283,8 @@ export function AiCompare(props: { onBack: () => void }) {
       ) : accountNames.length === 0 ? (
         <EmptyState icon="gear" text={t("ai_compare.empty")} />
       ) : !anyResult ? (
-        running.length > 0 || waiting.length > 0 ? null : (
+        // While tests run, or when one failed (said above, in its place), the page doesn't also say nothing is measured.
+        running.length > 0 || waiting.length > 0 || failed.length > 0 ? null : (
           <EmptyState icon="grid" data-nothing-measured="" text={t("ai_compare.nothing_measured")} />
         )
       ) : (

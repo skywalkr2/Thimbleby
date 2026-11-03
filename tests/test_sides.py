@@ -221,6 +221,9 @@ def test_a_business_name_another_project_has_is_refused_in_plain_words(api):
     personal = store.read().list("project")[0].data["name"]
     refused = client.post("/api/setup/business", json={"name": personal})
     assert refused.status_code == 409 and personal in refused.json()["detail"]
+    # A whole sentence with none of the engine's words (not "there is already a project called …").
+    assert refused.json()["detail"] == f"You already have something called {personal}. Choose a different name."
+    assert "project" not in refused.json()["detail"]
 
 
 # ---- which side a project, a person and an item are on ---------------------------------------------------------------

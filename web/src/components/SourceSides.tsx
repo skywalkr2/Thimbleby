@@ -110,7 +110,7 @@ export function SourceSides(props: { sources: Source[]; group?: boolean; what?: 
   return (
     <CheckboxGroup legend={props.group ? (props.account ? t("walkthrough.mail.sides.account.legend", { reads: kinds, account: props.account }) : t(`walkthrough.mail.sides.group.legend_${count}`)) : t("walkthrough.mail.sides.legend", { label: label })} data-source-sides={props.group ? undefined : mine[0]} data-sign-in-sides={props.group ? "" : undefined} aria-describedby={props.compact ? props.hintId : `${id}-hint`} className={props.compact ? "source-sides-compact" : undefined}>
       {options.map((o) => (
-        <label key={o.id} className="check-line">
+        <label key={o.id} className="side-chip" data-ticked={ticked(o.id) ? "true" : undefined}>
           <input type="checkbox" checked={ticked(o.id)} disabled={settings.isPending} onChange={(e) => change(o.id, e.target.checked)} />
           <span>{o.name}</span>
         </label>

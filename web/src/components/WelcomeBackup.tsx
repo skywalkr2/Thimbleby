@@ -9,6 +9,7 @@ import { backupText } from "../lib/backup";
 import { problemText } from "../lib/problem";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { ConfirmRemove } from "./ConfirmRemove";
 import { FolderPicker } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
@@ -42,6 +43,8 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
   const drives = useQuery({ queryKey: ["cloud-folders"], queryFn: api.cloudFolders, enabled: props.local, retry: false });
   const found = drives.data?.folders ?? [];
   const [choice, setChoice] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<{ path: string; where: string } | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
 
   const targets = settings.data?.items.find((i) => i.key === "storage.backups.targets")?.value;
   const existing = Array.isArray(targets)
@@ -98,6 +101,25 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
     }
   };
 
+  /** Stops backing up to one place; the copies already there stay. */
+  const remove = async () => {
+    if (!settings.data || !removing) return;
+    setRemoveBusy(true);
+    try {
+      const saved = await api.removeBackupFolder({ path: removing.path, fingerprint: settings.data.fingerprint });
+      await afterSave(saved);
+      setRemoving(null);
+      await client.invalidateQueries({ queryKey: ["status"] });
+      await client.invalidateQueries({ queryKey: ["backups"] });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+      setRemoving(null);
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    } finally {
+      setRemoveBusy(false);
+    }
+  };
+
   const missing = looking ? t("welcome.backup.looking") : ownFolder && !path.trim() ? t("welcome.backup.why_path") : !settings.data ? t("welcome.backup.getting_ready") : "";
   useContinue(hasSlot ? { run: save, label: t("welcome.backup.go"), disabled: !!missing, why: missing } : null);
 
@@ -108,8 +130,16 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
           <p className="what">{t("welcome.backup.current")}</p>
           <ul className="plain-list">
             {existing.map((e) => (
-              <li key={e.path}>
+              <li key={e.path} className="inline-field">
                 <span className="path">{e.label ? t("welcome.backup.target", { label: e.label, path: e.path }) : e.path}</span>
+                <Button
+                  size="sm"
+                  variant="quiet"
+                  aria-label={t("backups.remove_for", { where: e.label || e.path })}
+                  onClick={() => setRemoving({ path: e.path, where: e.label || e.path })}
+                >
+                  {t("backups.remove")}
+                </Button>
               </li>
             ))}
           </ul>
@@ -201,6 +231,17 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
           </Actions>
         )}
       </form>
+      {removing && (
+        <ConfirmRemove
+          title={t("backups.remove_title", { where: removing.where })}
+          go={t("backups.remove_go")}
+          busy={removeBusy}
+          onGo={() => void remove()}
+          onCancel={() => setRemoving(null)}
+        >
+          <p>{t("backups.remove_text")}</p>
+        </ConfirmRemove>
+      )}
       {picking && (
         <FolderPicker
           start={checked?.ok ? path : undefined}

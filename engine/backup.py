@@ -153,10 +153,15 @@ def _run(ws: Workspace, cfg: Config, now: datetime) -> dict[str, Any]:
                 }
             _save(ws, status)
             return status
+    done: set[Path] = set()
     for target in cfg.storage.backups.targets:
         key = target.path
         try:
             base = Path(target.path).expanduser()
+            # One folder named twice (two spellings of one place) gets one copy, not one for each.
+            if base.resolve() in done:
+                continue
+            done.add(base.resolve())
             if base.resolve().is_relative_to(ws.root.resolve()):
                 raise ValueError("the backup folder is inside the workspace, so it isn't a copy somewhere else")
             if not base.is_dir():
@@ -294,7 +299,7 @@ def overview(ws: Workspace, cfg: Config, now: datetime | None = None, limit: int
     them (at most `limit`), and whether backups run on their own."""
     settings = cfg.storage.backups
     status = _load(ws)
-    targets, copies = [], []
+    targets, copies, seen = [], [], set()
     for target in settings.targets:
         base = Path(target.path).expanduser()
         entry = status.get(target.path, {})
@@ -304,6 +309,11 @@ def overview(ws: Workspace, cfg: Config, now: datetime | None = None, limit: int
         if not base.is_dir():
             continue
         for folder in sorted((p for p in base.glob(f"{ws.root.name}-*") if p.is_dir()), reverse=True):
+            # A copy reached through two of the places (one inside the other, or the same folder twice) is listed once.
+            real = folder.resolve()
+            if real in seen:
+                continue
+            seen.add(real)
             copies.append(
                 Copy(
                     target.label or target.path,
