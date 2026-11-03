@@ -103,20 +103,55 @@ The self-check enforces it: a decision entry cites its change-log section ("Chan
   and fixing what a review finds there.
 - A subagent follows its brief literally, so every brief states the expected starting state (which files, records and
   functions exist) for the subagent to check before it builds on it.
-- **Every brief has a definition of done, and nothing else ends the work** (owner, 2026-11-03: "why are the processes
-  ending early"). Helpers followed their briefs literally and stopped early, because the briefs said "time-box … stop and
-  report", "fix where local and clear", "run once" and "report what's left".
-  - A brief never says those. It names the exact list the helper owns (item lines, rows or tests).
-  - Every item on that list must end as one of:
-    - fixed, with its test;
-    - judged wrong, with the evidence;
-    - needs the owner, with the choices;
-    - belongs to another named batch.
-    "Left" is not an ending.
-  - Every check and capture runs on the final code, after the last change.
-  - A helper whose context runs short writes a hand-off file and says "handing off". The main session starts a fresh
-    helper from it.
-  - A batch is sized to fit one helper's context: about 50 to 80 items or one shared component, not a whole area.
+- **Writing a brief** (owner, 2026-11-03: "why are the processes ending early"; "ensure the best practices in brief
+  writing is in claude.md"). Helpers follow a brief literally. They stopped early because briefs said "time-box … stop and
+  report", "fix where local and clear", "run once" and "report what's left". Every brief has these parts, in this order,
+  and is saved in the repository when work depends on it (for a review round, beside its item list):
+  1. **Goal and why**, in two or three sentences, with the bar it must meet (a score, a test, an exit criterion).
+  2. **Where and starting state:**
+     - the worktree command, or the existing worktree and what it already holds;
+     - the commit it starts from;
+     - the files, records, functions and earlier reports to check before building.
+  3. **The exact list it owns:** item lines by number, rows by id, or named tests. Not "the issues for these screens".
+     - Also **what is not its own**, and which named batch owns it, so nothing falls between two helpers.
+     - Shared fixes go to the batch that owns the shared component.
+  4. **Inputs:** the paths to read. For an independent review, also what not to read: our notes, other scores.
+  5. **The owner's decisions that apply,** quoted with their ids, so the helper never re-decides them.
+  6. **How to work:**
+     - check each claim in the picture or code before fixing;
+     - a capture fault is fixed in the drive, not the screen;
+     - measure before CSS;
+     - fix shared rules once, in the shared component;
+     - words go in the wording sheet;
+     - a test per fix, at the cheapest level that proves it.
+  7. **The definition of done; nothing else ends the work.** Every line it owns ends as one of:
+     - fixed, with its test;
+     - judged wrong, with the evidence;
+     - needs the owner, with the choices;
+     - belongs to another named batch.
+
+     "Left", "not done" and "not checked" are not endings. Every check and capture runs on the final code, after the last
+     change. There is no time-box and no "report where it stands". A helper whose context runs short writes a hand-off
+     file (open lines, files changed, checks still due) and reports "handing off", and the main session starts a fresh
+     helper from it.
+  8. **Checks,** as exact commands:
+     - its own `PW_PORT_OFFSET`;
+     - only the tests and browser projects it touched, never the full suites;
+     - long runs in the background, waited for once.
+  9. **Who else is working, and where:** the files or areas not to touch while they run.
+  10. **The report:** "Items closed", with each owned line copied exactly and its ending; each command's exit code; what
+      each captured picture shows; the claims it judged wrong.
+  11. **The standing don'ts:**
+      - no commit, push or message;
+      - no stopping processes by pattern;
+      - no bare `git stash`;
+      - no `timeout` around Playwright;
+      - no faketime;
+      - no weakened assertion;
+      - no allowlist entry;
+      - no sleep loops.
+
+  **Size:** about 50 to 80 items, or one shared component, so it fits one helper's context. A whole area is too much.
 - A subagent's "this can't be done" or "this needs a new op" comes back to the main session, never straight into a design
   change or a report.
 - **Quality and efficiency governance is the prime directive** (owner, 2026-10-13):
