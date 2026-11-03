@@ -27,28 +27,39 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 says what each batch covers, what passes at its end and how big it is. A batch is one meaningful piece of scope, with
 one full test run and one push (CLAUDE.md, "Usage and machine load").
 
-## Where things stand (2026-11-02)
+## Where things stand (2026-11-03)
 
-- **Built:** phases S and U (each box cites its tests), the audit of judgment calls (P110: the assistant decides, rules
-  narrow), the owner's install findings of 10/30 to 11/2 (P97 to P109, apart from what each row in `open-promises.md` says
-  is left), the visible rename to Thimbleby (P102), views (two roles in one side), days off for teams and people, dated
-  to-dos with "Needs a date", the follow-up line with what is due and a due-soon band, and the Schedule's Timeline (P111,
-  P112). The UI/UX sweep's tracking sheet is reconciled with the code (`sweep-04ffc21e-tracking.md`): all six P0s fixed.
+- **Now: U3, the gate before the UI/UX hand-back** (batch 0b below). The re-sweep's fixes (R1 to R6) and the visual rebuild
+  to the 4.6 mockups (V1 to V6) are built, and CI is green on c83736d. The first cold score of every screen (82 screens)
+  passed none at 4.0, and the audit of the tracking sheet found about 40 rows and 47 P2 items still open. The owner chose
+  to fix everything first (section 326). **The one list for this round is `docs/project/u3-gate/items.md`:** about 570
+  issues from the scores and 95 audit rows, each tagged with its batch, G1 to G6. Batches tick their items; the re-score
+  confirms them. The scores, the audit and the batch briefs sit beside it.
 - **Next, in order:**
-  1. **U2: every open P1 of the UI/UX sweep** (owner, 2026-11-02: "All open P1s first"): batches A (built), B (the
-     partly-done ones) and C (Files, Compare › Measure, Settings search, logo and colour), then one full test run, the fixes
-     it finds in one pass, and the push (CLAUDE.md: deliver the batch, test once, fix in one pass).
-  2. **The UI/UX re-review** (done 2026-11-03: the round didn't pass) **and U3,** its fixes and the visual rebuild to the reviewer's mockups, before the gate week (owner: "Everything, including visual").
+  1. **U3:** finish G1 to G6. Then the full suites, a fresh capture, and both cold scorers on every screen. The owner looks
+     at the side-by-sides and the scores, and says when to send.
+  2. **U4:** the functional designer's lessons (P118 to P123).
   3. **AI account hardening** (gate I-0a), each fix checked on a low-cost model first, then the owner's re-run (B-10).
-  4. **The owner's checks and the gate week** with its pass bar (P65; design 6.32): the laptop and phone exit checks
-     (B-6a, B-6b), an add-on installed from a real release host (B-5), the guided Gmail mailbox (P67), the real-mail re-run (P46).
-  5. **Phase I:** I-0 to I-0d, then **I-0p, the public repository** (P113), then the installers (I-1), then the tester
-     milestone with **the first public alpha** (I-2).
-- **Held, not dropped:** `includes:` (P62, P39) and the test kit cases P71 and P72 wait for the next plugin API release; the
-  writer walk-through (P70) waits for the writing pack to register its screens; the plan record, sprints and milestones on
-  the Timeline, and measures from another tool's data (P112 items 2 and 7) are the project management pack's (C2).
-- **Status lives here and in `open-promises.md`;** finished promises move to `open-promises-done.md`; finished roadmap work to
-  `roadmap-done.md`.
+  4. **The owner's checks and the gate week**, with its pass bar (P65; design 6.32): the laptop and phone exit checks
+     (B-6a, B-6b), an add-on installed from a real release host (B-5), the guided Gmail mailbox (P67), and the real-mail
+     re-run (P46).
+  5. **Phase I:** I-0 to I-0d, then I-0p, the public repository (P113), then the installers (I-1), then the tester
+     milestone with the first public alpha (I-2).
+- **Open boxes in phases B and S below are not all current.** Several were built under later batches and not ticked.
+  The reconcile happens after U3's fix round, under P125: every open box is checked against the code, then ticked with
+  its test and moved to `roadmap-done.md`, or kept with what is left.
+- **Held, not dropped:**
+  - `includes:` (P62, P39) and the test kit cases P71 and P72 wait for the next plugin API release.
+  - The writer walk-through (P70) waits for the writing pack to register its screens.
+  - The plan record, sprints and milestones on the Timeline, and measures from another tool's data (P112 items 2 and 7),
+    are the project management pack's (C2).
+- **Where work is tracked:**
+  - **This file:** the order of work and every open item.
+  - **`open-promises.md`:** every commitment.
+  - **`docs/project/u3-gate/items.md`:** the current round's item list.
+  - **`sweep-8ebf3cf-tracking.md`:** the reviewer's rows.
+  Finished promises move to `open-promises-done.md`, and finished roadmap work to `roadmap-done.md`. Nothing is
+  tracked only in a session or in a helper's scratch folder.
 
 ## How the order was set (decided; kept from 2026-10-20)
 
