@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { org, person, project } from "../lib/records-fixtures";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, snapshotOf, groupNames } from "../test-utils";
 import { People } from "./People";
 import { Projects } from "./Projects";
 import { SyncPanel } from "./SyncPanel";
@@ -114,11 +114,11 @@ test("the project form offers Inside (never itself), Language with the inherited
   renderApp(<Projects />);
   const dialog = await edit(user, "Book one", "Edit project");
   const inside = within(dialog).getByRole("combobox", { name: "Inside" });
-  expect(within(inside).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "The series"]);
+  expect(within(await snapshotOf(inside)).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "The series"]);
   expect(inside).toHaveValue("PRJ-1");
   const language = within(dialog).getByRole("combobox", { name: /Writing preferences/ });
   expect(language).toHaveValue("");
-  const labels = within(language).getAllByRole("option").map((o) => o.textContent);
+  const labels = within(await snapshotOf(language)).getAllByRole("option").map((o) => o.textContent);
   expect(labels[0]).toBe("Same as English (United Kingdom)");
   expect(labels.slice(1)).toEqual(["English (Australia)", "English (United Kingdom)", "English (United States)", "French (Canada)"]);
   expect(within(dialog).getByText("Choose a writing preference to override the parent project's choice.")).toBeInTheDocument();
@@ -140,9 +140,9 @@ test("a new project is inside a side: the choice is grouped by side with no None
   const dialog = await screen.findByRole("dialog", { name: "Add a project" });
   const inside = await within(dialog).findByRole("combobox", { name: "Inside" });
   await waitFor(() => expect(inside).toHaveValue("PRJ-firm"));
-  const group = within(inside).getByRole("group", { name: "Orchard Press" });
+  const group = within(await snapshotOf(inside)).getByRole("group", { name: "Orchard Press" });
   expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["Orchard Press", "The spring catalog"]);
-  expect(within(inside).queryByRole("option", { name: "None" })).toBeNull();
+  expect(within(await snapshotOf(inside)).queryByRole("option", { name: "None" })).toBeNull();
   await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Autumn list");
   await user.click(within(dialog).getByRole("button", { name: "Add a project" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects")).toBe(true));
@@ -156,9 +156,9 @@ test("with several sides a new project waits for the person to say which side, a
   await user.click(await screen.findByRole("button", { name: "Add a project" }));
   const dialog = await screen.findByRole("dialog", { name: "Add a project" });
   const inside = await within(dialog).findByRole("combobox", { name: "Inside" });
-  await waitFor(() => expect(within(inside).getAllByRole("group")).toHaveLength(2));
+  await waitFor(async () => expect(groupNames(await snapshotOf(inside))).toHaveLength(2));
   expect(inside).toHaveValue("");
-  expect(within(inside).queryByRole("option", { name: "None" })).toBeNull();
+  expect(within(await snapshotOf(inside)).queryByRole("option", { name: "None" })).toBeNull();
   await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Autumn list");
   expect(within(dialog).getByRole("button", { name: "Add a project" })).toBeDisabled();
   await user.selectOptions(inside, "PRJ-firm");
@@ -171,7 +171,7 @@ test("a project with no project around it names the workspace as what an empty l
   renderApp(<Projects />);
   await user.click(await screen.findByRole("button", { name: "Add a project" }));
   const language = await screen.findByRole("combobox", { name: /Writing preferences/ });
-  expect(within(language).getAllByRole("option")[0]).toHaveTextContent("Same as your usual setting");
+  expect(within(await snapshotOf(language)).getAllByRole("option")[0]).toHaveTextContent("Same as your usual setting");
 });
 
 test("choosing Same as for the language and clearing the budget send nothing, so the project inherits and has no cap", async () => {

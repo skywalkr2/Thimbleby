@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -315,7 +315,7 @@ export function HandIn(props: { onClose: () => void }) {
             onChange={(e) => setProject(e.target.value)}
           >
             <option value="">{t("handin.project.none")}</option>
-            <PlaceOptions projects={projects.data ?? []} />
+            {placeOptions(projects.data ?? [], t)}
           </Select>
           <span id="handin-project-hint" className="hint">
             {t("handin.project_hint")}

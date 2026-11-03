@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, snapshotOf, typeMoment } from "../test-utils";
 import { todayOn } from "../lib/dates";
 import { chooseFilters } from "../lib/open-items";
 import { dateAndTime } from "./ReminderLine";
@@ -275,13 +275,13 @@ test("project, person and state each narrow the list, from lists to pick from", 
   renderApp(<OpenItems />);
   await rows();
   const project = screen.getByRole("combobox", { name: "Project" });
-  expect(within(project).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor", "Lighthouse"]);
+  expect(within(await snapshotOf(project)).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor", "Lighthouse"]);
   await user.selectOptions(project, "PRJ-2");
   expect(await rows()).toHaveLength(1);
   expect((await rows())[0]).toHaveTextContent("Order the sample copies");
   await user.selectOptions(project, "");
   const who = screen.getByRole("combobox", { name: "Person" });
-  expect(within(who).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyone", "Quinn Sample", "Robin Sample"]);
+  expect(within(await snapshotOf(who)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyone", "Quinn Sample", "Robin Sample"]);
   await user.selectOptions(who, "P-1");
   expect((await rows()).map((r) => r.textContent).join(" ")).not.toContain("Order the sample copies");
   expect(await rows()).toHaveLength(3);
@@ -297,7 +297,7 @@ test("the state list for questions is its own", async () => {
   renderApp(<OpenItems />);
   await user.click(await screen.findByRole("button", { name: /Questions/ }));
   const state = await screen.findByRole("combobox", { name: "State" });
-  expect(within(state).getAllByRole("option").map((o) => o.textContent)).toEqual(["Any state", "Waiting on you", "Waiting on them", "Not sent yet", "For later"]);
+  expect(within(await snapshotOf(state)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Any state", "Waiting on you", "Waiting on them", "Not sent yet", "For later"]);
   await user.selectOptions(state, "yours");
   const list = await screen.findByRole("list", { name: "Open questions" });
   expect(within(list).getAllByRole("listitem")).toHaveLength(1);
@@ -479,8 +479,8 @@ test("with no side besides Personal the filters say Area, never Project, and the
   await rows();
   expect(await screen.findByRole("combobox", { name: "Area" })).toBeInTheDocument();
   expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
-  expect(within(screen.getByRole("combobox", { name: "Area" })).getByRole("option", { name: "All areas" })).toBeInTheDocument();
-  const states = within(screen.getByRole("combobox", { name: "State" })).getAllByRole("option").map((o) => o.textContent);
+  expect(within(await snapshotOf(screen.getByRole("combobox", { name: "Area" }))).getByRole("option", { name: "All areas" })).toBeTruthy();
+  const states = within(await snapshotOf(screen.getByRole("combobox", { name: "State" }))).getAllByRole("option").map((o) => o.textContent);
   expect(states).toEqual(expect.arrayContaining(["Overdue", "Not touched in a while", "Paused"]));
   expect(states).not.toContain("No owner");
 });
@@ -490,7 +490,7 @@ test("with a side the filters keep Project and No owner", async () => {
   renderApp(<OpenItems />);
   await rows();
   expect(screen.getByRole("combobox", { name: "Project" })).toBeInTheDocument();
-  expect(within(screen.getByRole("combobox", { name: "State" })).getByRole("option", { name: "No owner" })).toBeInTheDocument();
+  expect(within(await snapshotOf(screen.getByRole("combobox", { name: "State" }))).getByRole("option", { name: "No owner" })).toBeTruthy();
 });
 
 const BUSINESS = () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-side", kind: "business", name: "Orchard Press" }], chosen: "work" });
@@ -506,7 +506,7 @@ test("a to-do filed on a side and in none of its projects shows the side as not 
   expect(first).toHaveTextContent("Harbor");
   expect(second).toHaveTextContent("Orchard Press: not in a project");
   const choice = screen.getByRole("combobox", { name: "Project" });
-  expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor", "Lantern"]);
+  expect(within(await snapshotOf(choice)).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor", "Lantern"]);
   await user.selectOptions(choice, "PRJ-1");
   expect(await rows()).toHaveLength(1);
 });
@@ -654,7 +654,7 @@ test("a to-do's menu sets a reminder from a day and time, and a set one is said 
   expect(screen.queryByRole("menuitem", { name: "Remove reminder" })).toBeNull();
   await user.click(screen.getByRole("menuitem", { name: "Remind me…" }));
   const box = await screen.findByLabelText("Remind me at");
-  fireEvent.change(box, { target: { value: "2026-10-21T10:30" } });
+  await typeMoment(userEvent.setup(), box, "2026-10-21T10:30");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/A-1")?.body).toEqual({ at: "2026-10-21T10:30" }));
   first.unmount();

@@ -27,7 +27,7 @@ export function ReassignForm(props: { action: Target; from?: string; onDone?: ()
   const { action } = props;
   const [from, setFrom] = useState(props.from ?? (action.owners.length === 1 ? action.owners[0].person : ""));
   useEffect(() => {
-    box.current?.querySelector<HTMLElement>("select")?.focus();
+    box.current?.querySelector<HTMLElement>("[data-ui=select]")?.focus();
   }, []);
   const choose = async (to: string) => {
     if (!to || !from && action.owners.length > 0) return;

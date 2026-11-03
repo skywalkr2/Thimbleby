@@ -1,13 +1,49 @@
-/* A date or time: the shared control box at the width a date needs, tabular figures, a picker button that is a real target. */
-.date {
-  appearance: none; -webkit-appearance: none;
-  width: 100%; max-width: var(--field-date); min-width: 0; min-height: var(--input-h);
+/* A date box: the shared control box at the width a date needs, with the calendar button inside its right edge. The calendar is a
+   raised panel with a month heading, the weekday names and a grid of days; today has a ring, the chosen day a fill, and a day off
+   an underline, so no state is a colour alone. */
+.wrap { display: block; width: 100%; max-width: var(--field-date); min-width: 0; }
+.row { position: relative; display: block; }
+.input {
+  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; min-height: var(--input-h);
   border: 1px solid var(--border-strong); border-radius: var(--radius-md);
   background-color: var(--surface); color: var(--text);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-10) var(--space-2) var(--space-3);
   font-size: var(--text-md); line-height: var(--lh-md); font-variant-numeric: tabular-nums;
 }
-.both { max-width: var(--field-name); }
-.date:disabled { background-color: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
-.date::-webkit-calendar-picker-indicator { cursor: pointer; border-radius: var(--radius-sm); padding: var(--space-1); margin-inline-start: var(--space-1); }
-.date::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+.input[aria-invalid="true"] { border-color: var(--danger); }
+.input:disabled { background-color: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
+.open { position: absolute; top: 0; right: 0; bottom: 0; width: var(--input-h); display: grid; place-items: center; border: 0; background: none; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-md); }
+.open:hover:not(:disabled) { color: var(--text); }
+.open:disabled { color: var(--text-subtle); cursor: not-allowed; }
+/* A day and a time side by side; they wrap under each other in a narrow window. */
+.both { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-2); max-width: var(--field-name); min-width: 0; }
+.both > :first-child { flex: 1 1 var(--field-date); }
+.both > :last-child { flex: 0 1 140px; }
+.problem { margin: var(--space-1) 0 0; }
+
+.popover { max-width: calc(100vw - var(--space-4)); }
+.popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }
+@keyframes pop { from { opacity: 0; transform: scale(0.98); } }
+.dialog { outline: none; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-2), var(--overlay-edge); padding: var(--space-3); }
+.calendar { width: 17.5rem; max-width: 100%; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+.title { flex: 1; margin: 0; text-align: center; font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.step { width: var(--target-icon); height: var(--target-icon); display: grid; place-items: center; border: 0; border-radius: var(--radius-full); background: none; color: var(--text-muted); cursor: pointer; }
+.step:hover { background: var(--surface-hover); color: var(--text); }
+.step[data-disabled] { color: var(--text-subtle); cursor: not-allowed; }
+.back svg { transform: rotate(180deg); }
+.grid { width: 100%; border-collapse: collapse; }
+.weekday { padding: var(--space-1) 0; font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-muted); text-align: center; }
+.cell {
+  display: grid; place-items: center; width: 2.25rem; height: 2.25rem; margin: auto; border-radius: var(--radius-full);
+  font-size: var(--text-sm); font-variant-numeric: tabular-nums; cursor: pointer; outline: none;
+}
+.cell[data-hovered] { background: var(--surface-hover); }
+.cell[data-today] { box-shadow: inset 0 0 0 1.5px var(--border-strong); font-weight: var(--weight-semibold); }
+.cell[data-off] { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+.cell[data-outside-month] { color: var(--text-subtle); }
+.cell[data-selected] { background: var(--accent); color: var(--text-on-accent); font-weight: var(--weight-semibold); }
+.cell[data-disabled], .cell[data-unavailable] { color: var(--text-subtle); cursor: not-allowed; }
+.cell[data-unavailable], .cell[data-disabled]:not([data-outside-month]) { text-decoration: line-through; }
+.cell[data-focus-visible] { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
+.legend { margin: var(--space-2) 0 0; font-size: var(--text-xs); color: var(--text-muted); }

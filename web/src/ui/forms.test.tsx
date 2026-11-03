@@ -69,7 +69,7 @@ test("a disabled select stays a select and says nothing by opacity", () => {
   expect(screen.getByRole("combobox", { name: "Locked" })).toBeDisabled();
 });
 
-test("a date field is a date, a time or a date with a time, marked as the shared control", () => {
+test("a date field is a date, a time or a date with a time, drawn by the app and marked as the shared control", () => {
   const { container } = renderApp(
     <>
       <DateField aria-label="Day" defaultValue="2026-10-28" />
@@ -77,10 +77,15 @@ test("a date field is a date, a time or a date with a time, marked as the shared
       <DateField aria-label="When" kind="datetime-local" />
     </>,
   );
-  expect(screen.getByLabelText("Day")).toHaveAttribute("type", "date");
-  expect(screen.getByLabelText("Start")).toHaveAttribute("type", "time");
-  expect(screen.getByLabelText("When")).toHaveAttribute("type", "datetime-local");
-  expect(container.querySelectorAll('[data-ui="date"]')).toHaveLength(3);
+  // Never the browser's own date, time or date-and-time input: a text box with the app's calendar or list of times.
+  expect(container.querySelector('input[type="date"], input[type="time"], input[type="datetime-local"]')).toBeNull();
+  const day = screen.getByRole("textbox", { name: "Day" });
+  expect(day).toHaveAttribute("data-kind", "date");
+  expect(day).toHaveValue("Oct 28, 2026");
+  expect(screen.getByRole("combobox", { name: "Start" })).toHaveAttribute("data-kind", "time");
+  expect(screen.getByRole("textbox", { name: "When" })).toHaveAttribute("data-kind", "date");
+  expect(screen.getByRole("combobox", { name: "Time of day" })).toHaveAttribute("data-kind", "time");
+  expect(container.querySelectorAll('[data-ui="date"]')).toHaveLength(4);
 });
 
 test("a file drop holds the real file input, says what to do, then names the chosen file", async () => {

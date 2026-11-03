@@ -1,6 +1,7 @@
 // Rendering components against a fake API: routes map "METHOD path" to a handler that returns the JSON body.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "./lib/api";
 import type { ReactNode } from "react";
@@ -150,3 +151,67 @@ export function setupView(
 export function besidePane(): void {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: /min-width:\s*1024px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
 }
+
+/**
+ * The choices of the app's list to pick from (ui/Select), as a copy of its listbox. The list is a button that opens a panel, so
+ * its options are not on the page until it is opened: this opens it, takes a copy of the open listbox (the options with their
+ * words, values and selected marks) and closes it again, so a test reads what a list offers the way it read a browser select.
+ */
+export async function snapshotOf(select: HTMLElement): Promise<HTMLElement> {
+  const user = userEvent.setup();
+  const open = select.getAttribute("aria-expanded") === "true";
+  if (!open) await user.click(select);
+  const list = document.getElementById(select.getAttribute("aria-controls") ?? "");
+  if (!list) throw new Error("The list did not open.");
+  const copy = list.cloneNode(true) as HTMLElement;
+  // In a fragment of its own, so the names that point at other parts of the list (a group's heading) can be found.
+  document.createDocumentFragment().appendChild(copy);
+  await user.keyboard("{Escape}");
+  return copy;
+}
+
+/** The options of a list, in order, as copies (see `snapshotOf`). */
+export async function optionsOf(select: HTMLElement): Promise<HTMLElement[]> {
+  return Array.from((await snapshotOf(select)).querySelectorAll<HTMLElement>('[role="option"]'));
+}
+
+// The app's own date and time boxes (ui/DateField, TimeField) show a day and a time the way the reader's locale writes them and
+// are typed into the same way, so a test names them by what a person does: type a day, type a time, read what the box holds.
+import { parseDay, parseTime } from "./lib/date-input";
+import { todayOn } from "./lib/dates";
+
+/** The ISO day a date box shows ("Oct 28, 2026" is "2026-10-28"); empty when it shows none. */
+export function dayValue(box: HTMLElement): string {
+  const text = (box as HTMLInputElement).value;
+  return text ? (parseDay(text, { today: todayOn(new Date()) }) ?? `unreadable: ${text}`) : "";
+}
+
+/** The "HH:MM" a time box shows ("9:30 AM" is "09:30"); empty when it shows none. */
+export function timeValue(box: HTMLElement): string {
+  const text = (box as HTMLInputElement).value;
+  return text ? (parseTime(text) ?? `unreadable: ${text}`) : "";
+}
+
+/** The time box beside a date box that has one (a date with a time). */
+export const timeBesideDay = (day: HTMLElement): HTMLElement => (day.closest('[data-ui="datetime"]') as HTMLElement).querySelector('[data-kind="time"]') as HTMLElement;
+
+/** The "YYYY-MM-DDTHH:MM" a date-with-time field holds, read from the day box that has the label. */
+export function momentValue(day: HTMLElement): string {
+  const d = dayValue(day);
+  const t = timeValue(timeBesideDay(day));
+  return d && t ? `${d}T${t}` : "";
+}
+
+/** Types a date and a time ("2026-11-03T14:00") into the two boxes of a date-with-time field, given the day box. */
+export async function typeMoment(user: ReturnType<typeof userEvent.setup>, day: HTMLElement, iso: string): Promise<void> {
+  const time = timeBesideDay(day);
+  await user.clear(day);
+  await user.type(day, iso.slice(0, 10));
+  await user.clear(time);
+  await user.type(time, iso.slice(11, 16));
+  await user.tab();
+}
+
+/** The headings of the groups a copy of a list holds (see `snapshotOf`), in order. */
+export const groupNames = (snapshot: HTMLElement): string[] =>
+  Array.from(snapshot.querySelectorAll<HTMLElement>('[role="group"]')).map((g) => snapshot.querySelector(`[id="${g.getAttribute("aria-labelledby")}"]`)?.textContent ?? "");

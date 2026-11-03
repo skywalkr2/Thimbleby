@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { learnedLine, project, proposal } from "../lib/learned-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { LearnedLines } from "./Learned";
 
 function show(lines: S["LearnedLine"][], routes: Routes = {}, props: { changesets?: string[]; records?: string[] } = { changesets: ["CS-1"] }) {
@@ -27,7 +27,7 @@ test("the line says what was learned, with the narrowest reach picked, and Keep 
   const line = await screen.findByText("Interior files go to the editor before the printer.");
   expect(line.closest("p")).toHaveTextContent("Learned: Interior files go to the editor before the printer.");
   const reach = await screen.findByRole("combobox", { name: "Keep for" });
-  await waitFor(() => expect(within(reach).getAllByRole("option")[0]).toHaveTextContent("Filing notes on Spring launch"));
+  await waitFor(async () => expect(within(await snapshotOf(reach)).getAllByRole("option")[0]).toHaveTextContent("Filing notes on Spring launch"));
   expect(reach).toHaveValue("proposed");
   await user.click(screen.getByRole("button", { name: "Keep" }));
   await waitFor(() => expect(posted(calls, "POST knowledge/LES-1/keep")).toEqual({ read_version: 3 }));
@@ -40,8 +40,8 @@ test("widening the reach is one pick from a list, and Keep sends that target", a
   const user = userEvent.setup();
   const calls = show([learnedLine()]);
   const reach = await screen.findByRole("combobox", { name: "Keep for" });
-  await waitFor(() => expect(within(reach).getAllByRole("option")).toHaveLength(4));
-  expect(within(reach).getAllByRole("option").map((o) => o.textContent)).toEqual([
+  await waitFor(async () => expect(within(await snapshotOf(reach)).getAllByRole("option")).toHaveLength(4));
+  expect(within(await snapshotOf(reach)).getAllByRole("option").map((o) => o.textContent)).toEqual([
     "Filing notes on Spring launch",
     "Filing notes on every project",
     "All kinds of work on Spring launch",

@@ -387,13 +387,13 @@ test("Set the access key's expiry date sends the day, and clearing it sends the 
   });
   open();
   await menu(user, "Spare", "Set the access key's expiry date");
-  const field = await screen.findByLabelText(/Expiry date, if known/);
-  expect(field).toHaveAttribute("type", "date");
+  const field = await screen.findByRole("textbox", { name: /Expiry date, if known/ });
+  expect(field).toHaveAttribute("data-kind", "date");
   await user.type(field, "2027-02-15");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", credential_expires: "2027-02-15" }));
   await menu(user, "Dated", "Set the access key's expiry date");
-  await user.clear(await screen.findByLabelText(/Expiry date, if known/));
+  await user.clear(await screen.findByRole("textbox", { name: /Expiry date, if known/ }));
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/dated")?.body).toEqual({ fingerprint: "fp-1", clear_credential_expires: true }));
 });
@@ -408,7 +408,7 @@ test("replacing the key takes the date typed with it, and drops the old key's da
   open();
   await menu(user, "Spare", "Replace access key");
   await user.type(await screen.findByLabelText("New access key"), "fresh");
-  await user.type(screen.getByLabelText(/Expiry date, if known/), "2027-03-01");
+  await user.type(screen.getByRole("textbox", { name: /Expiry date, if known/ }), "2027-03-01");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", key: "fresh", credential_expires: "2027-03-01" }));
   await menu(user, "Dated", "Replace access key");

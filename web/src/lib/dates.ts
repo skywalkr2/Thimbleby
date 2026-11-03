@@ -217,3 +217,26 @@ export function monthYear(iso: string): string {
 export function dayOfMonth(iso: string): number {
   return dateOf(iso).getDate();
 }
+
+const formats = new Map<string, Intl.DateTimeFormat>();
+/** A formatter for the locale given (the computer's when none), kept so a box that writes a day on every keystroke makes it once. */
+function formatter(locale: string | undefined, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale ?? ""}|${JSON.stringify(options)}`;
+  let found = formats.get(key);
+  if (!found) {
+    found = new Intl.DateTimeFormat(locale, options);
+    formats.set(key, found);
+  }
+  return found;
+}
+
+/** A day as a date box shows it, "Oct 28, 2026": the month, the day and the year, in the reader's language. */
+export function fieldDay(iso: string | null | undefined, locale?: string): string {
+  return iso ? formatter(locale, { month: "short", day: "numeric", year: "numeric" }).format(dateOf(iso)) : "";
+}
+
+/** A time of day written as HH:MM, in the reader's own clock (12-hour or 24-hour): "9:30 AM" or "09:30". */
+export function timeOfDay(hhmm: string | null | undefined, locale?: string): string {
+  const found = /^(\d{2}):(\d{2})/.exec(hhmm ?? "");
+  return found ? formatter(locale, { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
+}

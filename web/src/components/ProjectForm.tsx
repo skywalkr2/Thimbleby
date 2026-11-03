@@ -15,7 +15,7 @@ import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { Field, list } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { SideDrawer } from "./SideForm";
 import { ValueSelect } from "./ValueSelect";
 import { Select } from "../ui/Select";
@@ -245,7 +245,7 @@ function ProjectFormDrawer(props: {
       <FormField id={`jw-${key}`} label={t("setup.inside")}>
         <Select id={`jw-${key}`} value={inside} required={mustChoose} onChange={(e) => setParent(e.target.value)}>
           {mustChoose ? <option value="" disabled>{t("setup.inside_choose")}</option> : (sides.length === 0 || !placed) && <option value="">{t("setup.inside_none")}</option>}
-          <PlaceOptions projects={others} asParent />
+          {placeOptions(others, t, true)}
         </Select>
         {movedTo && <span className="hint">{tn("filing.visible", 1, { side: movedTo })}</span>}
       </FormField>

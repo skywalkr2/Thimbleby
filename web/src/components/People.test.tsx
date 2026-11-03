@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { org, person, project } from "../lib/records-fixtures";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { People } from "./People";
 
 const firstOrg = org("ORG-1", "Org one", 2);
@@ -123,7 +123,7 @@ test("the person form chooses the organization by name and sends its id; undo pu
   const dialog = await edit(user, "Ana Person");
   const select = within(dialog).getByRole("combobox", { name: /Organization/ });
   await waitFor(() => expect(select).toHaveValue(firstOrg.id));
-  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "Org one", "Org two", "Add an organization…"]);
+  expect(within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "Org one", "Org two", "Add an organization…"]);
   await user.selectOptions(select, secondOrg.id);
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST people/P-1")).toBe(true));

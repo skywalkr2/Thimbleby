@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
 import { nextMonday } from "../lib/dates";
-import { besidePane, fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { DecisionRow, FollowUps } from "./FollowUps";
 
 // The window is wide, so a person's detail stands beside the list (design 7.13).
@@ -1026,7 +1026,7 @@ test("Hold for later has one choice for next Monday: a day hold for the coming M
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
   const choice = screen.getByRole("combobox", { name: "Hold it for" });
-  await user.selectOptions(choice, within(choice).getByRole("option", { name: /^Until next Monday, / }));
+  await user.selectOptions(choice, within(await snapshotOf(choice)).getByRole("option", { name: /^Until next Monday, / }));
   expect(screen.queryByLabelText("Send it on")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Hold for later" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: { on: nextMonday(new Date()) } }));
@@ -1053,10 +1053,10 @@ test("Hold for later offers the meetings the calendar keeps entries for, a serie
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
   const choice = await screen.findByRole("combobox", { name: "Hold it for" });
-  await waitFor(() => expect(within(choice).getAllByRole("option")).toHaveLength(4));
-  expect(within(choice).getByRole("option", { name: "Print sync, the next one" })).toBeInTheDocument();
-  expect(within(choice).getByRole("option", { name: /^One-off review, / })).toBeInTheDocument();
-  expect(within(choice).queryByRole("option", { name: /No entry|Called off/ })).toBeNull();
+  await waitFor(async () => expect(within(await snapshotOf(choice)).getAllByRole("option")).toHaveLength(4));
+  expect(within(await snapshotOf(choice)).getByRole("option", { name: "Print sync, the next one" })).toBeTruthy();
+  expect(within(await snapshotOf(choice)).getByRole("option", { name: /^One-off review, / })).toBeTruthy();
+  expect(within(await snapshotOf(choice)).queryByRole("option", { name: /No entry|Called off/ })).toBeNull();
   await user.selectOptions(choice, "series:SER-1");
   expect(screen.queryByLabelText("Send it on")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Hold for later" }));
@@ -1532,7 +1532,7 @@ test("each draft says which mailbox it is sent from: a list to pick from when se
   await user.click(await screen.findByRole("button", { name: "Robin Sample" }));
   const pane = await findPane();
   const pick = within(pane).getByRole("combobox", { name: "Send to Robin Sample from" });
-  expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["alex@example.com", "blake@example.com", "casey@example.com"]);
+  expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual(["alex@example.com", "blake@example.com", "casey@example.com"]);
   expect(pick).toHaveValue("blake@example.com");
   // The pick is remembered for that person on this browser.
   await user.selectOptions(pick, "casey@example.com");

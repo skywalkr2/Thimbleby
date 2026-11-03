@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, Refuse, renderApp } from "../test-utils";
+import { fakeApi, Refuse, renderApp, snapshotOf, optionsOf } from "../test-utils";
 import { HandIn } from "./HandIn";
 
 const handed = () => ({ request: "REQ-1", source: null });
@@ -99,7 +99,7 @@ test("the choice can be made from the keyboard", async () => {
 test("how sensitive it is starts at the usual and sends nothing about it", async () => {
   const { user, calls } = await setup();
   expect(screen.getByLabelText("Who may see this?")).toHaveValue("");
-  expect(screen.getByRole("option", { name: "Normal" })).toBeInTheDocument();
+  expect(within(await snapshotOf(screen.getByLabelText("Who may see this?"))).getByRole("option", { name: "Normal" })).toBeTruthy();
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "", pasted: "Subject: dates" }));
@@ -109,7 +109,7 @@ test("how sensitive it is starts at the usual and sends nothing about it", async
 test("Confidential and Private are sent as the level the person chose, in plain words", async () => {
   const { user, calls } = await setup();
   const choice = screen.getByLabelText("Who may see this?");
-  expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual([
+  expect(within(await snapshotOf(choice)).getAllByRole("option").map((o) => o.textContent)).toEqual([
     "Normal",
     "Confidential",
     "Private",
@@ -134,8 +134,8 @@ test("the project choice starts at not sure, lists every project with sub-projec
   const choice = screen.getByLabelText("Where does it belong?");
   expect(choice).toHaveValue("");
   expect(choice).toHaveAccessibleDescription("Helps Helper file things in the right place.");
-  await waitFor(() =>
-    expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual([
+  await waitFor(async () =>
+    expect(within(await snapshotOf(choice)).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "Not sure / several",
       "Harbor",
       "Harbor › Lighthouse",
@@ -152,7 +152,7 @@ test("the project choice starts at not sure, lists every project with sub-projec
 test("a chosen project is sent by its id, and choosing not sure again takes it back", async () => {
   const { user, calls } = await setup();
   const choice = screen.getByLabelText("Where does it belong?");
-  await screen.findByRole("option", { name: "Harbor › Lighthouse" });
+  await waitFor(async () => expect((await optionsOf(choice)).map((o) => o.textContent)).toContain("Harbor › Lighthouse"));
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.selectOptions(choice, "Harbor › Lighthouse");
   await user.selectOptions(choice, "Not sure / several");

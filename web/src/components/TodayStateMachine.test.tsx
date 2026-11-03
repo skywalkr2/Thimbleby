@@ -9,7 +9,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { RestartProvider } from "../lib/restart";
 import { forgetLine, useTodayCount } from "../lib/today";
-import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
+import { fakeApi, renderApp, statusFixture, type Routes, optionsOf } from "../test-utils";
 import { Today } from "./Today";
 
 type Line = S["QueueLineView"];
@@ -166,7 +166,7 @@ test("a person's actions on Today never add a line, every item keeps one line, a
   // Answer the owner question.
   await user.click(screen.getByRole("button", { name: "Pick an owner" }));
   const picker = await screen.findByRole("combobox", { name: "Who owns this?" });
-  await screen.findByRole("option", { name: "Robin Sample" });
+  await waitFor(async () => expect((await optionsOf(picker)).map((o) => o.textContent)).toContain("Robin Sample"));
   await user.selectOptions(picker, "Robin Sample");
   await user.click(screen.getByRole("button", { name: "Add the to-do" }));
   await waitFor(() => expect(server.lines).not.toContain(owner));

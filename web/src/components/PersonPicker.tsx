@@ -26,7 +26,7 @@ export function PersonPicker(props: {
 }) {
   const { t } = useWords();
   const id = useId();
-  const select = useRef<HTMLSelectElement>(null);
+  const select = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
   const suggestedIds = new Set(props.suggested.map((o) => o.id));
   const others = props.people.filter((p) => !suggestedIds.has(p.id));

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, snapshotOf, dayValue } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 const KIND = "demo/chapter";
@@ -273,15 +273,15 @@ test("Edit details offers the right control for each editable field and skips th
   expect(within(form).getByRole("textbox", { name: "Title" })).toBeRequired();
   expect(within(form).getByRole("spinbutton", { name: "Pages" })).toHaveValue(12);
   expect(within(form).getByRole("checkbox", { name: "Final" })).not.toBeChecked();
-  expect(within(form).getByLabelText("Due date")).toHaveAttribute("type", "date");
-  expect(within(form).getByLabelText("Due date")).toHaveValue("2026-11-01");
+  expect(within(form).getByRole("textbox", { name: "Due date" })).toHaveAttribute("data-kind", "date");
+  expect(dayValue(within(form).getByRole("textbox", { name: "Due date" }))).toBe("2026-11-01");
   const state = within(form).getByRole("combobox", { name: "State" });
-  expect(within(state).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
+  expect(within(await snapshotOf(state)).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
   const mood = within(form).getByRole("combobox", { name: "Mood" });
-  expect(within(mood).getAllByRole("option").map((o) => o.textContent)).toEqual(["calm", "tense"]);
+  expect(within(await snapshotOf(mood)).getAllByRole("option").map((o) => o.textContent)).toEqual(["calm", "tense"]);
   expect(within(form).getByRole("combobox", { name: "Owner" })).toHaveValue("P-2");
   const book = within(form).getByRole("combobox", { name: "Book" });
-  expect(within(book).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "First book", "Second book", "Add a project…"]);
+  expect(within(await snapshotOf(book)).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "First book", "Second book", "Add a project…"]);
   expect(within(form).getByRole("textbox", { name: /Tags/ })).toHaveValue("one\ntwo");
   for (const skipped of ["Id", "Link", "Locked", "Body text", "Raw"]) expect(within(form).queryByLabelText(skipped)).toBeNull();
 });
@@ -347,7 +347,7 @@ test("a number with a known set of values is a list of days to pick from, and th
   const form = await openForm(user);
   const lead = within(form).getByRole("combobox", { name: "Days of notice" });
   expect(lead).toHaveValue("2");
-  expect(within(lead).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "0", "1", "2", "3"]);
+  expect(within(await snapshotOf(lead)).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "0", "1", "2", "3"]);
   expect(within(form).queryByRole("spinbutton")).toBeNull();
   await user.selectOptions(lead, "3");
   await user.click(within(form).getByRole("button", { name: "Save" }));
@@ -438,8 +438,8 @@ test("a field bound to a value list is a list choice, with the record's dropped 
   );
   const form = await openForm(user);
   const stage = within(form).getByRole("combobox", { name: "Stage label" });
-  await waitFor(() =>
-    expect(within(stage).getAllByRole("option").map((o) => o.textContent)).toEqual([
+  await waitFor(async () =>
+    expect(within(await snapshotOf(stage)).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "Not set",
       "Draft",
       "Done",
@@ -451,7 +451,7 @@ test("a field bound to a value list is a list choice, with the record's dropped 
   expect(within(form).getByText("Where it stands.")).toBeInTheDocument();
   // A plain choice still offers just its own options.
   const state = within(form).getByRole("combobox", { name: "State" });
-  expect(within(state).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
+  expect(within(await snapshotOf(state)).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
   await user.selectOptions(stage, "Done");
   await user.click(within(form).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST records/edit")).toBe(true));

@@ -163,7 +163,7 @@ test.describe("mail and calendar acts", () => {
     ] as const) {
       await page.locator("[data-page-header]").getByRole("button", { name: /More actions for/ }).click();
       await page.getByRole("menuitem", { name: item }).click();
-      const field = page.locator(`[data-act-form="${form}"]`).locator("input, select, textarea").first();
+      const field = page.locator(`[data-act-form="${form}"]`).locator("input, [data-ui=select], textarea").first();
       await expect(field).toBeVisible();
       await expect(field).toBeFocused();
       // And it stays there: the menu's own hand-back comes a frame later.

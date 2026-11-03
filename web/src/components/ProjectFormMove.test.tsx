@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { project } from "../lib/records-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { ProjectDrawer } from "./ProjectForm";
 
 // Moving a project into a side's work with Edit's "Inside" says what that changes, the same warning as every other way of
@@ -26,8 +26,8 @@ test("choosing a place inside a side says the project will be visible with that 
   renderApp(<ProjectDrawer project={MINE} onClose={() => {}} />);
   const inside = await screen.findByRole("combobox", { name: "Inside" });
   expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
-  await user.selectOptions(inside, await within(inside).findByRole("option", { name: /Orchard Press/ }));
+  await user.selectOptions(inside, await within(await snapshotOf(inside)).findByRole("option", { name: /Orchard Press/ }));
   expect(await screen.findByText("This item will be visible with Orchard Press's work.")).toBeInTheDocument();
-  await user.selectOptions(inside, within(inside).getByRole("option", { name: "Home" }));
+  await user.selectOptions(inside, within(await snapshotOf(inside)).getByRole("option", { name: "Home" }));
   expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
 });

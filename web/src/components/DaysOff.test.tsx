@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 // A team's days off and a person's time away (design 5.1, 7.14): each period is a row with Edit and Remove, Add opens a form
@@ -75,9 +75,9 @@ test("adding days off opens a form with the cursor in its first date, and saving
   fireEvent.click(within(section).getByRole("button", { name: "Add days off" }));
   const first = await within(section).findByLabelText("First day");
   expect(first).toHaveFocus();
-  expect(first).toHaveAttribute("type", "date");
+  expect(first).toHaveAttribute("data-kind", "date");
   fireEvent.change(first, { target: { value: "2027-02-01" } });
-  fireEvent.change(within(section).getByLabelText(/Last day/), { target: { value: "2027-02-03" } });
+  fireEvent.change(within(section).getByRole("textbox", { name: /Last day/ }), { target: { value: "2027-02-03" } });
   fireEvent.change(within(section).getByLabelText(/What it is/), { target: { value: "Conference" } });
   fireEvent.click(within(section).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveLength(1));
@@ -95,7 +95,7 @@ test("the last day can't come before the first, so there is nothing to save", as
   const section = await teamPage();
   fireEvent.click(within(section).getByRole("button", { name: "Add days off" }));
   fireEvent.change(await within(section).findByLabelText("First day"), { target: { value: "2027-02-05" } });
-  fireEvent.change(within(section).getByLabelText(/Last day/), { target: { value: "2027-02-01" } });
+  fireEvent.change(within(section).getByRole("textbox", { name: /Last day/ }), { target: { value: "2027-02-01" } });
   expect(within(section).getByRole("button", { name: "Save" })).toBeDisabled();
   expect(within(section).getByText("The last day can't come before the first.")).toBeInTheDocument();
 });
@@ -122,9 +122,9 @@ test("the holiday calendar and the working days are lists to pick from", async (
   const sent: Sent[] = [];
   const section = await teamPage(sent);
   const calendar = within(section).getByLabelText("Holiday calendar");
-  expect(calendar.tagName).toBe("SELECT");
-  expect(within(calendar as HTMLElement).getAllByRole("option").map((o) => o.textContent)).toEqual(["The workspace's calendar", "en-GB", "en-US"]);
-  fireEvent.change(calendar, { target: { value: "" } });
+  expect(calendar).toHaveAttribute("data-ui", "select");
+  expect(within(await snapshotOf(calendar as HTMLElement)).getAllByRole("option").map((o) => o.textContent)).toEqual(["The workspace's calendar", "en-GB", "en-US"]);
+  await userEvent.setup().selectOptions(calendar, "");
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0].fields).toEqual({ holiday_calendar: null });
   const friday = within(section).getByRole("checkbox", { name: "Friday" });

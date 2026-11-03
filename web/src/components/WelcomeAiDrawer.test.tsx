@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { WelcomeAi } from "./WelcomeAi";
 
 /** The amount the person asked to be asked above. */
@@ -345,10 +345,10 @@ test("the pickers list the models with what each costs", async () => {
   await keyed(user);
   const details = await openModels(user);
   const everyday = within(details).getByLabelText("AI model for everyday work");
-  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["model-a", "model-b"]);
+  expect(within(await snapshotOf(everyday)).getAllByRole("option").map((o) => o.textContent)).toEqual(["model-a", "model-b"]);
   expect(within(details).getByText(/Reads up to about 200,000 text units at once\. Per million text units: \$3\.00 to read, \$15\.00 to write\./)).toBeInTheDocument();
   const harder = within(details).getByLabelText("AI model for harder work (optional)");
-  expect(within(harder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Same as the everyday model", "model-a", "model-b"]);
+  expect(within(await snapshotOf(harder)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Same as the everyday model", "model-a", "model-b"]);
 });
 
 test("a long list of models can be narrowed by typing, and when nothing matches the button says so", async () => {
@@ -361,7 +361,7 @@ test("a long list of models can be narrowed by typing, and when nothing matches 
   const everyday = within(details).getByLabelText("AI model for everyday work");
   expect(everyday).toHaveValue("model-00");
   await user.type(within(details).getByLabelText("Find a model"), "model-1");
-  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(Array.from({ length: 10 }, (_, i) => `model-${10 + i}`));
+  expect(within(await snapshotOf(everyday)).getAllByRole("option").map((o) => o.textContent)).toEqual(Array.from({ length: 10 }, (_, i) => `model-${10 + i}`));
   expect(everyday).toHaveValue("model-10");
   await user.clear(within(details).getByLabelText("Find a model"));
   await user.type(within(details).getByLabelText("Find a model"), "zzz");

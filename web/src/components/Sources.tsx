@@ -9,14 +9,14 @@ import { useAct } from "../lib/act";
 import { whenText as when } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { startCursor } from "../lib/cursor";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { useAddonName } from "../lib/addon-names";
 import { formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
-import { signInGroups, signInNeed, sourceState, type SignInGroup } from "../lib/connections";
+import { accountStates, accountsNeedingYou, signInNeed, sourceState, type AccountState } from "../lib/connections";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { settingsView, viewHref } from "../lib/views";
@@ -30,8 +30,9 @@ import { MissingAddon, addonOfConnector } from "./MissingAddon";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns, addonOfSignIn } from "./SignIns";
+import { AccountRow } from "./AccountRow";
+import { RowList } from "../ui/RowList";
 import { SourceSides } from "./SourceSides";
-import { useSignInWindow } from "../lib/sign-in-window";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
@@ -43,6 +44,7 @@ import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 import { FormBlock } from "../ui/FormBlock";
 import { Pill } from "../ui/Pill";
+import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -280,7 +282,7 @@ export function Sources(props: {
           />
         )}
       </Drawer>
-      {sources.data && <SignInNeeds groups={signInGroups(sources.data)} signIns={signIns.data} />}
+      {sources.data && <SignInNeeds accounts={accountsNeedingYou(accountStates(sources.data))} />}
       {sources.isPending ? (
         <Skeleton />
       ) : sources.isError ? (
@@ -324,47 +326,18 @@ export function Sources(props: {
   );
 }
 
-/** The accounts that have to sign in for their connections to be read, one line each with Sign in again, however many
- * connections each holds: a signed-out or refused account is told once, not once for each of its rows. */
-function SignInNeeds(props: { groups: SignInGroup[]; signIns: S["SignInView"][] | undefined }) {
+/** The accounts that have to sign in for their connections to be read, one row each with Sign in again, however many
+ * connections each holds: a signed-out or refused account is told once, not once for each of its rows. The header's status
+ * popover draws the same rows from the same account states. */
+function SignInNeeds(props: { accounts: AccountState[] }) {
   const { t } = useWords();
-  if (props.groups.length === 0) return null;
+  if (props.accounts.length === 0) return null;
   return (
-    <ul className="plain-list sign-in-needs" aria-label={t("sources.needs.label")} data-sign-in-needs="">
-      {props.groups.map((group) => (
-        <SignInNeedRow key={group.account ?? group.sources[0].id} group={group} signIns={props.signIns} />
+    <RowList aria-label={t("sources.needs.label")} data-sign-in-needs="">
+      {props.accounts.map((account) => (
+        <AccountRow key={account.key} account={account} />
       ))}
-    </ul>
-  );
-}
-
-function SignInNeedRow(props: { group: SignInGroup; signIns: S["SignInView"][] | undefined }) {
-  const { t, tn } = useWords();
-  const client = useQueryClient();
-  const { push } = useToasts();
-  const { group } = props;
-  const first = group.sources[0];
-  const addon = addonOfConnector(first.connector);
-  const item = (props.signIns ?? []).find((s) => addonOfSignIn(s.name) === addon);
-  const { start, phase, busy } = useSignInWindow(item?.name ?? "");
-  // The window that was opened says how it went: every list is read again and the person is told.
-  useEffect(() => {
-    if (phase !== "done" || !item) return;
-    void client.invalidateQueries();
-    push({ message: t("sign_in.return.done", { label: item.label }) });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-  const who = group.account ?? first.label;
-  const text = tn(group.need === "signed_out" ? "sources.needs.signed_out" : "sources.needs.again", group.sources.length, { account: who });
-  return (
-    <li className="problem-note sign-in-need" data-sign-in-need={group.account ?? ""} data-need={group.need}>
-      <span>{text}</span>
-      {item && (
-        <Button size="sm" variant="primary" disabled={busy || !item.ready} aria-label={t("sign_in.sign_in_again_account", { account: who })} onClick={() => void start()}>
-          {t("sign_in.sign_in_again")}
-        </Button>
-      )}
-    </li>
+    </RowList>
   );
 }
 
@@ -405,7 +378,7 @@ function SourceRow(props: {
   // has to sign in again) never says Read, whatever its last read said.
   const need = signInNeed(source);
   const state = sourceState(source);
-  const status =
+  const status: { text: string; tone: StateTone } =
     state === "off"
       ? { text: t("sources.off"), tone: "neutral" }
       : state === "sign_in"
@@ -485,7 +458,7 @@ function SourceRow(props: {
   );
   return (
     <>
-      <tr className="source-row" aria-labelledby={titleId}>
+      <tr className="source-row" aria-labelledby={titleId} data-state={needsYou(status.tone) ? status.tone : undefined}>
         <th scope="row">
           <strong id={titleId}>{source.label}</strong>
           <span className="source-summary">{facts.join(" · ")}</span>
@@ -526,10 +499,7 @@ function SourceRow(props: {
           <Pill describedAs={privacyFact(source, t)}>{t(`sources.level.${source.data_level ?? "internal"}`)}</Pill>
         </td>
         <td data-label={t("sources.table.status")}>
-          <span className="source-status" data-tone={status.tone}>
-            <span className="source-status-dot" data-status-dot="" aria-hidden="true" />
-            <span>{status.text}</span>
-          </span>
+          <StateMark tone={status.tone}>{status.text}</StateMark>
         </td>
         <td data-label={t("sources.table.actions")}>
           <RowMenu label={source.label} actions={actions} buttonId={menuId} />
@@ -1036,7 +1006,7 @@ function SourceForm(props: {
             <FormField id={`${base}-project`} label={t(justMe ? "sources.field.area" : "sources.field.project")}>
               <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
                 <option value="">{t(justMe ? "sources.field.no_area" : "sources.field.no_project")}</option>
-                <PlaceOptions projects={projects.data ?? []} />
+                {placeOptions(projects.data ?? [], t)}
               </Select>
             </FormField>
           )}

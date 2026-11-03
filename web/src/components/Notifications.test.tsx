@@ -3,7 +3,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { Notifications } from "./Notifications";
 import { useNeedsYouNotices } from "./NeedsYouNotices";
 import { Settings } from "./Settings";
@@ -82,7 +82,7 @@ describe("the ways of getting a notice", () => {
     renderApp(<Notifications />);
     const hook = await card("A chat app or a push topic");
     const pick = await within(hook).findByRole("combobox", { name: "Which app is the address for?" });
-    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["A named chat app", "Another chat app (a text message)", "Something else (plain text)"]);
+    expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual(["A named chat app", "Another chat app (a text message)", "Something else (plain text)"]);
     expect(pick).toHaveValue("generic-chat");
     expect(within(hook).getByText("Where to find the address: Look for incoming webhooks.")).toBeInTheDocument();
     await user.selectOptions(pick, "plain");

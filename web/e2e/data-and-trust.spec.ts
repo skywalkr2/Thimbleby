@@ -3,6 +3,7 @@
 // nothing internal shows on the pages a row opens (X37, X38, X72), sending one item back adds none of the others again (X74),
 // and removing the AI account asks first and leaves Today with nothing to Start (X76).
 import { expect, test, type Page } from "@playwright/test";
+import { choicesOf } from "./choose";
 import { findInternals } from "./internals-scan";
 
 const AUTH = { Authorization: "Bearer e2e-token" };
@@ -188,7 +189,7 @@ test("the pages a row opens show nothing internal: a note, a message, what chang
   await page.getByRole("menuitem", { name: "Pause" }).click();
   const pick = page.getByRole("combobox", { name: "Or pick what it waits on" });
   await expect(pick).toBeVisible(LOADED);
-  const options = (await pick.locator("option").allTextContents()).join("\n");
+  const options = (await choicesOf(pick)).map((c) => c.label).join("\n");
   for (const hit of findInternals(options)) found.push(`Pause: ${hit}`);
   await page.keyboard.press("Escape");
   const search = page.getByRole("banner").getByRole("searchbox");

@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { whenText } from "../lib/dates";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { Refuse, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { Sources, signedOutOf } from "./Sources";
 
 type Source = S["WatchSourceView"];
@@ -132,7 +132,7 @@ test("connections are a table with privacy pills and readable status dots", asyn
   expect(within(table).getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
   const item = within(table).getByRole("row", { name: "Source a" });
   expect(within(item).getByText("Confidential").closest("[data-pill]")).not.toBeNull();
-  expect(item.querySelector("[data-status-dot]")).toBeInTheDocument();
+  expect(item.querySelector("[data-state-mark]")).toBeInTheDocument();
   expect(within(item).getByText(/2 new/)).toBeInTheDocument();
   expect(within(item).getByText("Read")).toBeInTheDocument();
 });
@@ -488,7 +488,7 @@ describe("adding a source", () => {
     await user.click(await screen.findByRole("radio", { name: "A feed" }));
     await continueAdd(user);
     const every = screen.getByLabelText("How often to read");
-    expect(within(every).getAllByRole("option").map((o) => o.textContent)).toEqual([
+    expect(within(await snapshotOf(every)).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "every 15 minutes",
       "every 30 minutes",
       "every hour",
@@ -721,7 +721,7 @@ describe("a mailbox's folders", () => {
     const form = await screen.findByRole("form", { name: "Change Source a" });
     const sent = await within(form).findByRole("combobox", { name: "Sent folder" });
     const archive = within(form).getByRole("combobox", { name: "Archive folder" });
-    await waitFor(() => expect(within(archive).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Archive", "Inbox", "Sent", "Receipts"]));
+    await waitFor(async () => expect(within(await snapshotOf(archive)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Archive", "Inbox", "Sent", "Receipts"]));
     expect(sent).toHaveValue("Sent");
     expect(archive).toHaveValue("");
     // the folder it reads stays as it was: a text box, not part of this
@@ -742,7 +742,7 @@ describe("a mailbox's folders", () => {
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: "Change Source a" });
     const sent = await within(form).findByRole("combobox", { name: "Sent folder" });
-    expect(within(sent).getAllByRole("option").map((o) => o.textContent)).toContain("Old sent");
+    expect(within(await snapshotOf(sent)).getAllByRole("option").map((o) => o.textContent)).toContain("Old sent");
     expect(sent).toHaveValue("Old sent");
   });
 
@@ -910,7 +910,7 @@ describe("a source's menu", () => {
     const form = await screen.findByRole("form", { name: "Change Source a" });
     const pick = await within(form).findByLabelText("Whose writing this is");
     expect(pick).toHaveValue("p2");
-    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual([
+    expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "Several people",
       "Casey Example (you)",
       "Robin Example",
@@ -937,7 +937,7 @@ describe("a source's menu", () => {
       const form = await screen.findByRole("form", { name: "Add mail, calendar or folder" });
       await continueAdd(user, form);
       const pick = await within(form).findByLabelText("Account to read");
-      expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual([
         "Choose an account",
         "pat@example.com",
         "sam@example.com",
@@ -1202,7 +1202,7 @@ test("a mailbox offers the folder its server marks as sent, picked already, with
   const item = await row("Source work-mail");
   const list = await within(item).findByRole("combobox", { name: "Folder of the mail you sent" });
   expect(list).toHaveValue("Sent Items");
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sent Items", "Drafts"]); // INBOX is read already
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sent Items", "Drafts"]); // INBOX is read already
   expect(item).toHaveTextContent("Also read the mail you sent, so promises you make are noticed.");
   await user.click(within(item).getByRole("button", { name: "Read it too" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST watch/work-mail/sent-folder")?.body).toMatchObject({ folder: "Sent Items", label: "Source work-mail, sent" }));
@@ -1389,7 +1389,11 @@ describe("several accounts", () => {
     const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
     // One line for Blake, not one for each of the three rows, and none for the others.
     expect(within(needs).getAllByRole("listitem")).toHaveLength(1);
-    expect(needs).toHaveTextContent(`${BLAKE}: sign in again to read its 3 connections.`);
+    // The account's row: its name, its state in words with the time it was last read, and how many connections it holds.
+    expect(needs).toHaveTextContent(BLAKE);
+    expect(needs).toHaveTextContent(/Needs sign-in since/);
+    expect(needs).toHaveTextContent("3 connections");
+    expect(within(needs).getAllByRole("listitem")[0]).toHaveAttribute("data-state", "danger");
     expect(within(needs).getByRole("button", { name: `Sign in again as ${BLAKE}` })).toBeInTheDocument();
     // The rows of that account say what they need, never a green Read (the third's own last read was fine) and never a wall of problems.
     for (const label of [`Inbox, ${BLAKE}`, `Calendar, ${BLAKE}`, `Sent mail, ${BLAKE}`]) {
@@ -1407,7 +1411,10 @@ describe("several accounts", () => {
   test("an account that is signed out says it is not being read, and nothing says Read for it", async () => {
     openAccounts([mailSource("a", ALEX, { account_state: "signed_out" }), mailSource("c", CASEY)]);
     const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
-    expect(needs).toHaveTextContent(`${ALEX} is signed out: its connection isn't being read.`);
+    expect(needs).toHaveTextContent(ALEX);
+    expect(needs).toHaveTextContent(/Signed out since/);
+    expect(needs).toHaveTextContent("1 connection");
+    expect(within(needs).getAllByRole("listitem")[0]).toHaveAttribute("data-state", "warn");
     const item = await row(`Inbox, ${ALEX}`);
     expect(within(item).getByText("Signed out")).toBeInTheDocument();
     expect(within(item).queryByText("Read")).toBeNull();

@@ -57,7 +57,7 @@ test("the form parts, the record parts, the overlays and the status states of th
   const user = userEvent.setup();
   renderApp(<StyleGuide />);
   // The form parts: a date, a file zone, a group with its legend, and choice cards with one chosen.
-  expect(screen.getByLabelText(/^Due/)).toHaveAttribute("type", "date");
+  expect(screen.getByRole("textbox", { name: /^Due/ })).toHaveAttribute("data-kind", "date");
   expect(document.querySelector('[data-ui="file"]')).not.toBeNull();
   expect(screen.getByRole("group", { name: "Send me" })).toBeInTheDocument();
   expect(screen.getByRole("radio", { name: /Ask me each time/ })).toBeChecked();

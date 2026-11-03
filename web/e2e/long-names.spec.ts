@@ -4,6 +4,7 @@
 // name is cut with an ellipsis and has its full name on hover (and in its own words for a screen reader), the filter is a list
 // to pick from on a phone, and the icon rail gives each side a mark of its own.
 import { expect, test, type Page } from "@playwright/test";
+import { choicesOf, choose } from "./choose";
 
 const LOADED = { timeout: 20_000 };
 const WIDTHS = [390, 768, 1024, 1280, 1440];
@@ -50,9 +51,9 @@ test.describe("Long names of sides", () => {
     await go(page, "today");
     const list = page.getByRole("combobox", { name: "Show" });
     await expect(list).toBeVisible(LOADED);
-    await expect(list.getByRole("option")).toHaveText(["All", "Personal", ...names]);
-    await list.selectOption({ label: names[0] });
-    await expect(list).toHaveValue(/PRJ-/);
+    expect((await choicesOf(list)).map((c) => c.label)).toEqual(["All", "Personal", ...names]);
+    await choose(list, { label: names[0] });
+    await expect(list).toHaveAttribute("value", /PRJ-/);
     expect(await overflow(page)).toBeLessThanOrEqual(0);
     await expect(page.getByRole("radio")).toHaveCount(0);
   });

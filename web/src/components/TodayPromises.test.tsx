@@ -153,7 +153,7 @@ test("a waiting-on owed by someone the person reports to reads Waiting on, with 
   expect(screen.queryByRole("menuitem", { name: "New date" })).toBeNull();
   await user.keyboard("{Escape}");
   await user.click(within(row).getByRole("button", { name: "New date" }));
-  expect(await screen.findByLabelText("New date", { selector: "input" })).toHaveAttribute("type", "date");
+  expect(await screen.findByRole("textbox", { name: "New date" })).toHaveAttribute("data-kind", "date");
 });
 
 test("a waiting-on with no date reads Waiting on too, and managed or alongside stay Chase", async () => {
@@ -185,8 +185,8 @@ test("New date opens a date picker with the cursor in it, and saving corrects th
   const row = await rowOf(`Chase Robin Sample: Send the floor plan, due ${day("2026-10-13")}`);
   await menuOf(user, row);
   await user.click(screen.getByRole("menuitem", { name: "New date" }));
-  const picker = await screen.findByLabelText("New date", { selector: "input" });
-  expect(picker).toHaveAttribute("type", "date");
+  const picker = await screen.findByRole("textbox", { name: "New date" });
+  expect(picker).toHaveAttribute("data-kind", "date");
   await waitFor(() => expect(picker).toHaveFocus());
   fireEvent.change(picker, { target: { value: "2026-11-03" } });
   await user.click(screen.getByRole("button", { name: "Save" }));

@@ -8,7 +8,7 @@ import { useWords } from "../lib/wording";
 import { EmptyState } from "../ui/EmptyState";
 import styles from "./Today.module.css";
 
-interface Part {
+export interface Part {
   kind: "read" | "looked" | "unread" | "stale" | "pending";
   text: string;
   key: string;
@@ -66,8 +66,8 @@ function useParts(found: Coverage): Part[] {
   return parts;
 }
 
-export function Parts(props: { found: Coverage }) {
-  const parts = useParts(props.found);
+export function Parts(props: { found: Coverage; /** Kinds of part left out: the header's popover lists each account that couldn't be read as a row of its own. */ without?: Part["kind"][] }) {
+  const parts = useParts(props.found).filter((part) => !props.without?.includes(part.kind));
   return (
     <>
       {parts.map((part, i) => (
@@ -84,13 +84,13 @@ export function Parts(props: { found: Coverage }) {
 
 /** The one line in Today's header: what was read and when, and what couldn't be. Nothing while no source is on. Looking further
  * back is not offered here: it is in the source's own row menu. */
-export function CoverageLine(props: { as?: "p" | "span" }) {
+export function CoverageLine(props: { as?: "p" | "span"; without?: Part["kind"][] }) {
   const found = useCoverage();
   if (!found) return null;
   const Tag = props.as ?? "p";
   return (
     <Tag className={styles.coverage} data-coverage-line="">
-      <Parts found={found} />
+      <Parts found={found} without={props.without} />
     </Tag>
   );
 }

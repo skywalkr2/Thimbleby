@@ -21,7 +21,7 @@ export function LookBack(props: { source: Source; onClose: () => void }) {
   const estimate = useEstimate();
   const { source } = props;
   const base = useId();
-  const field = useRef<HTMLSelectElement>(null);
+  const field = useRef<HTMLButtonElement>(null);
   const [days, setDays] = useState(0);
   const [busy, setBusy] = useState(false);
   // The cursor goes to the list when the form opens.

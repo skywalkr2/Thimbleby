@@ -1,0 +1,10 @@
+/* The state in a row's meta: a dot (or, when it needs the person, an icon) and a word. */
+.mark { display: inline-flex; align-items: baseline; gap: var(--space-2); max-width: 100%; min-width: 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
+.mark svg { flex: none; align-self: center; }
+.dot { flex: none; align-self: center; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--text-subtle); }
+.word { min-width: 0; overflow-wrap: anywhere; }
+.mark[data-tone="ok"] .dot { background: var(--ok); }
+.mark[data-tone="ok"] .word { color: var(--text); }
+.mark[data-tone="warn"], .mark[data-tone="danger"] { font-weight: var(--weight-semibold); }
+.mark[data-tone="warn"] { color: var(--warn); }
+.mark[data-tone="danger"] { color: var(--danger); }

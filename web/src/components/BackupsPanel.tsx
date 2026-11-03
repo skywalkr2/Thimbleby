@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRestart } from "../lib/restart";
 import { api, type S } from "../lib/api";
-import { backupText } from "../lib/backup";
+import { backupText, backupTone } from "../lib/backup";
 import { dayAndTime } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
@@ -20,6 +20,9 @@ import { WelcomeBackup } from "./WelcomeBackup";
 
 import { EmptyState } from "../ui/EmptyState";
 import { Actions } from "../ui/Actions";
+import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
+import { StateMark, needsYou } from "../ui/StateMark";
 export function BackupsPanel(props: { local: boolean }) {
   const { t, tn } = useWords();
   const client = useQueryClient();
@@ -102,10 +105,21 @@ export function BackupsPanel(props: { local: boolean }) {
       )}
 
       <h3 id="backups-last-title">{t("backups.last.title")}</h3>
-      <p aria-labelledby="backups-last-title" data-last-backup="">
-        {backupText(view.state, t)}
-        {view.state.last_success ? ` · ${dayAndTime(view.state.last_success)}` : ""}
-      </p>
+      <RowList aria-labelledby="backups-last-title" data-last-backup-list="">
+        <Row
+          as="li"
+          loop={false}
+          state={needsYou(backupTone(view.state)) ? (backupTone(view.state) as "warn" | "danger") : undefined}
+          title={
+            <span data-last-backup="">
+              <StateMark tone={backupTone(view.state)}>
+                {backupText(view.state, t)}
+                {view.state.last_success ? ` · ${dayAndTime(view.state.last_success)}` : ""}
+              </StateMark>
+            </span>
+          }
+        />
+      </RowList>
       <Actions align="end">
         <Button loading={busy} disabled={!there} reason={t("backups.now.needs_folder")} onClick={() => void backUp()}>
           {t("backups.now")}

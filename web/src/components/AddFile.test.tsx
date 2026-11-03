@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { Refuse, fakeApi, renderApp, snapshotOf, groupNames } from "../test-utils";
 import { AddFile } from "./AddFile";
 
 const attachment: S["FileKindView"] = {
@@ -58,7 +58,7 @@ test("the kind defaults to attachment, says what it accepts in words without med
   renderApp(<AddFile onClose={() => undefined} />);
   const kind = (await screen.findByRole("combobox", { name: "What it's for" })) as HTMLSelectElement;
   expect(kind).toHaveValue("attachment");
-  expect(within(kind).getAllByRole("option").map((o) => o.textContent)).toEqual(["Attachment", "Report", "Odd"]);
+  expect(within(await snapshotOf(kind)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Attachment", "Report", "Odd"]);
   expect(fileInput()).toHaveAccessibleDescription("Only document and picture files. Up to 1 MB.");
   expect(fileInput()).toHaveAttribute("accept", "text/plain,application/pdf,image/png");
   const user = userEvent.setup();
@@ -85,7 +85,7 @@ test("the details form is made from the kind's schema: each supported field type
   expect(within(details).getByRole("checkbox", { name: "Final copy" })).not.toBeChecked();
   const status = within(details).getByRole("combobox", { name: /Status/ });
   expect(status).toHaveValue("draft");
-  expect(within(status).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "draft", "final"]);
+  expect(within(await snapshotOf(status)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "draft", "final"]);
   expect(within(details).getByRole("textbox", { name: /Tag/ })).toBeInTheDocument();
   expect(within(details).getByRole("combobox", { name: /Colour/ })).toHaveValue("");
   expect(screen.queryByText(/can't ask for yet/)).toBeNull();
@@ -190,7 +190,7 @@ test("the dialog opens with the cursor in its first field, the file to choose", 
   renderApp(<AddFile onClose={() => undefined} />);
   const dialog = await screen.findByRole("dialog");
   await waitFor(() => expect(dialog.contains(document.activeElement) && document.activeElement !== dialog).toBe(true));
-  expect(["INPUT", "SELECT", "TEXTAREA"]).toContain(document.activeElement?.tagName);
+  expect(["INPUT", "BUTTON", "TEXTAREA"]).toContain(document.activeElement?.tagName);
 });
 
 test("where a file belongs is grouped by side: the side's own choice first, then its projects, a side never a project", async () => {
@@ -199,9 +199,10 @@ test("where a file belongs is grouped by side: the side's own choice first, then
   fakeApi(routes({ "GET projects": () => [side, book] }));
   renderApp(<AddFile onClose={() => undefined} />);
   const where = await screen.findByRole("combobox", { name: /Where does it belong/ });
-  const group = await within(where).findByRole("group", { name: "Orchard Press" });
+  await waitFor(async () => expect(groupNames(await snapshotOf(where))).toEqual(["Orchard Press"]));
+  const group = within(await snapshotOf(where)).getByRole("group", { name: "Orchard Press" });
   expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog"]);
-  expect(within(where).getAllByRole("option").map((o) => o.textContent)).not.toContain("Orchard Press");
+  expect(within(await snapshotOf(where)).getAllByRole("option").map((o) => o.textContent)).not.toContain("Orchard Press");
 });
 
 

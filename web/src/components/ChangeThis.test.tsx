@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person } from "../lib/learned-fixtures";
-import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { DecisionRow } from "./FollowUps";
 import { RecordPage } from "./RecordPage";
 
@@ -159,7 +159,7 @@ test("Ask someone else picks a person from a list and moves the question", async
   // The form opens with the cursor in its list.
   await waitFor(() => expect(pick).toHaveFocus());
   expect(screen.getByRole("button", { name: "Ask them" })).toBeDisabled();
-  await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(2));
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option").length).toBeGreaterThan(2));
   await user.selectOptions(pick, "PER-3");
   await user.click(screen.getByRole("button", { name: "Ask them" }));
   await waitFor(() => expect(posted(calls, "POST questions/Q-5/reroute")).toEqual({ to: "PER-3" }));

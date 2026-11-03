@@ -235,7 +235,7 @@ function EscalateDetail(props: { line: QueueLine }) {
   const items = useQuery({ queryKey: ["open-items"], queryFn: api.openItems, enabled: !!action });
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const look = window.setTimeout(() => box.current?.querySelector<HTMLElement>("select")?.focus(), 0);
+    const look = window.setTimeout(() => box.current?.querySelector<HTMLElement>("[data-ui=select]")?.focus(), 0);
     return () => window.clearTimeout(look);
   });
   if (id) {

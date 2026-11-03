@@ -6,6 +6,7 @@
 // a throwaway authority the app trusts through its environment.
 // Names come from the fictional workspace the fake services serve, never written out here.
 import { expect, test } from "@playwright/test";
+import { choicesOf, choose } from "./choose";
 import {
   checkAccessibility,
   collectProblems,
@@ -366,7 +367,7 @@ test.describe.serial("journey: mail", () => {
     await expect(folders).toBeFocused();
     await expect(form.getByRole("textbox")).toHaveCount(0);
     await expect(page.locator("[data-folders-not-listed]")).toHaveCount(0);
-    const offered = await folders.locator("option").allTextContents();
+    const offered = (await choicesOf(folders)).map((c) => c.label);
     expect(offered).toEqual(["Choose a folder", ...seenOnService.folders.filter((f) => f.kind === "folder").map((f) => f.name)]);
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 });
@@ -376,7 +377,7 @@ test.describe.serial("journey: mail", () => {
     }
     expect(await widerThanWindow(page, "Move to")).toEqual([]);
     await page.setViewportSize({ width: 1280, height: 900 });
-    await folders.selectOption({ label: archive.name });
+    await choose(folders, { label: archive.name });
     await form.getByRole("button", { name: "Draft the move" }).click();
 
     // Waiting to go out names the folder as the person knows it, not its id, and nothing has been asked of the service yet.
@@ -414,12 +415,12 @@ test.describe.serial("journey: mail", () => {
     const labels = labelForm.getByRole("combobox", { name: "Label" });
     await expect(labels).toBeFocused();
     await expect(labelForm.getByRole("textbox")).toHaveCount(0);
-    expect(await labels.locator("option").allTextContents()).toEqual([
+    expect((await choicesOf(labels)).map((c) => c.label)).toEqual([
       "Choose a label",
       ...seenOnService.folders.filter((f) => f.kind === "label").map((f) => f.name),
     ]);
     await checkAccessibility(page);
-    await labels.selectOption({ label: follow.name });
+    await choose(labels, { label: follow.name });
     await labelForm.getByRole("button", { name: "Draft the label" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
     const labelPane = page.getByRole("complementary", { name: `Label 1 message ${follow.name}` });

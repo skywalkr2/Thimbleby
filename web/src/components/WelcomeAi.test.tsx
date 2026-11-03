@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { Refuse, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { WelcomeAi } from "./WelcomeAi";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
@@ -434,9 +434,16 @@ test("with no suggestion from the app, the list's first model is never chosen: t
   await user.paste("pasted-key");
   const picker = await screen.findByLabelText("AI model for everyday work");
   expect(picker).toHaveValue("");
-  expect(within(picker).getByRole("option", { name: "Pick a model" })).toBeInTheDocument();
+  // The list shows its placeholder, not the first model it offers.
+  expect(picker).toHaveTextContent("Pick a model");
   expect(checks(calls)).toHaveLength(0);
-  await user.selectOptions(picker, "model-c");
+  // Leaving the key box looks at it again; the person picks once that has settled, as they would between two clicks, and then
+  // moves on from the box (Enter), which checks it with the model they picked.
+  await user.tab();
+  const settled = await screen.findByLabelText("AI model for everyday work");
+  await user.selectOptions(settled, "model-c");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.keyboard("{Enter}");
   expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
   expect(checks(calls)[0].body).toMatchObject({ models: { everyday: "model-c" } });
 });
@@ -1038,7 +1045,7 @@ test("an app left to choose its own model is added with no models and works thro
   open();
   await pickElse(user, "App A");
   const model = screen.getByLabelText("AI model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the app choose", "Recommended", "Stronger", "Another AI model"]);
+  expect(within(await snapshotOf(model)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the app choose", "Recommended", "Stronger", "Another AI model"]);
   expect(model).toHaveValue("");
   await screen.findByText("Works. Ready to use.");
   await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
@@ -1089,7 +1096,7 @@ test("two examples with the same purpose are told apart by a number, not by the 
   });
   open();
   await pickElse(user, "App A");
-  const options = within(screen.getByLabelText("AI model")).getAllByRole("option").map((o) => o.textContent);
+  const options = within(await snapshotOf(screen.getByLabelText("AI model"))).getAllByRole("option").map((o) => o.textContent);
   expect(options).toEqual(["Let the app choose", "Recommended", "Stronger 1", "Stronger 2", "Another AI model"]);
 });
 
@@ -1105,7 +1112,7 @@ test("examples sharing a role show the word with a number, a lone one shows the 
   });
   open();
   await pickElse(user, "App A");
-  const labels = within(screen.getByLabelText("AI model")).getAllByRole("option").map((o) => o.textContent ?? "");
+  const labels = within(await snapshotOf(screen.getByLabelText("AI model"))).getAllByRole("option").map((o) => o.textContent ?? "");
   expect(labels).toEqual(["Let the app choose", "Recommended", "Stronger 1", "Stronger 2", "Faster", "Another AI model"]);
   for (const label of labels) expect(label).not.toMatch(/alpha|beta|gamma|delta/);
 });
@@ -1116,7 +1123,7 @@ test("an example the catalog gives no role is offered by number, never by its na
   open();
   await pickElse(user, "App B");
   const model = screen.getByLabelText("AI model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Recommended", "Faster", "Choice 3", "Another AI model"]);
+  expect(within(await snapshotOf(model)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Recommended", "Faster", "Choice 3", "Another AI model"]);
   expect(model).toHaveValue("gamma");
 });
 
@@ -1156,7 +1163,7 @@ test("an app whose model must be named starts on its recommended example, whatev
   open();
   await pickElse(user, "App B");
   const model = screen.getByLabelText("AI model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Recommended", "Faster", "Another AI model"]);
+  expect(within(await snapshotOf(model)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Recommended", "Faster", "Another AI model"]);
   expect(model).toHaveValue("gamma");
   expect(checks(calls)).toHaveLength(0); // not installed yet: nothing to check
 });

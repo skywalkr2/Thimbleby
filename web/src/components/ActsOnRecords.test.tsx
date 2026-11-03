@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, snapshotOf, typeMoment } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 // What the person does about a saved message or an invitation (design 6.12): Reply, Reply to everyone, Forward, Archive, Move to,
@@ -145,7 +145,7 @@ describe("a saved message", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Forward" }));
     const who = await screen.findByRole("combobox", { name: "Forward to" });
     expect(who).toHaveFocus();
-    expect(within(who).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a person…", "Ana Example"]);
+    expect(within(await snapshotOf(who)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a person…", "Ana Example"]);
     await user.selectOptions(who, "PER-2");
     await user.type(screen.getByRole("textbox", { name: "Your note" }), "For your records.");
     await user.click(screen.getByRole("button", { name: "Draft the forward" }));
@@ -186,7 +186,7 @@ describe("a saved message", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
     const folder = await screen.findByRole("combobox", { name: "Move to folder" });
     expect(folder).toHaveFocus();
-    await waitFor(() => expect(within(folder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Inbox", "Projects", "Receipts"]));
+    await waitFor(async () => expect(within(await snapshotOf(folder)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Inbox", "Projects", "Receipts"]));
     expect(screen.getByRole("button", { name: "Draft the move" })).toBeDisabled();
     await user.selectOptions(folder, "Projects");
     await user.click(screen.getByRole("button", { name: "Draft the move" }));
@@ -245,7 +245,7 @@ describe("a saved message", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
     const folder = await screen.findByRole("combobox", { name: "Move to folder" });
     expect(folder).toHaveFocus();
-    expect(within(folder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Projects/Archive", "Receipts"]);
+    expect(within(await snapshotOf(folder)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Projects/Archive", "Receipts"]);
     expect(screen.queryByRole("textbox", { name: "Name of the folder" })).toBeNull();
     await user.selectOptions(folder, "Receipts");
     await user.click(screen.getByRole("button", { name: "Draft the move" }));
@@ -269,7 +269,7 @@ describe("a saved message", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Label…" }));
     const label = await screen.findByRole("combobox", { name: "Label" });
     expect(label).toHaveFocus();
-    expect(within(label).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a label", "Waiting"]);
+    expect(within(await snapshotOf(label)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a label", "Waiting"]);
     await user.selectOptions(label, "Waiting");
     await user.click(screen.getByRole("button", { name: "Draft the label" }));
     await waitFor(() => expect(post(calls)).toHaveLength(1));
@@ -497,14 +497,14 @@ describe("an invitation", () => {
     expect(await screen.findByText(/No free time was found/)).toBeInTheDocument();
     const start = screen.getByLabelText("Starts");
     await waitFor(() => expect(start).toHaveFocus());
-    await user.type(start, "2026-11-05T10:00");
-    await user.type(screen.getByLabelText("Ends"), "2026-11-05T09:00");
+    await typeMoment(user, start, "2026-11-05T10:00");
+    await typeMoment(user, screen.getByLabelText("Ends"), "2026-11-05T09:00");
     await user.click(screen.getByRole("button", { name: "Draft the proposal" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Pick a free time, or type a start and an end that comes after it.");
     expect(post(calls)).toHaveLength(0);
     const end = screen.getByLabelText("Ends");
     await user.clear(end);
-    await user.type(end, "2026-11-05T11:00");
+    await typeMoment(user, end, "2026-11-05T11:00");
     await user.click(screen.getByRole("button", { name: "Draft the proposal" }));
     await waitFor(() => expect(post(calls)).toHaveLength(1));
     const sent = post(calls)[0].body as { proposed_start: string; proposed_end: string };

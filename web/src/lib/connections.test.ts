@@ -1,7 +1,7 @@
 import type { S } from "./api";
 import { connectionState } from "../shell/status";
 import { coverage } from "./coverage";
-import { signInGroups, signInNeed, sourceState } from "./connections";
+import { accountStates, accountsNeedingYou, signInGroups, signInNeed, sourceState } from "./connections";
 
 type Source = S["WatchSourceView"];
 
@@ -69,4 +69,38 @@ test("a source not being read is never all good: a person's own sign-out is a wa
   expect(refused.read.map((s) => s.id)).toEqual(["a"]);
   expect(refused.unread.map((u) => u.source.id)).toEqual(["b"]);
   expect(connectionState(refused)).toBe("failed");
+});
+
+// One failing account of three: it is one account, however many connections it holds, with the earliest time one of its
+// connections that stopped was last read.
+const mine = (id: string, account: string, over: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] => ({
+  id, label: `Inbox, ${account}`, connector: "k/mail", connector_label: "Mail", enabled: true, every_minutes: 15, items: 0, read_at: "2026-10-13T10:00:00Z",
+  last: { outcome: "ok", started_at: "2026-10-13T10:00:00Z", new: 0, changed: 0, removed: 0 }, failures: 0, problem: null, account, account_state: "signed_in", ...over,
+});
+
+test("one account of three failing is one account that needs the person, with the time its connections were last read", () => {
+  const failed = { outcome: "failed" as const, error_kind: "auth", started_at: "2026-10-13T11:00:00Z", new: 0, changed: 0, removed: 0 };
+  const all = accountStates([
+    mine("a", "alex@example.com"),
+    mine("b1", "blake@example.com", { account_state: "expired", last: failed, read_at: "2026-10-13T08:00:00Z" }),
+    mine("b2", "blake@example.com", { account_state: "expired", last: failed, read_at: "2026-10-13T07:30:00Z" }),
+    mine("c", "casey@example.com"),
+  ]);
+  expect(all.map((a) => a.name)).toEqual(["alex@example.com", "blake@example.com", "casey@example.com"]);
+  const needing = accountsNeedingYou(all);
+  expect(needing.map((a) => a.name)).toEqual(["blake@example.com"]);
+  expect(needing[0]).toMatchObject({ need: "again", tone: "danger", since: "2026-10-13T07:30:00Z" });
+  expect(needing[0].sources).toHaveLength(2);
+  expect(all[0]).toMatchObject({ need: null, fare: "read", tone: "ok", latest: "2026-10-13T10:00:00Z" });
+});
+
+test("a signed-out account is a warning, a switched-off connection is no account, and one never read is quiet", () => {
+  const all = accountStates([
+    mine("a", "alex@example.com", { account_state: "signed_out" }),
+    mine("b", "blake@example.com", { enabled: false }),
+    mine("c", "casey@example.com", { last: null, read_at: null }),
+  ]);
+  expect(all.map((a) => a.name)).toEqual(["alex@example.com", "casey@example.com"]);
+  expect(all[0]).toMatchObject({ need: "signed_out", tone: "warn" });
+  expect(all[1]).toMatchObject({ need: null, fare: "never", tone: "neutral" });
 });

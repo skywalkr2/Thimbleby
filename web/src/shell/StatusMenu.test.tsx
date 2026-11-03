@@ -359,7 +359,7 @@ test("the popover holds what was checked: how many connections were read and whe
 const account = (id: string, address: string, over: Partial<S["WatchSourceView"]> = {}) =>
   source({ id, label: `Inbox, ${address}`, account: address, account_state: "signed_in", last: tried("ok"), read_at: "2026-10-13T10:00:00Z", ...over });
 
-test("one failing account is one line naming its address in the popover, and the chip says a connection failed", async () => {
+test("one failing account is one row naming its address in the popover, and the chip counts it: 1 account needs you", async () => {
   const user = userEvent.setup();
   show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
     "GET watch": () => [
@@ -371,12 +371,35 @@ test("one failing account is one line naming its address in the popover, and the
     ],
   });
   await chipIs("connection_failed");
-  await chipText("Connection failed");
+  await chipText("1 account needs you");
+  expect(await chip()).toHaveAccessibleName("App status: 1 account needs you");
+  expect(chipNow()).toHaveAttribute("data-tone", "danger");
   const dialog = await open(user);
-  const lines = dialog.querySelectorAll("[data-coverage='unread']");
-  expect(lines).toHaveLength(1);
-  expect(lines[0]).toHaveTextContent(/^blake@example\.com couldn't be read since /);
-  expect(dialog).not.toHaveTextContent("alex@example.com couldn't");
+  // Each account once, the one that needs the person first: not a red line for each of its connections.
+  const rows = await within(dialog).findAllByRole("listitem", { name: /@example\.com$/ });
+  expect(rows.map((r) => r.getAttribute("data-account"))).toEqual(["blake@example.com", "alex@example.com", "casey@example.com"]);
+  expect(rows[0]).toHaveAttribute("data-state", "danger");
+  expect(rows[0]).toHaveTextContent(/Needs sign-in since/);
+  expect(rows[0]).toHaveTextContent("3 connections");
+  // The others are a dot and a word, with no edge and no tint.
+  for (const other of rows.slice(1)) {
+    expect(other).not.toHaveAttribute("data-state");
+    expect(other.querySelector("[data-state-mark]")).toHaveAttribute("data-tone", "ok");
+    expect(other).toHaveTextContent(/Read /);
+  }
+  expect(dialog.querySelectorAll("[data-coverage='unread']")).toHaveLength(0);
+  expect(dialog.querySelector(".problem-note")).toBeNull();
+});
+
+test("two accounts that need signing in are counted: 2 accounts need you", async () => {
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }), {
+    "GET watch": () => [
+      account("a", "alex@example.com", { account_state: "expired", last: tried("failed") }),
+      account("b", "blake@example.com", { account_state: "signed_out" }),
+      account("c", "casey@example.com"),
+    ],
+  });
+  await chipText("2 accounts need you");
 });
 
 test("an account that is signed out is not read, so the chip is not all good and the popover says it is signed out", async () => {
@@ -387,9 +410,11 @@ test("an account that is signed out is not read, so the chip is not all good and
   // The person's own sign-out is a warning that says so, never "All good" and never "Connection failed".
   await chipIs("connection_signed_out");
   expect(chipNow()).not.toHaveTextContent("All good");
-  expect(chipNow()).toHaveTextContent("Signed out");
+  expect(chipNow()).toHaveTextContent("1 account needs you");
   expect(chipNow()).not.toHaveTextContent("Connection failed");
   expect(chipNow()).not.toHaveAttribute("data-tone", "danger");
   const dialog = await open(user);
-  expect(within(dialog).getByText("alex@example.com is signed out, so it isn't being read")).toBeInTheDocument();
+  const row = await within(dialog).findByRole("listitem", { name: "alex@example.com" });
+  expect(row).toHaveAttribute("data-state", "warn");
+  expect(row).toHaveTextContent(/Signed out since/);
 });

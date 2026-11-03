@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { vi } from "vitest";
@@ -8,7 +8,7 @@ import { dateAndTime, useReminderNotices } from "./ReminderLine";
 import { forgetLine } from "../lib/today";
 import { wallTime } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
-import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
+import { fakeApi, renderApp, statusFixture, type Routes, typeMoment, timeBesideDay } from "../test-utils";
 import { Notifications } from "./Notifications";
 import { Today } from "./Today";
 
@@ -144,9 +144,10 @@ test("Pick a time puts the cursor in a day and time box, and saving sends that t
   await menuOf(user, await rowOf("Send Oren the estimate · due now"));
   await user.click(screen.getByRole("menuitem", { name: "Pick a time…" }));
   const box = await screen.findByLabelText("Remind me at");
-  expect(box).toHaveAttribute("type", "datetime-local");
+  expect(box).toHaveAttribute("data-kind", "date");
+  expect(timeBesideDay(box)).toHaveAttribute("data-kind", "time");
   await waitFor(() => expect(box).toHaveFocus());
-  fireEvent.change(box, { target: { value: "2026-10-21T10:30" } });
+  await typeMoment(userEvent.setup(), box, "2026-10-21T10:30");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/ACT-1")?.body).toEqual({ at: "2026-10-21T10:30" }));
 });

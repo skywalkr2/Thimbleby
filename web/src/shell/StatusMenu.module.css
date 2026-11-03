@@ -7,3 +7,6 @@
 .full { grid-column: 1 / -1; }
 .note { margin: 0; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }
 .sayIcon { margin-inline-end: var(--space-1); vertical-align: middle; }
+.wide { grid-column: 1 / -1; }
+/* The accounts' rows sit in the popover with its own width and no frame of their own. */
+.accounts { margin: 0; border: 0; border-radius: var(--radius-md); }

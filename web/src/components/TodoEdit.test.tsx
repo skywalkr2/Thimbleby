@@ -139,7 +139,8 @@ test("Escape closes the open editor, from any field, and the row gets the cursor
   await menuOf(user);
   await user.click(await screen.findByRole("menuitem", { name: "Pause" }));
   const waiting = await screen.findByRole("textbox", { name: "What is it waiting for?" });
-  await user.click(screen.getByRole("combobox", { name: "Or pick what it waits on" }));
+  // The cursor is on the list (closed): Escape is the editor's. With the list open the first Escape closes the list alone.
+  screen.getByRole("combobox", { name: "Or pick what it waits on" }).focus();
   await user.keyboard("{Escape}");
   expect(waiting).not.toBeInTheDocument();
 });

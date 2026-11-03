@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { Sources } from "./Sources";
 
 // A calendar can carry a color for its mark on the schedule, picked from a short named list in the source's own form.
@@ -54,8 +54,8 @@ test("a calendar's form offers its color as a list of names, with no color first
   open([source("cal", { connector: "calendar", reads: ["calendar"] })]);
   const form = await change(user, "Source cal");
   const pick = within(form).getByLabelText("Color on the schedule");
-  expect(pick.tagName).toBe("SELECT");
-  expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["No color", ...NAMES]);
+  expect(pick).toHaveAttribute("data-ui", "select");
+  expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual(["No color", ...NAMES]);
   expect(pick).toHaveValue("");
   expect(within(form).getByText(/The name is always shown too\./)).toBeInTheDocument();
 });

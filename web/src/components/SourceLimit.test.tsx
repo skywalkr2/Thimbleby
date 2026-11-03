@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { besidePane, fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 
 // The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
@@ -97,7 +97,7 @@ test("Widen adds a person picked from the list, leaving out those already in, wi
   const pick = within(dialog).getByLabelText("Add someone who may see it");
   // Opening the form puts the cursor in its list.
   await waitFor(() => expect(pick).toHaveFocus());
-  expect(within(pick).queryByRole("option", { name: "Pat Example" })).toBeNull();
+  expect(within(await snapshotOf(pick)).queryByRole("option", { name: "Pat Example" })).toBeNull();
   await user.selectOptions(pick, "PER-3");
   await user.click(within(dialog).getByRole("button", { name: "Add them" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST sources/SRC-3/widen")).toBe(true));

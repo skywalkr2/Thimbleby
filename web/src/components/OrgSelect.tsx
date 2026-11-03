@@ -25,7 +25,7 @@ export function OrgSelect(props: {
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   const own = useId();
   const id = props.id ?? own;
-  const select = useRef<HTMLSelectElement>(null);
+  const select = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);

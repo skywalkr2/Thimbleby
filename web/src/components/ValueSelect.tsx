@@ -31,7 +31,7 @@ export function ValueSelect(props: {
   const change = useListChange();
   const own = useId();
   const id = props.id ?? own;
-  const select = useRef<HTMLSelectElement>(null);
+  const select = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [problem, setProblem] = useState("");

@@ -2,6 +2,7 @@
 // Names come from the fixture's cases and people, never written out here.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { choicesOf, choose } from "./choose";
 import { expectQueueShows, pressStart, settingsSections, showSteps, widerThanWindow, FIRST_SCREEN } from "./journey-helpers";
 
 interface Case {
@@ -543,11 +544,14 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     const picker = page.getByRole("main").getByRole("combobox", { name: /Who is/ });
     await expect(picker).toHaveCount(1);
-    await expect(picker.locator("optgroup").first().locator("option")).toHaveCount(2);
+    // The first group of the list holds the two people who share the name.
+    const all = await choicesOf(picker);
+    const sharing = all.filter((c) => c.group !== null && c.group === all.find((x) => x.group !== null)?.group);
+    expect(sharing).toHaveLength(2);
     const before = await getJson<Section[]>(page, "api/followups");
     expect(before.flatMap((s) => s.actions).filter((a) => a.text === guestList)).toEqual([]);
-    const choice = await picker.locator("optgroup").first().locator("option").first().getAttribute("value");
-    await picker.selectOption(choice!);
+    const choice = sharing[0].value;
+    await choose(picker, choice);
     await page.getByRole("main").getByRole("button", { name: "Use this person" }).click();
     await expect(picker).toHaveCount(0);
     const after = await getJson<Section[]>(page, "api/followups");
@@ -657,9 +661,9 @@ test.describe.serial("acceptance scenario", () => {
     await first.getByRole("button", { name: "File under…" }).click();
     const picker = first.getByRole("combobox");
     await expect(picker).toBeFocused();
-    await expect(picker.locator("option").last()).toHaveText("Add a project…");
+    expect((await choicesOf(picker)).at(-1)?.label).toBe("Add a project…");
     const projects: Array<{ id: string; name: string }> = await (await page.request.get("api/projects")).json();
-    await picker.selectOption({ label: projects[0].name });
+    await choose(picker, { label: projects[0].name });
     await expect(page.getByRole("region", { name: "Notifications" })).toContainText(`under ${projects[0].name}.`);
     await expect.poll(async () => ((await (await page.request.get("api/unfiled")).json()) as { count: number }).count).toBe(before - 1);
     await page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Undo" }).first().click();
@@ -1137,8 +1141,8 @@ test.describe.serial("acceptance scenario", () => {
     const form = page.getByRole("dialog", { name: "Add a person" }).locator("form.setup-form");
     await form.getByLabel(/Full name/).fill("Org Person");
     const org = form.getByRole("combobox", { name: /Organization/ });
-    await expect(org.locator("option")).toContainText(["Not set", "Add an organization…"]);
-    await org.selectOption({ label: "Add an organization…" });
+    expect((await choicesOf(org)).map((c) => c.label)).toEqual(expect.arrayContaining(["Not set", "Add an organization…"]));
+    await choose(org, { label: "Add an organization…" });
     const field = form.getByRole("textbox", { name: "Name of the new organization" });
     await expect(field).toBeFocused();
     const name = `Test Organization ${Date.now()}`;
@@ -1146,7 +1150,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     // Enter adds the organization; it does not send the person.
     await field.press("Enter");
-    await expect(org.locator("option:checked")).toHaveText(name);
+    await expect(org).toContainText(name);
     await page.getByRole("dialog", { name: "Add a person" }).getByRole("button", { name: "Add a person" }).click();
     const row = page.getByRole("row", { name: /Org Person/ });
     await expect(row).toBeVisible();
@@ -1169,15 +1173,15 @@ test.describe.serial("acceptance scenario", () => {
     await expect(form.getByRole("textbox", { name: "Name", exact: true })).toBeFocused();
     await form.getByRole("textbox", { name: "Name", exact: true }).fill("Listed project");
     const status = form.getByRole("combobox", { name: "Status" });
-    await expect(status.locator("option")).toContainText(["Not set", "Add to the list…"]);
-    await status.selectOption({ label: "Add to the list…" });
+    expect((await choicesOf(status)).map((c) => c.label)).toEqual(expect.arrayContaining(["Not set", "Add to the list…"]));
+    await choose(status, { label: "Add to the list…" });
     const field = form.getByRole("textbox", { name: "Add a choice to Project status" });
     await expect(field).toBeFocused();
     await field.fill("Parked for now");
     await checkAccessibility(page);
     // Enter adds the value; it does not send the project.
     await field.press("Enter");
-    await expect(status).toHaveValue("Parked for now");
+    await expect(status).toHaveAttribute("value", "Parked for now");
     await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Added Parked for now to Project status.");
     await drawer.getByRole("button", { name: "Add a project" }).click();
     const row = page.getByRole("row", { name: /Listed project/ });
@@ -1189,7 +1193,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(again).toContainText("Parked for now");
     await again.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Edit" }).click();
-    await expect(page.getByRole("dialog", { name: "Edit project" }).getByRole("combobox", { name: "Status" })).toHaveValue("Parked for now");
+    await expect(page.getByRole("dialog", { name: "Edit project" }).getByRole("combobox", { name: "Status" })).toHaveAttribute("value", "Parked for now");
     await checkAccessibility(page);
   });
 

@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 // Who a person is to the user (design 6.34): a list on the person's page, saved at once as the user's own edit.
@@ -45,7 +45,7 @@ test("the person's page has a list of who they are to you, with the default said
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
   const list = await screen.findByRole("combobox", { name: "How you work with them" });
   expect(list).toHaveValue("report_to");
-  const options = within(list).getAllByRole("option").map((o) => o.textContent);
+  const options = within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent);
   expect(options).toEqual(["Use my default (I work alongside them)", "I manage them", "I work alongside them", "I report to them", "I only watch them"]);
   expect(screen.queryByText("report_to")).toBeNull();
 });
@@ -55,12 +55,12 @@ test("someone with no stance shows the default, and one marked as only tracked s
   const first = renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
   const list = await screen.findByRole("combobox", { name: "How you work with them" });
   expect(list).toHaveValue("");
-  await waitFor(() => expect(within(list).getAllByRole("option")[0]).toHaveTextContent("Use my default (I manage them)"));
+  await waitFor(async () => expect(within(await snapshotOf(list)).getAllByRole("option")[0]).toHaveTextContent("Use my default (I manage them)"));
   first.unmount();
   open({ track_only: true }, {}, "manage");
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
   const marked = await screen.findByRole("combobox", { name: "How you work with them" });
-  expect(within(marked).getAllByRole("option")[0]).toHaveTextContent("Use my default (I only watch them)");
+  expect(within(await snapshotOf(marked)).getAllByRole("option")[0]).toHaveTextContent("Use my default (I only watch them)");
 });
 
 test("picking one saves at once as the person's own edit with Undo, and Use my default clears it", async () => {

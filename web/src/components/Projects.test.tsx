@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project, unfiledItem, unfiledView } from "../lib/records-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { groupProjects, Projects } from "./Projects";
 
 const first = project("PRJ-1", "First project");
@@ -234,7 +234,7 @@ test("the form's Your role list changes the part the person has, with Undo", asy
   renderApp(<Projects />);
   const dialog = await edit(user, "Watched one");
   const role = within(dialog).getByRole("combobox", { name: /Your role/ });
-  expect(within(role).getAllByRole("option").map((o) => o.textContent)).toEqual(["Start", "Design for it", "Only watch it"]);
+  expect(within(await snapshotOf(role)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Start", "Design for it", "Only watch it"]);
   expect(role).toHaveValue("watch");
   await user.selectOptions(role, "run");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
@@ -271,8 +271,8 @@ test("a project's status, phase and group are chosen from their lists, and the c
   const status = within(dialog).getByRole("combobox", { name: "Status" });
   const phase = within(dialog).getByRole("combobox", { name: "Stage" });
   const group = within(dialog).getByRole("combobox", { name: /Group/ });
-  await waitFor(() => expect(within(group).getAllByRole("option").map((o) => o.textContent)).toContain("Old shelf (no longer offered)"));
-  expect(within(status).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "On track", "At risk", "Add to the list…"]);
+  await waitFor(async () => expect(within(await snapshotOf(group)).getAllByRole("option").map((o) => o.textContent)).toContain("Old shelf (no longer offered)"));
+  expect(within(await snapshotOf(status)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "On track", "At risk", "Add to the list…"]);
   expect(status).toHaveValue("On track");
   expect(group).toHaveValue("Old shelf");
   await user.selectOptions(status, "At risk");
@@ -301,7 +301,7 @@ test("the project form offers Priority from its list, sends it, and Undo puts th
   renderApp(<Projects />);
   const dialog = await edit(user, "Book one");
   const priority = within(dialog).getByRole("combobox", { name: "Priority" });
-  await waitFor(() => expect(within(priority).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "High", "Low", "Add to the list…"]));
+  await waitFor(async () => expect(within(await snapshotOf(priority)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "High", "Low", "Add to the list…"]));
   expect(priority).toHaveValue("High");
   await user.selectOptions(priority, "Low");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import "@testing-library/jest-dom/vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { project } from "../lib/records-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf, groupNames } from "../test-utils";
 import { ProjectPicker } from "./ProjectPicker";
 
 // Where something belongs (design 6.32): each side is a group, its own first choice is "in the side, not in a project", then
@@ -24,19 +24,17 @@ function show(onChange: (v: string) => void = () => {}) {
 test("the choices are grouped by side, each side's own choice first, then its projects", async () => {
   show();
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
-  const groups = await within(select).findAllByRole("group");
-  expect(groups.map((g) => g.getAttribute("label"))).toEqual(["Orchard Press", "Personal"]);
-  const firm = groups.find((g) => g.getAttribute("label") === "Orchard Press")!;
-  expect(within(firm).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog", "The spring catalog › Cover art"]);
-  const personal = groups.find((g) => g.getAttribute("label") === "Personal")!;
-  expect(within(personal).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Personal, not in a project", "Home"]);
+  await waitFor(async () => expect(groupNames(await snapshotOf(select))).toEqual(["Orchard Press", "Personal"]));
+  const list = within(await snapshotOf(select));
+  expect(within(list.getByRole("group", { name: "Orchard Press" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog", "The spring catalog › Cover art"]);
+  expect(within(list.getByRole("group", { name: "Personal" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Personal, not in a project", "Home"]);
 });
 
 test("a side is only ever the choice 'in the side, not in a project', never a project choice", async () => {
   show();
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
-  await within(select).findAllByRole("group");
-  const names = within(select).getAllByRole("option").map((o) => o.textContent);
+  await waitFor(async () => expect(groupNames(await snapshotOf(select)).length).toBeGreaterThan(0));
+  const names = within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent);
   expect(names).not.toContain("Orchard Press");
   expect(names).not.toContain("Personal");
   expect(names).toContain("Left over");
@@ -47,7 +45,7 @@ test("choosing a side's own choice hands back the side's id; choosing a project 
   const picked: string[] = [];
   show((v) => picked.push(v));
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
-  await within(select).findAllByRole("group");
+  await waitFor(async () => expect(groupNames(await snapshotOf(select)).length).toBeGreaterThan(0));
   await user.selectOptions(select, "In Orchard Press, not in a project");
   await user.selectOptions(select, "The spring catalog");
   expect(picked).toEqual(["PRJ-firm", "PRJ-book"]);
@@ -71,7 +69,7 @@ test("moving an item from Personal into a side says it will be visible with that
   const user = userEvent.setup();
   showMoving("PRJ-home");
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
-  await within(select).findAllByRole("group");
+  await waitFor(async () => expect(groupNames(await snapshotOf(select)).length).toBeGreaterThan(0));
   expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
   await user.selectOptions(select, "The spring catalog");
   expect(await screen.findByText("This item will be visible with Orchard Press's work.")).toBeInTheDocument();
@@ -83,7 +81,7 @@ test("a new item, which starts nowhere, is not warned about where it is put", as
   const user = userEvent.setup();
   showMoving("");
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
-  await within(select).findAllByRole("group");
+  await waitFor(async () => expect(groupNames(await snapshotOf(select)).length).toBeGreaterThan(0));
   await user.selectOptions(select, "The spring catalog");
   expect(screen.queryByText(/visible with/)).not.toBeInTheDocument();
 });

@@ -263,7 +263,7 @@ test.describe("no screen is wider than the window", () => {
       if (await key.count()) {
         await key.first().fill("secret-value");
         await panel.getByRole("button", { name: "Check", exact: true }).click();
-        await expect(panel.locator("select#ai-model")).toBeAttached(LOADED);
+        await expect(panel.locator("#ai-model")).toBeAttached(LOADED);
         // What a closed disclosure holds is measured too.
         await page.evaluate(() => document.querySelectorAll('[role="dialog"] details').forEach((d) => d.setAttribute("open", "")));
         await check(`${width}px, models listed, a long id`);

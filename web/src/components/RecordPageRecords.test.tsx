@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes, snapshotOf } from "../test-utils";
 import en from "../wording/en.json";
 import { RecordPage } from "./RecordPage";
 
@@ -450,7 +450,7 @@ test("with several other sides the page offers Move to… as a list of them, and
   // No one-click button for either side: the choice is a list.
   expect(screen.queryByRole("button", { name: /^Move to / })).toBeNull();
   const list = screen.getByRole("combobox", { name: "Move to…" });
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Move to…", "Personal", "Lantern Works"]);
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Move to…", "Personal", "Lantern Works"]);
   await user.selectOptions(list, "Lantern Works");
   await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "ACT-7", fields: { project: "PRJ-3" }, read_version: 3 }));
   expect(await screen.findByText("Moved 1 item to Lantern Works. It is now visible with Lantern Works's work.")).toBeInTheDocument();

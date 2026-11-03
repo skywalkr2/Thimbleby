@@ -4,7 +4,9 @@
 // the mail add-on on, and the fake services (tests/fake_services.py) playing three people (`--accounts 3`): each with an inbox
 // and a calendar of their own, one invitation and one thread in the first two, and one calendar entry in the first two that
 // overlap. /__e2e/failing makes one account fail afterwards. Addresses come from the fake services, never written out here.
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { choicesOf, choose } from "./choose";
 import { collectProblems, fakeAddress, type Info } from "./journey-helpers";
 
 const FAKE = `http://127.0.0.1:${process.env.JOURNEY_ACCOUNTS_FAKE_PORT ?? 8769}`;
@@ -187,13 +189,63 @@ test.describe.serial("several accounts", () => {
     await expect(page.locator("[data-status]").first()).toHaveAttribute("data-status", "connection_failed", LOADED);
     await page.locator("[data-status]").first().click();
     const dialog = page.getByRole("dialog", { name: "Status" });
-    await expect(dialog.locator("[data-coverage='unread']")).toHaveCount(1);
-    await expect(dialog.locator("[data-coverage='unread']")).toContainText(failing);
+    // The account is one row, said once, and the sign-in lines of the page and the header are the same row.
+    const rows = dialog.getByRole("list", { name: "Accounts" }).getByRole("listitem");
+    await expect(rows.filter({ hasText: failing })).toHaveCount(1);
+    await expect(rows.filter({ hasText: failing })).toContainText("Needs sign-in");
+    await expect(dialog.locator("[data-coverage='unread']")).toHaveCount(0);
     await page.keyboard.press("Escape");
     // Today holds one line for the account, not one for each of its connections.
     await go(page, "today");
     await expect(page.locator('[data-queue-line="source_unread"]')).toHaveCount(1, LOADED);
     await expect(page.locator('[data-queue-line="source_unread"]')).toContainText(failing);
+  });
+
+  test("VC13. with one of three accounts failing the header says 1 account needs you, and its popover is one state row for each account, not a wall of red lines", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`?token=${info.token}`);
+    await go(page, "settings/connections");
+    const chip = page.locator("[data-status]").first();
+    await expect(chip).toHaveAttribute("data-status", "connection_failed", LOADED);
+    // The pill and the page say the same thing: one account, named once, in the same words.
+    await expect(chip).toContainText("1 account needs you");
+    await expect(chip).toHaveAttribute("data-tone", "danger");
+    const failing = addresses[1];
+    const onPage = page.getByRole("list", { name: "Accounts that need you to sign in" }).getByRole("listitem");
+    await expect(onPage).toHaveCount(1);
+    const pageWords = ((await onPage.locator("[data-state-mark]").innerText()) ?? "").trim();
+    expect(pageWords).toMatch(/^Needs sign-in/);
+
+    await chip.click();
+    const dialog = page.getByRole("dialog", { name: "Status" });
+    const rows = dialog.getByRole("list", { name: "Accounts" }).getByRole("listitem");
+    // One row for each of the three accounts, whatever number of connections each holds.
+    await expect(rows).toHaveCount(3);
+    for (const address of addresses) await expect(rows.filter({ hasText: address })).toHaveCount(1);
+    // The failing one has the edge, the tint, its words and its button; the others are a dot and a word and nothing more.
+    const bad = rows.filter({ hasText: failing });
+    await expect(bad).toHaveAttribute("data-state", "danger");
+    await expect(bad.locator("[data-state-mark]")).toHaveText(pageWords);
+    await expect(bad.locator("[data-state-mark] svg")).toHaveCount(1);
+    await expect(bad.getByRole("button", { name: `Sign in again as ${failing}` })).toBeVisible();
+    for (const address of [addresses[0], addresses[2]]) {
+      const ok = rows.filter({ hasText: address });
+      await expect(ok).not.toHaveAttribute("data-state", /./);
+      await expect(ok.locator("[data-state-mark]")).toContainText("Read");
+      await expect(ok.getByRole("button")).toHaveCount(0);
+    }
+    // Nothing in the popover is a red line of its own: the state is the row's.
+    await expect(dialog.locator(".problem-note")).toHaveCount(0);
+    // The edge is drawn: a 3px bar on the failing row's leading side.
+    const edge = await bad.evaluate((el) => {
+      const after = getComputedStyle(el, "::before");
+      return { width: after.width, content: after.content };
+    });
+    expect(edge.width).toBe("3px");
+    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+    expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
+    await page.keyboard.press("Escape");
   });
 
   test("X84. setup's mail step with three accounts is one compact row for each, not a wall", async ({ page }) => {
@@ -228,11 +280,11 @@ test.describe.serial("several accounts", () => {
     await page.getByRole("button", { name: "Pat Sample" }).first().click();
     const pick = page.getByRole("combobox", { name: "Send to Pat Sample from" });
     await expect(pick).toBeVisible(LOADED);
-    await expect(pick.getByRole("option")).toHaveText(addresses);
+    expect((await choicesOf(pick)).map((c) => c.label)).toEqual(addresses);
     // Mail from them was read in the first account's mailbox, so that is where the draft starts.
-    await expect(pick).toHaveValue(addresses[0]);
-    await pick.selectOption(addresses[2]);
-    await expect(pick).toHaveValue(addresses[2]);
+    await expect(pick).toHaveAttribute("value", addresses[0]);
+    await choose(pick, addresses[2]);
+    await expect(pick).toHaveAttribute("value", addresses[2]);
   });
 
   test("X53. after a person's own sign-out the rows and the status say signed out, and the header says so as a warning: not Read, not All good, not Connection failed", async ({ page }) => {
@@ -253,7 +305,8 @@ test.describe.serial("several accounts", () => {
     }
     const chip = page.locator("[data-status]").first();
     await expect(chip).toHaveAttribute("data-status", "connection_signed_out", LOADED);
-    await expect(chip).toContainText("Signed out");
+    // The account needs the person (to sign in again), and the header counts it the way Connections lists it.
+    await expect(chip).toContainText("1 account needs you");
     await expect(chip).not.toContainText("All good");
     await expect(chip).not.toContainText("Connection failed");
     await expect(chip).toHaveAttribute("data-tone", "warn");

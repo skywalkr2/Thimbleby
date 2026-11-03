@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { reveal, useReveal } from "../lib/reveal";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { HoldNote, HoldPill, useHold } from "./OnHold";
 
 const person = (id: string, name: string): S["PersonView"] => ({ id, name, role: null, org: null, aliases: [], status: "active", is_pm: false, track_only: false, open_items: 0 });
@@ -150,11 +150,12 @@ test("Pause offers people, the other to-dos and the open questions to pick from,
   const field = screen.getByRole("textbox", { name: "What is it waiting for?" });
   expect(field).toHaveFocus();
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
-  await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(5));
-  expect(within(pick).getByRole("group", { name: "People" })).toHaveTextContent("Quinn Sample");
-  expect(within(pick).getByRole("group", { name: "To-dos" })).toHaveTextContent("Approve the cover");
-  expect(within(pick).getByRole("group", { name: "To-dos" })).not.toHaveTextContent("Send the index");
-  expect(within(pick).getByRole("group", { name: "Questions" })).toHaveTextContent("Can proof copies ship by Nov 3?");
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option").length).toBeGreaterThan(5));
+  const groups = within(await snapshotOf(pick));
+  expect(groups.getByRole("group", { name: "People" })).toHaveTextContent("Quinn Sample");
+  expect(groups.getByRole("group", { name: "To-dos" })).toHaveTextContent("Approve the cover");
+  expect(groups.getByRole("group", { name: "To-dos" })).not.toHaveTextContent("Send the index");
+  expect(groups.getByRole("group", { name: "Questions" })).toHaveTextContent("Can proof copies ship by Nov 3?");
 });
 
 test("picking a person puts the to-do on hold for them with no words typed, and Undo puts the old hold back", async () => {
@@ -169,7 +170,7 @@ test("picking a person puts the to-do on hold for them with no words typed, and 
   const submit = screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!;
   expect(submit).toBeDisabled();
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
-  await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(5));
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option").length).toBeGreaterThan(5));
   await user.selectOptions(pick, "P-1");
   expect(submit).toBeEnabled();
   await user.click(submit);
@@ -185,7 +186,7 @@ test("picking a to-do or a question sends its id with whatever words were typed"
   renderApp(<Harness id="ACT-1" />);
   await user.click(screen.getByRole("button", { name: "Pause" }));
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
-  await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(5));
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option").length).toBeGreaterThan(5));
   await user.selectOptions(pick, "Q-4");
   await user.type(screen.getByRole("textbox", { name: "What is it waiting for?" }), "the printer");
   await user.click(screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!);
@@ -214,7 +215,7 @@ test("the to-dos Pause offers are written as the lists write them: a day in the 
   renderApp(<Harness id="ACT-1" />);
   await user.click(screen.getByRole("button", { name: "Pause" }));
   const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
-  await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(3));
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option").length).toBeGreaterThan(3));
   expect(pick.textContent).not.toMatch(/2026-11-0\d/);
-  expect(within(pick).getByRole("group", { name: "To-dos" })).toHaveTextContent(/Send the venue list, due|Send the venue list by \w{3}, Nov 2/);
+  expect(within(await snapshotOf(pick)).getByRole("group", { name: "To-dos" })).toHaveTextContent(/Send the venue list, due|Send the venue list by \w{3}, Nov 2/);
 });

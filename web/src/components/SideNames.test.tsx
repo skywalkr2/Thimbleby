@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import { setSideChoice } from "../lib/sides";
 import { project } from "../lib/records-fixtures";
 import { Sidebar } from "../shell/Sidebar";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { SideFilter } from "./SideFilter";
 
 // Long names of sides (design 6.32, 7.1): the side filter is a list to pick from on a phone and cut chips with the full name on
@@ -47,7 +47,7 @@ test("on a phone the side filter is one list to pick from, with every side by it
   fakeApi(routes());
   renderApp(<SideFilter />);
   const list = await screen.findByRole("combobox", { name: "Show" });
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["All", "Personal", ...SIDES.map((s) => s.name)]);
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["All", "Personal", ...SIDES.map((s) => s.name)]);
   await userEvent.selectOptions(list, SIDES[2].name);
   expect(list).toHaveValue(SIDES[2].project);
   expect(screen.queryByRole("radio")).toBeNull();

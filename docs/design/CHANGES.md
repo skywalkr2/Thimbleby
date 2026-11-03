@@ -1043,6 +1043,24 @@ yet follow, that it is *designed*, with its phase.
 - **Wording:** `today.greeting.*`, `queue.clash.title*`, `queue.batch.keep_all`, `open.group.*`, `open.due*`, `open.needs_date.line`, `open.inline_add.*`, `today.schedule.heading`; gone: "All looks good", "Sort out the clash on", `open.subtitle.late`.
 - **Left:** "by Friday" in the add row, "Show N more coming up", a Done tab, an icon on each system line, the rail's length enforced by layout; the review on a fixture the capture can drive. `docs/project/u3-differences/today-todos.md` lists each with its reason.
 
+## 315. The app's own lists, dates and times; one state mark; one account state for the header and Connections (2026-11-03; visual review VC05, VP05, VC13)
+
+| Where | Before | Now |
+|---|---|---|
+| Select (7.12) | The browser's select | A button that opens a listbox: arrows, Home, End, Page Up and Down, type-ahead, Enter, Escape (cursor back on the button); a filter box above twelve choices; the same props, so `<option>` children and `e.target.value` still work. **Built** (`web/src/ui/Select.test.tsx`) |
+| DateField (7.12) | The browser's date input ("mm/dd/yyyy") | A text box that reads the locale's order, month names, "today", "tomorrow" and weekdays, shows the day as `fieldDay` writes it, and a calendar button that opens a month grid (arrows, Page Up and Down, Home and End to the week's edges, Enter, Escape returns the cursor); the week starts on `ui.schedule.week_starts_on`, days not worked are underlined; ISO in and out. **Built** (`web/src/ui/DateField.test.tsx`, `web/src/lib/date-input.test.ts`) |
+| TimeField (7.12) | The browser's time input ("--:-- --") | A text box that reads "9", "9:30", "930", "9:30 pm", "21:30", shows the time in the locale's 12-hour or 24-hour clock, and a list of times every 15 minutes (combobox). A date with a time is the two side by side. **Built** (`web/src/ui/DateField.test.tsx`) |
+| Every screen (7.12) | Native controls on To-dos, Schedule's Add, Quality, Edit details | All of them are the app's own, `RecordPage`'s date fields included; the one native control left is the file picker. **Built** (browser: `web/e2e/shared-rules.spec.ts`, `guards.spec.ts`) |
+| State rows (7.12) | State as coloured tags (pills) and, in Connections, a bare dot | `StateMark` (a dot and a word; an icon when it needs the person) and `Row state` (a 3px edge and a soft tint); used by Connections' sources and accounts, add-on cards, AI accounts, sign-ins and the backup. **Built** (`web/src/ui/StateMark.test.tsx`) |
+| Header status (7.1) | "Connection failed" or "Signed out"; the popover listed the failing account in a red line of the coverage text | "1 account needs you" ("2 accounts need you"); the popover lists each account once as a state row. Connections' sign-in rows and the popover's are one component from one account state. **Built** (`web/src/shell/StatusMenu.test.tsx`, `web/src/lib/connections.test.ts`; browser: `web/e2e/accounts.spec.ts`) |
+
+- **7.1, 7.12:** the status chip, the form parts and the state rows as above; `RecordPage`'s date fields use `DateField`.
+- **Dependency:** `@internationalized/date` is now a direct dependency (the calendar grid's date type; already installed).
+- **Tests:** `selectOptions` still drives a list (a helper in `web/src/test-setup.ts` opens it and clicks the choice); a test reads
+  a list's choices through `snapshotOf` and `optionsOf` (`web/src/test-utils.tsx`). Browser tests use `web/e2e/choose.ts`.
+- **Left:** the 12-hour or 24-hour clock and the list's step have no setting (listed in `docs/decisions.md`); the Connections page
+  is still a table of sources with the accounts that need signing in above it, not the mockup's card per account.
+
 ## 314. Restore from a backup copy in the app, staged and swapped in at the next start (2026-11-03; sweep X98, X04)
 
 | Where | Before | Now |

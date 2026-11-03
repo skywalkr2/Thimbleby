@@ -7,7 +7,7 @@ export function useFirstField<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() =>
-      ref.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea")?.focus(),
+      ref.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([type=checkbox]):not([type=radio]), [data-ui=select], textarea")?.focus(),
     );
     return () => window.cancelAnimationFrame(frame);
   }, []);

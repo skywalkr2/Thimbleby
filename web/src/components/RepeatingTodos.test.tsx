@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, dayValue } from "../test-utils";
 import { OpenItems } from "./OpenItems";
 import { RecordPage } from "./RecordPage";
 
@@ -107,7 +107,7 @@ test("a day that isn't one of the words' days offers the first that is", async (
   expect(await screen.findByText(/isn't one of those days/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: /^Use / }));
-  expect((screen.getByLabelText("Due") as HTMLInputElement).value).toBe("2026-11-03");
+  expect(dayValue(screen.getByLabelText("Due"))).toBe("2026-11-03");
   await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeDisabled());
   expect(calls.some((c) => c.route === "POST actions/A-1/repeat")).toBe(false);
 });

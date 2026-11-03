@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { besidePane, fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { AskChooser } from "./AskChooser";
 import { ChangeRow, WhatChanged } from "./WhatChanged";
 import { HeldDetail } from "./HeldDetail";
@@ -129,7 +129,7 @@ test("Add a person… is in the owner list too: the form opens in place and the 
   });
   renderApp(<AskChooser ask={{ id: "Q-2", about: "owner", name: null, options: [] }} />);
   const picker = await screen.findByRole("combobox", { name: "Who owns this?" });
-  expect(within(picker).getByRole("option", { name: "Add a person…" })).toBeInTheDocument();
+  expect(within(await snapshotOf(picker)).getByRole("option", { name: "Add a person…" })).toBeTruthy();
   await user.selectOptions(picker, "Add a person…");
   const dialog = await screen.findByRole("dialog", { name: "Add a person" });
   await waitFor(() => expect(within(dialog).getByRole("textbox", { name: "Full name" })).toHaveFocus());
@@ -239,7 +239,7 @@ test("It's part of picks a project from the list with the cursor in it, files th
   expect(list).toHaveFocus();
   const go = screen.getByRole("button", { name: "File it there" });
   expect(go).toBeDisabled();
-  expect(screen.getByRole("option", { name: "Sample Series › Sample Book" })).toBeInTheDocument();
+  expect(within(await snapshotOf(list)).getByRole("option", { name: "Sample Series › Sample Book" })).toBeTruthy();
   await user.selectOptions(list, "PRJ-2");
   await user.click(go);
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-5/ops/1/part-of")?.body).toEqual({ project: "PRJ-2" }));

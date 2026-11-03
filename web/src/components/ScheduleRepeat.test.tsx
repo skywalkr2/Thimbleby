@@ -1,10 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { entry } from "../lib/schedule-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, typeMoment, dayValue } from "../test-utils";
 import { EntryDetails } from "./ScheduleEntryPane";
 
 // An entry of the person's own that repeats says so in its details, and Move and Cancel act on the date that was opened or on every
@@ -64,9 +64,9 @@ test("Cancel every date sends no date, and Move this date starts from that date'
   await menu(user);
   await user.click(await screen.findByRole("menuitem", { name: "Move this date…" }));
   const start = await screen.findByLabelText("Starts");
-  expect((start as HTMLInputElement).value.startsWith("2026-10-23")).toBe(true);
-  fireEvent.change(start, { target: { value: "2026-10-24T09:00" } });
-  fireEvent.change(screen.getByLabelText("Ends"), { target: { value: "2026-10-24T10:00" } });
+  expect(dayValue(start)).toBe("2026-10-23");
+  await typeMoment(userEvent.setup(), start, "2026-10-24T09:00");
+  await typeMoment(userEvent.setup(), screen.getByLabelText("Ends"), "2026-10-24T10:00");
   await user.click(screen.getByRole("button", { name: "Move it" }));
   await waitFor(() => expect(calls.filter((c) => c.route === `POST events/${ENTRY}/move`)).toHaveLength(1));
   expect(calls.find((c) => c.route === `POST events/${ENTRY}/move`)!.body).toMatchObject({ read_version: 5, occurrence: WAS });

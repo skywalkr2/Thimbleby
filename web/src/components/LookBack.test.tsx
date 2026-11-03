@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { CoverageLine } from "./Coverage";
 import { Sources } from "./Sources";
 
@@ -121,7 +121,7 @@ test("looking further back is a list to pick from, with the cursor in it, never 
   await lookFurtherBack(user);
   const list = await screen.findByRole("combobox", { name: "How much further" });
   expect(list).toHaveFocus();
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose how far", "30 more days", "90 more days", "365 more days"]);
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose how far", "30 more days", "90 more days", "365 more days"]);
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(screen.getByRole("button", { name: "Look back" })).toBeDisabled();
 });

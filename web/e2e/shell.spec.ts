@@ -3,6 +3,7 @@
 // the offline state, and the phone's bottom bar. Screenshots go to the folder named by E2E_SHOTS, when it is set.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { choicesOf, choose } from "./choose";
 import { pressStart, showSteps, FIRST_SCREEN } from "./journey-helpers";
 
 /** The assistant's configured name, as the app reports it. */
@@ -963,16 +964,16 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await expectNoViolations(page);
       // A choice is saved as it is made and can be undone.
       const first = part.getByRole("group", { name: "Each kind of work" }).getByRole("combobox").first();
-      const before = await first.inputValue();
-      const options = await first.locator("option").evaluateAll((all) => all.map((o) => (o as HTMLOptionElement).value));
+      const before = (await first.getAttribute("value")) ?? "";
+      const options = (await choicesOf(first)).map((c) => c.value);
       const other = options.find((o) => o !== before)!;
-      await first.selectOption(other);
+      await choose(first, other);
       await expect(page.getByRole("button", { name: "Undo" }).first()).toBeVisible(SAVED);
-      await expect(first).toHaveValue(other);
+      await expect(first).toHaveAttribute("value", other);
       await page.getByRole("button", { name: "Undo" }).first().click();
       // The Undo is done when it says so (it saves, then reloads what the screens show); the list then shows what it had.
       await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Undone.", SAVED);
-      await expect(first).toHaveValue(before);
+      await expect(first).toHaveAttribute("value", before);
     });
   }
 

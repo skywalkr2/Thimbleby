@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { Handled } from "./Handled";
 import { RecordPage } from "./RecordPage";
 import { CurrentCopy } from "./SameDocument";
@@ -118,7 +118,7 @@ test("Same document as lists the files of the folder, links the one chosen, and 
   await user.click(await screen.findByRole("menuitem", { name: "Same document as…" }));
   const pick = await screen.findByRole("combobox", { name: "Which file is it the same document as?" });
   expect(pick).toHaveFocus();
-  expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a file", "Costs.md", "Plan v2.md"]);
+  expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a file", "Costs.md", "Plan v2.md"]);
   const go = screen.getByRole("button", { name: "They are the same document" });
   expect(go).toBeDisabled();
   await user.selectOptions(pick, "Costs.md");

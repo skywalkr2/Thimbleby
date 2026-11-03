@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
-import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes, snapshotOf, typeMoment, momentValue } from "../test-utils";
 import { isoInput } from "./EventActs";
 import { FollowUps } from "./FollowUps";
 import { NewEvent } from "./NewEvent";
@@ -89,12 +89,12 @@ describe("an event of the person's own", () => {
     const start = await screen.findByLabelText("Starts");
     const end = screen.getByLabelText("Ends");
     expect(start).toHaveFocus();
-    expect(isoInput((start as HTMLInputElement).value)).toBe(new Date(START).toISOString());
-    expect(isoInput((end as HTMLInputElement).value)).toBe(new Date(END).toISOString());
+    expect(isoInput(momentValue(start))).toBe(new Date(START).toISOString());
+    expect(isoInput(momentValue(end))).toBe(new Date(END).toISOString());
     await user.clear(start);
-    await user.type(start, "2026-11-03T14:00");
+    await typeMoment(user, start, "2026-11-03T14:00");
     await user.clear(end);
-    await user.type(end, "2026-11-03T15:00");
+    await typeMoment(user, end, "2026-11-03T15:00");
     await user.click(screen.getByRole("button", { name: "Draft the move" }));
     await waitFor(() => expect(posts(calls)).toHaveLength(1));
     expect(posts(calls)[0].body).toEqual({
@@ -113,7 +113,7 @@ describe("an event of the person's own", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Move to another time…" }));
     const end = await screen.findByLabelText("Ends");
     await user.clear(end);
-    await user.type(end, "2026-11-01T08:00");
+    await typeMoment(user, end, "2026-11-01T08:00");
     await user.click(screen.getByRole("button", { name: "Draft the move" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Type a start and an end that comes after it.");
     expect(posts(calls)).toHaveLength(0);
@@ -174,7 +174,7 @@ describe("a new event", () => {
     await user.click(await screen.findByRole("button", { name: "Put on a calendar…" }));
     const choice = await screen.findByLabelText("Calendar");
     expect(choice).toHaveValue("");
-    expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a calendar", "Home (a@example.com)", "Work (b@example.com)"]);
+    expect(within(await snapshotOf(choice)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a calendar", "Home (a@example.com)", "Work (b@example.com)"]);
     await user.type(screen.getByLabelText("What"), "Dentist");
     expect(screen.getByRole("button", { name: "Draft the event" })).toBeDisabled();
     await user.selectOptions(choice, "Work (b@example.com)");

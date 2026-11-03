@@ -60,6 +60,7 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
+import { DateField } from "../ui/DateField";
 import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
 import { FormBlock } from "../ui/FormBlock";
@@ -768,8 +769,10 @@ function DetailInput(props: {
     );
   } else if (f.type === "list") {
     control = <textarea id={id} className="short" value={text} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)} />;
+  } else if (f.type === "date") {
+    control = <DateField id={id} value={text} required={required} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)} />;
   } else {
-    const type = f.type === "number" ? "number" : f.type === "date" ? "date" : "text";
+    const type = f.type === "number" ? "number" : "text";
     control = (
       <input
         id={id}

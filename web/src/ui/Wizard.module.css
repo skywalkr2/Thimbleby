@@ -40,7 +40,7 @@
 .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); min-width: 0; align-content: start; }
 
 /* Fields hold what they hold: a name or a short value, a number, an address or a key; never the whole width of the column. */
-.body [data-field] :is(input, select):not([type="checkbox"], [type="radio"]) { max-width: var(--field-name); }
+.body [data-field] :is(input, [data-ui="select"]):not([type="checkbox"], [type="radio"]) { max-width: var(--field-name); }
 .body [data-field] :is(input[type="url"], input[type="password"], input[type="email"], input[type="search"]) { max-width: var(--field-max); }
 
 /* The footer is fixed to the bottom of the window, over a surface that runs its full width. */

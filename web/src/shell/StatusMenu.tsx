@@ -15,8 +15,11 @@ import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Popover } from "../ui/Popover";
+import { RowList } from "../ui/RowList";
 import { StatusChip } from "../ui/StatusChip";
+import { AccountRow } from "../components/AccountRow";
 import { CoverageLine } from "../components/Coverage";
+import { accountStates, accountsNeedingYou } from "../lib/connections";
 import { useCoverage } from "../lib/coverage";
 import { settingsView, viewHref } from "../lib/views";
 import { afterClose } from "../ui/afterClose";
@@ -75,10 +78,15 @@ export function StatusMenu(props: {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const alive = useAlive();
   const found = useCoverage();
+  // The accounts are read from the same sources as Connections and say the same thing there: each is listed once, whatever
+  // number of its connections can't be read, and the chip counts the ones that need the person to sign in.
+  const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
+  const accounts = accountStates(watch.data ?? []);
+  const needing = accountsNeedingYou(accounts);
   const assistant = alive && alive.tone !== "ok" && ASSISTANT_OWN.includes(alive.kind) ? alive.tone : undefined;
   const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase, connections: connectionState(found), assistant });
   const assistantShown = !!alive && (props.narrow || assistant !== undefined);
-  const word = t(CHIP_WORD[kind]);
+  const word = (kind === "connection_failed" || kind === "connection_signed_out") && needing.length > 0 ? tn("status.chip_accounts_need", needing.length) : t(CHIP_WORD[kind]);
   const b = status.data?.backup;
   const ai = status.data?.ai;
   const spend = status.data ? spendText(status.data.spend, t, total) : null;
@@ -149,11 +157,18 @@ export function StatusMenu(props: {
               </li>
             )}
             {found && (
-              <li className={[styles.state, kind === "connection_failed" || kind === "connection_signed_out" || kind === "connection_retrying" ? styles.warn : ""].join(" ")} data-state="connections">
+              <li className={[styles.state, styles.wide, kind === "connection_failed" || kind === "connection_signed_out" || kind === "connection_retrying" ? styles.warn : ""].join(" ")} data-state="connections">
                 <p className={styles.name}>{t("status.connections")}</p>
                 <div className={styles.full}>
-                  <CoverageLine />
+                  <CoverageLine without={["unread"]} />
                 </div>
+                {accounts.length > 0 && (
+                  <RowList className={`${styles.full} ${styles.accounts}`} aria-label={t("account.list")} data-accounts="">
+                    {[...needing, ...accounts.filter((a) => a.need === null)].map((account) => (
+                      <AccountRow key={account.key} account={account} />
+                    ))}
+                  </RowList>
+                )}
                 {!found.complete && (
                   <ButtonLink size="sm" href={viewHref(settingsView("connections"))} onClick={() => close()}>
                     {t("status.connections_open")}

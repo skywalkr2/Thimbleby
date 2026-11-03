@@ -21,7 +21,6 @@ import {
   stateOf,
   summarize,
   workWords,
-  broken,
   type Account,
   type Kind,
 } from "../lib/ai-accounts";
@@ -38,6 +37,7 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Pill, type PillTone } from "../ui/Pill";
+import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
 import { Row } from "../ui/Row";
 import { DialogFooter, ModalPanel, restoreFocus } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
@@ -612,13 +612,15 @@ function AccountRow(props: {
         ? t("ai_accounts.identity.unknown", { reason: account.identity_unknown })
         : "";
   const worry = ["missing", "no_key", "failed", "paused", "ending"].includes(state.kind);
-  const dot = worry ? <Icon name="alert" size={16} /> : <span className={styles.dot} data-tone={state.kind === "untested" ? "quiet" : "ok"} aria-hidden="true" />;
+  // The account's state is a dot and a word in its meta (an icon, an edge and a tint when it needs the person): an account that
+  // can't work is a danger, one that is paused or ending a warning.
+  const stateTone: StateTone = !worry ? (state.kind === "untested" ? "neutral" : "ok") : ["missing", "no_key", "failed"].includes(state.kind) ? "danger" : "warn";
 
   const kindWords = !kind ? "" : kind.local ? t("ai_accounts.kind.local") : kind.needs_key ? t("ai_accounts.kind.paid") : kind.program ? t("ai_accounts.kind.app") : "";
   const covers = role === "work" ? t("ai_accounts.covers.work", { work: workWords(account.used_for, t) }) : role === "backup" ? t("ai_accounts.covers.backup", { work: workWords(backupFor, t) }) : "";
   const keyEnds = account.credential_expires && !account.key_ending ? t("ai_accounts.key_ends_quiet", { date: monthDay(account.credential_expires) }) : "";
   const metaLine = [kindWords, kind?.name, covers, keyEnds].filter(Boolean).join(" · ");
-  const pillTone: PillTone = role === "work" ? "need" : role === "none" && broken(account) ? "warn" : "neutral";
+  const pillTone: PillTone = role === "work" ? "need" : "neutral";
 
   const counts = props.skills ? skillCounts(props.skills.models) : null;
   // Until a kind of work has a result the row says so, with a button to measure, rather than "Good at 0 of 14".
@@ -747,6 +749,7 @@ function AccountRow(props: {
   return (
     <>
     <Row
+      state={needsYou(stateTone) ? stateTone : undefined}
       pill={<Pill tone={pillTone}>{t(`ai_accounts.role.${role}`)}</Pill>}
       title={<span id={`${base}-title`}>{name}</span>}
       aria-labelledby={`${base}-title`}
@@ -754,8 +757,7 @@ function AccountRow(props: {
         <>
           {metaLine && <span className={styles.meta}>{metaLine}</span>}
           <span className={`${styles.meta} ${styles.state}`} data-tone={worry ? "warn" : "ok"}>
-            {dot}
-            <span>{stateText}</span>
+            <StateMark tone={stateTone}>{stateText}</StateMark>
           </span>
           {identityText && (
             <span className={styles.meta} data-tone={account.identity_changed_to || (!account.runs_as && account.identity_unknown) ? "warn" : "ok"} data-identity="" title={account.runs_as_how ?? undefined}>

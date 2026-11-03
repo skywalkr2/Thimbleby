@@ -7,7 +7,7 @@ import { RestartProvider } from "../lib/restart";
 import { announceSignIn } from "../lib/sign-in-window";
 import { useToasts } from "../lib/toasts";
 import { App } from "../App";
-import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture } from "../test-utils";
+import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture, snapshotOf, optionsOf } from "../test-utils";
 import { Walkthrough } from "./Walkthrough";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
@@ -1473,8 +1473,8 @@ describe("each screen", () => {
     const row = await screen.findByRole("form", { name: "Add someone" });
     expect(screen.getAllByRole("form")).toHaveLength(1);
     expect(within(row).getAllByRole("textbox")).toHaveLength(1);
-    expect(within(row).getByLabelText("Where they belong")).toHaveDisplayValue("Personal");
-    expect(within(within(row).getByLabelText("Where they belong")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
+    expect(within(row).getByLabelText("Where they belong")).toHaveTextContent("Personal");
+    expect(within(await snapshotOf(within(row).getByLabelText("Where they belong"))).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", EMPLOYER, SHOP]);
     await user.type(within(row).getByLabelText("Name"), "Pat Kin");
     await user.selectOptions(within(row).getByLabelText("Who they are"), "sister");
     await user.click(within(row).getByRole("button", { name: "Add" }));
@@ -1496,7 +1496,7 @@ describe("each screen", () => {
       open();
       const box = await relationBox();
       expect(box).toHaveValue("");
-      expect(within(box).getAllByRole("option")[0]).toHaveTextContent("Choose…");
+      expect(within(await snapshotOf(box)).getAllByRole("option")[0]).toHaveTextContent("Choose…");
       expect(within(await addRow()).queryByLabelText("Where they belong")).toBeNull();
       // A name alone can be added: the relation is left empty, never guessed.
       await user.type(within(await addRow()).getByLabelText("Name"), "Pat Kin");
@@ -1508,7 +1508,7 @@ describe("each screen", () => {
     test("the list splits sister and brother and adds a landlord, a school and a tradesperson", async () => {
       personalOnly();
       open();
-      const options = within(await relationBox()).getAllByRole("option").map((o) => o.textContent);
+      const options = within(await snapshotOf(await relationBox())).getAllByRole("option").map((o) => o.textContent);
       expect(options).toEqual(expect.arrayContaining(["my sister", "my brother", "our landlord", "our school", "a tradesperson"]));
       expect(options).not.toContain("my sister or brother");
     });
@@ -1543,7 +1543,7 @@ describe("each screen", () => {
       const calls = personalOnly({ "GET people": () => [kin], "POST people/PER-9": () => ({ id: "PER-9" }) });
       open();
       const box = await screen.findByLabelText("How Casey Kin relates to you");
-      expect(within(box).getAllByRole("option").map((o) => o.textContent)).toContain("Someone else");
+      expect(within(await snapshotOf(box)).getAllByRole("option").map((o) => o.textContent)).toContain("Someone else");
       await user.selectOptions(box, "other");
       const words = await screen.findByLabelText("How they relate to you, in your words");
       expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -1606,7 +1606,7 @@ describe("each screen", () => {
       const place = within(list).getByRole("combobox", { name: "Add the ticked people to" });
       expect(within(list).getAllByRole("combobox")).toHaveLength(1);
       expect(place).toHaveValue("personal");
-      expect(within(place).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", SHOP]);
+      expect(within(await snapshotOf(place)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", SHOP]);
       await user.click(within(list).getByRole("checkbox", { name: "Casey Kin" }));
       await user.click(within(list).getByRole("checkbox", { name: "Lee Kin" }));
       await user.selectOptions(place, "PRJ-3");
@@ -1804,14 +1804,14 @@ describe("each screen", () => {
     );
     open();
     const row = await screen.findByRole("form", { name: "Add someone" });
-    const options = () => within(within(row).getByLabelText("Who they are")).getAllByRole("option").map((o) => o.textContent);
+    const options = async () => (await optionsOf(within(row).getByLabelText("Who they are"))).map((o) => o.textContent);
     await user.selectOptions(within(row).getByLabelText("Where they belong"), EMPLOYER);
-    expect(options()).toEqual(expect.arrayContaining(["manager", "colleague"]));
+    expect(await options()).toEqual(expect.arrayContaining(["manager", "colleague"]));
     await user.selectOptions(within(row).getByLabelText("Where they belong"), SHOP);
-    expect(options()).toEqual(expect.arrayContaining(["customer", "supplier", "staff"]));
+    expect(await options()).toEqual(expect.arrayContaining(["customer", "supplier", "staff"]));
     // "customer" stays and "client" is gone: two words for one part left people choosing between them.
-    expect(options()).not.toContain("client");
-    expect(options()).not.toContain("manager");
+    expect(await options()).not.toContain("client");
+    expect(await options()).not.toContain("manager");
     // Nothing is preselected: the part starts empty on every side, so no one is filed under a part nobody chose.
     expect(within(row).getByLabelText("Who they are")).toHaveValue("");
     await user.type(within(row).getByLabelText("Name"), "Drew Kin");
@@ -1837,8 +1837,8 @@ describe("each screen", () => {
     );
     open();
     const box = await screen.findByLabelText("Drew Kin's part");
-    expect(within(box).getAllByRole("option").map((o) => o.textContent)).toEqual(expect.arrayContaining(["customer", "supplier", "staff", "Something else"]));
-    expect(within(box).getAllByRole("option").map((o) => o.textContent)).not.toContain("manager");
+    expect(within(await snapshotOf(box)).getAllByRole("option").map((o) => o.textContent)).toEqual(expect.arrayContaining(["customer", "supplier", "staff", "Something else"]));
+    expect(within(await snapshotOf(box)).getAllByRole("option").map((o) => o.textContent)).not.toContain("manager");
     await user.selectOptions(box, "supplier");
     await waitFor(() => expect(calls.find((c) => c.route === "POST people/PER-8")?.body).toEqual({ role: "supplier" }));
   });

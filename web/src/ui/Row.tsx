@@ -48,6 +48,9 @@ export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   actions?: ReactNode;
   /** The row is a stop of the keyboard loop (the default); a heading row that only opens its list is not (`loop={false}`). */
   loop?: boolean;
+  /** The row needs the person: a 3px edge on its leading side and a soft tint, in the warning or the danger color. The state's own
+   * words (a `StateMark` in the meta) say what it is, so the edge and the tint are never the only sign. */
+  state?: "warn" | "danger";
   /** The row has the cursor, or is open in the pane. */
   selected?: boolean;
   /** Content under the row, across its full width (an expanded row's items). */
@@ -64,7 +67,7 @@ function linesOf(meta: ReactNode, more: ReactNode[] | undefined): ReactNode[] {
 }
 
 export function Row(props: RowProps) {
-  const { lead, pill, title, titleId, meta, metaLines, expand, oneLine, clamp, primary, menu, actions, selected, loop = true, children, as = "li", className, ref, ...rest } = props;
+  const { lead, pill, title, titleId, meta, metaLines, expand, oneLine, clamp, primary, menu, actions, state, selected, loop = true, children, as = "li", className, ref, ...rest } = props;
   const Tag = as as "div";
   // The cursor's row: given by `selected`, or by `aria-current` as a list's row attributes set it.
   const isSelected = selected ?? rest["aria-current"] === "true";
@@ -77,8 +80,9 @@ export function Row(props: RowProps) {
       ref={ref as Ref<HTMLDivElement>}
       data-row={loop ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
+      data-state={state ?? (rest as Record<string, unknown>)["data-state"] as string | undefined}
       aria-current={isSelected ? "true" : undefined}
-      className={[styles.row, menu ? styles.hasMenu : "", isSelected ? styles.selected : "", className ?? ""].filter(Boolean).join(" ")}
+      className={[styles.row, menu ? styles.hasMenu : "", isSelected ? styles.selected : "", state ? styles[state] : "", className ?? ""].filter(Boolean).join(" ")}
     >
       <div className={styles.lead} data-row-lead="">
         {lead}

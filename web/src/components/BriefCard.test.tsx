@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
 import { day } from "../lib/dates";
-import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { BriefCard } from "./BriefCard";
 
 // The brief (design 6.32): the form that is due, as a card at the top of Today. Each section in order with its heading, a
@@ -488,7 +488,7 @@ test("the question offers the people on the job but not customers, suppliers or 
     { "POST brief/message/for": () => ({ changeset: "CS-7" }) },
   )).calls;
   const who = await screen.findByLabelText("The person you report to");
-  expect(within(who).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick a person", "Pat Example", "Lena Example"]);
+  expect(within(await snapshotOf(who)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick a person", "Pat Example", "Lena Example"]);
   expect(who).toHaveValue("PER-9");
   await user.click(screen.getByRole("button", { name: "This is who I report to" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST brief/message/for")?.body).toEqual({ person: "PER-9" }));

@@ -5,7 +5,7 @@
 
 import { useCallback, useRef } from "react";
 
-const FIELDS = "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])";
+const FIELDS = "input:not([type=hidden]):not([disabled]), select:not([disabled]), [data-ui=select]:not([disabled]), textarea:not([disabled])";
 /** How long a field that arrives late may still take the cursor. */
 const WAIT_MS = 3000;
 

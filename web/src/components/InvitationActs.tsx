@@ -93,7 +93,7 @@ function ProposeForm(props: { entry: string; onCancel: () => void; onSubmit: (st
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (slots.isPending) return;
-    form.current?.querySelector<HTMLElement>('input[type="radio"], input[type="datetime-local"]')?.focus();
+    form.current?.querySelector<HTMLElement>('input[type="radio"], [data-ui="datetime"] input')?.focus();
   }, [slots.isPending]);
   const typed = start !== "" || end !== "";
   const chosen = typed ? null : (list.find((s) => s.start === picked) ?? null);

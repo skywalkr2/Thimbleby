@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Locator } from "@playwright/test";
+import { choose } from "./choose";
 import { collectProblems, expectQueueShows, connectedAgain, dismissToasts, fakeAddress, openView, pressStart, visit, type Info, type Requests, FIRST_SCREEN } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
@@ -350,7 +351,7 @@ test.describe.serial("journeys", () => {
       row = await onToday(row);
       await expect(row.getByRole("combobox", { name: `Who is “${name}”?` })).toBeVisible();
       // The last choice in the list opens the form in a drawer over the screen; nobody leaves it to add someone.
-      await row.getByRole("combobox", { name: `Who is “${name}”?` }).selectOption({ label: "Add a person…" });
+      await choose(row.getByRole("combobox", { name: `Who is “${name}”?` }), { label: "Add a person…" });
       const form = page.getByRole("dialog", { name: "New person" }).getByRole("form", { name: "New person" });
       await expect(form.getByLabel("Full name", { exact: true })).toBeFocused();
       await expect(form.getByLabel("Full name", { exact: true })).toHaveValue(name);
@@ -434,7 +435,7 @@ test.describe.serial("journeys", () => {
     for (const keep of [false, true]) {
       await row.locator("li[data-item]", { hasText: `Add a project “${party}”?` }).getByRole("button", { name: `More actions for ${party}` }).click();
       await page.getByRole("menuitem", { name: "It's part of…" }).click();
-      await row.getByLabel(`“${party}” is part of`).selectOption({ label: festival });
+      await choose(row.getByLabel(`“${party}” is part of`), { label: festival });
       await row.getByRole("button", { name: "File it there" }).click();
       await expect(toasts).toContainText(`Filed under ${festival}. “${party}” is kept as a name for it.`);
       expect(await partyNote()).toBe(festival);

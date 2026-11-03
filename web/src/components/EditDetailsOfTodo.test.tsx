@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, dayValue } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 // A to-do's page edits it with the short editor its row has, never a form of the record's own fields (sweep X71): what, due,
@@ -71,7 +71,7 @@ test("Edit details on a to-do opens the short editor, with no field of the recor
   renderApp(<RecordPage kind="action" id={ID} onBack={() => {}} />);
   await user.click(await screen.findByRole("button", { name: "Edit details" }));
   expect(await screen.findByLabelText("Title")).toHaveValue(WORDS);
-  expect(screen.getByLabelText("Due")).toHaveValue("2026-11-04");
+  expect(dayValue(screen.getByLabelText("Due"))).toBe("2026-11-04");
   for (const raw of ["Reply owed", "Reported by", "Date set by", "Where it came from", "Status", "Wording", "Area"]) {
     expect(screen.queryByLabelText(raw)).toBeNull();
   }

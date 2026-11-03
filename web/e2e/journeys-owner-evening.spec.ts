@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { choose } from "./choose";
 import { collectProblems, fakeAddress, openView, pressStart, startOnToday, visit, widerThanWindow, type Info, type Requests, type SignInSeen, FIRST_SCREEN } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_EVENING_FAKE_PORT", 8761);
@@ -166,7 +167,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     expect(await widerThanWindow(page, "People")).toEqual([]);
     const addRow = main.getByRole("form", { name: "Add someone" });
     await addRow.getByLabel("Name").fill(friend);
-    await addRow.getByLabel("Who they are").selectOption({ label: "my friend" });
+    await choose(addRow.getByLabel("Who they are"), { label: "my friend" });
     await addRow.getByRole("button", { name: "Add", exact: true }).click();
     // The people added so far are their own list; the suggestions above it may still show the same name for a moment.
     await expect(main.getByRole("region", { name: "The people in your life" }).getByRole("listitem").filter({ hasText: friend })).toContainText("my friend");

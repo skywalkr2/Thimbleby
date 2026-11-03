@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, snapshotOf, dayValue } from "../test-utils";
 import { TodayRail } from "./TodayRail";
 import { ThisWeekInspector } from "./ThisWeek";
 
@@ -601,7 +601,7 @@ test("the agenda has no form of its own: one button opens the drawer, with the c
   expect(within(panel).queryByRole("textbox", { name: "What" })).toBeNull();
   const drawer = await addLine(user);
   await waitFor(() => expect(within(drawer).getByRole("textbox", { name: "What" })).toHaveFocus());
-  expect(within(drawer).getByLabelText("Day")).toHaveValue(TODAY);
+  expect(dayValue(within(drawer).getByLabelText("Day"))).toBe(TODAY);
   expect(within(drawer).getByRole("button", { name: "Add" })).toBeDisabled();
 });
 
@@ -611,7 +611,8 @@ test("a meeting is added from the drawer: what, the day (today until chosen) and
   const drawer = await addLine(user);
   await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Print sync");
   fireEvent.change(within(drawer).getByLabelText("Day"), { target: { value: "2026-10-16" } });
-  fireEvent.change(within(drawer).getByLabelText("Starts at (optional)"), { target: { value: "15:00" } });
+  await user.type(within(drawer).getByLabelText("Starts at (optional)"), "15:00");
+  await user.tab();
   await user.click(within(drawer).getByRole("button", { name: "Add" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00", until: null, side: null, where: null, repeat: null, repeat_until: null }));
   expect(await screen.findByText("Print sync added to your calendar.")).toBeInTheDocument();
@@ -627,11 +628,15 @@ test("the drawer asks when it ends, only once there is a start, and refuses an e
   expect(within(drawer).getByLabelText("Ends at (optional)")).toBeDisabled();
   expect(within(drawer).getByText("Give a start time first.")).toBeInTheDocument();
   await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Print sync");
-  fireEvent.change(within(drawer).getByLabelText("Starts at (optional)"), { target: { value: "15:00" } });
-  fireEvent.change(within(drawer).getByLabelText("Ends at (optional)"), { target: { value: "14:00" } });
+  await user.type(within(drawer).getByLabelText("Starts at (optional)"), "15:00");
+  await user.tab();
+  await user.type(within(drawer).getByLabelText("Ends at (optional)"), "14:00");
+  await user.tab();
   expect(await within(drawer).findByText("It has to end after it starts.")).toBeInTheDocument();
   expect(within(drawer).getByRole("button", { name: "Add" })).toBeDisabled();
-  fireEvent.change(within(drawer).getByLabelText("Ends at (optional)"), { target: { value: "16:30" } });
+  await user.clear(within(drawer).getByLabelText("Ends at (optional)"));
+  await user.type(within(drawer).getByLabelText("Ends at (optional)"), "16:30");
+  await user.tab();
   await user.click(within(drawer).getByRole("button", { name: "Add" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: TODAY, time: "15:00", until: "16:30", side: null, where: null, repeat: null, repeat_until: null }));
 });
@@ -644,7 +649,7 @@ test("the drawer takes a place and how often it repeats, with a last day only wh
   await user.type(within(drawer).getByRole("textbox", { name: "Place (optional)" }), "Room 2");
   // A list to pick from, never a box to type in; the last day is asked only once it repeats.
   const repeat = within(drawer).getByRole("combobox", { name: "Repeats" });
-  expect(within(repeat).getAllByRole("option").map((o) => o.textContent)).toEqual(["Does not repeat", "Every day", "Every week", "Every two weeks", "Every month"]);
+  expect(within(await snapshotOf(repeat)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Does not repeat", "Every day", "Every week", "Every two weeks", "Every month"]);
   expect(within(drawer).queryByLabelText("Last day (optional)")).toBeNull();
   await user.selectOptions(repeat, "two_weeks");
   fireEvent.change(within(drawer).getByLabelText("Day"), { target: { value: "2026-10-16" } });
@@ -664,7 +669,7 @@ test("with a side beside Personal the drawer asks which one the meeting belongs 
   });
   const drawer = await addLine(user);
   const side = await within(drawer).findByRole("combobox", { name: "Belongs to" });
-  expect(within(side).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", "Orchard Press"]);
+  expect(within(await snapshotOf(side)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", "Orchard Press"]);
   await user.selectOptions(side, "PRJ-orchard");
   await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Stock take{Enter}");
   await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Stock take", day: TODAY, time: null, until: null, side: "PRJ-orchard", where: null, repeat: null, repeat_until: null }));

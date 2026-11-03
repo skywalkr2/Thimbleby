@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { Handled } from "./Handled";
 
 // Several saved messages at once (design 6.12, S1b-2): messages ticked in Handled for you's list are archived, moved, labeled or
@@ -211,7 +211,7 @@ test("Move to picks from the one account's own folders and drafts the move for e
   await tick(user, ["Subject a", "Subject b"]);
   await user.click(within(screen.getByRole("region", { name: "Selected mail" })).getByRole("button", { name: "Move to…" }));
   const folder = await screen.findByRole("combobox", { name: "Move to folder" });
-  await waitFor(() => expect(within(folder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Inbox", "Projects"]));
+  await waitFor(async () => expect(within(await snapshotOf(folder)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Inbox", "Projects"]));
   await user.selectOptions(folder, "Projects");
   await user.click(screen.getByRole("button", { name: "Draft the move" }));
   expect(await screen.findByRole("heading", { name: "Move 1 message to Projects" })).toBeInTheDocument();
@@ -248,7 +248,7 @@ test("Move to for an account whose channel lists its folders picks a folder and 
   await tick(user, ["Subject a", "Subject b"]);
   await user.click(within(screen.getByRole("region", { name: "Selected mail" })).getByRole("button", { name: "Move to…" }));
   const folder = await screen.findByRole("combobox", { name: "Move to folder" });
-  expect(within(folder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Projects/Archive"]);
+  expect(within(await snapshotOf(folder)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a folder", "Projects/Archive"]);
   await user.selectOptions(folder, "Projects/Archive");
   await user.click(screen.getByRole("button", { name: "Draft the move" }));
   expect(await screen.findByRole("heading", { name: "Move 1 message to Projects/Archive" })).toBeInTheDocument();
@@ -265,7 +265,7 @@ test("Label for an account whose channel lists its labels picks a label and draf
   await tick(user, ["Subject a"]);
   await user.click(within(screen.getByRole("region", { name: "Selected mail" })).getByRole("button", { name: "Label…" }));
   const label = await screen.findByRole("combobox", { name: "Label" });
-  expect(within(label).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a label", "Waiting"]);
+  expect(within(await snapshotOf(label)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choose a label", "Waiting"]);
   await user.selectOptions(label, "Waiting");
   await user.click(screen.getByRole("button", { name: "Draft the label" }));
   expect(await screen.findByRole("heading", { name: "Label 1 message Waiting" })).toBeInTheDocument();

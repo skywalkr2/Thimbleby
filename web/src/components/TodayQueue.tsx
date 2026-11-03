@@ -810,7 +810,7 @@ function QueueRow(props: {
   const intoPane = () => {
     let tries = 0;
     const look = () => {
-      const inner = document.querySelector<HTMLElement>("[data-queue-inspector] textarea, [data-queue-inspector] input, [data-queue-inspector] select");
+      const inner = document.querySelector<HTMLElement>("[data-queue-inspector] textarea, [data-queue-inspector] input, [data-queue-inspector] [data-ui=select]");
       if (inner) inner.focus();
       else if (tries++ < 20) window.setTimeout(look, 50);
     };

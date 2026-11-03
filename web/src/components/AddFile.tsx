@@ -12,7 +12,7 @@ import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, DialogFooter } from "./ModalPanel";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { Select } from "../ui/Select";
@@ -128,7 +128,7 @@ export function AddFile(props: { onClose: () => void }) {
           <FormField id={`${base}-project`} label={t("addfile.project")} optional>
             <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
               <option value="">{t("addfile.no_project")}</option>
-              <PlaceOptions projects={projects.data ?? []} />
+              {placeOptions(projects.data ?? [], t)}
             </Select>
           </FormField>
           )}

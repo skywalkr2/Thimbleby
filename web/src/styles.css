@@ -250,7 +250,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .setting-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
 .settings-intro { max-width: var(--measure); }
 .merged-controls { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; }
-.merged-controls select { width: auto; max-width: 100%; }
+.merged-controls [data-ui="select"] { width: auto; max-width: 100%; }
 .setting-label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .save-status { min-height: 1.5em; margin: 0 0 var(--space-2); }
 .setting-changed { font-size: var(--text-sm); color: var(--text-muted); white-space: nowrap; }
@@ -296,13 +296,13 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .source-row > th > strong, .source-summary { display: block; }
 .source-row > th > strong { font-weight: var(--weight-semibold); }
 .source-summary { margin-top: var(--space-1); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
-.source-status { display: inline-flex; align-items: center; gap: var(--space-1); }
-.source-status-dot { display: inline-block; flex: none; width: .65rem; height: .65rem; border-radius: 50%; background: var(--text-muted); }
 .source-step { display: grid; gap: var(--space-1); }
 .source-step h4 { margin: 0; font-size: var(--text-md); }
-.source-status[data-tone="ok"] .source-status-dot { background: var(--ok); }
-.source-status[data-tone="warn"] .source-status-dot { background: var(--warn); }
-.source-status[data-tone="danger"] .source-status-dot { background: var(--danger); }
+/* A connection that needs the person: a 3px edge on its leading side and a soft tint, as a row's state does (ui/Row). */
+.source-row[data-state="warn"] { --state-tint: var(--warn-soft); --state-edge: var(--warn); }
+.source-row[data-state="danger"] { --state-tint: var(--danger-soft); --state-edge: var(--danger); }
+.source-row[data-state] { background: linear-gradient(90deg, var(--state-tint) 0, transparent 60%); }
+.source-row[data-state] > :first-child { box-shadow: inset 3px 0 0 var(--state-edge); }
 .source-row-details { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
 .source-row-details > :first-child { margin-top: 0; }
 .list-accordion-item { border-bottom: 1px solid var(--border); }
@@ -500,7 +500,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 
 /* The offer of a mailbox's sent folder under its row: the words, the list and the button wrap, never scroll sideways. */
 .sent-offer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-2); min-width: 0; }
-.sent-offer select { width: auto; max-width: 100%; min-width: 0; }
+.sent-offer [data-ui="select"] { width: auto; max-width: 100%; min-width: 0; }
 
 /* What a refused save refreshed from what is saved now: one plain line each, above the form. */
 .refreshed-lines { list-style: none; margin: 0 0 var(--space-3); padding: 0; }

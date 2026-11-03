@@ -10,7 +10,7 @@ import { takeFilters } from "../lib/open-items";
 import { showNewLines } from "../lib/queue-hold";
 import { RestartProvider } from "../lib/restart";
 import { forgetLine } from "../lib/today";
-import { fakeApi, renderApp, setupStep, setupView, statusFixture, type Routes } from "../test-utils";
+import { fakeApi, renderApp, setupStep, setupView, statusFixture, type Routes, optionsOf } from "../test-utils";
 import { Today } from "./Today";
 
 type Line = S["QueueLineView"];
@@ -300,7 +300,7 @@ test("an owner question's line opens the question itself, with the choice of who
   const calls = show([line("owner", { key: "question:Q-9", text: "Print the agenda.", question: "Q-9" })], { "GET changes": () => [item], "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: null }], "POST questions/Q-9/answer": () => ({ ok: "Q-9" }) }).calls;
   await user.click(await screen.findByRole("button", { name: "Pick an owner" }));
   const picker = await screen.findByRole("combobox", { name: "Who owns this?" });
-  await screen.findByRole("option", { name: "Robin Sample" });
+  await waitFor(async () => expect((await optionsOf(picker)).map((o) => o.textContent)).toContain("Robin Sample"));
   await user.selectOptions(picker, "Robin Sample");
   await user.click(screen.getByRole("button", { name: "Add the to-do" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-9/answer")?.body).toEqual({ person: "PER-2" }));

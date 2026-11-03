@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 import { useMovedToSide } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { ProjectDrawer } from "./ProjectForm";
 import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
@@ -32,7 +32,7 @@ export function ProjectPicker(props: {
   const movedTo = useMovedToSide(started, props.value);
   const own = useId();
   const id = props.id ?? own;
-  const select = useRef<HTMLSelectElement>(null);
+  const select = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
   const rows = [...(projects.data ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   const close = () => {
@@ -51,7 +51,7 @@ export function ProjectPicker(props: {
         onChange={(e) => (e.target.value === ADD ? setAdding(true) : props.onChange(e.target.value))}
       >
         <option value="">{props.empty ?? t("project.choose")}</option>
-        <PlaceOptions projects={rows} />
+        {placeOptions(rows, t)}
         <option value={ADD}>{t("project.add_option")}</option>
       </Select>
       {movedTo && <span className="hint">{tn("filing.visible", 1, { side: movedTo })}</span>}

@@ -8,7 +8,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { firstField } from "../lib/cursor";
 import { problemText } from "../lib/problem";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { useAddonName } from "../lib/addon-names";
 import { changedValues, type Draft } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
@@ -60,7 +60,7 @@ export function DataForms(props: { level?: 2 | 3 }) {
         <FormField id={`${base}-project`} label={t("dataform.project")}>
           <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)} aria-describedby={`${base}-project-hint`}>
             <option value="">{t("dataform.no_project")}</option>
-            <PlaceOptions projects={projects.data ?? []} />
+            {placeOptions(projects.data ?? [], t)}
           </Select>
           <p className="hint" id={`${base}-project-hint`}>
             {t("dataform.project_hint")}

@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { PromiseWhy } from "./PromiseWhy";
 
 // Every promise shows why, and each part of it is one click to correct from a list (design 6.33).
@@ -73,7 +73,7 @@ test("who owes it is a list of people with the cursor in it, and picking one cor
   await user.click(await screen.findByRole("button", { name: "Change: Who owes it" }));
   const list = screen.getByRole("combobox", { name: "Who owes it" });
   expect(list).toHaveFocus();
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana Person", "Robin Sample", "Casey Moor"]);
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ana Person", "Robin Sample", "Casey Moor"]);
   await user.selectOptions(list, "PER-3");
   await waitFor(() => expect(calls.find((c) => c.route === "POST promises/ACT-1/correct")?.body).toEqual({ read_version: 4, owner: "PER-3" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
@@ -85,7 +85,7 @@ test("promised to is a list that can say no one", async () => {
   const { calls } = show(view());
   await user.click(await screen.findByRole("button", { name: "Change: Promised to" }));
   const list = screen.getByRole("combobox", { name: "Promised to" });
-  expect(within(list).getAllByRole("option")[0]).toHaveTextContent("No one in particular");
+  expect(within(await snapshotOf(list)).getAllByRole("option")[0]).toHaveTextContent("No one in particular");
   await user.selectOptions(list, "");
   await waitFor(() => expect(calls.find((c) => c.route === "POST promises/ACT-1/correct")?.body).toEqual({ read_version: 4, promised_to: [] }));
 });
@@ -95,7 +95,7 @@ test("how it is known is the two values to pick from", async () => {
   const { calls } = show(view());
   await user.click(await screen.findByRole("button", { name: "Change: How it is known" }));
   const list = screen.getByRole("combobox", { name: "How it is known" });
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Said", "Worked out"]);
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Said", "Worked out"]);
   await user.selectOptions(list, "said");
   await waitFor(() => expect(calls.find((c) => c.route === "POST promises/ACT-1/correct")?.body).toEqual({ read_version: 4, basis: "said" }));
 });
@@ -104,8 +104,8 @@ test("the day is a date picker with the cursor in it, and saving sends the new d
   const user = userEvent.setup();
   const { calls } = show(view());
   await user.click(await screen.findByRole("button", { name: "Change: Due" }));
-  const picker = screen.getByLabelText("Due", { selector: "input" });
-  expect(picker).toHaveAttribute("type", "date");
+  const picker = screen.getByRole("textbox", { name: "Due" });
+  expect(picker).toHaveAttribute("data-kind", "date");
   expect(picker).toHaveFocus();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   fireEvent.change(picker, { target: { value: "2026-11-03" } });

@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, renderApp, type Routes, typeMoment } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 // The person's own calendar entry is moved or cancelled from its page at once, with Undo in a toast, and a connected event that
@@ -77,10 +77,10 @@ describe("an entry the app keeps itself", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Move to another time…" }));
     const start = await screen.findByLabelText("Starts");
     await user.clear(start);
-    await user.type(start, "2026-11-03T14:00");
+    await typeMoment(user, start, "2026-11-03T14:00");
     const end = screen.getByLabelText("Ends");
     await user.clear(end);
-    await user.type(end, "2026-11-03T15:00");
+    await typeMoment(user, end, "2026-11-03T15:00");
     await user.click(screen.getByRole("button", { name: "Move it" }));
     await waitFor(() => expect(posted(calls, `POST events/${ENTRY}/move`)).toHaveLength(1));
     expect(posted(calls, `POST events/${ENTRY}/move`)[0].body).toEqual({

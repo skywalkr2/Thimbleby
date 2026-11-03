@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { projectChoices } from "../lib/project-choices";
-import { PlaceOptions } from "./PlaceOptions";
+import { placeOptions } from "./PlaceOptions";
 import { useRowKeys } from "../lib/keys";
 import { plainDates } from "../lib/read";
 import { useWords } from "../lib/wording";
@@ -222,7 +222,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
           </label>
           <Select id={`${ids}-into`} autoFocus value={into} onChange={(e) => setInto(e.target.value)}>
             <option value="">{t("project_item.choose")}</option>
-            <PlaceOptions projects={projects.data ?? []} asParent />
+            {placeOptions(projects.data ?? [], t, true)}
           </Select>
           <Actions align="end">
             <Button variant="quiet" onClick={close}>

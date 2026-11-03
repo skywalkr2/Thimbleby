@@ -44,7 +44,7 @@ import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
-import { Pill } from "../ui/Pill";
+import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
 import { ConfirmRemove } from "./ConfirmRemove";
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
@@ -411,21 +411,15 @@ function PackRow(props: {
       href: safeHomepage,
     });
   }
-  const pill = !installed ? (
-    <Pill tone="neutral">{t("addons.pill.not_installed")}</Pill>
-  ) : props.restartNeeded ? (
-    <Pill tone="warn">{t("addons.pill.restart")}</Pill>
-  ) : pack.enabled ? (
-    <Pill tone="ok">{t("addons.pill.on")}</Pill>
-  ) : (
-    <Pill tone="neutral">{t("addons.pill.off")}</Pill>
-  );
+  // An add-on's state is a dot and a word in its meta; one that waits for a restart is a warning, with its edge and tint.
+  const stateTone: StateTone = !installed ? "neutral" : props.restartNeeded ? "warn" : pack.enabled ? "ok" : "neutral";
+  const stateWord = t(!installed ? "addons.pill.not_installed" : props.restartNeeded ? "addons.pill.restart" : pack.enabled ? "addons.pill.on" : "addons.pill.off");
   const details = [
     !props.group && <p key="facts" className="hint">{facts.join(" · ")}</p>,
     !props.group && <p key="price" className="hint">{priceText(pack.price, amount, t)}</p>,
   ];
   return (
-    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} pill={pill} actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
+    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} state={needsYou(stateTone) ? stateTone : undefined} meta={<StateMark tone={stateTone}>{stateWord}</StateMark>} actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
             <Button variant="primary"
               id={`pack-install-${index}`}
               data-key="primary"
@@ -955,15 +949,10 @@ function InstalledRow(props: { item: Installed; index: number; onRemoved: () => 
       : item.reason
         ? t("addons.state.because", { reason: item.reason })
         : t("addons.state.off");
-  const pill = pending ? (
-    <Pill tone="warn">{t("addons.pill.restart")}</Pill>
-  ) : item.state === "enabled" ? (
-    <Pill tone="ok">{t("addons.pill.on")}</Pill>
-  ) : (
-    <Pill tone="neutral">{t("addons.pill.off")}</Pill>
-  );
+  const stateTone: StateTone = pending ? "warn" : item.state === "enabled" ? "ok" : "neutral";
+  const stateWord = t(pending ? "addons.pill.restart" : item.state === "enabled" ? "addons.pill.on" : "addons.pill.off");
   return (
-    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} pill={pill} actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
+    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} state={needsYou(stateTone) ? stateTone : undefined} meta={<StateMark tone={stateTone}>{stateWord}</StateMark>} actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
           <RowMenu label={name} actions={actions} /></>}>
 {item.description && <p className="pack-summary">{item.description}</p>}
 {pending && (

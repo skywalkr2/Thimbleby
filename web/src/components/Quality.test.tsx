@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, dayValue } from "../test-utils";
 import { Quality } from "./Quality";
 
 // The Quality screen (design 6.32): a section for each measure with its number out of its denominator, the person's own
@@ -423,8 +423,7 @@ test("the cursor starts on the heading, and the form's date holds today and show
   const date = await screen.findByLabelText("Day");
   await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveFocus());
   expect(date).not.toHaveFocus();
-  expect(date).toHaveValue("2026-10-19");
-  expect(date).toHaveAttribute("max", "2026-10-19");
+  expect(dayValue(date)).toBe("2026-10-19");
   expect(screen.getByLabelText("Promises on your own list")).toHaveValue(10);
 });
 

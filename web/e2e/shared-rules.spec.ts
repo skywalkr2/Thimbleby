@@ -4,7 +4,8 @@
 //   VP02  every row has the 24px leading slot, and every row title in a list starts at the same x, within 1px;
 //   VP03  every group label is uppercase, 11px, and carries its count in a pill;
 //   VP06  no element shows a focus ring before a key is pressed, and a key then shows it on the row it moves to;
-//   VP01  no screen scrolls sideways, and a screen's header, tabs, lists and rail share the content area's left and right edges.
+//   VP01  no screen scrolls sideways, and a screen's header, tabs, lists and rail share the content area's left and right edges;
+//   VC05  no browser date, time or list control: every date, time and list to pick from is the app's own (ui/DateField, TimeField, Select).
 // The layout server holds the long made-up text and many items of the fixtures, so the rules hold with them. Checked by hand, not
 // here: the colors of the weights, a card's edge by night, the order and look of a row's parts (the reviewer's side-by-side pages).
 import { expect, test, type Page } from "@playwright/test";
@@ -251,5 +252,87 @@ test.describe("the shared rules hold on every main screen", () => {
     // A press with the pointer takes the ring away: the mouse gets none.
     await page.mouse.click(5, 300);
     expect((await ringsShown(page)).found).toEqual([]);
+  });
+});
+
+// VC05: the browser's own date, time and list controls ("mm/dd/yyyy", "--:-- --", the grey select) are gone from every screen
+// and form. A date is a text box with a calendar button, a time a text box with a list of times, a list a button that opens a
+// listbox. (A file picker is the browser's own and stays; it is not matched here.)
+const NATIVE = "input[type=date], input[type=time], input[type=datetime-local], select";
+const native = (page: Page) => page.locator(NATIVE);
+
+test.describe("no browser date, time or list controls (VC05)", () => {
+  for (const screen of SCREENS) {
+    test(`${screen.name}: none on the screen`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await load(page, screen.hash);
+      await screen.ready(page);
+      await settled(page);
+      await expect(native(page)).toHaveCount(0);
+    });
+  }
+
+  test("none in the Add to-do form, the Schedule's Add form, Quality's count form or a to-do's Edit details; each has the app's own date box with its calendar", async ({ page, request }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // To-dos: Add a to-do.
+    await load(page, "work/open");
+    await heading(page, "To-dos and questions");
+    await page.getByRole("button", { name: "Add a to-do" }).first().click();
+    const todo = page.getByRole("dialog", { name: "Add a to-do" });
+    await expect(todo).toBeVisible(LOADED);
+    await expect(native(page)).toHaveCount(0);
+    await expect(todo.locator('[data-ui="date"]').first()).toBeVisible();
+    await expect(todo.getByRole("button", { name: /^Choose a date/ }).first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Add a to-do" })).toHaveCount(0);
+
+    // Schedule: Add to schedule, with a day, a start time and an end time.
+    await load(page, "schedule");
+    await heading(page, "Schedule");
+    await page.getByRole("button", { name: /^Add (to schedule|an event|a meeting)$|^Add$/ }).first().click();
+    await expect(page.getByRole("textbox", { name: "Day" })).toBeVisible(LOADED);
+    await expect(native(page)).toHaveCount(0);
+    await expect(page.getByRole("combobox", { name: /^Starts at/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Quality: the day count.
+    await load(page, "quality");
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+    await settled(page);
+    await expect(native(page)).toHaveCount(0);
+
+    // A to-do's Edit details.
+    const open = (await (await request.get("api/open-items", { headers: AUTH })).json()) as { actions: Array<{ id: string }> };
+    expect(open.actions.length).toBeGreaterThan(0);
+    await load(page, `records/action/${open.actions[0].id}`);
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+    await page.getByRole("button", { name: "Edit details" }).click();
+    await expect(page.getByLabel("Title")).toBeVisible(LOADED);
+    await expect(native(page)).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Due", exact: true })).toBeVisible();
+  });
+
+  test("a date is typed in the person's words or picked from the calendar, with the keyboard, and the cursor returns to its button", async ({ page, request }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const open = (await (await request.get("api/open-items", { headers: AUTH })).json()) as { actions: Array<{ id: string }> };
+    await load(page, `records/action/${open.actions[0].id}`);
+    await page.getByRole("button", { name: "Edit details" }).click();
+    const due = page.getByRole("textbox", { name: "Due", exact: true });
+    await expect(due).toBeVisible(LOADED);
+    await due.fill("tomorrow");
+    await due.blur();
+    await expect(due).not.toHaveValue("tomorrow");
+    const picker = page.getByRole("button", { name: "Choose a date: Due" });
+    await picker.click();
+    const dialog = page.getByRole("dialog", { name: "Calendar" });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(picker).toBeFocused();
   });
 });

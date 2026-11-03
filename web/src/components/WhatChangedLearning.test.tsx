@@ -4,7 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { learnedLine, project } from "../lib/learned-fixtures";
-import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
 
 // The window is wide, so a change's detail stands beside the list (design 7.13).
@@ -110,7 +110,7 @@ test("This doesn't apply here narrows the entry by leaving a project out, at onc
   await user.click(screen.getByRole("menuitem", { name: "This doesn't apply here" }));
   const pick = await screen.findByRole("combobox", { name: "Stop using this for" });
   expect(screen.getByRole("button", { name: "Limit where it applies" })).toBeDisabled();
-  await waitFor(() => expect(within(pick).getAllByRole("option")).toHaveLength(3));
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option")).toHaveLength(3));
   await user.selectOptions(pick, "PRJ-1");
   await user.click(screen.getByRole("button", { name: "Limit where it applies" }));
   await waitFor(() =>
@@ -128,8 +128,8 @@ test("This doesn't apply here never offers a side as a project to leave out", as
   await user.click(await screen.findByRole("button", { name: `More actions for ${RULE}` }));
   await user.click(screen.getByRole("menuitem", { name: "This doesn't apply here" }));
   const pick = await screen.findByRole("combobox", { name: "Stop using this for" });
-  await waitFor(() => expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toContain("Spring launch"));
-  expect(within(pick).queryByRole("option", { name: "Orchard Press" })).toBeNull();
+  await waitFor(async () => expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toContain("Spring launch"));
+  expect(within(await snapshotOf(pick)).queryByRole("option", { name: "Orchard Press" })).toBeNull();
 });
 
 test("This doesn't apply here can retire the entry instead, with Undo", async () => {

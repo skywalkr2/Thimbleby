@@ -57,6 +57,6 @@ export function showRow(row: HTMLElement | null, focusInside = false): void {
   if (!row) return;
   row.scrollIntoView?.({ block: "nearest" });
   // The cursor goes to the row's first field; a row with none gives it to its first button.
-  const inner = focusInside ? (row.querySelector<HTMLElement>("textarea, input, select") ?? row.querySelector<HTMLElement>("button")) : null;
+  const inner = focusInside ? (row.querySelector<HTMLElement>("textarea, input, [data-ui=select]") ?? row.querySelector<HTMLElement>("button")) : null;
   (inner ?? row).focus();
 }

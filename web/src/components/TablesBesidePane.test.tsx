@@ -157,7 +157,7 @@ test("the organization filter is sized to its content", async () => {
   expect(filter).toHaveAttribute("data-size", "content");
   const css = readFileSync(join(__dirname, "People.module.css"), "utf8");
   expect(css).toMatch(/fit-content/);
-  expect(css).toMatch(/select\s*\{[^}]*width:\s*auto/);
+  expect(css).toMatch(/\[data-ui="select"\]\s*\{[^}]*width:\s*auto/);
 });
 
 test("the organizations are a table: name, how many people work there, whether it is yours, other names, and the row's menu", async () => {

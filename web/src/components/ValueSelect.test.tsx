@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { useState } from "react";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes, optionsOf } from "../test-utils";
 import { ValueSelect } from "./ValueSelect";
 
 const LIST = "demo-state";
@@ -35,7 +35,7 @@ function routes(extra: Routes = {}): Routes {
   return { "GET lists": () => [list()], ...extra };
 }
 
-const options = (box: HTMLElement) => within(box).getAllByRole("option").map((o) => o.textContent);
+const options = async (box: HTMLElement) => (await optionsOf(box)).map((o) => o.textContent);
 
 afterEach(() => {
   delete document.body.dataset.closed;
@@ -45,7 +45,7 @@ test("it offers the list's values in order, with Not set first and the add choic
   fakeApi(routes());
   renderApp(<Harness start="Waiting" />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toEqual(["Not set", "Open", "Waiting", "Add to the list…"]));
+  await waitFor(async () => expect(await options(select)).toEqual(["Not set", "Open", "Waiting", "Add to the list…"]));
   expect(select).toHaveValue("Waiting");
 });
 
@@ -53,16 +53,16 @@ test("a value the record holds but the list dropped stays, marked as no longer o
   fakeApi(routes());
   renderApp(<Harness start="Closed" />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toContain("Closed (no longer offered)"));
+  await waitFor(async () => expect(await options(select)).toContain("Closed (no longer offered)"));
   expect(select).toHaveValue("Closed");
-  expect(options(select)).toEqual(["Not set", "Open", "Waiting", "Closed (no longer offered)", "Add to the list…"]);
+  expect(await options(select)).toEqual(["Not set", "Open", "Waiting", "Closed (no longer offered)", "Add to the list…"]);
 });
 
 test("a held value is shown plainly while the lists load, and when they don't load there is no way to add", async () => {
   fakeApi({ "GET lists": () => new Refuse(500, "") });
   renderApp(<Harness start="Closed" />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toEqual(["Not set", "Closed"]));
+  await waitFor(async () => expect(await options(select)).toEqual(["Not set", "Closed"]));
   expect(select).toHaveValue("Closed");
 });
 
@@ -90,7 +90,7 @@ test("Add to the list opens a field; Add sends the value, selects it and offers 
   );
   renderApp(<Harness />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toContain("Add to the list…"));
+  await waitFor(async () => expect(await options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
   const field = screen.getByRole("textbox", { name: "Add a choice to Demo state" });
   expect(field).toHaveFocus();
@@ -100,7 +100,7 @@ test("Add to the list opens a field; Add sends the value, selects it and offers 
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("Parked"));
   expect(calls.find((c) => c.route === "POST lists/demo-state/add")?.body).toEqual({ value: "Parked" });
   expect(screen.queryByRole("textbox", { name: "Add a choice to Demo state" })).toBeNull();
-  await waitFor(() => expect(options(screen.getByRole("combobox", { name: "State" }))).toContain("Parked"));
+  await waitFor(async () => expect(await options(screen.getByRole("combobox", { name: "State" }))).toContain("Parked"));
   expect(screen.getByRole("combobox", { name: "State" })).toHaveValue("Parked");
   expect(await screen.findByText("Added Parked to Demo state.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
@@ -113,7 +113,7 @@ test("Enter in the field adds without sending the form around it", async () => {
   const calls = fakeApi(routes({ "POST lists/demo-state/add": () => ({ changeset: "CS-2" }) }));
   renderApp(<Harness onSubmit={sent} />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toContain("Add to the list…"));
+  await waitFor(async () => expect(await options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
   await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "Parked{Enter}");
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("Parked"));
@@ -126,7 +126,7 @@ test("Escape cancels the field and does not reach the form, and nothing is sent"
   const calls = fakeApi(routes());
   renderApp(<Harness start="Open" />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toContain("Add to the list…"));
+  await waitFor(async () => expect(await options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
   await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "Parked{Escape}");
   expect(screen.queryByRole("textbox", { name: "Add a choice to Demo state" })).toBeNull();
@@ -141,7 +141,7 @@ test("a value the list already offers is selected without asking the server", as
   const calls = fakeApi(routes());
   renderApp(<Harness />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toContain("Add to the list…"));
+  await waitFor(async () => expect(await options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
   await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "waiting{Enter}");
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("Waiting"));
@@ -153,7 +153,7 @@ test("a refusal shows in an alert, keeps the field open with what was typed, and
   fakeApi(routes({ "POST lists/demo-state/add": () => new Refuse(422, "That value is not allowed here.") }));
   renderApp(<Harness start="Open" />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toContain("Add to the list…"));
+  await waitFor(async () => expect(await options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
   await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "Bad");
   await user.click(screen.getByRole("button", { name: "Add" }));
@@ -166,6 +166,6 @@ test("a required choice has no Not set", async () => {
   fakeApi(routes());
   renderApp(<Harness start="Open" required />);
   const select = await screen.findByRole("combobox", { name: "State" });
-  await waitFor(() => expect(options(select)).toEqual(["Open", "Waiting", "Add to the list…"]));
+  await waitFor(async () => expect(await options(select)).toEqual(["Open", "Waiting", "Add to the list…"]));
   expect(select).toBeRequired();
 });

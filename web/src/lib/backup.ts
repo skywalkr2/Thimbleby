@@ -18,3 +18,11 @@ export function backupText(b: S["BackupStatus"], t: T): string {
   const text = age === null ? (b.last_error ? t("backup.failed") : t("backup.never")) : b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
   return b.encrypted ? `${text} · ${t("backup.encrypted")}` : text;
 }
+
+/** How the backup stands, for the state mark: a danger when the last try failed, a warning when one is due, fine when it is
+ * recent, and quiet when none is set up. */
+export function backupTone(b: S["BackupStatus"]): "ok" | "warn" | "danger" | "neutral" {
+  if (!b.configured) return "neutral";
+  if (b.last_error) return "danger";
+  return b.needs_attention ? "warn" : "ok";
+}

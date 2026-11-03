@@ -15,6 +15,14 @@
 .row.selected:focus-visible { box-shadow: var(--row-selected-bar); }
 :global(:root[data-input="keyboard"]) .row.selected:focus-visible { box-shadow: var(--row-selected-bar), inset 0 0 0 2px var(--focus-ring); }
 
+/* A row that needs the person: a 3px edge on its leading side and a soft tint that fades out across the row. */
+.warn, .danger { background: linear-gradient(90deg, var(--state-tint) 0, transparent 60%), var(--surface); }
+.warn { --state-tint: var(--warn-soft); --state-edge: var(--warn); }
+.danger { --state-tint: var(--danger-soft); --state-edge: var(--danger); }
+.warn::before, .danger::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--state-edge); }
+.warn:hover, .danger:hover { background: linear-gradient(90deg, var(--state-tint) 0, transparent 60%), var(--surface-hover); }
+@media (max-width: 639.98px) { .warn, .danger { background: var(--state-tint); } .warn:hover, .danger:hover { background: var(--state-tint); } }
+
 .lead { grid-column: 1; align-self: center; justify-self: stretch; width: var(--row-lead-w); height: var(--row-lead-w); min-width: 0; display: grid; place-items: center; overflow: visible; }
 /* The mark after the title's words: it wraps with them and never draws over them. */
 .mark { margin-left: var(--space-2); vertical-align: 1px; }

@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { ReminderWhere } from "./ReminderWhere";
 import { ReminderWhereRow } from "./ReminderWhereRow";
 
@@ -86,7 +86,7 @@ describe("where reminders reach you", () => {
     renderApp(<ReminderWhere />);
     await userEvent.click(await screen.findByRole("radio", { name: /In my calendar/ }));
     const pick = await screen.findByRole("combobox", { name: "Account" });
-    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick an account", "My sign-in (me@example.com)"]);
+    expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick an account", "My sign-in (me@example.com)"]);
     expect(screen.queryByText(/exactly what a reminder will say/)).toBeNull();
     await userEvent.selectOptions(pick, "signin:me@example.com");
     expect(screen.getByText(/exactly what a reminder will say/)).toBeInTheDocument();

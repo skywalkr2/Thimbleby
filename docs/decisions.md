@@ -32,6 +32,24 @@ was far from them. *Impact:* web only (no API model, no setting; `RAIL_ROWS` is 
 new `MarkDot`, `InlineAddTodo`, `NeedsADateLine`, wording (`today.greeting.*`, `queue.clash.title*`, `queue.batch.keep_all`,
 `open.group.*`), the old "All looks good" label and the clash's "Sort out the clash on …" title are replaced. Change log: section 316.
 
+## 2026-11-03: The app's own lists, dates and times, one way to say a state, and one account state for the header and Connections (VC05, VP05, VC13; section 315)
+
+**Decided:** (owner: the build matches the reviewer's 4.6 mockups before the gate week; design by the main session.) (1) *Our own
+controls.* The browser's select, date and time controls are replaced by the app's: `Select` is a button that opens a listbox (the
+select-only combobox), with a filter box above twelve choices; `DateField` a text box that reads what the person types in their
+locale plus a calendar button (the date picker dialog); `TimeField` a text box that reads "9", "930" or "9:30 pm" plus a list of
+times every 15 minutes. Values in and out stay ISO text, so no caller's data changes. The file picker stays the browser's own.
+(2) *One state mark.* A state is a dot and a word in a row's meta; one that needs the person gets an icon, a 3px edge and a soft
+tint on the row; used for Connections, add-ons, AI accounts, sign-ins and the backup; side and calendar dots stay for sides and
+calendars. (3) *One account state.* The header counts "1 account needs you" and lists each account once, and Connections lists
+the accounts that need signing in, both from `accountStates` (`web/src/lib/connections.ts`) through one row (`AccountRow`).
+*Why:* the reviewer saw "mm/dd/yyyy" boxes and grey native selects, status as tags, and a header popover that listed one failing
+account once for each connection in red. *Impact:* web only; one dependency added to `package.json` (`@internationalized/date`,
+already installed under the calendar component the app uses), the browser tests' `selectOption` calls became a helper, no setting,
+no API change, no plugin API change. Not decided here, listed for the owner: the 12-hour or 24-hour clock and the minutes between
+the listed times have no setting (the browser's locale decides the clock, 15 minutes the list), where a setting would be
+`ui.time_format` and `ui.time_step` with demo values in both workspaces. Change log: section 315.
+
 ## 2026-11-03: Restore from a copy, staged and swapped in at the next start (X98, X04; section 314)
 
 **Decided:** (owner: every item of the re-sweep fixed before the gate week; design by the main session.) A person restores one of

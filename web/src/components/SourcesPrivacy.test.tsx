@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { privacyFact, Sources } from "./Sources";
 
 // A connection's privacy follows the side it serves (design 6.32, 7.15): its row says how private what it holds is and why,
@@ -77,7 +77,7 @@ test("the form offers following the side first, then the three levels, and shows
   open([source("a", { data_level: "internal", data_level_from: "source", data_level_own: "internal", data_level_sides: [] })]);
   const form = await change(user, "Source a");
   const pick = within(form).getByLabelText("Privacy");
-  expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["Like what it serves (Private)", "Open", "Confidential", "Private"]);
+  expect(within(await snapshotOf(pick)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Like what it serves (Private)", "Open", "Confidential", "Private"]);
   expect(pick).toHaveValue("internal");
 });
 
@@ -112,7 +112,7 @@ test("a connection that serves no side offers the usual level instead, and savin
   const user = userEvent.setup();
   const calls = open([source("a", { data_level: "internal", data_level_from: "default", data_level_sides: [], data_level_side_level: null })]);
   const form = await change(user, "Source a");
-  expect(within(within(form).getByLabelText("Privacy")).getAllByRole("option")[0]).toHaveTextContent("The usual for connections");
+  expect(within(await snapshotOf(within(form).getByLabelText("Privacy"))).getAllByRole("option")[0]).toHaveTextContent("The usual for connections");
   await user.click(within(form).getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST watch/sources/a")).toBe(true));
   expect(calls.find((c) => c.route === "POST watch/sources/a")?.body).not.toHaveProperty("data_level");

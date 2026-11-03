@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import type { SettingsSection } from "../lib/views";
 import { project } from "../lib/records-fixtures";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { Refuse, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Settings } from "./Settings";
 import { setDensity, setTheme } from "../lib/theme";
@@ -687,7 +687,7 @@ test("the person's own record is picked from the people by name, with a blank fo
   );
   open();
   const list = await screen.findByLabelText("Your own record.");
-  await waitFor(() => expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["No one chosen yet", "Ada Example", "Robin Sample"]));
+  await waitFor(async () => expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["No one chosen yet", "Ada Example", "Robin Sample"]));
   expect(list).toHaveValue("");
   await user.selectOptions(list, "PER-2");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
@@ -698,7 +698,7 @@ test("a role's tier is picked from the tiers by their plain names", async () => 
   api([...ITEMS, item("ai.roles.write.tier", { type: "choice", choices: "tiers", options: ["routine", "deep", "extra-care"], value: "routine", default: "", description: "The tier for writing." })]);
   open();
   const list = await screen.findByLabelText("The tier for writing.");
-  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Everyday work", "Harder work", "Extra care"]);
+  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Everyday work", "Harder work", "Extra care"]);
 });
 
 test("how an owner is shown is a list of examples, and the file types that may be added are ticked by plain names", async () => {
@@ -709,7 +709,7 @@ test("how an owner is shown is a list of examples, and the file types that may b
   ]);
   open();
   const owner = await screen.findByLabelText("How an owner is shown.");
-  expect(within(owner).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ada Example", "Design (Ada Example)"]);
+  expect(within(await snapshotOf(owner)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ada Example", "Design (Ada Example)"]);
   const types = screen.getByRole("group", { name: /File types that may be added/ });
   expect(within(types).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual(["PDF", "CSV spreadsheet", "PNG image"]);
   expect(within(types).getByRole("checkbox", { name: "PDF" })).toBeChecked();
@@ -723,8 +723,8 @@ test("a setting that holds a date format is a list showing today's date in each 
   ]);
   open();
   const list = await screen.findByLabelText("How dates appear.");
-  expect(list.tagName).toBe("SELECT");
-  const labels = within(list).getAllByRole("option").map((o) => o.textContent);
+  expect(list).toHaveAttribute("data-ui", "select");
+  const labels = within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent);
   expect(labels).toHaveLength(2);
   expect(labels.join(" ")).not.toContain("%");
   expect(labels[1]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -1278,7 +1278,7 @@ test("a setting that picks a language shows each tag by its name, sorted by name
   );
   open();
   const select = await screen.findByLabelText("What demo.language does");
-  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["English (United Kingdom)", "English (United States)", "French (France)"]);
+  expect(within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent)).toEqual(["English (United Kingdom)", "English (United States)", "French (France)"]);
   expect(select).toHaveValue("en-US");
   await user.selectOptions(select, "fr-FR");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
@@ -1293,7 +1293,7 @@ test("the spelling of English is picked by its name: American, British and the r
   );
   open();
   const select = await screen.findByLabelText("English spelling");
-  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["American", "Australian", "British"]);
+  expect(within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent)).toEqual(["American", "Australian", "British"]);
   expect(document.body.textContent ?? "").not.toMatch(/\ben-[A-Z]{2}\b/);
   await user.selectOptions(select, "en-GB");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
@@ -1499,7 +1499,7 @@ test("a choice setting that doesn't name a list keeps its own order and wording"
   api();
   open();
   const select = await screen.findByLabelText("What demo.mode does");
-  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["person", "rule"]);
+  expect(within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent)).toEqual(["person", "rule"]);
 });
 
 test("the Notices page holds the reminder settings as lists, and the button that asks the browser for notifications", async () => {
@@ -1514,7 +1514,7 @@ test("the Notices page holds the reminder settings as lists, and the button that
   renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   expect(await screen.findByRole("combobox", { name: "Quiet hours start at" })).toHaveValue("21:00");
   const first = screen.getByRole("combobox", { name: "Your working week starts on" });
-  expect(within(first).getAllByRole("option").map((o) => o.textContent)).toEqual(["Monday", "Tuesday"]);
+  expect(within(await snapshotOf(first)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Monday", "Tuesday"]);
   expect(request).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Allow notifications" }));
   expect(request).toHaveBeenCalledTimes(1);

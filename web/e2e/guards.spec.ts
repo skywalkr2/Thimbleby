@@ -4,8 +4,9 @@
 //   2. at most one filled primary button in a region (the header, a pane, a dialog, the main content);
 //   3. no list row has a leading column wider than the 24px slot every row has (nothing starts more than 72px from the edge);
 //   4. no field has the cursor when a screen opens (a form, dialog or drawer the person opened is another matter).
-//   5. no native, unstyled select, date, time or file control and no fieldset drawn with its legend on a border (VC05, E12): a
-//      list, a date, a file and a group of ticks come from the shared components, which mark themselves `data-ui`.
+//   5. no browser select, date or time control (VC05: the app's own list, date and time boxes replace them), no unstyled file
+//      control and no fieldset drawn with its legend on a border (E12): a file and a group of ticks come from the shared
+//      components, which mark themselves `data-ui`.
 // The layout server holds the long names and the many items of the fixtures, so the guards hold with them.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -133,7 +134,8 @@ const nativeControls = (page: Page) =>
       const tag = el.tagName.toLowerCase();
       const type = (el as HTMLInputElement).type;
       const kind = tag === "select" ? "select" : tag === "fieldset" ? "group" : type === "file" ? "file" : "date";
-      const mine = el.getAttribute("data-ui") === kind || (kind === "file" && !!el.closest('[data-ui="file"]'));
+      // A browser select, date or time control is never ours: the app's own are a button with a listbox and text boxes.
+      const mine = kind === "select" || kind === "date" ? false : el.getAttribute("data-ui") === kind || (kind === "file" && !!el.closest('[data-ui="file"]'));
       const label = `${tag}${type && tag === "input" ? `[${type}]` : ""}#${el.id || el.getAttribute("name") || ""}`;
       if (!mine) found.push(`${label} is a native control`);
       else if (kind === "group" && parseFloat(style.borderTopWidth) > 0) found.push(`${label} has a frame with its legend on it`);

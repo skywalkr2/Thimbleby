@@ -10,7 +10,9 @@ export const ROW_EVENT = "rowkey";
 
 export function typing(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+  // The app's own lists and date boxes (ui/Select, ui/DateField) are fields too: the button that opens a list, the list itself,
+  // the calendar's grid and the text boxes inside them.
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || !!target.closest('[data-ui="select"], [role="combobox"], [role="listbox"], [role="grid"]');
 }
 
 function rows(): HTMLElement[] {
@@ -32,7 +34,7 @@ function move(step: number): void {
 }
 
 /** What can take the cursor in a pane: a row first, then anything a person can press or type in. */
-const ENTRY = '[data-row], a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+const ENTRY = '[data-row], a[href], button:not(:disabled), input:not(:disabled), [data-ui="select"]:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 /** The regions of a screen the cursor can move between (marked `data-region`): a list, the details beside it, the rail. A region
  * that isn't shown is not one. */

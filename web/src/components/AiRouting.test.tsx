@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { Refuse, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { AiChoices, AiRouting } from "./AiRouting";
 
 type View = S["AiRoutingView"];
@@ -130,7 +130,7 @@ test("each kind of work has a list of the models to pick from, named in plain wo
   expect(await screen.findByRole("heading", { name: "Which model does what" })).toBeInTheDocument();
   const notes = within(rowOf("notes")).getByLabelText(NOTES) as HTMLSelectElement;
   expect(notes).toHaveValue("routine");
-  expect(within(notes).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account"]);
+  expect(within(await snapshotOf(notes)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account"]);
   expect(screen.queryByText(/routine|deep|tier/i)).toBeNull();
 });
 
@@ -241,12 +241,12 @@ test("a failed answer's second try is a list per model, says when it happens, an
   const calls = server(start());
   renderApp(<AiRouting />);
   expect(await screen.findByText(/only when the app's own checks find a problem, never because the model says it isn't sure/)).toBeInTheDocument();
-  const routine = screen.getByLabelText("Everyday work · Main account", { selector: "select" }) as HTMLSelectElement;
+  const routine = screen.getByLabelText("Everyday work · Main account", { selector: '[data-ui="select"]' });
   expect(routine).toHaveValue("deep");
-  expect(within(routine).getAllByRole("option").map((o) => o.textContent)).toEqual(["Don't try again", "Try once more with Harder work · Strong account"]);
-  const deep = screen.getByLabelText("Harder work · Strong account", { selector: "select" });
+  expect(within(await snapshotOf(routine)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Don't try again", "Try once more with Harder work · Strong account"]);
+  const deep = screen.getByLabelText("Harder work · Strong account", { selector: '[data-ui="select"]' });
   expect(deep).toHaveValue("");
-  expect(within(deep).queryByRole("option", { name: /Strong account/ })).toBeNull(); // not itself
+  expect(within(await snapshotOf(deep)).queryByRole("option", { name: /Strong account/ })).toBeNull(); // not itself
   await user.selectOptions(routine, "");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toEqual({ changes: {}, reset: ["ai.tiers.routine.escalate_to"], fingerprint: "fp-1" });
@@ -264,7 +264,7 @@ test("the rules are rows with pick lists; changing one saves the whole list in o
   expect(rule.getByLabelText("Kind of work")).toHaveValue("notes");
   expect(rule.getByLabelText("Quotes more earlier messages than")).toHaveValue("3");
   expect(rule.getByLabelText("Longer than (characters)")).toHaveValue("");
-  expect(within(rule.getByLabelText("How private it is")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Any", "Open", "Confidential", "Private"]);
+  expect(within(await snapshotOf(rule.getByLabelText("How private it is"))).getAllByRole("option").map((o) => o.textContent)).toEqual(["Any", "Open", "Confidential", "Private"]);
   await user.selectOptions(rule.getByLabelText("How private it is"), "restricted");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toEqual({
@@ -415,7 +415,7 @@ test("a kind of work that uses an add-on's own tier shows it as the model it use
   });
   renderApp(<AiRouting />);
   const select = (await within(await screen.findByRole("heading", { name: "Which model does what" }).then(() => rowOf("ex/read"))).findByLabelText("Read a chapter")) as HTMLSelectElement;
-  await waitFor(() => expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account", "Long reading"]));
+  await waitFor(async () => expect(within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Everyday work · Main account", "Harder work · Strong account", "Long reading"]));
   expect(select).toHaveValue("ex/long");
 });
 
