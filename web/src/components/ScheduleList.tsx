@@ -79,16 +79,18 @@ export function ScheduleList(props: {
                       {open(row.entry, d.date)}
                     </li>
                   ) : (
-                    <li key={`clash:${row.at}:${n}`} className={`${styles.listRow} ${styles.listClash}`} data-clash="" role="group" aria-label={t("schedule.clash.label", { names: row.entries.map((e) => e.title).join(", ") })}>
-                      <p className={styles.listClashHead}>
-                        <Icon name="alert" size={16} />
-                        <span>{row.heading}</span>
-                      </p>
-                      <ul className={styles.listRows}>
-                        {row.entries.map((entry, k) => (
-                          <li key={`${entryKey(entry, d.date)}:${k}`}>{open(entry, d.date)}</li>
-                        ))}
-                      </ul>
+                    <li key={`clash:${row.at}:${n}`} className={`${styles.listRow} ${styles.listClash}`} data-clash="">
+                      <div role="group" aria-label={t("schedule.clash.label", { names: row.entries.map((e) => e.title).join(", ") })}>
+                        <p className={styles.listClashHead}>
+                          <Icon name="alert" size={16} />
+                          <span>{row.heading}</span>
+                        </p>
+                        <ul className={styles.listRows}>
+                          {row.entries.map((entry, k) => (
+                            <li key={`${entryKey(entry, d.date)}:${k}`}>{open(entry, d.date)}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </li>
                   ),
                 )}

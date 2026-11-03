@@ -156,6 +156,9 @@ test.describe("the calendar page", () => {
         const found = await measure(page);
         expect(found.page, `view ${key} at ${width}`).toBeLessThanOrEqual(found.window);
         expect(found.body).toBeLessThanOrEqual(found.window);
+        // The Day view opens scrolled to now, which can put the toolbar under the page's sticky header; the check is of
+        // the page from its top.
+        await page.evaluate(() => window.scrollTo(0, 0));
         const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
         expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
       }
@@ -169,6 +172,7 @@ test.describe("the calendar page", () => {
     for (const key of ["1", "2", "3", "4"] as const) {
       await pick(page, key);
       await expect(page.locator("main [data-grid], main [data-month]").first()).toBeVisible();
+      await page.evaluate(() => window.scrollTo(0, 0));
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
       expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
     }

@@ -225,9 +225,22 @@ test("every page of Settings is built in one frame: the same title, search and s
   expect(names).toContain("Connections");
   expect(names).toContain("Add-ons");
   const frames: Array<{ name: string; title: number[]; search: number[]; side: number[]; content: number[] }> = [];
-  const box = async (selector: string) => {
+  const once = async (selector: string) => {
     const found = await page.locator(selector).first().boundingBox();
     return found ? [Math.round(found.x), Math.round(found.y), Math.round(found.width)] : [];
+  };
+  // A page's frame is measured once its layout has settled (the same box on three reads a short while apart), so a page
+  // still filling in on a busy machine is not measured half-built. What is compared is unchanged.
+  const box = async (selector: string) => {
+    let last = await once(selector);
+    let same = 0;
+    for (let tries = 0; tries < 100 && same < 3; tries++) {
+      await page.waitForTimeout(50);
+      const now = await once(selector);
+      same = JSON.stringify(now) === JSON.stringify(last) ? same + 1 : 0;
+      last = now;
+    }
+    return last;
   };
   for (const name of names) {
     await (await settingsSections(page)).getByRole("link", { name, exact: true }).click();

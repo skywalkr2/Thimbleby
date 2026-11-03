@@ -361,6 +361,39 @@ describe("opening", () => {
     expect(await screen.findByRole("region", { name: "Setup" })).toHaveTextContent("0 of 7 done");
   });
 
+  test("going to Today while setup is still being read keeps the person on Today", async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const base = routes({}, CORE.map((id) => step(id)), { open: true, step: "you" });
+    const calls = fakeApi({
+      ...base,
+      "GET setup": async () => {
+        await held;
+        return (base["GET setup"] as () => unknown)();
+      },
+      "GET panels": () => [],
+      "GET asks": () => [],
+      "GET changes": () => [],
+      "GET followups": () => [],
+      "GET runtime-config": () => ({ instance: null }),
+      "GET today/agenda": () => [],
+      "GET today/todo": () => [],
+      "GET today/arrived": () => ({ items: [], left_out: 0 }),
+      "GET projects": () => [],
+    });
+    window.location.hash = "";
+    renderApp(<App rc={rcFixture()} />);
+    await waitFor(() => expect(calls.some((c) => c.route === "GET setup")).toBe(true));
+    window.location.hash = "#today";
+    release();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
+    expect(window.location.hash).toBe("#today");
+  });
+
   test("it does not take the person from a hand-in they already started when setup is read late", async () => {
     const user = userEvent.setup();
     let release: () => void = () => {};

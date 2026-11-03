@@ -48,12 +48,12 @@
 .mark[data-hidden] { background: transparent; box-shadow: inset 0 0 0 2px var(--text-subtle); }
 
 /* A clash: the meetings that overlap are one card naming them all, with the word and an icon, so it is never told by color alone. */
-.slot[data-clash] { min-height: calc(var(--space-4) + (var(--n, 2) + 1) * var(--lh-meta)); z-index: 2; }
+.slot[data-clash] { min-height: calc(var(--space-4) + var(--lh-meta) + var(--n, 2) * var(--entry-min)); z-index: 2; }
 .clash { box-sizing: border-box; height: 100%; margin: 0; padding: var(--space-1) var(--space-2); border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-soft); overflow: hidden; min-width: 0; }
 .clashHead { display: flex; align-items: center; gap: var(--space-1); margin: 0; font-size: var(--text-meta); line-height: var(--lh-meta); font-weight: var(--weight-semibold); color: var(--danger); }
 .clashRows { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
 .clashRows > li { min-width: 0; }
-.clashRow { --cal: var(--text-subtle); display: flex; align-items: center; gap: var(--space-1); width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--text-meta); line-height: var(--lh-meta); text-align: left; cursor: pointer; }
+.clashRow { --cal: var(--text-subtle); min-height: var(--entry-min); display: flex; align-items: center; gap: var(--space-1); width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--text-meta); line-height: var(--lh-meta); text-align: left; cursor: pointer; }
 .clashRow:hover .name { text-decoration: underline; }
 .clashRow:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .clashRow .name { font-weight: var(--weight-regular); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -86,7 +86,7 @@
 
 /* The time grid: an hour column and a column for each day, in three rows: the day headings, the all-day strip and the hours. */
 .grid {
-  --hour: 4.5rem; --hours-w: 4rem;
+  --hour: 4.5rem; --hours-w: 4rem; --entry-min: 1.75rem;
   display: grid; grid-template-columns: var(--hours-w) repeat(var(--cols, 1), minmax(0, 1fr)); min-width: 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
 }

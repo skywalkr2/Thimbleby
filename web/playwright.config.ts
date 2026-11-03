@@ -135,7 +135,14 @@ export const allProjects = [
       ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /settings-walk\.spec\.ts/, use, dependencies: [s.name] }] : []),
       ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
       // The schedule at a phone, a tablet and a desktop width, and moving through its days (once, at the root).
-      ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /(schedule|timeline)\.spec\.ts/, use, dependencies: [s.name] }] : []),
+      // The timeline runs after the schedule, never beside it: both add the same meetings to the shared server, and two
+      // adds at the same moment would each make their own entry.
+      ...(s.base === "/"
+        ? [
+            { name: `${s.name}-schedule`, testMatch: /schedule\.spec\.ts/, use, dependencies: [s.name] },
+            { name: `${s.name}-timeline`, testMatch: /timeline\.spec\.ts/, use, dependencies: [`${s.name}-schedule`] },
+          ]
+        : []),
       // The tables beside the detail pane at 1440px (once, at the root).
       ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
     ];

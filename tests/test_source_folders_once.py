@@ -99,6 +99,22 @@ def test_a_folder_the_account_doesnt_have_is_refused_before_anything_is_saved(si
     assert sources(ws) == before
 
 
+def test_each_refusal_says_its_own_reason_whatever_the_folder_is_spelled_like(signing):  # noqa: F811
+    ws, c, api = _signed_in(signing)
+    before = sources(ws)
+    # A folder the account lacks is never called one that is read already, with or without stray slashes and spaces.
+    for spelled in ("Nonsense folder 123", "Nonsense folder 123/", " Nonsense folder 123 ", "inbox-not"):
+        refused = _add(c, api, ws, spelled)
+        assert refused.status_code == 400, spelled
+        assert refused.json()["detail"].startswith("This account has no folder called"), spelled
+        assert "already reads this" not in refused.json()["detail"], spelled
+    # And the folder that is read already is never called missing.
+    for spelled in ("INBOX", "INBOX/", " INBOX "):
+        said = _add(c, api, ws, spelled).json()["detail"]
+        assert said == ADVICE["sources.refuse.same_folder"].format(label="Your inbox"), spelled
+    assert sources(ws) == before
+
+
 def test_a_message_two_sources_of_one_account_both_list_is_one_item(signing):  # noqa: F811
     from engine import watch
 
