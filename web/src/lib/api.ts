@@ -457,6 +457,7 @@ export const api = {
   removeOrganization: (o: string) => call<S["Ok"]>("POST", `organizations/${id(o)}/remove`),
   restoreOrganization: (o: string) => call<S["Ok"]>("POST", `organizations/${id(o)}/restore`),
   removePerson: (p: string) => call<S["Ok"]>("POST", `people/${id(p)}/remove`),
+  personRemoval: (p: string) => call<S["PersonRemoval"]>("GET", `people/${id(p)}/removal`),
   restorePerson: (p: string) => call<S["Ok"]>("POST", `people/${id(p)}/restore`),
   addProject: (body: S["ProjectIn"]) => call<S["Created"]>("POST", "projects", body),
   editProject: (p: string, body: S["ProjectPatch"]) => call<S["Ok"]>("POST", `projects/${id(p)}`, body),

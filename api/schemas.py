@@ -395,6 +395,14 @@ class Ok(BaseModel):
     ok: str
 
 
+class PersonRemoval(BaseModel):
+    """Whether a person was removed (and can be brought back) or isn't a record at all, and when and under what name."""
+
+    state: Literal["removed", "none"]
+    name: str | None = None
+    removed_at: str | None = None
+
+
 class FeedbackProblem(BaseModel):
     """One recent failure as Send feedback offers it, already masked (design 7, Help). Never the packet, the request,
     any record's text, a file's name or a name of a person or project."""

@@ -572,7 +572,12 @@ pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pr
 .account-main { display: grid; gap: var(--space-1); min-width: 0; }
 .account-row .account-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); min-width: 0; }
 .account-row .account-name strong { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.account-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.account-state { display: block; overflow: hidden; min-width: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+/* A line of parts set apart by dots that wraps: a dot belongs to the part after it and is drawn in the space before it, which
+   the clipped box around the line hides when that part starts a line, so a dot never starts or ends a line. */
+.meta-line { display: flex; flex-wrap: wrap; align-items: center; row-gap: var(--space-1); margin-left: calc(-1 * var(--space-4)); }
+.meta-line > * { position: relative; padding-left: var(--space-4); min-width: 0; }
+.meta-line > * + *::before { content: "·"; position: absolute; left: calc(var(--space-4) / 2 - 0.15em); color: var(--text-subtle); }
 .account-ok { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--ok); font-weight: var(--weight-semibold); }
 .account-for { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-1); min-width: 0; }
 .account-for-word { color: var(--text-muted); font-size: var(--text-sm); }

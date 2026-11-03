@@ -406,6 +406,19 @@ def test_people_can_be_added_renamed_and_removed_when_unused(api):
     assert new in {p["id"] for p in client.get(f"{base}/people").json()}
 
 
+def test_a_removed_person_is_said_removed_with_when_and_a_missing_one_is_said_missing(api):
+    client, base, _ = api
+    new = client.post(f"{base}/people", json={"full_name": "Pat Example", "role": "Proofreader"}).json()["id"]
+    assert client.get(f"{base}/people/{new}/removal").json()["state"] == "none"
+    assert client.post(f"{base}/people/{new}/remove").status_code == 200
+    gone = client.get(f"{base}/people/{new}/removal").json()
+    assert gone["state"] == "removed" and gone["name"] == "Pat Example" and gone["removed_at"]
+    assert client.get(f"{base}/record-pages/{new}", params={"kind": "person"}).status_code == 404
+    assert client.post(f"{base}/people/{new}/restore").status_code == 200
+    assert client.get(f"{base}/people/{new}/removal").json()["state"] == "none"
+    assert client.get(f"{base}/people/PER-99999/removal").json() == {"state": "none", "name": None, "removed_at": None}
+
+
 def test_a_first_name_set_on_the_person_is_what_the_copied_message_greets_them_by(api):
     client, base, _ = api
     editor = by_role("Editor")

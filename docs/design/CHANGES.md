@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 323. A removed person's page offers Restore; the quality server holds found promises; a dot never ends a line on setup's account row (2026-11-03; final review group f6)
+
+| Where | Before | Now |
+|---|---|---|
+| A person who was removed (7.12) | The card said "This person isn't here any more" for a removed person and for a wrong address alike | A removed person's page says "<name> was removed", when, and offers **Restore** (the existing restore, with Undo); an address with no record says so, with Back to People. `GET /api/people/{id}/removal` says which (`PersonRemoval`). No window: a removed record can be restored while it exists. **Built** (`RecordPageRecords.test.tsx`, `tests/test_routes.py`, `people-records.spec.ts`) |
+| Setup mail, account row (7.8) | The state line's dots were items of a wrapping row, so one could end a line before "Private to you" | The line is a `meta-line`: a dot belongs to the part after it and is hidden when that part starts a line. **Built** (`Walkthrough.test.tsx`, measured in the capture) |
+| Browser tests (14) | The people-records server held no promise the assistant found, so Quality showed "Too early to tell" | `tests/e2e_server.py --assistant-found` seeds promises at the server's clock (`tests/e2e_quality.py`) |
+| The capture (visual tool) | The "All clear" card and a failing calendar could not be reached | A stage with setup finished and nothing waiting; the stand-in service's `/__e2e/failing` takes `part` (all, mail or calendar) |
+
+- **No config key.** One new read route (`PersonRemoval`).
+
 ## 322. The last fixes to setup, a person's page and Quality from the final side-by-side review (2026-11-03; final review group f5c)
 
 | Where | Before | Now |
@@ -1039,7 +1050,7 @@ yet follow, that it is *designed*, with its phase.
 | A person who isn't there (7.12) | A "Not here" title and a Person chip over the card | The card alone; the heading is kept for a screen reader. **Built** (`RecordPageRecords.test.tsx`) |
 | Quality (6.20, 7.12) | "Back to Today" as a button; week headers of three lines; "Your own count" open with a wrapping title; a bare red line when it couldn't load; too-early card with a second panel | A "Today ›" crumb; headers Found, Done, False alerts, Looking over; the own count folded as "Count them yourself", its hint under a one-line title; the shared failed-load row (an edge, the words, a filled Try again); the own count folded inside the too-early card. **Built** (`Quality.test.tsx`) |
 
-- **Left:** the person-not-found line "Undo is on the People page for 10 minutes." is not written: no such Undo exists (a removal's Undo is its toast), and the line would say what isn't true. See `docs/project/u3-differences/person-quality-setup.md`.
+- **Left:** the person-not-found line "Undo is on the People page for 10 minutes." is not written: no such Undo exists (a removal's Undo is its toast). Section 323 replaces it with a removed person's page that says so and offers Restore.
 - **No config key, no API change.**
 
 ## 321. Setup's mail step as one first-account card, the offline banner in the setup guide, Quality's "Too early to tell" (2026-11-03; final review group f5b)

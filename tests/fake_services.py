@@ -102,6 +102,7 @@ class State:
         self.accounts = 0
         self.failing_account = 0  # the number (from 1) of the account whose reads fail; 0 for none
         self.failing_how = "expired"  # "expired": the sign-in is refused; "retrying": the service asks to try again
+        self.failing_part = "all"  # which reads of the failing account fail: "all", "mail" or "calendar"
         self.account_of: dict[str, int] = {}  # the account each code, access token and refresh token belongs to
         self.seen = {
             "authorizations": 0,
@@ -301,7 +302,7 @@ def account_routes(state: State) -> list[Route]:
             return JSONResponse(issue(with_refresh=True, scope=grant["scope"], account=grant.get("account", 0)))
         if form.get("grant_type") == "refresh_token" and form.get("refresh_token") in state.refresh:
             account = state.account_of.get(form["refresh_token"], 0)
-            if is_failing(state, account) and state.failing_how == "expired":
+            if is_failing(state, account) and state.failing_how == "expired" and state.failing_part == "all":
                 return refused("invalid_grant")
             state.seen["renewals"] += 1
             scope = state.scopes.get(form["refresh_token"], SCOPES)
@@ -645,9 +646,14 @@ def intake_items(now: datetime, days: int = 14) -> dict[str, list[str]]:
     }
 
 
-def failure(state: State, request: Request) -> JSONResponse | None:
-    """What the failing account's reads get: the sign-in refused, or the service asking to try again later."""
-    if not is_failing(state, account_of(state, request)):
+#: The parts of an account a failure can reach: all of it, its mail alone or its calendar alone.
+FAIL_PARTS = ("all", "mail", "calendar")
+
+
+def failure(state: State, request: Request, part: str = "mail") -> JSONResponse | None:
+    """What the failing account's reads get: the sign-in refused, or the service asking to try again later. Only the
+    part that is failing (its mail, its calendar or both) is refused."""
+    if not is_failing(state, account_of(state, request)) or state.failing_part not in ("all", part):
         return None
     if state.failing_how == "retrying":
         return JSONResponse({"error": {"code": "ServiceBusy"}}, status_code=503, headers={"Retry-After": "120"})
@@ -874,7 +880,7 @@ def calendar_routes(state: State) -> list[Route]:
             return unauthorized()
         state.seen["calendar_reads"] += 1
         if state.accounts:
-            failed = failure(state, request)
+            failed = failure(state, request, "calendar")
             if failed is not None:
                 return failed
             return JSONResponse({"events": account_events(state.moment, account_of(state, request))})
@@ -1002,10 +1008,11 @@ def helper_routes(state: State, base: str) -> list[Route]:
         body = await request.json()
         number = int(body.get("account", 0))
         how = str(body.get("how", "expired"))
-        if not 0 <= number <= max(state.accounts, 1) or how not in ("expired", "retrying"):
-            return JSONResponse({"error": "no such account or way to fail"}, status_code=400)
-        state.failing_account, state.failing_how = number, how
-        return JSONResponse({"account": number, "how": how})
+        part = str(body.get("part", "all"))
+        if not 0 <= number <= max(state.accounts, 1) or how not in ("expired", "retrying") or part not in FAIL_PARTS:
+            return JSONResponse({"error": "no such account, way or part to fail"}, status_code=400)
+        state.failing_account, state.failing_how, state.failing_part = number, how, part
+        return JSONResponse({"account": number, "how": how, "part": part})
 
     async def accounts(_request: Request) -> JSONResponse:
         count = max(state.accounts, 1)
@@ -1015,6 +1022,7 @@ def helper_routes(state: State, base: str) -> list[Route]:
                     {
                         "address": account_address(n),
                         "failing": state.failing_how if is_failing(state, n) else None,
+                        "part": state.failing_part if is_failing(state, n) else None,
                     }
                     for n in range(count)
                 ]

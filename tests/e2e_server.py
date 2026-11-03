@@ -40,6 +40,7 @@ from tests.conftest import DEMO_B, fixture_records
 from tests.e2e_just_me import seed_first_go, seed_just_me, the_person
 from tests.e2e_many_sides import seed_many_sides
 from tests.e2e_meetings import seed_meetings
+from tests.e2e_quality import seed_found_promises
 from tests.e2e_sides import calendar_sources, seed_sides, seed_views
 from tests.roundtrip import round_trip
 
@@ -289,6 +290,13 @@ def main() -> None:
         "/__e2e/sides says what was seeded",
     )
     parser.add_argument(
+        "--assistant-found",
+        action="store_true",
+        help="seed three promises of the person's own that the assistant found, made at the server's own clock so they "
+        "fall inside the quality window, one of them closed, so the quality page shows its figures and not the "
+        "too-early card",
+    )
+    parser.add_argument(
         "--many-sides",
         action="store_true",
         help="make the workspace as --just-me does and add a job and three businesses as setup adds them (five sides "
@@ -466,6 +474,8 @@ def main() -> None:
         many_sided = seed_many_sides(client) if args.many_sides else None
     else:
         sided = None
+    if args.assistant_found:
+        seed_found_promises(store, cfg)
     if args.first_day:
         seed_first_go(store)
 

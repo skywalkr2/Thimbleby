@@ -227,3 +227,17 @@ def test_the_failing_helper_makes_one_account_fail_from_then_on_and_refuses_what
     assert [a["failing"] for a in helper.get("/__e2e/accounts").json()["accounts"]] == [None, None, None]
     assert helper.post("/__e2e/failing", json={"account": 4}).status_code == 400
     assert helper.post("/__e2e/failing", json={"account": 1, "how": "sideways"}).status_code == 400
+
+
+def test_the_failing_helper_can_fail_one_part_of_the_account_alone(tmp_path):
+    state, client = make(tmp_path, failing=0)
+    token = token_for(client, 2)
+    helper = TestClient(build_app(state, 0))
+    assert helper.post("/__e2e/failing", json={"account": 2, "part": "calendar"}).json()["part"] == "calendar"
+    assert get(client, "/calendar/v1/events", token).status_code == 401
+    assert mail(client, token)
+    assert helper.post("/__e2e/failing", json={"account": 2, "part": "mail"}).status_code == 200
+    assert get(client, "/mail/v1/messages", token).status_code == 401
+    assert calendar(client, token)
+    assert [a["part"] for a in helper.get("/__e2e/accounts").json()["accounts"]] == [None, "mail", None]
+    assert helper.post("/__e2e/failing", json={"account": 2, "part": "tea"}).status_code == 400

@@ -270,7 +270,7 @@ export const allServers = [
       timeout: 60_000,
     }),
     on(peopleRecords.port, {
-      command: `uv run python -m tests.e2e_server --port ${peopleRecords.port} --base-path / --sides --plain-stages`,
+      command: `uv run python -m tests.e2e_server --port ${peopleRecords.port} --base-path / --sides --assistant-found --plain-stages`,
       cwd: "..",
       url: `http://127.0.0.1:${peopleRecords.port}/api/health`,
       reuseExistingServer: false,

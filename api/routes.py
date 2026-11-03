@@ -135,6 +135,7 @@ from api.schemas import (
     PersonChoice,
     PersonIn,
     PersonPatch,
+    PersonRemoval,
     PersonSuggestion,
     PersonView,
     PluginStatusView,
@@ -2576,6 +2577,22 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         guard(lambda: _remove(store, "person", pid))
         changed()
         return Ok(ok=pid)
+
+    @r.get("/people/{pid}/removal")
+    def person_removal(pid: str) -> PersonRemoval:
+        """Whether this person was removed (their record is kept, so Restore brings them back) or isn't a record at
+        all, and when they were removed."""
+        from engine.record_page import display_name
+
+        held = store.read().get("person", pid, include_deleted=True)
+        if held is None or not held.deleted:
+            return PersonRemoval(state="none")
+        entries = store.read().ledger(kind="person", record_id=pid, op="person.remove")
+        return PersonRemoval(
+            state="removed",
+            name=display_name(held.data) or None,
+            removed_at=entries[-1]["at"] if entries else None,
+        )
 
     @r.post("/people/{pid}/restore")
     def restore_person(pid: str) -> Ok:

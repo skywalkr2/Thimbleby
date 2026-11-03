@@ -78,6 +78,37 @@ test.describe("People and record pages", () => {
     await page.keyboard.press("Escape");
   });
 
+  test("a person who was removed has a page that says so and when, and Restore brings the page back", async ({ page }) => {
+    test.setTimeout(120_000);
+    await go(page, "records/people");
+    await heading(page, "People");
+    await page.getByRole("button", { name: "Add a person" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Add a person" });
+    await expect(dialog.getByRole("textbox", { name: "Full name" })).toBeFocused(LOADED);
+    await dialog.getByLabel("Full name").fill("Wren Tallis");
+    await dialog.getByRole("button", { name: "Add a person" }).click();
+    await expect(dialog).toHaveCount(0, LOADED);
+    await page.getByRole("link", { name: "Wren Tallis" }).first().click();
+    await page.getByRole("link", { name: "Open Wren Tallis's page" }).click();
+    await heading(page, "Wren Tallis");
+    const address = await page.evaluate(() => window.location.hash);
+
+    // Removing them from their page leaves a card that says they were removed, not a dead end.
+    await page.getByRole("button", { name: "More actions for Wren Tallis" }).click();
+    await page.getByRole("menuitem", { name: "Remove" }).click();
+    await expect(page.getByText("Wren Tallis was removed")).toBeVisible(LOADED);
+    // Their page, opened again later, says the same, with when; nothing was lost.
+    await go(page, "records/people");
+    await heading(page, "People");
+    await go(page, address.replace(/^#/, ""));
+    await expect(page.getByText("Wren Tallis was removed")).toBeVisible(LOADED);
+    await expect(page.getByText(/^Removed .*Their record is kept/)).toBeVisible(LOADED);
+    await page.getByRole("button", { name: "Restore" }).click();
+    await heading(page, "Wren Tallis");
+    await expect(page.getByText("Restored Wren Tallis.")).toBeVisible(LOADED);
+    await expect(page.getByText("Wren Tallis was removed")).toHaveCount(0);
+  });
+
   test("a name already on the list is said while it is typed, and the person's page has tabs, a timeline and one line to ask in", async ({ page }) => {
     test.setTimeout(120_000);
     await go(page, "records/people");

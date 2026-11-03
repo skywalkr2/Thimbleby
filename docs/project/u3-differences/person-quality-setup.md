@@ -59,7 +59,6 @@ Change log: section 317. Tracking rows: VS01, VS03, VS13, VS15, VC10, VC11, VC12
 | person | "Everything with <name> 14" as a tab | The tabs are Overview, Open with <name> and Activity; the count the mockup shows would be a new measure |
 | person | The details edited in place (Cancel and Save under the fields) | They open in the drawer the People screen uses; one form for both |
 | person | The tinted "owes you" row on the open list and a side mark on each row | The open list is the shared record rows; the mark by side belongs to the lists (step 4) |
-| person | Not found: "Undo is on the People page for 10 minutes." | No People-page Undo exists (a removal's Undo is its toast); writing the line would say what isn't true. A "recently removed" list with a configured window would be a new feature for the owner to decide |
 | person | A large count, a failed save | The fixtures tie no hundred items to a person, and the save's own banner is the shell's; listed as not driven by the capture |
 | person | The capture shows no side color on the avatar | The sample person is on no side; the disc takes the color when they are on one (`PersonPage.test.tsx`) |
 | person | The empty state's height | The shared empty state keeps its own padding |

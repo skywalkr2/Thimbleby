@@ -10,7 +10,7 @@ import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
 import { inReadingOrder, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
 import { reconcile, type Refreshed } from "../lib/refreshed";
-import { day, time } from "../lib/dates";
+import { day, dayAndTime, time } from "../lib/dates";
 import { useAct } from "../lib/act";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -62,7 +62,7 @@ import { plainTitle } from "../lib/title-dates";
 import { offeredInForm, shownAsDetail } from "../lib/record-internals";
 import { useEditDetailsOfTodo } from "./EditDetailsOfTodo";
 import { useFocusAfterRender } from "../lib/focus-after-render";
-import { Button } from "../ui/Button";
+import { Button, ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
@@ -143,6 +143,13 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     void act(
       () => api.actionStatus(id, "done"),
       (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(id, "open") }),
+    );
+  // A person who is gone is either removed (the record is kept, so Restore brings them back) or was never there.
+  const removal = useQuery({ queryKey: ["person-removal", id], queryFn: () => api.personRemoval(id), enabled: kind === "person" && record.isError && record.error instanceof ApiError && record.error.status === 404 });
+  const restore = (who: string) =>
+    void act(
+      () => api.restorePerson(id),
+      () => ({ message: t("toast.restored", { name: who }), undo: () => api.removePerson(id) }),
     );
   const [editing, setEditing] = useState(false);
   // A person and a project are edited in the same drawer as on their own screens.
@@ -495,7 +502,19 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
-      {record.isError && gone && isPerson && (
+      {record.isError && gone && isPerson && removal.data?.state === "removed" && (
+        <EmptyState
+          icon="alert"
+          title={t("person.removed_title", { name: removal.data.name || t("person.removed_someone") })}
+          text={removal.data.removed_at ? t("person.removed_text_when", { when: dayAndTime(removal.data.removed_at) }) : t("person.removed_text")}
+          action={{ label: t("person.removed_restore"), onClick: () => restore(removal.data?.name || t("person.removed_someone")), primary: true }}
+        >
+          <ButtonLink variant="quiet" href={viewHref("records/people")}>
+            {t("person.gone_back")}
+          </ButtonLink>
+        </EmptyState>
+      )}
+      {record.isError && gone && isPerson && removal.data?.state !== "removed" && !removal.isPending && (
         <EmptyState icon="alert" title={t("person.gone_title")} text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people") }} />
       )}
       {record.isError && gone && !isPerson && <EmptyState icon="alert" text={t("record.not_found")} />}

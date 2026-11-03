@@ -4,6 +4,15 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: A removed person's page offers Restore; the last capture and browser-test data (final review, group f6; section 323)
+
+**Decided:** (owner: nothing is left undone before the gate; design by the main session.) The person-not-found line "Undo is on the People page
+for 10 minutes." stays unwritten, and in its place the page says the truth: a person whose record is removed is "<name> was removed", when, with
+**Restore** (the existing restore, with Undo); an address with no record says so with Back to People. The record is kept, so no window and no
+setting. The mail step's account row sets its dots so none can end or start a wrapped line. The people-records browser server seeds promises the
+assistant found; the capture gets a finished-setup stage and a stand-in service that can fail a calendar alone. **Impact:** one read route
+(`GET /api/people/{id}/removal`), wording keys, a CSS pattern (`meta-line`); no config key. Change log: section 323.
+
 ## 2026-11-03: The last fixes from the final side-by-side review: setup on a phone, the mail step's account cards, a person's page, Quality (final review, group f5c; section 322)
 
 **Decided:** (owner: nothing is left undone before the hand-back; design by the main session.) Setup's header on a phone is one bar and its

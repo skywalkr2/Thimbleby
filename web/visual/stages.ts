@@ -74,7 +74,7 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
     case "accounts/failing": {
       // The service withdraws the third account's sign-in; each of its parts is read once, so the app finds out.
       const studio = (env.seed.addresses as string[])[2];
-      await fetch(`${env.fake}/__e2e/failing`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ account: 3, how: "expired" }) });
+      await fetch(`${env.fake}/__e2e/failing`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ account: 3, how: "expired", part: "all" }) });
       const page = await env.context.newPage();
       await page.goto(`${env.base}?token=${env.token}#today`);
       await page.evaluate(() => {
@@ -86,7 +86,17 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
         await row.getByRole("button", { name: `More actions for ${label}` }).click();
         await page.getByRole("menuitem", { name: "Read now" }).click();
       }
+      // Both parts of the account must be found out (its inbox and its calendar), or the Schedule's banner stays off.
       await page.locator("[data-connection-card][data-need]").first().waitFor(LONG);
+      await page.waitForFunction(
+        async ([base, token]) => {
+          const rows = (await (await fetch(`${base}api/watch`, { headers: { Authorization: `Bearer ${token}` } })).json()) as Array<{ reads?: string[]; account_state?: string; last?: { outcome?: string; error_kind?: string } }>;
+          const needing = (kind: string) => rows.some((r) => (r.reads ?? []).includes(kind) && (r.account_state === "expired" || r.account_state === "signed_out" || (r.last?.outcome === "failed" && r.last.error_kind === "auth")));
+          return needing("mail") && needing("calendar");
+        },
+        [env.base, env.token] as [string, string],
+        LONG,
+      );
       env.seed.failing = studio;
       await page.close();
       return;

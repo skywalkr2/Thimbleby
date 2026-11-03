@@ -650,6 +650,7 @@ test("a page for a record that isn't there says so with a title, and offers no T
     "GET record?kind=person&id=PER-9": () => new Refuse(404, "person PER-9 doesn't exist"),
     "GET kinds/person": () => ({ kind: "person", fields: [] }),
     "GET record-pages/PER-9?kind=person": () => new Refuse(404, "no"),
+    "GET people/PER-9/removal": () => ({ state: "none", name: null, removed_at: null }),
     "GET people": () => [],
     "GET projects": () => [],
     "GET settings": () => ({ fingerprint: "fp", items: [] }),
@@ -658,9 +659,37 @@ test("a page for a record that isn't there says so with a title, and offers no T
   });
   renderApp(<RecordPage kind="person" id="PER-9" onBack={() => {}} />);
   expect(await screen.findByText("This person isn't here any more")).toBeInTheDocument();
-  expect(screen.getByText("They may have been merged with someone else or removed.")).toBeInTheDocument();
+  expect(screen.getByText("There is no one at this address.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
   expect(screen.getByRole("link", { name: "Back to People" })).toHaveAttribute("href", expect.stringMatching(/#records\/people$/));
   expect(screen.getByRole("heading", { name: "Not here" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   expect(screen.queryByText("This page didn't load.")).toBeNull();
+});
+
+test("a page for a person who was removed says so and when, and Restore brings them back with Undo", async () => {
+  const calls: string[] = [];
+  fakeApi({
+    "GET record?kind=person&id=PER-9": () => new Refuse(404, "person PER-9 doesn't exist"),
+    "GET kinds/person": () => ({ kind: "person", fields: [] }),
+    "GET record-pages/PER-9?kind=person": () => new Refuse(404, "no"),
+    "GET people/PER-9/removal": () => ({ state: "removed", name: "Sample Person", removed_at: "2026-10-28T09:30:00+00:00" }),
+    "POST people/PER-9/restore": () => {
+      calls.push("restore");
+      return { ok: "PER-9" };
+    },
+    "GET people": () => [],
+    "GET projects": () => [],
+    "GET settings": () => ({ fingerprint: "fp", items: [] }),
+    "GET lists": () => [],
+    "GET organizations": () => [],
+  });
+  renderApp(<RecordPage kind="person" id="PER-9" onBack={() => {}} />);
+  expect(await screen.findByText("Sample Person was removed")).toBeInTheDocument();
+  expect(screen.getByText(/Removed .*Their record is kept, so you can bring them back\./)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Back to People" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+  await waitFor(() => expect(calls).toEqual(["restore"]));
+  expect(await screen.findByText("Restored Sample Person.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
 });

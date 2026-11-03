@@ -20388,6 +20388,46 @@
         "title": "PersonPrepView",
         "type": "object"
       },
+      "PersonRemoval": {
+        "description": "Whether a person was removed (and can be brought back) or isn't a record at all, and when and under what name.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removed At"
+          },
+          "state": {
+            "enum": [
+              "removed",
+              "none"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "PersonRemoval",
+        "type": "object"
+      },
       "PersonSuggestion": {
         "description": "Someone the person's mail shows often and who isn't on file yet: `name` as the mail gives it, `address`, in how\nmany messages they appear (`count`), and whether those were the person's own sent mail.",
         "properties": {
@@ -44057,6 +44097,46 @@
           }
         },
         "summary": "Edit Person"
+      }
+    },
+    "/api/people/{pid}/removal": {
+      "get": {
+        "description": "Whether this person was removed (their record is kept, so Restore brings them back) or isn't a record at\nall, and when they were removed.",
+        "operationId": "person_removal_api_people__pid__removal_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonRemoval"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Person Removal"
       }
     },
     "/api/people/{pid}/remove": {

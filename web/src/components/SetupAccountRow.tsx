@@ -60,24 +60,22 @@ export function SetupAccountRow(props: {
           <span className="hint">{props.reads}</span>
         </span>
         <span className="account-state">
-          <span>{props.service}</span>
-          <span aria-hidden="true">·</span>
-          {props.need ? (
-            <StateMark tone={props.need.tone}>{words(props.need)}</StateMark>
-          ) : (
-            <span className="account-ok">
-              <Icon name="check" size={14} />
-              <span>{t("walkthrough.mail.account.connected")}</span>
-            </span>
-          )}
-          {level && (
-            <>
-              <span aria-hidden="true">·</span>
+          <span className="meta-line">
+            <span>{props.service}</span>
+            {props.need ? (
+              <StateMark tone={props.need.tone}>{words(props.need)}</StateMark>
+            ) : (
+              <span className="account-ok">
+                <Icon name="check" size={14} />
+                <span>{t("walkthrough.mail.account.connected")}</span>
+              </span>
+            )}
+            {level && (
               <span className={styles.privacy} title={first ? privacyFact(first, t) : undefined}>
                 {level === "restricted" ? t("walkthrough.mail.account.private") : t(`sources.level.${level}`)}
               </span>
-            </>
-          )}
+            )}
+          </span>
         </span>
         {props.sidesEditor && <AccountSidesLine sources={props.sources} account={name} editor={props.sidesEditor} />}
       </div>
