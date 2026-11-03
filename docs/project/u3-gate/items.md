@@ -1,8 +1,8 @@
 # U3 gate: every item to close before the hand-back
 
 The one list for the gate's fix round (roadmap U3, "The gate's fix round"). Every [B] and broken issue from the cold scores,
-every [C] issue, and every open row of the audit, each tagged with its batch. A batch ticks an item when its fix and test are
-in; the re-score confirms it. Nits are in the score files only. Sources: `scores/` (two scorers, by screen), `audit-open-rows.md`.
+every [C] issue, and every open row of the audit, each tagged with its batch. An item is ticked here when its batch is reviewed and merged
+into the working tree, with the test that proves it; work still in a helper's unmerged copy is not ticked. The re-score confirms it. Nits are in the score files only. Sources: `scores/` (two scorers, by screen), `audit-open-rows.md`.
 
 ## From the cold scores
 
