@@ -37,6 +37,10 @@ Before the app goes back to the UI/UX reviewer, every screen must score at least
   - the design text each fix changes;
   - the `docs/project/u3-differences/` file for each mockup page you change.
 
+## Order
+
+Fix, run your own tests, capture your screens, look at every picture against its issues, fix what you see, then the checks below. The main session then has your screens scored cold before anything is merged or pushed; CI comes last.
+
 ## Checks before you report
 
 - `npm --prefix web run build` exits 0. Build and run the browser tests in one command, and start the tests only if the build exited 0.
