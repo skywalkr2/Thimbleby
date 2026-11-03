@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 326. The gate's fix round: scope and ten design choices (2026-11-03; owner)
+
+| Where | Before | Now |
+|---|---|---|
+| The U3 hand-back (roadmap) | Open tracking rows and the P2 groups could go back as "left" | Everything is fixed first: every open row, Y07 to Y11, and the cold scores' findings, until every screen is at least 4.0 with no point under 3.5 |
+| Privacy words (6.18, 7.13) | Three vocabularies across the AI step, the levels and the mail sides | One scale, Open, Confidential and Private (D1); built in batch G5, with the design text |
+| AI step, Clash, Quality, Follow-ups, To-dos (7.7, 7.13) | Open questions against the 4.6 mockups | Ring and tint (D2); the first meeting plus the menu (D3); the period stays a setting (D4); labelled buttons (D5); no Done tab (D6) |
+| Motion (7.1) | Open | Only the mark moves, at first launch and at the end of setup (D7) |
+| Screenshot comparisons (14) | Captures by hand | Six screens at two widths compared in CI (D8) |
+| Search (7.7) | Open | Own records only, and an empty result says so (D9) |
+| An add-on's install (3.11) | Open | It keeps its restart and says so before Install; a no-restart install is a plugin round question (D10) |
+
+- **No config key, API or op change in this section;** the batches that build each choice have their own sections.
+
 ## 325. Today's all-clear is the brand card (2026-11-03; final review group f8)
 
 | Where | Before | Now |

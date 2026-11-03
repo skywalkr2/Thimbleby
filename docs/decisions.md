@@ -4,6 +4,35 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The gate's fix round takes everything, and ten design choices (owner; section 326)
+
+**Decided:** (owner, after the first cold score of every screen and the audit of the tracking sheet's open rows.) Everything
+goes in before the hand-back to the UI/UX reviewer: every open row, every P2 item in Y07 to Y11, and every finding of the cold
+scores, until every screen scores at least 4.0 with no point under 3.5. The owner chose the recommended answer on each of ten
+open choices:
+- **D1, privacy words:** one scale everywhere (Open, Confidential, Private). Hand-in's "Normal" becomes Open, and setup's mail
+  questions become a plain yes or no that sets the level.
+- **D2, the AI step:** the chosen card keeps the ring and the tint, with no check disc. The mockup's disc is a recorded
+  difference.
+- **D3, a clash:** the first meeting is the row's button, and the second is in its menu. There is no "Open both" page.
+- **D4, Quality:** the period stays a setting, with no chooser on the page.
+- **D5, Follow-ups:** "Group by" is three labelled buttons, not a dropdown.
+- **D6, To-dos:** there is no Done tab. Finished work is in What changed.
+- **D7, motion:** only the mark moves, at first launch and at the end of setup. Everything else keeps the short state
+  transitions.
+- **D8, screenshot comparisons in CI:** six screens at two widths are compared with a stored picture on every push.
+- **D9, search:** it stays on the person's own records, and an empty result says that mail and notes are not searched.
+- **D10, an add-on's install:** it keeps its restart, and the page says so before Install. A no-restart install is asked in the
+  next plugin round.
+
+**Why:**
+- The first cold score put every screen between 3.0 and 4.0.
+- The audit found about 40 rows and 47 polish items still open behind stale "In progress" notes.
+- The owner wants nothing left for the reviewer to find.
+
+**Impact:** the fix batches G1 to G6 (roadmap U3, gate). Each batch edits the design section it changes and has its own change-log
+section. Change log: section 326.
+
 ## 2026-11-03: Today's all-clear is the brand card (final review, group f8; section 325)
 
 **Decided:** (owner: build to the 4.6 mockup; design by the main session.) When setup is done, the assistant has run, every
