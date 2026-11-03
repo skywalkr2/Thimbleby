@@ -32,7 +32,7 @@ export async function setUpWithBusiness(request: APIRequestContext): Promise<Fir
 
 /** Every main screen the first day shows, by the address after the #. */
 export const screens = (day: FirstDay): Array<{ name: string; hash: string; heading: string | RegExp }> => [
-  { name: "Today", hash: "today", heading: "Today" },
+  { name: "Today", hash: "today", heading: /^Good (morning|afternoon|evening)/ },
   { name: "Schedule", hash: "schedule", heading: /./ },
   { name: "Since yesterday", hash: "work/since", heading: /./ },
   { name: "What changed", hash: "work/changed", heading: "What changed" },

@@ -1,8 +1,8 @@
 // What a batch to look over opens (design 7.7, 6.32): the things in it that need a look, each on one line with "Not right"
 // (the correction that sends it back with a note, which the assistant learns from), what waits for the person's yes answered
-// where it is, and "All looks good" at the end, which marks the batch reviewed with an Undo. Opening it marks nothing as seen,
+// where it is, and "Keep all N" at the end, which marks the batch reviewed with an Undo. Opening it marks nothing as seen,
 // goes nowhere and splits nothing: the batch stays one line on Today until it is confirmed. Batches left unopened that were
-// folded into one line are drawn one after another, oldest first, each with its own "All looks good".
+// folded into one line are drawn one after another, oldest first, each with its own "Keep all N".
 import { useState } from "react";
 import { useAct } from "../lib/act";
 import { api } from "../lib/api";
@@ -110,7 +110,7 @@ function Batch(props: { part: QueueLine; named: boolean }) {
       {changesets.length > 0 ? (
         <div className={styles.end}>
           <Button variant="primary" onClick={confirm}>
-            {t("queue.act.all_good")}
+            {tn("queue.batch.keep_all", Math.max(1, items.length))}
           </Button>
         </div>
       ) : (

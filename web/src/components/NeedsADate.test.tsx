@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { forgetLine } from "../lib/today";
@@ -50,9 +51,18 @@ function api(shown: S["OpenActionView"][], extra: Routes = {}) {
   });
 }
 
-test("the group is at the top with the to-dos that need a date, and they are not listed again below", async () => {
+/** The line at the foot of the list says how many need a date; its button opens the group. */
+async function openDates() {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Give them dates" }));
+}
+
+test("the to-dos that need a date are one line at the foot of the list that opens their group, and they are not listed again above it", async () => {
   api([dated, undated, told]);
   renderApp(<OpenItems />);
+  expect(await screen.findByText("2 to-dos need a date")).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: /Needs a date/ })).toBeNull();
+  await openDates();
   const group = await screen.findByRole("region", { name: /Needs a date/ });
   const rows = within(group).getAllByRole("listitem").filter((row) => row.hasAttribute("data-row"));
   expect(rows).toHaveLength(2);
@@ -60,9 +70,10 @@ test("the group is at the top with the to-dos that need a date, and they are not
   expect(within(rows[1]).getByText(/Robin Sample/)).toBeInTheDocument();
   const list = screen.getByRole("list", { name: "Open to-dos" });
   expect(within(list).getByText("Send the proof")).toBeInTheDocument();
-  expect(within(list).queryByText("Tidy the style sheet")).toBeNull();
-  // The group comes before the list in the page.
-  expect(group.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // Each to-do is listed once: the dated ones as rows, the undated ones only in the group the line opens.
+  expect(screen.getAllByRole("link", { name: "Tidy the style sheet" })).toHaveLength(1);
+  // The line and its group are at the foot of the list, after the dated to-dos.
+  expect(within(list).getByText("Send the proof").compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test("with every to-do dated there is no group", async () => {
@@ -81,6 +92,7 @@ test("picking a day sets the to-do's date as the person's own change and Undo ta
     },
   });
   renderApp(<OpenItems />);
+  await openDates();
   const picker = await screen.findByLabelText("Date for Tidy the style sheet");
   fireEvent.change(picker, { target: { value: "2026-10-22" } });
   await waitFor(() => expect(sent).toHaveLength(1));
@@ -100,6 +112,7 @@ test("a year only half typed is never saved", async () => {
     },
   });
   renderApp(<OpenItems />);
+  await openDates();
   fireEvent.change(await screen.findByLabelText("Date for Tidy the style sheet"), { target: { value: "0002-10-22" } });
   await act(async () => undefined);
   expect(sent).toEqual([]);

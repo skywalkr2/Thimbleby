@@ -133,15 +133,15 @@ test.describe.serial("journeys", () => {
     await expect(recap.locator('[data-step="people"]')).toContainText("No one added");
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     // It is finished for good: a reload doesn't open it again, however often, and the address that names Today stays on Today.
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Getting started" })).toHaveCount(0);
     await page.reload();
     await page.goto("#today");
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Getting started" })).toHaveCount(0);
     // What I passed by waits on Today as one setup line that counts only what is done (the name, the work answer, the AI
     // account and the backup), never as a forced return.
@@ -187,7 +187,7 @@ test.describe.serial("journeys", () => {
     await expect(page).toHaveURL(/#today$/);
     await expect(review.getByText(/Send the venue list/).first()).toBeVisible();
     await expect(review.getByRole("button", { name: /^Not right/ }).first()).toBeVisible();
-    await expect(review.getByRole("button", { name: "All looks good" })).toBeVisible();
+    await expect(review.getByRole("button", { name: /^Keep (it|all \d+)$/ })).toBeVisible();
     await expect(page.getByText("Who owns this?")).toHaveCount(0);
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
@@ -201,7 +201,7 @@ test.describe.serial("journeys", () => {
   }) => {
     collectProblems(page, problems);
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
 
     // Connections: add a folder, pointing at the folder the test put the file in.
     await openView(page, "Connections");
@@ -259,7 +259,7 @@ test.describe.serial("journeys", () => {
     test.setTimeout(240_000);
     collectProblems(page, problems);
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     const toasts = page.getByRole("region", { name: "Notifications" });
     const undo = () => toasts.getByRole("button", { name: "Undo" }).last().click();
     const json = async <T>(path: string): Promise<T> => {
@@ -309,7 +309,7 @@ test.describe.serial("journeys", () => {
       const item = hasText ? scope.locator("li[data-item]", { hasText }) : scope;
       await expect(item.getByRole("button", { name: /^(Add|Keep it|Drop it|Do it anyway|Use this person)/ })).toHaveCount(0);
       await item.getByRole("link", { name: "Answer on Today" }).first().click();
-      await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
       return page.getByRole("main");
     };
     // A line that comes back after Undo is not selected on Today, so its link on What changed is followed again. The change
@@ -507,7 +507,7 @@ test.describe.serial("journeys", () => {
     test.setTimeout(240_000);
     collectProblems(page, problems);
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
 
     // The app runs in a throwaway environment of its own, so an install from the screen can't reach the project's.
     expect(info.install_target).toBeTruthy();

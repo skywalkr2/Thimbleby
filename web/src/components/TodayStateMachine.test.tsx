@@ -154,7 +154,7 @@ test("a person's actions on Today never add a line, every item keeps one line, a
   await oneLineEach("after opening the review", server);
 
   // Confirm, then Undo: the line goes, and comes back as the same one line.
-  await user.click(screen.getByRole("button", { name: "All looks good" }));
+  await user.click(screen.getByRole("button", { name: /^Keep (it|all \d+)$/ }));
   await waitFor(() => expect(server.lines).not.toContain(review));
   await refresh();
   await oneLineEach("after confirming", server);

@@ -142,7 +142,7 @@ test("the workspace name goes to Today from any screen", async () => {
   await user.click(await within(await screen.findByRole("navigation", { name: "Settings sections" })).findByRole("link", { name: "Connections" }));
   expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
-  expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
 });
 
 const quiet = {
@@ -223,7 +223,7 @@ test("going to another view moves focus to its heading, but the first load does 
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
-  expect(await screen.findByRole("heading", { level: 1, name: "Today" })).not.toHaveFocus();
+  expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).not.toHaveFocus();
   await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Follow-ups" }));
   await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Follow-ups" })).toHaveFocus());
 });
@@ -232,8 +232,8 @@ test("Today's heading carries the date, and every view has one h1", async () => 
   window.location.hash = "";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  const heading = await screen.findByRole("heading", { level: 1, name: "Today" });
-  expect(heading.closest("[data-page-header]")?.textContent).toMatch(/^Today\S.*\d/);
+  const heading = await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ });
+  expect(heading.closest("[data-page-header]")?.textContent).toMatch(/^Good (morning|afternoon|evening)\S.*\d/);
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
 });
 
@@ -259,7 +259,7 @@ test("the sidebar is not in the style guide's navigation", async () => {
   window.location.hash = "";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  await screen.findByRole("heading", { level: 1, name: "Today" });
+  await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ });
   expect(within(screen.getByRole("navigation", { name: "Views" })).queryByRole("link", { name: "Style guide" })).toBeNull();
 });
 
@@ -267,7 +267,7 @@ test("the browser going offline shows in the status chip at once", async () => {
   window.location.hash = "";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  await screen.findByRole("heading", { level: 1, name: "Today" });
+  await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ });
   act(() => {
     window.dispatchEvent(new Event("offline"));
   });
@@ -283,7 +283,7 @@ test("below the configured width the sidebar gives way to the bottom bar", async
   window.location.hash = "";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  await screen.findByRole("heading", { level: 1, name: "Today" });
+  await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ });
   const bar = screen.getByRole("navigation", { name: "Views" });
   expect(within(bar).getByRole("button", { name: "More" })).toBeInTheDocument();
   expect(within(bar).queryByRole("link", { name: "Stages" })).toBeNull();

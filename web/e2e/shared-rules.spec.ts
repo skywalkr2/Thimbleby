@@ -37,7 +37,7 @@ const SCREENS: Screen[] = [
     hash: "today",
     groups: true,
     ready: async (page) => {
-      await heading(page, "Today");
+      await heading(page, /^Good (morning|afternoon|evening)/);
       await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible(LOADED);
       await expect(page.locator("[data-queue-line]").first()).toBeVisible(LOADED);
     },

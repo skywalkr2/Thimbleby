@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function signIn(page: Page) {
   await page.goto("?token=e2e-token");
-  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Needs you" })).toBeVisible();
 }
 
@@ -70,7 +70,7 @@ test.describe("the brand", () => {
     page.on("request", (request) => requests.push(request.url()));
     await page.emulateMedia({ colorScheme: "light" });
     await signIn(page);
-    const title = page.getByRole("heading", { level: 1, name: "Today" });
+    const title = page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ });
     expect(family(await title.evaluate((el) => getComputedStyle(el).fontFamily))).toBe("Fraunces Variable");
     expect(family(await page.locator("body").evaluate((el) => getComputedStyle(el).fontFamily))).toBe("Inter Variable");
     // A row's text and a button are in the interface face too: the display face is for titles and the name only.

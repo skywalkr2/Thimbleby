@@ -61,3 +61,24 @@ export function ownersAfter(owners: OpenAction["owners"], from: string, to: stri
   }
   return out;
 }
+
+/** The groups the to-dos list is drawn in, in order. */
+export const TODO_GROUPS = ["overdue", "today", "coming", "waiting"] as const;
+export type TodoGroup = (typeof TODO_GROUPS)[number];
+
+/** The group a to-do is in: late ones first, then what waits on someone else (a to-do the person doesn't have to do),
+ * then what is due today, and everything else as coming up. A to-do with no day is coming up. `today` is the day, as an ISO date. */
+export function groupOf(a: OpenAction, today: string): TodoGroup {
+  if (a.state === "overdue") return "overdue";
+  if (a.needs_you === false) return "waiting";
+  if (a.due && a.due.slice(0, 10) <= today) return "today";
+  return "coming";
+}
+
+/** The rows by group in the list's order, leaving out a group with none. Within a group the rows keep the order they came in. */
+export function groupActions(rows: OpenAction[], today: string): Array<{ group: TodoGroup; rows: OpenAction[] }> {
+  return TODO_GROUPS.map((group) => ({ group, rows: rows.filter((a) => groupOf(a, today) === group) })).filter((g) => g.rows.length > 0);
+}
+
+/** How many of the rows are due today, for the line under the title. */
+export const dueToday = (rows: OpenAction[], today: string): number => rows.filter((a) => a.state !== "overdue" && !!a.due && a.due.slice(0, 10) === today).length;

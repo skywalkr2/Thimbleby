@@ -73,6 +73,6 @@ test("Look over is the one button and opens the list", async () => {
 
 test("with nothing unseen there is no line", async () => {
   show([]);
-  await screen.findByRole("heading", { level: 1, name: "Today" });
+  await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ });
   expect(screen.queryByRole("group", { name: TITLE })).not.toBeInTheDocument();
 });

@@ -328,7 +328,7 @@ test.describe.serial("acceptance scenario", () => {
     }
     expect(await widerThanWindow(page, "People step")).toEqual([]);
     await page.getByRole("button", { name: "Finish later" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await page.setViewportSize({ width: 1280, height: 720 });
   });
 
@@ -350,7 +350,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     // Finish later leaves the walkthrough, and Today's setup line stays as it was.
     await page.getByRole("button", { name: "Finish later" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     // The next step is still the first one not done or skipped: the work question comes before the AI account.
     await expect(line).toContainText("Next: Say what you'll use it for");
     // Continue setup opens the walkthrough at that step, with the cursor on its heading.
@@ -381,7 +381,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("combobox", { name: /relates to you/ }).first()).toBeVisible();
     await expect(page.getByRole("form", { name: "Add someone" }).getByRole("textbox", { name: "Name" })).toBeVisible();
     await page.getByRole("button", { name: "Finish later" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await line.getByRole("button", { name: "More actions for setup" }).click();
     await page.getByRole("menuitem", { name: "Hide" }).click();
     await expect(line).toHaveCount(0);
@@ -451,7 +451,7 @@ test.describe.serial("acceptance scenario", () => {
     expect(extrasWidth).toBeGreaterThanOrEqual(listWidth - 2);
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Finish later" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
   });
 
   test("a demo workspace says so on every screen, and feedback is a mail draft the person sends", async ({ page }) => {
@@ -540,7 +540,7 @@ test.describe.serial("acceptance scenario", () => {
     // What changed is the history: the question is information there, answered on its line on Today, which the link opens.
     await expect(shared.getByRole("combobox", { name: /Who is/ })).toHaveCount(0);
     await shared.getByRole("link", { name: "Answer on Today" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     const picker = page.getByRole("main").getByRole("combobox", { name: /Who is/ });
     await expect(picker).toHaveCount(1);
     await expect(picker.locator("optgroup").first().locator("option")).toHaveCount(2);

@@ -8,6 +8,9 @@ import { useAct } from "../lib/act";
 import { addDays, clockDay, clockTime, todayOn, time } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
 import { useSideFilter } from "../lib/sides";
+import { useCalendarColor } from "../lib/marks";
+import { RAIL_ROWS, useQueue } from "../lib/today";
+import { Icon } from "../ui/Icon";
 import { useWords } from "../lib/wording";
 import { AgendaItems } from "./AgendaList";
 import { useChangeThis } from "./ChangeThis";
@@ -88,6 +91,8 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const filter = useSideFilter();
   const events = (agenda.data ?? []).filter((e) => filter.shows(e.side, e.views));
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
+  // The meetings that are named in a clash line on Today say so in their own row.
+  const clashEntries = new Set((useQueue().data ?? []).filter((l) => l.kind === "clash").flatMap((l) => [l.entry, l.other_entry]).filter((x): x is string => !!x));
   const groups = groupByDay(events, today);
   const todayGroups = groups.filter((group) => group.date === today);
   // Deliveries with no date yet are on no day: they are listed under "On its way" at the card's end.
@@ -103,13 +108,15 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const card = (
     <RailPanel
       id="schedule"
-      title={t("today.schedule.title")}
+      title={t("today.schedule.heading")}
+      short={t("today.schedule.title")}
       count={agenda.data ? count : null}
+      countHidden
       countText={tn("today.agenda.count", count)}
       summary={agenda.data ? summary || (sourceState.problems.length > 0 ? t("today.rail.not_read") : t("today.agenda.none_today")) : ""}
       action={
-        <ButtonLink size="sm" href={viewHref("schedule")}>
-          {t("schedule.open")}
+        <ButtonLink variant="quiet" size="sm" href={viewHref("schedule")} aria-label={t("schedule.open")}>
+          {t("today.schedule.open")}
         </ButtonLink>
       }
       footer={
@@ -147,13 +154,28 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
                 rows.splice(upcoming ? rows.indexOf(upcoming) : group.events.filter((e) => !e.own).length, 0, "now");
               }
             }
+            // The card holds a few meetings, the next ones, and one line for the rest, so the rail is never longer than the queue.
+            const events = rows.filter((r) => r !== "now").length;
+            let visible = rows;
+            let hidden = 0;
+            if (events > RAIL_ROWS) {
+              let begin = Math.max(0, rows.indexOf("now"));
+              while (begin > 0 && rows.slice(begin).filter((r) => r !== "now").length < RAIL_ROWS) begin--;
+              let taken = 0;
+              visible = rows.slice(begin).filter((r) => {
+                if (r === "now") return true;
+                taken += 1;
+                return taken <= RAIL_ROWS;
+              });
+              hidden = events - Math.min(taken, RAIL_ROWS);
+            }
             return (
               <div key={group.date} className="tb-group">
                 <h3 id={headId} className="tb-group-head">
                   {t("today.agenda.today")}
                 </h3>
                 <ul className="tb-list" aria-labelledby={headId}>
-                  {rows.map((row, i) =>
+                  {visible.map((row, i) =>
                     row === "now" ? (
                       <li key="now" className="now-line">
                         <span>{t("today.agenda.now", { time: time(now) })}</span>
@@ -165,8 +187,16 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
                         when={whenText(row, group.date, t)}
                         past={group.date === today && !row.all_day && !row.own && ended(row)}
                         source={sourceName(row.source)}
+                        clash={!!row.entry && clashEntries.has(row.entry)}
                       />
                     ),
+                  )}
+                  {hidden > 0 && (
+                    <li className="tb-more">
+                      <ButtonLink variant="quiet" size="sm" href={viewHref("schedule")}>
+                        {tn("today.agenda.more", hidden)}
+                      </ButtonLink>
+                    </li>
                   )}
                 </ul>
               </div>
@@ -333,7 +363,7 @@ function MeetingDrawer(props: { today: string; onClose: () => void }) {
   );
 }
 
-function AgendaRow(props: { event: Event; when: string; past: boolean; source: string }) {
+function AgendaRow(props: { event: Event; when: string; past: boolean; source: string; clash?: boolean }) {
   const { t, tn } = useWords();
   const { event } = props;
   const row = useRef<HTMLLIElement>(null);
@@ -349,12 +379,13 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
         run: () => void act(() => api.entryTodo(offer.entry), (made) => ({ message: t("today.agenda.todo_added", { what: offer.text }), undo: () => api.undo(made.changeset) })),
       }
     : null;
+  const calendarColor = useCalendarColor();
   const meta = [event.where, ...deliveryDetails(event, t), event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
   const status = deliveryStatusWord(event, t);
   // A meeting of a series shows how many open items wait for it, linking to the series' page; with none, nothing is said.
   const open = event.series && (event.open_items ?? 0) > 0 ? event.open_items! : 0;
   return (
-    <li className={props.past ? "tb-row stacked past" : "tb-row stacked"} ref={row} tabIndex={event.own ? -1 : undefined}>
+    <li className={props.past ? "tb-row stacked past" : "tb-row stacked"} ref={row} tabIndex={event.own ? -1 : undefined} data-event="" data-calendar-color={event.own ? undefined : (calendarColor(event.source) ?? "gray")}>
       <span className="tb-when">{props.when}</span>
       <div className="tb-what">
         <div className="tb-title">
@@ -380,7 +411,18 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
             </>
           )}
         </div>
-        {meta && <div className="tb-meta">{meta}</div>}
+        {(meta || props.clash) && (
+          <div className="tb-meta">
+            {props.clash && (
+              <span className={styles.clashMark} data-clash="">
+                <Icon name="alert" size={16} />
+                {t("today.agenda.clash")}
+              </span>
+            )}
+            {props.clash && meta ? " · " : null}
+            {meta}
+          </div>
+        )}
         <AgendaItems items={event.agenda ?? []} />
       </div>
       {event.own && <RowMenu label={event.title} actions={[change.entry]} />}

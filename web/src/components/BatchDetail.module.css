@@ -11,7 +11,8 @@
 .text { min-width: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
 .form { grid-column: 1 / -1; min-width: 0; }
 .held { grid-column: 1 / -1; min-width: 0; padding-inline-start: var(--space-3); border-inline-start: 2px solid var(--border-strong); }
-.end { display: flex; justify-content: flex-end; }
+/* The foot of the card: a hairline, then the one filled button at the end. */
+.end { display: flex; justify-content: flex-end; padding-top: var(--space-3); border-top: 1px solid var(--border); }
 /* A narrow pane: the button goes under the words, at full width. */
 @media (max-width: 639.98px) {
   .item, :global([data-narrow]) .item { grid-template-columns: minmax(0, 1fr); }

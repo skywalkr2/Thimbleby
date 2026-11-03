@@ -89,7 +89,7 @@ test.describe("A review happens on Today", () => {
     await expect(page.locator("[data-outside]")).toHaveCount(0);
     expect(confirmed).toBeNull();
     expect(await rows.count()).toBe(before);
-    await row.getByRole("button", { name: "All looks good" }).click();
+    await row.getByRole("button", { name: /^Keep (it|all \d+)$/ }).click();
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     expect(confirmed).toEqual({ changesets: ["CS-1"] });
     // The count went down by one, and never up.
@@ -188,7 +188,7 @@ test.describe("A review happens on Today", () => {
   // Sweep batches V1 and V2: a row's action is never filled with the solid accent, even on the line with the cursor: it is an outline
   // by day (the surface) and tonal by night (the soft accent), the same on every line; the cursor shows as the focus ring and the 2px bar on the row.
   for (const scheme of ["light", "dark"] as const) {
-    test(`in ${scheme} mode no row's action is filled, and only the line with the cursor shows the focus ring`, async ({ page }) => {
+    test(`in ${scheme} mode only the first decision's action is filled, the others rest, and only the line with the cursor shows the focus ring`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await serve(page, () => lines);
       await page.setViewportSize({ width: 1280, height: 900 });
@@ -226,9 +226,11 @@ test.describe("A review happens on Today", () => {
       });
       const withButton = found.backgrounds.filter((b) => b !== null);
       expect(withButton.length).toBeGreaterThan(2);
-      expect(withButton.filter((b) => b === found.filled), JSON.stringify(found)).toHaveLength(0);
+      // The first decision carries the screen's one filled button (4.6 `today`); every other line's action is the resting weight.
+      expect(withButton.filter((b) => b === found.filled), JSON.stringify(found)).toHaveLength(1);
+      expect(withButton[0], JSON.stringify(found)).toBe(found.filled);
       const resting = scheme === "dark" ? found.tonal : found.surface;
-      expect(withButton.filter((b) => b === resting), JSON.stringify(found)).toHaveLength(withButton.length);
+      expect(withButton.slice(1).filter((b) => b === resting), JSON.stringify(found)).toHaveLength(withButton.length - 1);
       // The line with the cursor has the reviewer's 2px bar and the focus ring together; no other line has either.
       expect(found.rowRings[0], JSON.stringify(found)).toBe(found.barAndRing);
       expect(found.rowRings.slice(1).filter((b) => b === found.ring || b === found.bar || b === found.barAndRing), JSON.stringify(found)).toHaveLength(0);

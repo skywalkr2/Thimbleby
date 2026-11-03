@@ -1,6 +1,7 @@
 // "Needs a date" (design 7.5): the open to-dos with no date that the person owns or has told someone about, at the top of
 // the to-dos, each with a date picker. Picking a day sets the to-do's date as the person's own change, at once, with Undo; it
 // drops the words an old date was read from and leaves the group on its own. Nothing here guesses a date.
+import { useId, useState } from "react";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
@@ -8,7 +9,9 @@ import type { OpenAction } from "../lib/open-items";
 import { shortTitle } from "../lib/title-dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { Button } from "../ui/Button";
 import { DateField } from "../ui/DateField";
+import { Icon } from "../ui/Icon";
 import { GroupLabel } from "../ui/GroupLabel";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
@@ -56,5 +59,30 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: 
       </RowList>
       <p className="hint">{tn(props.hint ?? "open.needs_date.hint", props.rows.length)}</p>
     </section>
+  );
+}
+
+/** The to-dos that need a date, as one line at the foot of the list ("2 to-dos need a date" and "Give them dates"); pressing the
+ * button opens the group under it, with a date picker for each, and pressing it again puts it away. Nothing at all with none. */
+export function NeedsADateLine(props: { rows: OpenAction[] }) {
+  const { t, tn } = useWords();
+  const [open, setOpen] = useState(false);
+  const body = useId();
+  if (props.rows.length === 0) return null;
+  return (
+    <li role="presentation" className={styles.needsLine} data-needs-date-line="">
+      <div className={styles.needsLineRow}>
+        <Icon name="calendar" size={16} />
+        <span>{tn("open.needs_date.line", props.rows.length)}</span>
+        <Button variant="quiet" size="sm" aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
+          {t(open ? "open.needs_date.close" : "open.needs_date.open")}
+        </Button>
+      </div>
+      {open && (
+        <div id={body}>
+          <NeedsADate rows={props.rows} />
+        </div>
+      )}
+    </li>
   );
 }

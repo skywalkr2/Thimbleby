@@ -8,6 +8,10 @@ import { onAnySide, onSide, type SideChoice } from "./sides";
 import { useStageToday } from "../components/StageToday";
 import { useActToday } from "./acts";
 
+/** How many lines a card of Today's rail holds before one line says how many more there are, so the rail is never longer than
+ * the queue beside it. */
+export const RAIL_ROWS = 3;
+
 export type QueueLine = S["QueueLineView"];
 export type QueueGroupName = QueueLine["group"];
 

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { todayOn } from "../lib/dates";
 import { chooseFilters } from "../lib/open-items";
 import { dateAndTime } from "./ReminderLine";
 import { OpenItems } from "./OpenItems";
@@ -111,9 +112,13 @@ test("every open to-do is a row with its owners, due date, project and the proje
   expect(first).toHaveTextContent("Harbor");
   expect(first).toHaveTextContent("Upper Shelf");
   expect(within(first).getByRole("link", { name: "Where it came from" })).toHaveAttribute("href", `${WEB}docs.example.com/plan`);
-  expect(within(first).getByText("Overdue")).toBeInTheDocument();
-  expect(all[2]).toHaveTextContent("Not touched for 30 days");
-  expect(all[3]).toHaveTextContent("Nobody yet");
+  // The group's label says it is late; the row says the day, in words, with an icon.
+  expect(first.querySelector("[data-due=late]")).toHaveTextContent(/Oct 12/);
+  expect(screen.getByRole("heading", { level: 3, name: "Overdue" })).toBeInTheDocument();
+  // Groups: overdue, then what is coming up, then what waits on someone else.
+  expect(all[1]).toHaveTextContent("Not touched for 30 days");
+  expect(all[2]).toHaveTextContent("No owner");
+  expect(all[3]).toHaveTextContent("Order the sample copies");
   expect(all[4]).toHaveTextContent("Paused: the printer's quote");
 });
 
@@ -153,21 +158,17 @@ test("a to-do's owner, date and source share one meta line on a phone", async ()
   }
 });
 
-test("the inline add row opens the to-do form", async () => {
+test("the add row is the first line of the to-dos on every width, and the header's button still opens the form for details", async () => {
   const user = userEvent.setup();
   api();
-  document.documentElement.setAttribute("data-narrow", "");
-  try {
-    renderApp(<OpenItems />);
-    const list = await screen.findByRole("list", { name: "Open to-dos" });
-    const add = within(list).getByRole("button", { name: "Add a to-do…" });
-    expect(add.closest("li")).toBe(list.firstElementChild);
-    expect(within(add.closest("li")!).getByText(/type "by Friday" or "every Monday"/i)).toBeVisible();
-    await user.click(add);
-    expect(await screen.findByRole("textbox", { name: "What to do" })).toBeVisible();
-  } finally {
-    document.documentElement.removeAttribute("data-narrow");
-  }
+  renderApp(<OpenItems />);
+  const list = await screen.findByRole("list", { name: "Open to-dos" });
+  const add = within(list).getByRole("textbox", { name: "Add a to-do" });
+  expect(add.closest("li")).toBe(list.firstElementChild);
+  // It is not a row of the list: it takes no part in the list's count.
+  expect(add.closest("li")).toHaveAttribute("role", "presentation");
+  await user.click(screen.getByRole("button", { name: "Add a to-do" }));
+  expect(await screen.findByRole("textbox", { name: "What to do" })).toBeVisible();
 });
 
 test("the established wide to-do layout has no phone-only inline add row", async () => {
@@ -445,7 +446,7 @@ test("a to-do with no owner asks who, in the row", async () => {
   const user = userEvent.setup();
   const calls = api({ "POST questions/Q-9/answer": () => ({ ok: "Q-9", request: null }) });
   renderApp(<OpenItems />);
-  const row = (await rows())[3];
+  const row = (await rows())[2];
   await user.click(within(row).getByRole("button", { name: "Pick an owner" }));
   await user.selectOptions(await within(row).findByRole("combobox"), "P-2");
   await user.click(within(row).getByRole("button", { name: "Add the to-do" }));
@@ -702,5 +703,79 @@ test("the line under the list counts the rows the tab counts, with the noun the 
 test("under the title it says how many to-dos are open and how many of them are overdue, from the rows listed (VS10)", async () => {
   api();
   renderApp(<OpenItems />);
-  expect(await screen.findByText("5 open · 1 overdue")).toBeInTheDocument();
+  expect(await screen.findByText("7 open")).toBeInTheDocument();
+  expect(screen.getByText(/· 1 overdue/)).toBeInTheDocument();
+});
+
+// ---- The 4.6 `todos` mockup (section 316) ---------------------------------------------------------------------------------
+
+const TODAY_ISO = todayOn(new Date());
+const mixed = [
+  action("G-1", "Pay the deposit", { due: "2026-01-05", state: "overdue" }),
+  action("G-2", "Get a catering quote", { due: TODAY_ISO }),
+  action("G-3", "Take the tablets", { due: TODAY_ISO, repeat: undefined }),
+  action("G-4", "Mail the claim forms", { due: "2099-10-30" }),
+  action("G-5", "Book the fitting", { due: "2099-11-05" }),
+  action("G-6", "Revised offsite budget", { owners: [{ person: "P-2", name: "Robin Sample" }], needs_you: false, due: "2099-11-01" }),
+  action("G-7", "Print the agenda", { needs_date: true }),
+];
+const groupLabels = () => within(screen.getByRole("list", { name: "Open to-dos" })).getAllByRole("heading", { level: 3 });
+
+test("the to-dos are grouped Overdue, Today, Coming up and Waiting on others, each with its count, in that order", async () => {
+  api({}, { actions: mixed });
+  renderApp(<OpenItems />);
+  await screen.findByRole("list", { name: "Open to-dos" });
+  expect(groupLabels().map((g) => g.textContent)).toEqual(["Overdue1", "Today2", "Coming up2", "Waiting on others1"]);
+  expect(groupLabels()[0]).toHaveAttribute("data-tone", "danger");
+  const names = (await rows()).map((r) => r.querySelector("[data-row-title]")?.textContent);
+  expect(names).toEqual(["Pay the deposit", "Get a catering quote", "Take the tablets", "Mail the claim forms", "Book the fitting", "Revised offsite budget"]);
+  // The overdue line says its day with an icon; the group says it too, so the row has no Overdue pill of its own.
+  const first = (await rows())[0];
+  expect(first.querySelector("[data-due=late] [data-icon=alert]")).not.toBeNull();
+  expect(within(first).queryByText("Overdue")).toBeNull();
+  expect((await rows())[1].querySelector("[data-due=today]")).toHaveTextContent("Due today");
+});
+
+test("the counts agree: the tab, the line under the title, the groups with the line for those that need a date, and the footer", async () => {
+  api({}, { actions: mixed, questions });
+  renderApp(<OpenItems />);
+  await screen.findByRole("list", { name: "Open to-dos" });
+  // 7 to-dos and 2 questions are open; one to-do is overdue and two are due today.
+  expect(screen.getByRole("button", { name: /^To-dos/ })).toHaveTextContent("7");
+  expect(screen.getByRole("button", { name: /^Questions/ })).toHaveTextContent("2");
+  expect(screen.getByText("9 open")).toBeInTheDocument();
+  expect(screen.getByText(/· 1 overdue · 2 due today/)).toBeInTheDocument();
+  const grouped = groupLabels().reduce((n, g) => n + Number(g.querySelector("[data-group-count]")?.textContent), 0);
+  expect(grouped).toBe(6);
+  expect(screen.getByText("1 to-do needs a date")).toBeInTheDocument();
+  expect(grouped + 1).toBe(7);
+  expect(document.querySelector("[data-need-count]")).toHaveTextContent("of these 7 to-dos");
+});
+
+test("those that need a date are one line at the foot of the list, and a button on it opens them and puts them away", async () => {
+  const user = userEvent.setup();
+  api({}, { actions: mixed });
+  renderApp(<OpenItems />);
+  const line = await screen.findByText("1 to-do needs a date");
+  expect(line.closest("[data-needs-date-line]")).not.toBeNull();
+  expect(screen.queryByRole("region", { name: /Needs a date/ })).toBeNull();
+  const open = screen.getByRole("button", { name: "Give them dates" });
+  expect(open).toHaveAttribute("aria-expanded", "false");
+  await user.click(open);
+  expect(await screen.findByRole("region", { name: /Needs a date/ })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Hide them" }));
+  expect(screen.queryByRole("region", { name: /Needs a date/ })).toBeNull();
+});
+
+test("a question has no check box or round tick: only a to-do can be marked done from its row", async () => {
+  const user = userEvent.setup();
+  api({}, { actions: mixed, questions });
+  renderApp(<OpenItems />);
+  expect((await rows())[0].querySelector("[aria-label='Mark done']")).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: /^Questions/ }));
+  const list = await screen.findByRole("list", { name: "Open questions" });
+  expect(within(list).getAllByRole("listitem").length).toBe(2);
+  expect(within(list).queryByRole("button", { name: "Mark done" })).toBeNull();
+  expect(within(list).queryByRole("checkbox")).toBeNull();
+  for (const q of Array.from(list.querySelectorAll("[data-row-lead]"))) expect(q.children).toHaveLength(0);
 });

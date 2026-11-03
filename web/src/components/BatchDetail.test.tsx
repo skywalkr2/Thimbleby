@@ -85,5 +85,5 @@ test("each item shows where it came from, its side and its owner, and a draft sh
 test("Not right is a quiet link on the item's row, never a second button beside the primary action", () => {
   renderApp(<BatchDetail line={batch} />);
   expect(screen.getByRole("button", { name: /Not right: Send two spine options/ })).toHaveAttribute("data-variant", "quiet");
-  expect(screen.getByRole("button", { name: "All looks good" })).toHaveAttribute("data-variant", "primary");
+  expect(screen.getByRole("button", { name: /^Keep (it|all \d+)$/ })).toHaveAttribute("data-variant", "primary");
 });

@@ -267,7 +267,7 @@ test.describe.serial("journey: new start", () => {
     expect(await extras.getByRole("listitem").count()).toBeGreaterThan(0);
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     // The look back waits for the Start on Today, which shows its cost first. One request for each item taken in, each item
     // once, and the promises found arrive below as lines to look over, never in setup.
     await startOnToday(page);
@@ -320,7 +320,7 @@ test.describe.serial("journey: new start", () => {
     for (const label of ["Your inbox", "Your calendar", "Your sent mail"]) {
       await found.filter({ hasText: label }).getByRole("button", { name: "Look over", exact: true }).click();
       await expect(page).toHaveURL(/#today$/);
-      await found.filter({ hasText: label }).getByRole("button", { name: "All looks good" }).click();
+      await found.filter({ hasText: label }).getByRole("button", { name: /^Keep (it|all \d+)$/ }).click();
     }
     await expect(found).toHaveCount(0);
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);

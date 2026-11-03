@@ -47,6 +47,9 @@
 .actions :global([data-variant="primary"]:not(:disabled)), .actions :global([data-variant="secondary"]:not(:disabled)) { background: var(--row-btn-bg); border-color: var(--row-btn-border); color: var(--row-btn-text); }
 .actions :global([data-variant="primary"]:not(:disabled):hover), .actions :global([data-variant="secondary"]:not(:disabled):hover) { background: var(--row-btn-hover); border-color: var(--row-btn-border); }
 .actions :global([data-variant="quiet"]) { padding-inline: var(--space-2); }
+/* The one exception: a button that names the filled weight (the screen's one primary, set up by the screen) keeps it in a row. */
+.actions :global([data-variant="primary"][data-weight="filled"]:not(:disabled)) { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.actions :global([data-variant="primary"][data-weight="filled"]:not(:disabled):hover) { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 /* Phone (the configured phone layout, and any window under 640px): the parts stack. The title and meta have the row's width
    beside the lead slot, the buttons go under them, and the menu ("...") sits at the row's top right, whatever else the row has.

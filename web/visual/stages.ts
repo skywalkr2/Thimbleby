@@ -51,7 +51,7 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
       await page.goto(`${env.base}?token=${env.token}`);
       await page.getByRole("heading", { level: 1, name: "Getting started" }).waitFor(LONG);
       await page.getByRole("button", { name: "Finish later" }).click();
-      await page.getByRole("heading", { level: 1, name: "Today" }).waitFor(LONG);
+      await page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ }).waitFor(LONG);
       await page.close();
       const info = (await (await fetch(`${env.fake}/__e2e/accounts`)).json()) as { accounts: Array<{ address: string }> };
       env.seed.addresses = info.accounts.map((a) => a.address);

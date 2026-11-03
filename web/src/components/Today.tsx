@@ -1,8 +1,10 @@
 // The Today screen (design 7.7): what needs the person as a ranked queue, the line that has the cursor in the inspector
 // (from 1680px; below that a line's items open under it), and the rail of at most three cards: the briefing, the schedule and
 // what came in.
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { longDay } from "../lib/dates";
+import { api } from "../lib/api";
+import { longDay, onTheClock } from "../lib/dates";
 import { useMediaQuery } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { onSide, setSideChoice, useSideFilter } from "../lib/sides";
@@ -46,6 +48,12 @@ export function Today(props: {
   // With setup unfinished, "nothing needs you" would be untrue: setup is what is next, and the heading says which step.
   const setupNext = useNextSetupStep();
   const [selected, setSelected] = useState<Selection | null>(null);
+  // The heading is a greeting for the time of day, with the person's first name once it is known.
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const first = (me.data?.full_name ?? "").trim().split(/\s+/)[0] ?? "";
+  const hour = Math.floor(onTheClock(new Date()).minutes / 60);
+  const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const greeting = first ? t(`today.greeting.${part}`, { name: first }) : t(`today.greeting.${part}.plain`);
 
   // Another part of the screen asks for an answer or a question to be looked at: its line opens, with the cursor on it.
   const [shown, setShown] = useState<string | null>(null);
@@ -96,12 +104,21 @@ export function Today(props: {
     <div className={styles.today}>
       <div className={styles.head}>
         <PageHeader
-          title={t("nav.home")}
+          title={greeting}
           subtitle={
             <>
-              {[longDay(new Date()), count === null ? "" : count === 0 ? (setupNext ? t("today.needs.setup_next", { step: setupNext.label }) : filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
-                .filter(Boolean)
-                .join(" · ")}
+              {longDay(new Date())}
+              {count === null ? null : count === 0 ? (
+                <>
+                  {" · "}
+                  {setupNext ? t("today.needs.setup_next", { step: setupNext.label }) : filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })}
+                </>
+              ) : (
+                <>
+                  {" · "}
+                  <strong>{tn("today.needs.count", count)}</strong>
+                </>
+              )}
             </>
           }
           filters={

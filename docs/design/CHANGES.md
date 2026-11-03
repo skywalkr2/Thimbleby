@@ -1027,6 +1027,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 316. Today, the opened review and To-dos built to the 4.6 mockups (2026-11-03; visual review VS05, VS10, VS11, VC01)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's heading (7.7) | "Today", then the date and "N things need you" | A greeting for the time of day on the person's clock with their first name ("Good afternoon, Robin"); the date, then the count in bold. **Built** (`web/src/components/Today.test.tsx`: "the heading greets the person…") |
+| The queue (7.7) | A pane titled "Needs you" with its count, groups in sentence case | No title on the page (the pane keeps its name for a screen reader); groups uppercase with counts, At risk in the problem color. **Built** (`Today.test.tsx`: "the queue has no title of its own…", `web/src/ui/Panel.test.tsx`) |
+| A line's lead slot and meta (7.7, 7.14) | Empty slot; the side as a tag in the title | An icon by kind, or the side's color; the side and each calendar named in the meta after a mark (`web/src/ui/MarkDot.tsx`); one line. **Built** (`Today.test.tsx`: "a line on one of the person's sides…", "a clash line names both meetings…") |
+| One filled button (7.12) | None on Today (a row's action is never filled) | The first decision's action is filled, with a tint and a 3px edge; a line at risk has its own; while a review is open Keep all has the filled weight. **Built** (`Today.test.tsx`: "the first decision has the screen's one filled button…", "while a review is open…") |
+| A clash line (7.7) | "Sort out the clash on Tue, Nov 3: A and B", the pill Clash, "In X and in Y" | "A and B overlap" (or "are too close together"), the day and the overlap, the calendars with marks, "They overlap by 30 minutes". **Built** (`TodayCapacity.test.tsx`, `TodayAccounts.test.tsx`) |
+| The opened review (7.7) | A bordered card, "All looks good" | An inset card on the sunken surface under the row's text, ending in a hairline and "Keep all N" ("Keep it" for one). **Built** (`web/src/components/BatchDetail.test.tsx`) |
+| Today's rail (7.7) | Buttons in the card heads, every meeting and message listed | "Open" and "Check now" as quiet links; the Schedule card is headed "Today's schedule" (its region is still "Schedule"), three meetings on a calendar-colored edge, Clash when named by a clash line, and "N more in the schedule"; Came in holds three and a quiet "N more". **Built** (`web/src/components/TodayRail.test.tsx`) |
+| To-dos and questions (7.5) | One list in the server's order, a pill for Overdue, the add button in the header (and on a phone a line that opened the form), "Needs a date" a group at the top | Groups Overdue, Today, Coming up, Waiting on others with counts (`groupActions`); the add row first on every width; "N to-dos need a date" one line at the foot that opens the group; "N open · N overdue · N due today" over both tabs. **Built** (`OpenItems.test.tsx`, `InlineAddTodo.test.tsx`, `NeedsADate.test.tsx`, `web/src/lib/todo-groups.test.ts`; browser `web/e2e/today-todos-46.spec.ts`, written, not yet run) |
+
+- **Wording:** `today.greeting.*`, `queue.clash.title*`, `queue.batch.keep_all`, `open.group.*`, `open.due*`, `open.needs_date.line`, `open.inline_add.*`, `today.schedule.heading`; gone: "All looks good", "Sort out the clash on", `open.subtitle.late`.
+- **Left:** "by Friday" in the add row, "Show N more coming up", a Done tab, an icon on each system line, the rail's length enforced by layout; the review on a fixture the capture can drive. `docs/project/u3-differences/today-todos.md` lists each with its reason.
+
 ## 314. Restore from a backup copy in the app, staged and swapped in at the next start (2026-11-03; sweep X98, X04)
 
 | Where | Before | Now |

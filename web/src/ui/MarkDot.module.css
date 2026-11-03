@@ -1,0 +1,15 @@
+/* A side or calendar mark: 8px, round, never the only sign of what it marks. */
+.dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--text-subtle); }
+.dot[data-mark="side"][data-color="1"] { background: var(--side-1); }
+.dot[data-mark="side"][data-color="2"] { background: var(--side-2); }
+.dot[data-mark="side"][data-color="3"] { background: var(--side-3); }
+.dot[data-mark="side"][data-color="4"] { background: var(--side-4); }
+.dot[data-mark="side"][data-color="5"] { background: var(--side-5); }
+.dot[data-mark="calendar"][data-color="blue"] { background: var(--cal-1); }
+.dot[data-mark="calendar"][data-color="teal"] { background: var(--cal-2); }
+.dot[data-mark="calendar"][data-color="green"] { background: var(--cal-3); }
+.dot[data-mark="calendar"][data-color="orange"] { background: var(--cal-4); }
+.dot[data-mark="calendar"][data-color="red"] { background: var(--cal-5); }
+.dot[data-mark="calendar"][data-color="pink"] { background: var(--cal-6); }
+.dot[data-mark="calendar"][data-color="purple"] { background: var(--cal-7); }
+.dot[data-mark="calendar"][data-color="gray"] { background: var(--cal-8); }

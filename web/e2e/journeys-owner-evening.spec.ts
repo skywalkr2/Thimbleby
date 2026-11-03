@@ -180,7 +180,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     await main.getByRole("button", { name: "Go to Today" }).click();
 
     // 6. Today. The bill and the rest are read under its Start, so they are on screen after it.
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await startOnToday(page);
     await expect.poll(async () => (await requests()).work, { timeout: 90_000 }).toBeGreaterThan(0);
     const header = page.getByRole("banner");

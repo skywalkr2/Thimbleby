@@ -86,7 +86,7 @@ test.describe("the visual system", () => {
         await page.evaluate(() => {
           window.location.hash = "today";
         });
-        await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
         await expect(page.getByRole("heading", { level: 2, name: "Needs you" })).toBeVisible();
         await expectNoViolations(page);
         await shoot(page, `today-${scheme}-${width}`);

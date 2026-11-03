@@ -4,6 +4,34 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Today, the opened review and To-dos built to the 4.6 mockups (VS05, VS10, VS11, VC01; section 316)
+
+**Decided:** (owner: these screens match the reviewer's mockups before the gate week; design by the main session.) *Today:* the
+heading is a greeting for the time of day on the person's clock with their first name once it is known ("Good afternoon, Robin"),
+and the line under it says the date and, in bold, how many things need them. The queue has no title of its own on the page (the
+pane is still named "Needs you" for a screen reader); its groups are labelled with counts, and At risk in the problem color. Each
+line starts with an icon in its 24px slot (a person to place, something to look over, something to send, something at risk), or,
+with none, the color of its side; a line on a side names it in its meta after a mark in that side's color (`--side-1` to `--side-5`
+by the side's place in the person's list), and a clash names both meetings in its title ("A and B overlap") and both calendars in
+its meta, each after a mark in its calendar's color, on one line. The first decision has the screen's one filled button, a tint and
+a 3px edge; a line at risk has its own tint and edge. While a review is open its **Keep all N** is the one filled button and the
+first decision is drawn as the other lines are (tint kept). The opened review is an inset card on the sunken surface, under the
+row's text. The rail is calm: no filled button, "Open" as a link, the Schedule card holds the next three meetings and one line for
+the rest, each on an edge in its calendar's color, saying Clash when a clash line names it; Came in holds three messages and a
+quiet button for the rest. *To-dos:* grouped Overdue, Today, Coming up and Waiting on others, each with its count; the first line
+of the list is an add row (type a title, Enter adds it as the person's own with Undo, the cursor stays; the Add form is still the
+header's button, for a day, an owner or a repeat, and Enter opens it with the words typed when the person has sides and none is
+picked, since the form asks where the to-do belongs); the to-dos that need a date are one line at the foot ("N to-dos need a date",
+"Give them dates") that opens their list; the title line says "N open · N overdue · N due today" over the to-dos and the
+questions, and the tabs, the groups with that line, and the footer agree; questions have no tick (they never had; a test now holds
+it). *Not built, said so:* the mockup's "by Friday" in the add row's placeholder (the add row sends the title only, so a new to-do
+needs a date), "Show N more coming up" (it would hide rows other screens count), a Done tab, the greeting's "starting with one
+decision", and an icon in the system lines' slot (each held kind draws its own row). The rail's card length is capped in rows
+(`RAIL_ROWS`, three), not enforced by layout. *Why:* the reviewer's final pass scored these two pages 4.58 and 4.55 and the build
+was far from them. *Impact:* web only (no API model, no setting; `RAIL_ROWS` is a constant that could become a setting),
+new `MarkDot`, `InlineAddTodo`, `NeedsADateLine`, wording (`today.greeting.*`, `queue.clash.title*`, `queue.batch.keep_all`,
+`open.group.*`), the old "All looks good" label and the clash's "Sort out the clash on …" title are replaced. Change log: section 316.
+
 ## 2026-11-03: Restore from a copy, staged and swapped in at the next start (X98, X04; section 314)
 
 **Decided:** (owner: every item of the re-sweep fixed before the gate week; design by the main session.) A person restores one of

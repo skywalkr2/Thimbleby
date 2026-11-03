@@ -114,7 +114,7 @@ test.describe.serial("setup and settings fixes", () => {
     await main.getByRole("button", { name: "I'll do this later" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     await main.getByRole("button", { name: "Go to Today" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible(LOADED);
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible(LOADED);
     // X66: the tab names the workspace and the product.
     await expect(page).toHaveTitle(/ · Thimbleby$/);
   });

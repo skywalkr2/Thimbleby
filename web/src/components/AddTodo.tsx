@@ -20,12 +20,12 @@ import { ProjectPicker } from "./ProjectPicker";
 import { FormField } from "../ui/FormField";
 import styles from "./AddTodo.module.css";
 
-function AddTodoForm(props: { onClose: () => void }) {
+function AddTodoForm(props: { onClose: () => void; text?: string }) {
   const { t } = useWords();
   const act = useAct();
   const id = useId();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
-  const [text, setText] = useState("");
+  const [text, setText] = useState(props.text ?? "");
   const [when, setWhen] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
   const { justMe } = useSides();
@@ -147,8 +147,12 @@ function AddTodoForm(props: { onClose: () => void }) {
   );
 }
 
-/** Opens the add-a-to-do form: `open` for the button that starts it, `form` to render once beside it. */
-export function useAddTodo(): { open: () => void; form: ReactNode } {
-  const [shown, setShown] = useState(false);
-  return { open: () => setShown(true), form: shown ? <AddTodoForm onClose={() => setShown(false)} /> : null };
+/** Opens the add-a-to-do form: `open` for the button that starts it (with the words already typed, when it has some), `form` to
+ * render once beside it. */
+export function useAddTodo(): { open: (words?: string) => void; form: ReactNode } {
+  const [shown, setShown] = useState<{ text: string } | null>(null);
+  return {
+    open: (words) => setShown({ text: typeof words === "string" ? words : "" }),
+    form: shown ? <AddTodoForm text={shown.text} onClose={() => setShown(null)} /> : null,
+  };
 }

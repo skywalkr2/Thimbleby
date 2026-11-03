@@ -138,9 +138,12 @@ test("a clash line names both meetings with their times and calendars and offers
     { "POST suggestions/not-now": () => ({ signal: "SIG-1" }) },
   );
   // The title is short: the day and the two meetings. The times and calendars are in what the line opens.
-  expect(await screen.findByText(/^Sort out the clash on [^:]*: Site visit and Supplier call$/)).toBeInTheDocument();
+  expect(await screen.findByText(/^Site visit and Supplier call overlap$/)).toBeInTheDocument();
   // The line names the calendar the meetings are in, so two accounts' meetings are told apart.
-  expect(screen.getByText("They overlap by 30 minutes · In Work calendar")).toBeInTheDocument();
+  expect(row("clash")).toHaveTextContent("Work calendar");
+  expect(row("clash")).toHaveTextContent("They overlap by 30 minutes");
+  // Each calendar is named after a mark in its color, in the line's meta: one line, parts after a dot.
+  expect(row("clash").querySelector("[data-mark=calendar]")).not.toBeNull();
   expect(row("clash").className).toMatch(/plain/);
   await user.click(within(row("clash")).getByRole("button", { name: "Open Site visit" }));
   expect(onOpenRecord).toHaveBeenCalledWith("event", "EVT-3");

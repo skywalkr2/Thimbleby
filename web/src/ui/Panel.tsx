@@ -10,6 +10,12 @@ export function Panel(props: {
   level?: 2 | 3;
   count?: ReactNode;
   actions?: ReactNode;
+  /** The count is said to a screen reader and not drawn (a card that is a glance, not a tally). */
+  countHidden?: boolean;
+  /** The region's name when it is not the title's words (the title says more than the region needs to be called). */
+  label?: string;
+  /** The title is kept for a screen reader and left off the page, for a pane whose rows say what it holds (Today's queue). */
+  hideTitle?: boolean;
   /** The smaller title of a rail pane. */
   small?: boolean;
   /** No padding in the body, for rows that run edge to edge. */
@@ -22,15 +28,24 @@ export function Panel(props: {
   const headId = props.id ?? auto;
   const Heading = props.level === 3 ? "h3" : "h2";
   return (
-    <section className={[styles.panel, props.small ? styles.small : "", props.className ?? ""].filter(Boolean).join(" ")} aria-labelledby={headId}>
-      <div className={styles.head}>
-        <Heading id={headId} className={styles.title}>
-          {props.title}
-        </Heading>
-        {props.count !== undefined && props.count !== null && props.count !== "" && <span className={styles.count}>{props.count}</span>}
-        <span className={styles.spacer} />
-        {props.actions && <div className={styles.actions}>{props.actions}</div>}
-      </div>
+    <section className={[styles.panel, props.small ? styles.small : "", props.className ?? ""].filter(Boolean).join(" ")} aria-label={props.label} aria-labelledby={props.label ? undefined : headId}>
+      {props.hideTitle ? (
+        <>
+          <Heading id={headId} className="sr" data-panel-title-hidden="">
+            {props.title}
+          </Heading>
+          {props.count !== undefined && props.count !== null && props.count !== "" && <span className="sr">{props.count}</span>}
+        </>
+      ) : (
+        <div className={styles.head}>
+          <Heading id={headId} className={styles.title}>
+            {props.title}
+          </Heading>
+          {props.count !== undefined && props.count !== null && props.count !== "" && <span className={props.countHidden ? "sr" : styles.count}>{props.count}</span>}
+          <span className={styles.spacer} />
+          {props.actions && <div className={styles.actions}>{props.actions}</div>}
+        </div>
+      )}
       {props.children !== undefined && <div className={props.flush ? styles.flush : styles.body}>{props.children}</div>}
     </section>
   );

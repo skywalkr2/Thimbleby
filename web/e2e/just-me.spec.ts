@@ -26,7 +26,7 @@ interface Seeded {
 
 let seeded: Seeded;
 
-const heading = (page: Page, name: string, level = 1) => expect(page.getByRole("heading", { level, name, exact: true })).toBeVisible(LOADED);
+const heading = (page: Page, name: string | RegExp, level = 1) => expect(page.getByRole("heading", { level, name, exact: true })).toBeVisible(LOADED);
 const section = (page: Page, name: string) => expect(page.getByRole("heading", { level: 2, name: new RegExp(`^${name}`) })).toBeVisible(LOADED);
 
 /** What the person can see, from the top of the page to the bottom: the visible text and nothing hidden. */
@@ -38,7 +38,7 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
     name: "Today",
     hash: () => "today",
     ready: async (page) => {
-      await heading(page, "Today");
+      await heading(page, /^Good (morning|afternoon|evening)/);
       // The lines Today holds have been read: there is the one about a backup, as in any workspace that has none.
       await expect(page.locator("[data-queue-line]").first()).toBeVisible(LOADED);
     },
@@ -285,7 +285,7 @@ test.describe('"Just me" sees no work words', () => {
 
     // Handing something in, and asking.
     await go(page, "today");
-    await heading(page, "Today");
+    await heading(page, /^Good (morning|afternoon|evening)/);
     await page.getByRole("button", { name: "Hand something in" }).first().click();
     await expect(page.getByRole("dialog", { name: "Hand something in" })).toBeVisible(LOADED);
     await read("Hand something in");
@@ -374,7 +374,7 @@ test.describe('"Just me" sees no work words', () => {
     const brief = (await (await page.request.get("api/brief?form=monday")).json()) as { message: unknown };
     expect(brief.message ?? null).toBeNull();
     await go(page, "today");
-    await heading(page, "Today");
+    await heading(page, /^Good (morning|afternoon|evening)/);
     await expect(page.getByText(/report to/i)).toHaveCount(0);
   });
 

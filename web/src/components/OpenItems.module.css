@@ -8,3 +8,22 @@
 .needs { margin-bottom: var(--space-4); }
 .needsHead { padding-left: var(--row-px); }
 .pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); min-width: 0; }
+
+/* The list is one surface; its groups are labels inside it, and the add row is its first line. */
+.groupItem { list-style: none; margin: 0; padding: 0; }
+.groupItem > :first-child { padding-top: var(--space-4); }
+.inlineAdd { display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: var(--space-2) var(--row-px); border-bottom: 1px solid var(--border); background: var(--surface); list-style: none; margin: 0; min-height: var(--row-h); }
+.inlinePlus { flex: none; width: var(--row-lead-w); display: grid; place-items: center; color: var(--accent); }
+.inlineAdd input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; padding: var(--space-2) 0; font: inherit; box-shadow: none; }
+.inlineAdd input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+.inlineAdd .over { flex: none; font-size: var(--text-meta); }
+.over { color: var(--danger); font-weight: var(--weight-semibold); }
+.dueLate { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--danger); font-weight: var(--weight-semibold); vertical-align: bottom; }
+.dueToday { color: var(--warn); font-weight: var(--weight-semibold); }
+.placeMark { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; vertical-align: bottom; }
+/* "N to-dos need a date": one muted line at the foot of the list, with a quiet button that opens the group under it. */
+.needsLine { list-style: none; margin: 0; padding: 0; background: var(--surface-sunk); border-top: 1px solid var(--border); min-width: 0; }
+.needsLineRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--row-px); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
+.needsLine .needs { margin: 0; padding: 0 var(--row-px) var(--space-3); }
+/* The list keeps to a readable width on a wide window; the page's grid is the limit on a narrow one. */
+.todoList { max-width: 55rem; }

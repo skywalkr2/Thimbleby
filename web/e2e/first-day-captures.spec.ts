@@ -19,9 +19,9 @@ const SCHEMES = ["light", "dark"] as const;
 type Shot = { name: string; hash: string; heading: string | RegExp; of?: (page: Page) => ReturnType<Page["locator"]> };
 
 const shots = (day: FirstDay): Shot[] => [
-  { name: "today", hash: "today", heading: "Today" },
+  { name: "today", hash: "today", heading: /^Good (morning|afternoon|evening)/ },
   // Came in is a panel of Today's side column; it is on screen only where a mailbox is connected.
-  { name: "came-in", hash: "today", heading: "Today", of: (page) => page.getByRole("region", { name: "Came in" }) },
+  { name: "came-in", hash: "today", heading: /^Good (morning|afternoon|evening)/, of: (page) => page.getByRole("region", { name: "Came in" }) },
   { name: "since-yesterday", hash: "work/since", heading: "Since yesterday" },
   { name: "business", hash: `records/project/${encodeURIComponent(day.side)}`, heading: SIDE },
   { name: "project", hash: `records/project/${encodeURIComponent(day.project)}`, heading: "First catalog" },

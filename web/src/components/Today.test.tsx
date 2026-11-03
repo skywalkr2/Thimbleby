@@ -351,7 +351,7 @@ test("Look over opens the batch in the details, and All looks good there confirm
   expect(corrections[0]).toHaveAttribute("data-variant", "quiet");
   expect(calls.filter((c) => c.route.startsWith("POST"))).toEqual([]);
   expect(onView).not.toHaveBeenCalled();
-  await user.click(within(open).getByRole("button", { name: "All looks good" }));
+  await user.click(within(open).getByRole("button", { name: /^Keep (it|all \d+)$/ }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/confirm")?.body).toEqual({ changesets: ["CS-1"] }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/unconfirm")?.body).toEqual({ changesets: ["CS-1"], signals: ["SIG-1"] }));
@@ -412,7 +412,7 @@ test("Look over on an intake opens its items in the details: nothing is marked s
   expect(calls.filter((c) => c.route.startsWith("POST"))).toEqual([]);
   expect(onView).not.toHaveBeenCalled();
   expect(window.location.hash).not.toMatch(/changed/);
-  await user.click(within(open).getByRole("button", { name: "All looks good" }));
+  await user.click(within(open).getByRole("button", { name: /^Keep (it|all \d+)$/ }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/confirm")?.body).toEqual({ changesets: ["CS-1", "CS-2"] }));
 });
 
@@ -432,7 +432,7 @@ test("what the first look back over the mail found is one line, Look over what w
   await user.click(screen.getByRole("button", { name: "Look over" }));
   const open = row("intake_review");
   expect(await within(open).findByText("Send the headcount")).toBeInTheDocument();
-  expect(within(open).getByRole("button", { name: "All looks good" })).toBeInTheDocument();
+  expect(within(open).getByRole("button", { name: /^Keep (it|all \d+)$/ })).toBeInTheDocument();
   expect(within(open).getAllByRole("button", { name: /^Not right/ }).length).toBeGreaterThan(0);
 });
 
@@ -478,7 +478,7 @@ test("batches left unopened are one line, and each opens with its own All looks 
   expect(sections).toHaveLength(2);
   expect(within(sections[0]).getByText("Return the proofs")).toBeInTheDocument();
   expect(within(sections[1]).getByText("Send two spine options")).toBeInTheDocument();
-  expect(within(open).getAllByRole("button", { name: "All looks good" })).toHaveLength(2);
+  expect(within(open).getAllByRole("button", { name: /^Keep (it|all \d+)$/ })).toHaveLength(2);
 });
 
 test("what came from outside is said once in the details, and a list line carries no Outside tag", async () => {
@@ -689,7 +689,7 @@ test("lines that arrive while the person is working in the queue wait behind 'N 
     },
   });
   await user.click(await screen.findByRole("button", { name: "Look over" }));
-  await user.click(await within(row("review")).findByRole("button", { name: "All looks good" }));
+  await user.click(await within(row("review")).findByRole("button", { name: /^Keep (it|all \d+)$/ }));
   const pill = await screen.findByRole("button", { name: "Show 1 new item" });
   expect(document.querySelector('[data-queue-line="send"]')).toBeNull();
   // Nothing moved under the cursor; Show brings the new line in.
@@ -798,7 +798,7 @@ test("after a line is settled the cursor and the pane move to the next line, not
   await within(pane).findByRole("textbox", { name: "Your answer" });
   await waitFor(() => expect(row("decision")).toHaveFocus());
   await user.keyboard("j");
-  await user.click(await within(pane).findByRole("button", { name: "All looks good" }));
+  await user.click(await within(pane).findByRole("button", { name: /^Keep (it|all \d+)$/ }));
   await waitFor(() => expect(row("send")).toHaveFocus());
   expect(await within(pane).findByRole("heading", { name: "Send 2 items to Robin Sample" })).toBeInTheDocument();
   expect(within(pane).getByText("2 of 2 · j / k")).toBeInTheDocument();
@@ -1322,4 +1322,115 @@ test("the Schedule card and Came in write a time on the person's own clock, not 
   } finally {
     setClockZone(undefined);
   }
+});
+
+// ---- The 4.6 `today` and `today-review` mockups (section 316) ------------------------------------------------------------
+
+const clashLine: Line = line("clash", {
+  key: "clash:a:b:2026-10-27",
+  text: "Venue walk-through",
+  other: "Budget check-in",
+  state: "overlap",
+  minutes: 30,
+  due: "2026-10-27",
+  source_name: "Studio calendar",
+  other_source_name: "Clinic calendar",
+  entry: "EVT-1",
+  other_entry: "EVT-2",
+  starts: "2026-10-27T14:30:00+00:00",
+  ends: "2026-10-27T15:30:00+00:00",
+  other_starts: "2026-10-27T14:45:00+00:00",
+  other_ends: "2026-10-27T15:15:00+00:00",
+});
+const calendarSource = (id: string, label: string, color: S["WatchSourceView"]["color"]): S["WatchSourceView"] => ({ id, label, connector: "k", connector_label: "Calendar", enabled: true, every_minutes: 15, items: 1, last: null, read_at: null, failures: 0, problem: null, reads: ["calendar"], color });
+
+test("the heading greets the person by their first name for the time of day, and the count in the line under it is in bold", async () => {
+  show([decision], { "GET me": () => ({ person: "PER-1", full_name: "Robin Sample" }) });
+  const heading = await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), Robin$/ });
+  expect(heading).toBeInTheDocument();
+  expect(heading.closest("[data-page-header]")?.querySelector("strong")).toHaveTextContent("1 thing needs you");
+});
+
+test("with no name known the greeting is the time of day alone", async () => {
+  show([decision], { "GET me": () => ({ person: null, full_name: "" }) });
+  expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)$/ })).toBeInTheDocument();
+});
+
+test("the queue has no title of its own on the page: its groups are labelled with their counts, and the pane is still named for a screen reader", async () => {
+  show([decision, clashLine]);
+  await screen.findByText("Matte or soft-touch?");
+  const region = screen.getByRole("region", { name: "Needs you" });
+  expect(within(region).getByRole("heading", { level: 2, name: "Needs you" })).toHaveClass("sr");
+  const groups = within(region).getAllByRole("heading", { level: 3 });
+  expect(groups.map((g) => g.textContent)).toEqual(["Decide1", "At risk1"]);
+  expect(groups[1]).toHaveAttribute("data-tone", "danger");
+});
+
+test("the first decision has the screen's one filled button, a tint and an edge; a line at risk has its own tint, edge and an icon in its lead slot", async () => {
+  const second = line("decision", { key: "question:Q-2", text: "Which cover?", question: "Q-2" });
+  show([decision, second, clashLine]);
+  await screen.findByText("Matte or soft-touch?");
+  const first = row("decision");
+  expect(first).toHaveAttribute("data-state", "decide");
+  expect(within(first).getByRole("button", { name: "Answer" })).toHaveAttribute("data-weight", "filled");
+  const other = document.querySelectorAll<HTMLElement>('[data-queue-line="decision"]')[1];
+  expect(other).not.toHaveAttribute("data-state");
+  expect(within(other).getByRole("button", { name: "Answer" })).toHaveAttribute("data-weight", "outline");
+  const risk = row("clash");
+  expect(risk).toHaveAttribute("data-state", "danger");
+  expect(risk.querySelector("[data-row-lead] [data-icon=alert]")).not.toBeNull();
+  // One filled button on the whole screen.
+  expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(1);
+});
+
+test("a clash line names both meetings in its title and both calendars in its meta, each after a mark in its calendar's color, with Open for each", async () => {
+  const user = userEvent.setup();
+  show([clashLine], { "GET watch": () => [calendarSource("c1", "Studio calendar", "purple"), calendarSource("c2", "Clinic calendar", "teal")] });
+  expect(await screen.findByText("Venue walk-through and Budget check-in overlap")).toBeInTheDocument();
+  const clash = row("clash");
+  const marks = clash.querySelectorAll("[data-mark=calendar]");
+  expect(Array.from(marks).map((m) => m.getAttribute("data-color"))).toEqual(["purple", "teal"]);
+  expect(clash).toHaveTextContent("Studio calendar and");
+  expect(clash).toHaveTextContent("Clinic calendar");
+  expect(clash).toHaveTextContent("They overlap by 30 minutes");
+  // The meta is one line: its parts are inline, never stacked.
+  expect(clash.querySelector("p")?.className).toMatch(/oneLine/);
+  await user.click(within(clash).getByRole("button", { name: /More|menu/i }));
+  expect(await screen.findByRole("menuitem", { name: "Open Budget check-in" })).toBeInTheDocument();
+});
+
+test("a line on one of the person's sides names it in its meta after a mark in the side's color, by the side's place in their list", async () => {
+  const sides = [
+    { project: "PRJ-1", kind: "business", name: "Northwind Clinic", removable: false, filed: 0 },
+    { project: "PRJ-2", kind: "job", name: "Lantern Row Studio", removable: false, filed: 0 },
+  ];
+  show([{ ...decision, side: "PRJ-2", side_name: "Lantern Row Studio" }], {
+    "GET setup/business": () => ({ business: true, name: "Northwind Clinic", personal: "PRJ-0", sides, chosen: null }),
+    "GET views": () => [],
+  });
+  await screen.findByText("Matte or soft-touch?");
+  const mark = await waitFor(() => {
+    const found = row("decision").querySelector("[data-mark=side]");
+    expect(found).not.toBeNull();
+    return found!;
+  });
+  // Personal is the first slot, Northwind the second, Lantern Row the third.
+  expect(mark).toHaveAttribute("data-color", "3");
+  expect(row("decision")).toHaveTextContent("Lantern Row Studio");
+});
+
+test("while a review is open its Keep all is the one filled button, and the first decision keeps its tint but is drawn as the other lines are", async () => {
+  const user = userEvent.setup();
+  show([decision, review]);
+  await screen.findByText("Matte or soft-touch?");
+  expect(within(row("decision")).getByRole("button", { name: "Answer" })).toHaveAttribute("data-weight", "filled");
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  const open = row("review");
+  const keep = await within(open).findByRole("button", { name: "Keep all 3" });
+  expect(keep).toHaveAttribute("data-weight", "filled");
+  expect(row("decision")).toHaveAttribute("data-state", "decide");
+  expect(within(row("decision")).getByRole("button", { name: "Answer" })).toHaveAttribute("data-weight", "outline");
+  expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(1);
+  // The review is an inset card under its row.
+  expect(open.querySelector("[data-inset]")).not.toBeNull();
 });

@@ -331,7 +331,7 @@ describe("opening", () => {
       "GET projects": () => [],
     });
     renderApp(<App rc={rcFixture()} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 30));
     expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
     expect(window.location.hash).not.toBe("#setup");
@@ -352,7 +352,7 @@ describe("opening", () => {
       "GET projects": () => [],
     });
     renderApp(<App rc={rcFixture()} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => c.route === "GET setup")).toBe(true));
     await new Promise((r) => setTimeout(r, 30));
     expect(screen.queryByRole("heading", { name: "Getting started" })).toBeNull();
@@ -385,7 +385,7 @@ describe("opening", () => {
       "GET projects": () => [],
     });
     renderApp(<App rc={rcFixture()} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Hand something in" })[0]);
     await user.type(await screen.findByLabelText("Paste or type it here"), "Minutes from the call.");
     release();

@@ -9,12 +9,14 @@ import { api } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
 import { useAct } from "../lib/act";
 import { useIsNarrow } from "../lib/media";
-import { day, monthDay } from "../lib/dates";
+import { day, monthDay, todayOn } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
 import {
   ACTION_STATES,
   QUESTION_STATES,
   actionsShown,
+  dueToday,
+  groupActions,
   questionsShown,
   takeFilters,
   type Filters,
@@ -25,9 +27,14 @@ import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
 import { openOnToday } from "./AnswerOnToday";
 import { onSide, useSideFilter, useSides } from "../lib/sides";
+import { useSideSlot } from "../lib/marks";
 import { recordView, toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
+import { Icon } from "../ui/Icon";
+import { GroupLabel } from "../ui/GroupLabel";
+import { MarkDot } from "../ui/MarkDot";
+import { InlineAddTodo } from "./InlineAddTodo";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { AskChooser } from "./AskChooser";
@@ -46,7 +53,7 @@ import styles from "./OpenItems.module.css";
 import { OriginLink } from "./Origin";
 import { useHandToAssistant } from "./HandToAssistant";
 import { usePlaceText } from "../lib/place";
-import { NeedsADate } from "./NeedsADate";
+import { NeedsADateLine } from "./NeedsADate";
 import { ProjectTag } from "./ProjectTag";
 import { ViewTags, useViewLabels } from "./ViewTags";
 import { NotesTitle } from "./ActionNotes";
@@ -59,7 +66,6 @@ import { EmptyState } from "../ui/EmptyState";
 import { FilterChip } from "../ui/FilterChip";
 import { PageHeader } from "../ui/PageHeader";
 import { RoundCheck } from "../ui/RoundCheck";
-import { RowItem } from "../ui/Row";
 import { TabStrip } from "../ui/TabStrip";
 import { RowList } from "../ui/RowList";
 type Tab = "actions" | "questions";
@@ -85,9 +91,19 @@ export function OpenItems() {
   const needYou = tab === "actions" ? actions.filter((a) => a.needs_you).length : questions.filter((q) => q.state === "yours").length;
   const total = tab === "actions" ? actions.length : questions.length;
 
-  // "6 open · 1 overdue": the same rows the tab counts.
+  // "12 open · 1 overdue · 2 due today": the to-dos and the questions, the same rows the tabs count.
   const late = actions.filter((a) => a.state === "overdue").length;
-  const subtitle = tab !== "actions" || actions.length === 0 ? undefined : late > 0 ? t("open.subtitle.late", { n: actions.length, late }) : tn("open.subtitle", actions.length);
+  const today = todayOn(new Date());
+  const dueNow = dueToday(actions, today);
+  const openAll = actions.length + questions.length;
+  const subtitle =
+    openAll === 0 ? undefined : (
+      <>
+        <strong>{tn("open.subtitle", openAll)}</strong>
+        {late > 0 && ` · ${t("open.subtitle.overdue", { n: late })}`}
+        {dueNow > 0 && ` · ${t("open.subtitle.today", { n: dueNow })}`}
+      </>
+    );
 
   const projectName = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? actions.find((a) => a.project === id)?.project_name ?? id;
   const projectChoices = [...new Set(tab === "actions" ? actions.filter((a) => !a.side_name).map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
@@ -123,7 +139,7 @@ export function OpenItems() {
         subtitle={subtitle}
         primary={
           !items.isPending && actions.length + questions.length > 0 ? (
-            <Button variant="primary" icon="plus" onClick={addTodo.open}>
+            <Button variant="primary" icon="plus" onClick={() => addTodo.open()}>
               {t("addtodo.open")}
             </Button>
           ) : undefined
@@ -161,28 +177,22 @@ export function OpenItems() {
         <EmptyState
           icon="check"
           text={side.choice === "all" ? t("open.empty") : t("sides.empty.open", { side: side.named })}
-          action={{ label: t("addtodo.open"), onClick: addTodo.open, primary: true }}
+          action={{ label: t("addtodo.open"), onClick: () => addTodo.open(), primary: true }}
         />
       ) : (
         <>
-          {tab === "actions" && <NeedsADate rows={needDate} />}
           {shown + (tab === "actions" ? needDate.length : 0) === 0 ? (
             <EmptyState text={t("open.none_match")} />
-          ) : shown === 0 ? null : tab === "actions" ? (
-            <RowList aria-label={t("open.list.actions")}>
-              {narrow && (
-                <RowItem>
-                  <Button variant="quiet" icon="plus" onClick={addTodo.open}>
-                    {t("open.inline_add")}
-                  </Button>{" "}
-                  <span className="hint">{t("open.inline_add_hint")}</span>
-                </RowItem>
-              )}
-              {shownActions.map((a) => (
-                <ActionRow key={a.id} action={a} inlineOrigin={narrow} />
+          ) : tab === "actions" ? (
+            // With no row to list (every to-do waits for a date) what is left is the add row and one line, which are not a list.
+            <RowList aria-label={shownActions.length > 0 ? t("open.list.actions") : undefined} role={shownActions.length > 0 ? undefined : "presentation"} className={styles.todoList}>
+              <InlineAddTodo onDetails={addTodo.open} />
+              {groupActions(shownActions, today).map(({ group, rows }) => (
+                <TodoGroupRows key={group} group={group} rows={rows} inlineOrigin={narrow} />
               ))}
+              <NeedsADateLine rows={needDate} />
             </RowList>
-          ) : (
+          ) : shown === 0 ? null : (
             <RowList aria-label={t("open.list.questions")}>
               {shownQuestions.map((q) => (
                 <QuestionRow key={q.id} question={q} inlineOrigin={narrow} />
@@ -193,6 +203,24 @@ export function OpenItems() {
         </>
       )}
     </section>
+  );
+}
+
+/** One group of the to-dos: its label with the count, then its rows. The label is a part of the list, not a row of it. */
+function TodoGroupRows(props: { group: string; rows: OpenAction[]; inlineOrigin: boolean }) {
+  const { t } = useWords();
+  const id = useId();
+  return (
+    <>
+      <li role="presentation" className={styles.groupItem}>
+        <GroupLabel id={id} as="h3" count={props.rows.length} tone={props.group === "overdue" ? "danger" : "plain"} data-todo-group={props.group}>
+          {t(`open.group.${props.group}`)}
+        </GroupLabel>
+      </li>
+      {props.rows.map((a) => (
+        <ActionRow key={a.id} action={a} inlineOrigin={props.inlineOrigin} />
+      ))}
+    </>
   );
 }
 
@@ -265,21 +293,55 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
   ];
   const timing: MenuAction[] = [...(unowned ? [] : [...remind.entries, hold.entry]), ...(stopRepeat ? [stopRepeat] : [])];
   const inViews = useViewLabels(a.views);
+  const people = useQuery({ queryKey: ["people"], queryFn: api.people });
+  const me = people.data?.find((p) => p.is_pm)?.id;
+  const slot = useSideSlot()(a.side);
+  const today = todayOn(new Date());
+  // The owners are named when one of them is somebody else; a to-do that is the person's own doesn't say so on every line.
+  const others = a.owners.filter((o) => o.person !== me).map((o) => o.name);
+  const dueWords = a.due
+    ? a.due_check
+      ? t("op.meta.due_check", { date: day(a.due) })
+      : a.state === "overdue"
+        ? t("open.due", { date: day(a.due) })
+        : a.due.slice(0, 10) === today
+          ? t("open.due_today")
+          : t("open.due", { date: day(a.due) })
+    : null;
+  const dueMark =
+    dueWords && !a.due_check && a.state === "overdue" ? (
+      <span key="d" className={styles.dueLate} data-due="late">
+        <Icon name="alert" size={16} />
+        {dueWords}
+      </span>
+    ) : dueWords && a.due?.slice(0, 10) === today && !a.due_check ? (
+      <strong key="d" className={styles.dueToday} data-due="today">
+        {dueWords}
+      </strong>
+    ) : (
+      dueWords
+    );
+  const placeMark = place({ name: a.project_name, side: a.side_name, parent: a.parent_name }) ? (
+    <span key="p" className={styles.placeMark}>
+      {slot !== null && <MarkDot kind="side" slot={slot} />}
+      <ProjectTag name={a.project_name} side={a.side_name} parent={a.parent_name} />
+    </span>
+  ) : null;
   const meta = join([
-    a.owners.length > 0 ? a.owners.map((o) => o.name).join(", ") : t("open.nobody"),
+    others.length > 0 && others.join(", "),
     a.to_send && (
       <strong key="s" className={styles.toSend} data-to-send="">
         {t("action.to_send")}
       </strong>
     ),
-    a.due && t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }),
+    dueMark,
     a.remind_at && t("today.todo.reminder", { when: dateAndTime(a.remind_at) }),
     a.repeat && (
       <span key="r" data-repeat="" title={said(a.repeat)}>
         {t("repeat.mark")}
       </span>
     ),
-    place({ name: a.project_name, side: a.side_name, parent: a.parent_name }) && <ProjectTag key="p" name={a.project_name} side={a.side_name} parent={a.parent_name} />,
+    placeMark,
     inViews.length > 0 && <ViewTags key="v" views={a.views} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
@@ -346,8 +408,6 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
 
 function pillOf(a: OpenAction, t: T): ReactNode {
   switch (a.state) {
-    case "overdue":
-      return <Pill tone="danger">{t("open.state.overdue")}</Pill>;
     case "stale":
       return <Pill tone="warn">{t("open.state.stale")}</Pill>;
     case "no_owner":

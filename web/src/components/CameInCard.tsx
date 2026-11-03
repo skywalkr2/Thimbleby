@@ -10,6 +10,9 @@ import { listOf } from "../lib/packs";
 import { clockDay, clockTime, todayOn, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
 import { onAnySide, useSideFilter, useSides } from "../lib/sides";
+import { useSideSlot } from "../lib/marks";
+import { MarkDot } from "../ui/MarkDot";
+import { RAIL_ROWS } from "../lib/today";
 import { anyReading } from "../lib/sources";
 import { recordView, viewHref } from "../lib/views";
 import { Button } from "../ui/Button";
@@ -87,6 +90,11 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
   const filter = useSideFilter();
   // The side filter narrows what came in by the sides its mailbox serves; mail from one that serves none shows under every choice.
   const items = (arrived.data?.items ?? []).filter((m) => onAnySide(m.sides, filter.picked));
+  // The card holds a few lines and one line for the rest, so the rail is never longer than the queue beside it.
+  const [all, setAll] = useState(false);
+  const slotOf = useSideSlot();
+  const shown = all ? items : items.slice(0, RAIL_ROWS);
+  const more = items.length - shown.length;
   const { setAside: moveToFolder, isPersonal, isSideCorrection } = useSetAside();
   const { justMe, personal, sides } = useSides();
   // Treat as: brought in under a side by name, as Handled for you offers it for mail read with nothing to do. With only
@@ -122,7 +130,7 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
               : t("today.rail.nothing")
           : ""
       }
-      action={watch.data && anyReading(watch.data) ? <CheckNow quiet={items.length === 0} /> : undefined}
+      action={watch.data && anyReading(watch.data) ? <CheckNow quiet /> : undefined}
       footer={
         handledToday > 0 ? (
           <a href={viewHref("work/handled")} data-handled-today="">
@@ -145,16 +153,18 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
         )
       ) : (
         <ul className="tb-list">
-          {items.map((message, i) => {
+          {shown.map((message, i) => {
             // A thread held by two mailboxes is one row, naming the others that hold it.
             const also = (message.also_in ?? []).map(sourceName).filter(Boolean);
+            const sideSlot = (message.sides ?? []).length === 1 ? slotOf((message.sides ?? [])[0]) : null;
             const meta = [message.sender, sourceName(message.source), also.length > 0 ? t("today.arrived.also_in", { names: listOf(also) }) : ""].filter(Boolean).join(" · ");
             return (
-              <li key={`${message.snapshot}:${i}`} className={message.unread ? "tb-row unread" : "tb-row"}>
+              <li key={`${message.snapshot}:${i}`} className={message.unread ? "tb-row unread" : "tb-row"} data-came-in="">
+                {sideSlot !== null && <MarkDot kind="side" slot={sideSlot} className="tb-side-dot" />}
                 <div className="tb-what">
                   <div className="tb-title">
                     {message.unread && (
-                      <span className="tb-unread-dot" data-unread-dot="">
+                      <span className="tb-unread-dot" data-unread-dot={sideSlot === null ? "" : undefined} data-new-text={sideSlot === null ? undefined : ""}>
                         <span className="sr">{t("today.arrived.new")}</span>
                       </span>
                     )}
@@ -190,6 +200,13 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
               </li>
             );
           })}
+          {(more > 0 || all) && items.length > RAIL_ROWS && (
+            <li className="tb-more">
+              <Button variant="quiet" size="sm" aria-expanded={all} onClick={() => setAll(!all)}>
+                {all ? t("today.arrived.fewer") : tn("today.arrived.more", more)}
+              </Button>
+            </li>
+          )}
         </ul>
       )}
     </RailPanel>

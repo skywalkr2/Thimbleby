@@ -38,7 +38,7 @@ test.describe("Hand something in", () => {
     expect(box.width).toBeLessThanOrEqual(641);
     await expect(drawer.getByLabel("Paste or type it here")).toBeFocused();
     // Today is behind it, not gone.
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     const field = (await drawer.getByLabel("Paste or type it here").boundingBox())!;
     expect(field.width).toBeLessThanOrEqual(box.width);
     await page.keyboard.press("Escape");

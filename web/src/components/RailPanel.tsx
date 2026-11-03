@@ -31,7 +31,11 @@ export function RailFolds(props: { children: ReactNode }) {
 export function RailPanel(props: {
   id: string;
   title: string;
+  /** The panel's short name, for the one line it folds to on a phone and for its region, when its heading says more ("Today's schedule"). */
+  short?: string;
   count: number | null;
+  /** The count is said to a screen reader and not drawn. */
+  countHidden?: boolean;
   countText: string;
   /** What the panel says when it is folded to one line on the phone: "nothing today", "3". Empty while it loads. */
   summary?: string;
@@ -52,7 +56,7 @@ export function RailPanel(props: {
         <section className={styles.fold} aria-labelledby={`${id}-head`} data-folded={open ? undefined : ""}>
           <h2 id={`${id}-head`} className={styles.foldHead}>
             <button type="button" className={styles.foldToggle} aria-expanded={open} aria-controls={`${id}-body`} onClick={setOpen}>
-              <span>{props.title}</span>
+              <span>{props.short ?? props.title}</span>
               {props.summary ? <> <span className={styles.foldSummary}>{`· ${props.summary}`}</span></> : null}
             </button>
           </h2>
@@ -73,6 +77,8 @@ export function RailPanel(props: {
         small
         flush
         title={props.title}
+        label={props.short}
+        countHidden={props.countHidden}
         count={
           // A panel with nothing in it shows no count, rather than "0".
           props.count === null || props.count === 0 ? null : (

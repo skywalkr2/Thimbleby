@@ -736,10 +736,10 @@ test("with a mailbox connected and nothing come in, Came in is drawn with a quie
   expect(await screen.findByText("Nothing new")).toBeInTheDocument();
 });
 
-test("Check now keeps its usual look when mail came in, and is not drawn when no source is connected", async () => {
+test("Check now is a quiet button whether or not mail came in, since the rail is calm, and is not drawn when no source is connected", async () => {
   open({ "GET watch": () => [watched("a")] });
   const col = await column("Came in");
-  expect((await within(col).findByRole("button", { name: "Check now" }))).not.toHaveAttribute("data-variant", "quiet");
+  expect(await within(col).findByRole("button", { name: "Check now" })).toHaveAttribute("data-variant", "quiet");
   cleanup();
   open({ ...NOTHING_CAME, "GET watch": () => [] });
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
@@ -787,4 +787,71 @@ test("came in: an unread message carries a dot, and a read one has none", async 
   const rows = within(await column("Came in")).getAllByRole("listitem");
   expect(rows[0].querySelector("[data-unread-dot]")).not.toBeNull();
   expect(rows[1].querySelector("[data-unread-dot]")).toBeNull();
+});
+
+// ---- The 4.6 `today` rail (section 316): calm, a few lines in each card ------------------------------------------------------
+
+const calendar = (color: S["WatchSourceView"]["color"]): S["WatchSourceView"] => ({ ...watched("cal-1"), id: "cal-1", label: "Studio calendar", reads: ["calendar"], color });
+
+test("the Schedule card is headed Today's schedule, with Open as a link and no count drawn; the region keeps its short name", async () => {
+  open({ "GET watch": () => [calendar("teal")] });
+  const card = await column("Schedule");
+  expect(within(card).getByRole("heading", { level: 2, name: "Today's schedule" })).toBeInTheDocument();
+  const link = await within(card).findByRole("link", { name: "Open the schedule" });
+  expect(link).toHaveTextContent(/^Open$/);
+  expect(link).toHaveAttribute("data-variant", "quiet");
+  expect(card.querySelector("[data-group-count], [class*=count]:not(.sr)")).toBeNull();
+});
+
+test("a meeting stands on an edge in its calendar's color, and one named in a clash line says Clash", async () => {
+  const meetings = [
+    event({ title: "Standup", start: at(TODAY, 13), end: at(TODAY, 13, 30), entry: "EVT-1" }),
+    event({ title: "Design review", start: at(TODAY, 15), end: at(TODAY, 16), entry: "EVT-2" }),
+  ];
+  open({
+    "GET today/agenda": () => meetings,
+    "GET watch": () => [calendar("teal")],
+    "GET today/queue": () => [{ key: "clash:a:b", group: "risk", kind: "clash", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, entry: "EVT-1", other_entry: "EVT-2", text: "Standup", other: "Design review", state: "overlap", minutes: 15 }],
+  });
+  const card = await column("Schedule");
+  const rows = await waitFor(() => {
+    const found = card.querySelectorAll<HTMLElement>("[data-event]");
+    expect(found).toHaveLength(2);
+    return found;
+  });
+  expect(rows[0]).toHaveAttribute("data-calendar-color", "teal");
+  await waitFor(() => expect(rows[0].querySelector("[data-clash]")).toHaveTextContent("Clash"));
+  expect(rows[1].querySelector("[data-clash]")).toHaveTextContent("Clash");
+});
+
+test("the Schedule card holds the next three meetings and one line says how many more there are, linking to the schedule", async () => {
+  const meetings = [13, 14, 15, 16, 17].map((hour) => event({ title: `Meeting at ${hour}`, start: at(TODAY, hour), end: at(TODAY, hour, 30), snapshot: `s-${hour}` }));
+  open({ "GET today/agenda": () => meetings });
+  const card = await column("Schedule");
+  expect(await within(card).findByText("Meeting at 13")).toBeInTheDocument();
+  expect(card.querySelectorAll("[data-event]")).toHaveLength(3);
+  expect(within(card).queryByText("Meeting at 16")).toBeNull();
+  const more = within(card).getByRole("link", { name: "2 more in the schedule" });
+  expect(more.getAttribute("href")).toMatch(/#schedule$/);
+});
+
+test("Came in holds three messages and a quiet button for the rest, which opens them and puts them away", async () => {
+  const user = userEvent.setup();
+  const items = [1, 2, 3, 4, 5].map((n) => message({ title: `Mail ${n}`, sender: "Robin Sample", unread: false, snapshot: `m-${n}` }));
+  open({ "GET today/arrived": () => ({ items, left_out: 0, set_aside: 0 }) });
+  const card = await column("Came in");
+  expect(await within(card).findByText("Mail 1")).toBeInTheDocument();
+  expect(card.querySelectorAll("[data-came-in]")).toHaveLength(3);
+  const more = within(card).getByRole("button", { name: "2 more" });
+  expect(more).toHaveAttribute("data-variant", "quiet");
+  await user.click(more);
+  expect(card.querySelectorAll("[data-came-in]")).toHaveLength(5);
+  await user.click(within(card).getByRole("button", { name: "Show fewer" }));
+  expect(card.querySelectorAll("[data-came-in]")).toHaveLength(3);
+});
+
+test("no button in the rail is filled", async () => {
+  open({ "GET watch": () => [calendar("teal")] });
+  await within(await column("Came in")).findByText("2 messages");
+  expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(0);
 });

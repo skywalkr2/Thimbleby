@@ -34,7 +34,7 @@ async function choose(page: Page, choice: "all" | Side) {
   await expect(page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`), checked: true })).toBeVisible();
 }
 
-const heading = (page: Page, name: string) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);
+const heading = (page: Page, name: string | RegExp) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);
 
 /** What a screen shows under each choice: for every choice, the words that must be there and the ones that must not. Whatever
  * is on no side is in `always`, and shows under every choice. */
@@ -72,12 +72,12 @@ test.describe("The side filter changes what the screens show", () => {
   test("Today: a clash of one calendar, that calendar's meetings and the promises owed show only under their side; a line on no side shows under every choice", async ({ page }) => {
     test.setTimeout(120_000);
     await go(page, "today");
-    await heading(page, "Today");
+    await heading(page, /^Good (morning|afternoon|evening)/);
     const main = page.locator("main");
     // The backup line is the app's own: on no side, so under every choice. The clash is between two meetings of the business
     // calendar: on the business side alone. The meetings are tomorrow, so the card lists none of them; its footer counts them.
     await expect(main.getByText("Back up your work")).toBeVisible(LOADED);
-    const { shown, hidden } = bySide({ personal: [], job: [], business: ["Sort out the clash"] }, []);
+    const { shown, hidden } = bySide({ personal: [], job: [], business: ["overlap"] }, []);
     await expectUnder(page, main, shown, hidden);
     // The Tomorrow footer counts only the chosen side's meetings.
     const footer: Record<"all" | Side, string> = { all: "Tomorrow: 3 entries", personal: "Nothing scheduled tomorrow.", job: "Tomorrow: 1 entry", business: "Tomorrow: 2 entries" };

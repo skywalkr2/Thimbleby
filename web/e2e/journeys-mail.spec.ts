@@ -161,7 +161,7 @@ test.describe.serial("journey: mail", () => {
     await expect(recap.locator('[data-step="backup"]')).toContainText("Skipped");
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
 
     // The sign-in's sources were read at once; taking them in waits for the Start on Today, which shows its cost first. One
     // request for each item taken in, each item once. The stand-in rules find the person's own to-dos in these messages,
@@ -222,10 +222,10 @@ test.describe.serial("journey: mail", () => {
     await expect(inbox.getByRole("button", { name: /^Not right/ }).first()).toBeVisible();
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);
     await expect(found).toHaveCount(2);
-    await inbox.getByRole("button", { name: "All looks good" }).click();
+    await inbox.getByRole("button", { name: /^Keep (it|all \d+)$/ }).click();
     await expect(found).toHaveCount(1);
     await page.locator('[data-queue-line="intake_review"]').filter({ hasText: "Your calendar" }).getByRole("button", { name: "Look over", exact: true }).click();
-    await page.locator('[data-queue-line="intake_review"]').filter({ hasText: "Your calendar" }).getByRole("button", { name: "All looks good" }).click();
+    await page.locator('[data-queue-line="intake_review"]').filter({ hasText: "Your calendar" }).getByRole("button", { name: /^Keep (it|all \d+)$/ }).click();
     await expect(found).toHaveCount(0);
     // Reviewing added nothing to Today: no line of its own for any item, and no "N new" waiting.
     await expect(page.locator('[data-queue-line="review"]')).toHaveCount(0);

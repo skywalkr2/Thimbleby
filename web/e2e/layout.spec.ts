@@ -83,7 +83,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
 ];
 
 const section = (page: Page, name: string) => expect(page.getByRole("heading", { level: 2, name: new RegExp(`^${name}`) })).toBeVisible(LOADED);
-const heading = (page: Page, name: string) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);
+const heading = (page: Page, name: string | RegExp) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);
 const text = (page: Page, words: string) => expect(page.getByText(words.slice(0, 12)).first()).toBeAttached(LOADED);
 
 /** How wide the page and its body are against the window, and what sticks out past it without making the page scroll
@@ -181,7 +181,7 @@ test.describe("no screen is wider than the window", () => {
       await heading(page, "To-dos and questions");
       const list = page.getByRole("list", { name: "Open to-dos" });
       await expect(list).toBeVisible(LOADED);
-      await expect(list.getByRole("button", { name: "Add a to-do…" })).toBeVisible();
+      await expect(list.getByRole("textbox", { name: "Add a to-do" })).toBeVisible();
       const found = await overflow(page);
       expect(tooWide(found), `To-dos at ${width}px: ${JSON.stringify(found)}`).toBe(false);
     }

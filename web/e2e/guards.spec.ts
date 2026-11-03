@@ -25,7 +25,7 @@ const SIZES = [
 ];
 
 const SCREENS: Array<{ name: string; hash: string; heading: string | RegExp }> = [
-  { name: "Today", hash: "today", heading: "Today" },
+  { name: "Today", hash: "today", heading: /^Good (morning|afternoon|evening)/ },
   { name: "Follow-ups", hash: "work/followups", heading: "Follow-ups" },
   { name: "To-dos and questions", hash: "work/open", heading: "To-dos and questions" },
   { name: "What changed", hash: "work/changed", heading: "What changed" },

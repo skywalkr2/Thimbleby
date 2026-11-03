@@ -30,3 +30,26 @@ test("a panel's count is a pill, the same as a group label's and a tab's", () =>
     expect(/\.count \{[^}]*\}/s.exec(readFileSync(join(__dirname, file), "utf8"))?.[0], file).toContain("border-radius: var(--radius-full)");
   }
 });
+
+test("a pane can keep its title for a screen reader and leave it off the page, with its count said in words", () => {
+  render(
+    <Panel title="Needs you" hideTitle count={<span>4 things need you</span>}>
+      <p>rows</p>
+    </Panel>,
+  );
+  const heading = screen.getByRole("heading", { level: 2, name: "Needs you" });
+  expect(heading).toHaveClass("sr");
+  expect(screen.getByRole("region", { name: "Needs you" })).toBeInTheDocument();
+  expect(screen.getByText("4 things need you").parentElement).toHaveClass("sr");
+});
+
+test("a region can be named shorter than its title, and a count can be left unseen", () => {
+  render(
+    <Panel title="Today's schedule" label="Schedule" count={<span>3 events today</span>} countHidden>
+      <p>rows</p>
+    </Panel>,
+  );
+  expect(screen.getByRole("region", { name: "Schedule" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Today's schedule" })).toBeVisible();
+  expect(screen.getByText("3 events today").parentElement).toHaveClass("sr");
+});
