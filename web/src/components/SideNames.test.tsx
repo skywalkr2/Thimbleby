@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import { setSideChoice } from "../lib/sides";
 import { project } from "../lib/records-fixtures";
 import { Sidebar } from "../shell/Sidebar";
-import { fakeApi, renderApp, snapshotOf } from "../test-utils";
+import { fakeApi, renderApp } from "../test-utils";
 import { SideFilter } from "./SideFilter";
 
 // Long names of sides (design 6.32, 7.1): the side filter is a list to pick from on a phone and cut chips with the full name on
