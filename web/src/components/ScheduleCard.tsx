@@ -224,12 +224,12 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
 /** The button that adds a meeting to the agenda, opening a drawer with a short form to fill: what, the day (today to begin with),
  * the time (none: all day), when it ends (with a time) and, for a person with more than one side, which side it belongs to. The server makes the person's own calendar entry, or merges the meeting into one already
  * there and says so; Undo takes an added one back. The drawer closes once it is added; a refusal leaves what was typed. */
-export function AddMeeting(props: { today: string; compact?: boolean }) {
+export function AddMeeting(props: { today: string; compact?: boolean; primary?: boolean }) {
   const { t } = useWords();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" icon={props.compact ? "plus" : undefined} onClick={() => setOpen(true)}>
+      <Button size="sm" variant={props.primary ? "primary" : "secondary"} icon={props.compact && !props.primary ? "plus" : props.primary ? "plus" : undefined} onClick={() => setOpen(true)}>
         {t(props.compact ? "meeting.add_short" : "meeting.open")}
       </Button>
       {open && <MeetingDrawer today={props.today} onClose={() => setOpen(false)} />}

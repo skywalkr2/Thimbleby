@@ -4,6 +4,37 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Schedule and Connections built to the 4.6 mockups; signing in again to one account refuses another (VS06, VS18, X45, X53, X57, VC13; section 318)
+
+**Decided:** (owner: these screens match the reviewer's mockups before the gate week; design by the main session.) *Connections:* one
+card for each account address (a signed-in add-on's accounts, and the mailbox or calendar the app reads itself, each by its name),
+holding that account's connections as rows: its state in words ("Connected", "Needs sign-in since 10:51 AM"), the sides it serves
+as chips with **Change** (the same tick boxes as before, opened in the card), its privacy said once when its connections share it,
+and for each connection what it is (Inbox, Sent mail, Calendar), what it holds, and how it stands ("Read 2 min ago", "Not read
+since 10:51 AM", which never says Read for a connection that is not being read). An account that needs the person is the first
+card, with a 3px edge and the one filled button, **Sign in again**; on a phone its name, state and that button come before the
+service's name and the sides. Folders and feeds, which belong to no account, share one card. The table is gone: its "For" column
+is the chips and its "Last checked" column the row's status. The per-account list in the Accounts section is gone too (the
+cards are the accounts); that section stays for signing in to a service, adding another account and choosing what to read.
+**Signing in again to one account as another is refused:** the sign-in is started for that account's address
+(`POST /api/sign-ins/{name}/start?account=<address>`, kept with the pending sign-in), and when the service answers with a
+different address nothing is kept and no source is started; the person is told "That was a different account: <address>. Sign in
+as <expected>." in the card, with Try again. A sign-in started with no account named behaves as before. *Schedule:* an entry in the
+grid is a block with the calendar's color on a 3px edge and, softly, in its fill, the title in the control weight and the time and
+calendar on a line under it ("In 2 calendars" for one held in several, shown once); meetings that overlap are one **Clash** card
+naming them all ("3 at once" with the time for three or more), drawn with the word and an icon; the calendars are toggles with a
+tick box in their color (Hidden said in words), which scroll inside their own row on a phone. Below 1100px the Week view is the
+working days and says so; on a phone the Week and the work week are a list by day. Day, Month and Timeline use the same colors
+and toggles. The Add to schedule button is the screen's one filled button.
+
+**Why:** the reviewer's score found a table and a wall of rows where one account was meant to read as one thing, week blocks with
+weak text and fills, and a refused sign-in that silently added a second account (the person had no way to know the wrong one was
+used). **Impact:** one new optional query parameter on a sign-in's start route (generated types and OpenAPI refreshed); no other API
+change; no plugin API change. `StateMark` takes `quiet` (a dot that keeps its tone) for a state inside a card. **Left:** the
+Schedule's clash is any two meetings that overlap (it does not know which a person marked "It's fine" on Today); the weekend is not
+fetched while the Week view shows the working days; `docs/project/u3-differences/schedule-connections.md` lists the rest.
+Change log: section 318.
+
 ## 2026-11-03: A person's page, Quality and the setup's AI and mail steps built to the 4.6 mockups (VS01, VS03, VS13, VS15, VC10, VC11, VC12, X59, Y01; section 317)
 
 **Decided:** (owner: these screens match the reviewer's mockups before the gate week; design by the main session.) *A person's page:* the

@@ -42,6 +42,11 @@
 .shape[data-shape="square"], .key[data-shape="square"] { border: 2px solid var(--text); background: var(--surface); border-radius: var(--radius-sm); }
 .shape[data-shape="diamond"], .key[data-shape="diamond"] { width: 13px; height: 13px; transform: rotate(45deg); border: 2px solid var(--text); background: var(--surface); }
 .shape[data-shape="diamond"] svg { transform: rotate(-45deg); }
+.mark[data-color="blue"] { --cal: var(--cal-1); } .mark[data-color="teal"] { --cal: var(--cal-2); } .mark[data-color="green"] { --cal: var(--cal-3); } .mark[data-color="orange"] { --cal: var(--cal-4); }
+.mark[data-color="red"] { --cal: var(--cal-5); } .mark[data-color="pink"] { --cal: var(--cal-6); } .mark[data-color="purple"] { --cal: var(--cal-7); } .mark[data-color="gray"] { --cal: var(--cal-8); }
+.mark[data-color] .shape[data-shape="circle"] { background: var(--cal); }
+.mark[data-color][data-bar] { background: color-mix(in srgb, var(--cal) 14%, var(--surface)); box-shadow: inset 3px 0 0 var(--cal), inset 0 0 0 1px var(--border-strong); }
+.mark[data-color][data-selected] { box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
 .shape[data-state="overdue"], .key[data-state="overdue"] { border-color: var(--danger); color: var(--danger); }
 .shape[data-state="done"], .key[data-state="done"] { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
 

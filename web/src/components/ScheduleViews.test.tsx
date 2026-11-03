@@ -208,17 +208,37 @@ describe("the keys and the arrows", () => {
 });
 
 describe("the grid", () => {
-  test("entries that overlap sit side by side and one alone takes the whole lane", async () => {
+  test("meetings that overlap are one clash card naming them, and one alone takes the whole lane", async () => {
     const user = userEvent.setup();
     await open((date) => (date === TODAY ? { timed: [entry({ title: "Planning", begins: `${date}T09:15:00+00:00`, ends: `${date}T10:00:00+00:00` }), ...(WEEK(date).timed ?? [])] } : {}));
     await user.click(radio("Day"));
-    const slot = async (title: string) => ((await screen.findByRole("button", { name: new RegExp(title) })).closest("li") as HTMLElement).style;
-    const [standup, planning, dentist] = [await slot("Standup"), await slot("Planning"), await slot("Dentist")];
-    expect([standup.left, standup.width, planning.left, planning.width]).toEqual(["0%", "50%", "50%", "50%"]);
+    const card = await screen.findByRole("group", { name: "Clash: Standup, Planning" });
+    // The word and an icon say it, and both meetings are in it, each one a button that opens it.
+    expect(within(card).getByText("Clash")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: /Standup/ })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: /Planning/ })).toBeInTheDocument();
+    const clash = (card.closest("li") as HTMLElement).style;
+    const dentist = ((await screen.findByRole("button", { name: /Dentist/ })).closest("li") as HTMLElement).style;
+    // The card spans from the first start (09:00, the grid starting at 07:00) to the last end (10:00).
+    expect([clash.left, clash.width]).toEqual(["0px", "100%"]);
+    expect(clash.top).toBe("calc(2 * var(--hour))");
+    expect(clash.height).toBe("calc(1 * var(--hour))");
     expect([dentist.left, dentist.width]).toEqual(["0%", "100%"]);
-    // An entry is placed by where it starts: an hour is 3.5rem, and the grid starts at 07:00.
-    expect(standup.top).toBe("calc(2 * var(--hour))");
-    expect(standup.height).toBe("calc(0.5 * var(--hour))");
+  });
+
+  test("entries that are not meetings and overlap sit side by side", async () => {
+    const user = userEvent.setup();
+    await open((date) =>
+      date === TODAY
+        ? { timed: [entry({ title: "Parcel one", kind: "delivery", begins: `${date}T09:00:00+00:00`, ends: `${date}T10:00:00+00:00` }), entry({ title: "Parcel two", kind: "delivery", begins: `${date}T09:15:00+00:00`, ends: `${date}T10:00:00+00:00` })] }
+        : {},
+    );
+    await user.click(radio("Day"));
+    const slot = async (title: string) => ((await screen.findByRole("button", { name: new RegExp(title) })).closest("li") as HTMLElement).style;
+    const [one, two] = [await slot("Parcel one"), await slot("Parcel two")];
+    expect([one.left, one.width, two.left, two.width]).toEqual(["0%", "50%", "50%", "50%"]);
+    expect(one.top).toBe("calc(2 * var(--hour))");
+    expect(document.querySelector("[data-clash]")).toBeNull();
   });
 
   test("the grid shows the configured hours and grows to hold an entry outside them", async () => {
@@ -375,11 +395,11 @@ describe("an entry's details", () => {
     expect(screen.getByRole("button", { name: /Standup/ })).toHaveAccessibleName(/From Work calendar/);
     expect(screen.getByRole("button", { name: /Design review/ })).toHaveAccessibleName(/From Home calendar/);
     expect(screen.getByRole("button", { name: /Dentist/ })).toHaveAccessibleName(/Added by you/);
-    const mark = screen.getByRole("button", { name: /Standup/ }).querySelector("[data-color]");
-    expect(mark).toHaveAttribute("data-color", "teal");
-    expect(mark).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getByRole("button", { name: /Design review/ }).querySelector("[data-color]")).toBeNull();
-    expect(screen.getByRole("button", { name: /Dentist/ }).querySelector("[data-color]")).toBeNull();
+    // The block carries its calendar's color on its edge and in its fill (the color is named on the block itself); the words say which calendar.
+    expect(screen.getByRole("button", { name: /Standup/ })).toHaveAttribute("data-color", "teal");
+    expect(screen.getByRole("button", { name: /Standup/ })).toHaveTextContent(/Work calendar/);
+    expect(screen.getByRole("button", { name: /Design review/ })).not.toHaveAttribute("data-color");
+    expect(screen.getByRole("button", { name: /Dentist/ })).not.toHaveAttribute("data-color");
   });
 });
 

@@ -148,6 +148,7 @@ class _Pending:
     redirect: str
     started: float
     acting: bool = False
+    expected: str | None = None
 
 
 _PENDING: dict[str, _Pending] = {}
@@ -173,10 +174,18 @@ def check_addresses(sign_in: SignIn, network: list[str]) -> None:
             raise ValueError(f"{url} must be an https address on a host the add-on says it reaches")
 
 
-def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = None, acting: bool = False) -> str:
+def start(
+    sign_in: SignIn,
+    client_id: str,
+    redirect: str,
+    now: float | None = None,
+    acting: bool = False,
+    expected: str | None = None,
+) -> str:
     """The address of the service's sign-in page for this sign-in; the answer comes back to `redirect`. With `acting`
     it asks for the sign-in's acting scopes as well as its reading ones (the person turned acting on); never
-    otherwise."""
+    otherwise. With `expected`, the address of the account being signed in again: the answer is checked against it
+    (see `pending_expected` and `same_account`)."""
     if not client_id:
         raise SignInError(f"{sign_in.label} needs an app registration first: paste one on its Sign-ins row")
     now = time.time() if now is None else now
@@ -186,7 +195,9 @@ def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = No
     verifier = secrets.token_urlsafe(48)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     asked = (*sign_in.scopes, *(sign_in.acting_scopes if acting else ()))
-    _PENDING[state] = _Pending(sign_in, verifier, redirect, now, bool(acting and sign_in.acting_scopes))
+    _PENDING[state] = _Pending(
+        sign_in, verifier, redirect, now, bool(acting and sign_in.acting_scopes), (expected or "").strip() or None
+    )
     query = {
         **sign_in.params,
         "response_type": "code",
@@ -224,6 +235,17 @@ def finish(
 def drop_pending(state: str) -> None:
     """Forget a started sign-in the service refused."""
     _PENDING.pop(state, None)
+
+
+def pending_expected(state: str) -> str | None:
+    """The address of the account a started sign-in is for, when it was started to sign in again to one account."""
+    pending = _PENDING.get(state)
+    return pending.expected if pending else None
+
+
+def same_account(address: str, expected: str) -> bool:
+    """Whether two addresses are the one account (the same test the account's key makes)."""
+    return account_key(address) == account_key(expected)
 
 
 def pending_sign_in(state: str) -> SignIn | None:

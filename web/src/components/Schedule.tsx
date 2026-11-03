@@ -7,11 +7,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
-import { moveBy, rangeOf, rememberView, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
+import { clashGroups, minutesOf, moveBy, rangeOf, rememberView, SHORT, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
 import { RANGE_DAYS, RANGES, rememberRange, storedRange, type TimelineRange } from "../lib/timeline";
-import { addDays, fullDay, todayOn, monthDayLong, monthDayYear, monthYear } from "../lib/dates";
+import { addDays, fullDay, todayOn, monthDayLong, monthDayYear, monthYear, weekdayLong } from "../lib/dates";
 import { typing } from "../lib/keys";
-import { useMediaQuery, useWidth } from "../lib/media";
+import { useIsNarrow, useMediaQuery, useWidth } from "../lib/media";
 import { onSide, useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -27,7 +27,9 @@ import { NewEvent } from "./NewEvent";
 import { EntryButton, entryKey, entryTitle, type Calendars, type Entry } from "./ScheduleEntry";
 import { ScheduleLegend, useHiddenCalendars } from "./ScheduleLegend";
 import { EntryDetails } from "./ScheduleEntryPane";
-import { TimeGrid, type DayEntries } from "./ScheduleGrid";
+import { isMeeting, TimeGrid, type DayEntries } from "./ScheduleGrid";
+import { ScheduleList } from "./ScheduleList";
+import { ScheduleStale } from "./ScheduleStale";
 import { MonthGrid } from "./ScheduleMonth";
 import { NeedsADate } from "./NeedsADate";
 import { Timeline, type Lane } from "./ScheduleTimeline";
@@ -72,16 +74,22 @@ export function Schedule() {
   const region = useRef<HTMLDivElement>(null);
   const width = useWidth(region);
   const beside = useMediaQuery("(min-width: 1024px)");
+  // Below this the week has no room for seven days: it shows the working days, and says so. On a phone it is a list by day.
+  const weekdaysOnly = useMediaQuery("(max-width: 1099.98px)");
+  const phone = useIsNarrow();
   const now = useNow();
 
   // Week and Work week need room for their columns; without it the calendar shows Day. A width not yet known counts as enough.
   const room = width ?? Number.POSITIVE_INFINITY;
-  const fits = (v: CalendarView) => (v === "week" ? room >= WEEK_MIN : v === "work_week" ? room >= WORK_WEEK_MIN : true);
+  const fits = (v: CalendarView) => (phone && (v === "week" || v === "work_week") ? true : v === "week" ? room >= WEEK_MIN : v === "work_week" ? room >= WORK_WEEK_MIN : true);
   const view: CalendarView = fits(pick) ? pick : "day";
+  // The week with seven days needs the room of a wide window; with less it is the working days.
+  const shown: CalendarView = view === "week" && weekdaysOnly ? "work_week" : view;
+  const asList = phone && (view === "week" || view === "work_week");
 
   const today = means.today ?? todayOn(now);
   const date = anchor ?? today;
-  const range = useMemo(() => rangeOf(view, date, means.week_starts_on, means.work_days), [view, date, means.week_starts_on, means.work_days]);
+  const range = useMemo(() => rangeOf(shown, date, means.week_starts_on, means.work_days), [shown, date, means.week_starts_on, means.work_days]);
   const isTimeline = view === "timeline";
   const page = useQuery({ queryKey: ["today", "schedule", range.first, range.days], queryFn: () => api.schedule(range.first, range.days), placeholderData: keepPreviousData, enabled: !isTimeline });
   // The Timeline starts on the first day of the week of the day being looked at, or of this week when none is.
@@ -210,6 +218,9 @@ export function Schedule() {
   };
 
   const unit = view === "month" ? "month" : view === "day" ? "day" : isTimeline ? "timeline" : "week";
+  // How many clashes the days shown hold, and the first day one is on.
+  const clashes = days.flatMap((d) => clashGroups(d.timed.filter(isMeeting).map((e) => ({ item: e, start: minutesOf(e.begins) ?? 0, end: Math.max(minutesOf(e.ends) ?? (minutesOf(e.begins) ?? 0) + SHORT, (minutesOf(e.begins) ?? 0) + 1) }))).map(() => d.date));
+  const subtitle = isTimeline || view === "month" || clashes.length === 0 ? undefined : t(clashes.length === 1 ? "schedule.clash.sub.one" : "schedule.clash.sub.other", { n: clashes.length, day: weekdayLong(clashes[0]) });
   const back = { day: t("schedule.back.day"), week: t("schedule.back.week"), month: t("schedule.back.month"), timeline: t("schedule.back.timeline") }[unit];
   const forward = { day: t("schedule.forward.day"), week: t("schedule.forward.week"), month: t("schedule.forward.month"), timeline: t("schedule.forward.timeline") }[unit];
   const heading = isTimeline
@@ -233,14 +244,13 @@ export function Schedule() {
       <PageHeader
         id="schedule-title"
         title={t("schedule.title")}
-        actions={
-          <>
-            {/* Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. */}
-            {data && <AddMeeting today={data.today} />}
-            {/* A connected calendar that can add events after the person's yes offers a new event on it. */}
-            {data && <NewEvent today={data.today} />}
-          </>
+        subtitle={subtitle}
+        primary={
+          // Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here.
+          data ? <AddMeeting today={data.today} primary /> : undefined
         }
+        // A connected calendar that can add events after the person's yes offers a new event on it.
+        actions={data ? <NewEvent today={data.today} /> : undefined}
       />
       <div className={styles.bar}>
         <div className={styles.row} data-bar-row="">
@@ -259,6 +269,7 @@ export function Schedule() {
           <SideFilter />
         </div>
         <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
+        <ScheduleStale />
       </div>
       <ListDetail
         title={found ? entryTitle(found.entry, t) : ""}
@@ -272,8 +283,8 @@ export function Schedule() {
           ) : timeline.isError || !tl ? (
             <EmptyState icon="alert" text={t("schedule.timeline.load_failed")} action={{ label: t("action.try_again"), onClick: () => void timeline.refetch() }} />
           ) : (
-            <div className={styles.frame} data-swipe="" data-view={view} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
-              <Timeline data={tl} lanes={lanes} sideName={(side) => filter.options.find((o) => o.id === side)?.name} selected={picked} onOpen={open} />
+            <div className={styles.frame} data-swipe="" data-view={view} data-shown={shown} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
+              <Timeline data={tl} lanes={lanes} sideName={(side) => filter.options.find((o) => o.id === side)?.name} selected={picked} onOpen={open} colorOf={(e) => calendars.color(e.source)} />
             </div>
           )
         ) : page.isPending ? (
@@ -281,12 +292,15 @@ export function Schedule() {
         ) : page.isError || !data ? (
           <EmptyState icon="alert" text={t("schedule.load_failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
         ) : (
-          <div className={styles.frame} data-swipe="" data-view={view} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
+          <div className={styles.frame} data-swipe="" data-view={view} data-shown={shown} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
             {view === "month" ? (
               <MonthGrid days={days} today={data.today} month={date} limit={data.month_entries} calendars={calendars} selected={picked} onOpen={open} onOpenDay={openDay} />
+            ) : asList ? (
+              <ScheduleList days={days} today={data.today} calendars={calendars} selected={picked} onOpen={open} />
             ) : (
               <TimeGrid days={days} today={data.today} startsAt={data.grid_starts} endsAt={data.grid_ends} now={now} calendars={calendars} selected={picked} onOpen={open} />
             )}
+            {view === "week" && weekdaysOnly && !asList && <p className={styles.none} data-weekdays-only="">{t("schedule.weekdays_only")}</p>}
             {empty && <p className={styles.none}>{view === "day" ? t("schedule.empty_day") : t("schedule.empty_range")}</p>}
           </div>
         )}

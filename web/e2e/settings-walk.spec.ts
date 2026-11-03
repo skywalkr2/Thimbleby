@@ -293,15 +293,17 @@ test("How the assistant is doing is in the person's menu, and opens the page hea
 });
 
 // A table rule in one CSS module once reached every table's first cell (a third of the width), so a connection's name and
-// facts were squeezed into a narrow column on a phone. Measured: the name cell takes the row's width.
+// facts were squeezed into a narrow column on a phone. Connections is cards now: measured, a connection's words take the card's
+// width beside its icon and menu, and a records table is not cut while the window has room.
 test("on a phone a connection's name takes the row's width, and a records table is not cut while the window has room", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("?token=e2e-token#settings/connections");
-  const first = page.locator(".source-table tbody > tr.source-row > th").first();
+  const first = page.locator("[data-connection-card] [data-source-row]").first().locator("p").first();
   await expect(first).toBeVisible(LOADED);
   const cell = (await first.boundingBox())!;
-  const row = (await page.locator(".source-table tbody > tr.source-row").first().boundingBox())!;
-  expect(cell.width).toBeGreaterThan(row.width * 0.8);
+  const row = (await page.locator("[data-connection-card] [data-source-row]").first().boundingBox())!;
+  expect(cell.width).toBeGreaterThan(row.width * 0.5);
+  expect(await page.locator(".source-table").count()).toBe(0);
   await notWider(page, "Connections on a phone");
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("?token=e2e-token#records/people");

@@ -304,7 +304,9 @@ export const ENTRIES: Entry[] = [
     stage: "signed-in",
     open: async (env) => {
       await open(env, "settings/connections");
-      await env.page.getByRole("button", { name: /^Sign out/ }).last().click();
+      // An account's own menu, not a connection's: its name is the address alone.
+      await env.page.getByRole("button", { name: /^More actions for [^\s,]+@[^\s,]+$/ }).last().click();
+      await env.page.getByRole("menuitem", { name: "Sign out" }).click();
       await env.page.waitForTimeout(700);
     },
   },
@@ -317,7 +319,7 @@ export const ENTRIES: Entry[] = [
     open: async (env) => {
       await open(env, "settings/connections");
       await refuseWrites(env, 500, "The app couldn't write to its folder.");
-      const row = env.page.getByRole("table", { name: "Connections" }).getByRole("row").nth(1);
+      const row = env.page.locator("[data-source-row]").first();
       await row.getByRole("button", { name: /^More actions for/ }).click();
       await env.page.getByRole("menuitem", { name: /^(Pause|Turn off|Read now|Change)/ }).first().click();
       await env.page.waitForTimeout(900);

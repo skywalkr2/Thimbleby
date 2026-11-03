@@ -8,3 +8,7 @@
 .mark[data-tone="warn"], .mark[data-tone="danger"] { font-weight: var(--weight-semibold); }
 .mark[data-tone="warn"] { color: var(--warn); }
 .mark[data-tone="danger"] { color: var(--danger); }
+/* Quiet: a state inside an account's card keeps the dot (in its tone) and a regular word. */
+.mark[data-quiet] { font-weight: var(--weight-regular); color: var(--text-muted); }
+.mark[data-quiet][data-tone="warn"] .dot { background: var(--warn); }
+.mark[data-quiet][data-tone="danger"] .dot { background: var(--danger); }

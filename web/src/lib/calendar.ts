@@ -151,3 +151,31 @@ export function placeOverlaps<T>(items: readonly { item: T; start: number; end: 
   close();
   return placed;
 }
+
+export interface ClashGroup<T> extends Span {
+  /** The entries that overlap one another, by when they begin. */
+  items: T[];
+  /** The longest time, in minutes, that two of them are on at once. */
+  overlap: number;
+}
+
+/** The meetings that overlap in time, each run of them one group of two or more (a clash); an entry that overlaps nothing is in
+ * no group, and one that ends as the next begins does not overlap it. The group spans from its first start to its last end. */
+export function clashGroups<T>(items: readonly { item: T; start: number; end: number }[]): ClashGroup<T>[] {
+  const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end);
+  const groups: { members: typeof sorted; end: number }[] = [];
+  for (const entry of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && entry.start < last.end) {
+      last.members.push(entry);
+      last.end = Math.max(last.end, entry.end);
+    } else groups.push({ members: [entry], end: entry.end });
+  }
+  return groups
+    .filter((g) => g.members.length > 1)
+    .map((g) => {
+      let overlap = 0;
+      for (const [n, a] of g.members.entries()) for (const b of g.members.slice(n + 1)) overlap = Math.max(overlap, Math.min(a.end, b.end) - Math.max(a.start, b.start));
+      return { items: g.members.map((m) => m.item), start: g.members[0].start, end: g.end, overlap };
+    });
+}

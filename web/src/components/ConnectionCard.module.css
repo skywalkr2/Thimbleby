@@ -1,0 +1,73 @@
+/* One account's card on Connections (design 7.9): who it is, how it stands, the sides it is for, then its connections as rows with a
+   status each. An account that needs the person takes the edge and the tint of a row that needs them, and its one filled
+   button. The page is never wider than the window: names wrap, chips scroll inside their own line, the status goes under the words. */
+.cards { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: grid; gap: var(--space-4); min-width: 0; }
+.card { position: relative; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.card[data-need]::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--danger); }
+.card[data-need="signed_out"]::before { background: var(--warn); }
+.head { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "avatar name acts" "avatar line acts" "avatar sides acts"; column-gap: var(--space-4); row-gap: var(--space-1); align-items: start; padding: var(--space-4) var(--space-5); }
+.avatar { grid-area: avatar; width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--surface-sunk); border: 1px solid var(--border); display: grid; place-items: center; color: var(--text-muted); }
+.name { grid-area: name; margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); overflow-wrap: anywhere; min-width: 0; }
+.line { grid-area: line; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
+.service { order: 0; }
+.state { order: 1; }
+.privacy { order: 2; }
+.sep { color: var(--text-subtle); }
+.sides { grid-area: sides; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); min-width: 0; font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); }
+.chip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--target-min); padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text); font-size: var(--text-meta); font-weight: var(--weight-medium); max-width: 100%; min-width: 0; }
+.chipName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.change { margin-left: var(--space-1); }
+.acts { grid-area: acts; display: flex; align-items: center; gap: var(--space-2); justify-self: end; }
+.otherHead { padding: var(--space-4) var(--space-5) var(--space-3); }
+.otherHead .meta { margin-top: var(--space-1); }
+.again { white-space: nowrap; }
+.editor { grid-column: 1 / -1; padding: 0 var(--space-5) var(--space-4); min-width: 0; }
+.waiting, .refused { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; padding: var(--space-2) var(--space-5) var(--space-3); border-top: 1px solid var(--border); font-size: var(--text-meta); line-height: var(--lh-meta); min-width: 0; }
+.refused { background: var(--danger-soft); color: var(--text); }
+.refusedText { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; }
+.refusedText svg { flex: none; color: var(--danger); }
+.parts { list-style: none; margin: 0; padding: 0; min-width: 0; }
+.empty { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
+
+/* A connection inside a card: an icon, its name and what it holds, how it stands, its menu. */
+.part { display: grid; grid-template-columns: 40px minmax(0, 1fr) minmax(0, 14rem) 32px; grid-template-areas: "lead main status menu" "extra extra extra extra"; column-gap: var(--space-4); align-items: center; padding: var(--space-2) var(--space-5); border-top: 1px solid var(--border); min-height: 48px; min-width: 0; }
+.lead { grid-area: lead; justify-self: center; color: var(--text); display: grid; place-items: center; }
+.main { grid-area: main; min-width: 0; }
+.title { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-regular); overflow-wrap: anywhere; }
+.titleLine { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.meta { margin: 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }
+.status { grid-area: status; min-width: 0; justify-self: start; }
+.menu { grid-area: menu; justify-self: end; }
+.extra { grid-area: extra; min-width: 0; padding: var(--space-2) 0 var(--space-2) calc(var(--space-10) + var(--space-4)); display: grid; gap: var(--space-2); }
+.extra:empty { display: none; }
+.extra > :first-child { margin-top: 0; }
+
+/* Under 1100px the status goes under the words, so the words keep the room. */
+@media (max-width: 1099.98px) {
+  .part { grid-template-columns: 40px minmax(0, 1fr) 32px; grid-template-areas: "lead main menu" ". status ." "extra extra extra"; row-gap: var(--space-1); }
+}
+/* Phone: the name, the state and the one button first; what kind of service it is and the sides after. Nothing is cut and nothing
+   scrolls the page sideways. */
+@media (max-width: 639.98px) {
+  .head { grid-template-columns: 40px minmax(0, 1fr); grid-template-areas: "avatar name" "avatar state" "avatar acts" "avatar service" "avatar privacy" "avatar sides"; padding: var(--space-4); padding-right: var(--target-icon); column-gap: var(--space-3); }
+  .line { display: contents; }
+  .state { grid-area: state; justify-self: start; }
+  .service { grid-area: service; justify-self: start; }
+  .privacy { grid-area: privacy; justify-self: start; }
+  .acts { display: contents; }
+  .again { grid-area: acts; justify-self: start; margin-top: var(--space-2); margin-bottom: var(--space-1); }
+  .sep { display: none; }
+  .menuHead { position: absolute; top: var(--space-2); right: var(--space-2); }
+  .part { padding-inline: var(--space-4); }
+  .extra { padding-left: 0; }
+  .editor, .waiting, .refused, .empty { padding-inline: var(--space-4); }
+}
+:global([data-narrow]) .acts { display: contents; }
+:global([data-narrow]) .again { grid-area: acts; justify-self: start; margin-top: var(--space-2); }
+:global([data-narrow]) .menuHead { position: absolute; top: var(--space-2); right: var(--space-2); }
+:global([data-narrow]) .head { grid-template-columns: 40px minmax(0, 1fr); grid-template-areas: "avatar name" "avatar state" "avatar acts" "avatar service" "avatar privacy" "avatar sides"; padding-right: var(--target-icon); }
+:global([data-narrow]) .line { display: contents; }
+:global([data-narrow]) .state { grid-area: state; justify-self: start; }
+:global([data-narrow]) .service { grid-area: service; justify-self: start; }
+:global([data-narrow]) .privacy { grid-area: privacy; justify-self: start; }
+:global([data-narrow]) .sep { display: none; }

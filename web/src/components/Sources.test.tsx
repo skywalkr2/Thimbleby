@@ -98,7 +98,7 @@ function open(
   return { calls, onAsk };
 }
 
-const row = async (label: string) => (await screen.findByRole("row", { name: label })) as HTMLElement;
+const row = async (label: string) => (await screen.findByRole("listitem", { name: label })) as HTMLElement;
 
 async function continueAdd(user: ReturnType<typeof userEvent.setup>, form = screen.getByRole("form", { name: "Add mail, calendar or folder" })) {
   const next = within(form).queryByRole("button", { name: "Continue" });
@@ -124,17 +124,16 @@ test("a source shows its kind, how often it is read and its last read in words",
   expect(item).toHaveTextContent("2 new, 1 changed");
 });
 
-test("connections are a table with privacy pills and readable status dots", async () => {
+test("connections are cards: a folder or feed is a row in the shared card, with a privacy pill and a readable status", async () => {
   open([source("a", { data_level: "internal", last: run({ new: 2 }) })]);
-  const table = await screen.findByRole("table", { name: "Connections" });
-  expect(within(table).getByRole("columnheader", { name: "Connection" })).toBeInTheDocument();
-  expect(within(table).getByRole("columnheader", { name: "Privacy" })).toBeInTheDocument();
-  expect(within(table).getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
-  const item = within(table).getByRole("row", { name: "Source a" });
+  const list = await screen.findByRole("list", { name: "Connections" });
+  expect(within(list).queryByRole("table")).toBeNull();
+  const card = within(list).getByRole("region", { name: "Folders and feeds" });
+  const item = within(card).getByRole("listitem", { name: "Source a" });
   expect(within(item).getByText("Confidential").closest("[data-pill]")).not.toBeNull();
   expect(item.querySelector("[data-state-mark]")).toBeInTheDocument();
   expect(within(item).getByText(/2 new/)).toBeInTheDocument();
-  expect(within(item).getByText("Read")).toBeInTheDocument();
+  expect(item.querySelector("[data-state-mark]")).toHaveTextContent(/^Read /);
 });
 
 test("adding a connection is a two-step drawer", async () => {
@@ -304,8 +303,8 @@ test("Read now reads that source and shows what the read returned", async () => 
   renderApp(<Sources onAsk={() => {}} />);
   const user = userEvent.setup();
   await choose(user, "Source a", "Read now");
-  await waitFor(() => expect(screen.getByRole("row", { name: "Source a" })).toHaveTextContent("4 new"));
-  expect(screen.getByRole("row", { name: "Source a" })).toHaveTextContent("7 items");
+  await waitFor(() => expect(screen.getByRole("listitem", { name: "Source a" })).toHaveTextContent("4 new"));
+  expect(screen.getByRole("listitem", { name: "Source a" })).toHaveTextContent("7 items");
   expect(calls.some((c) => c.route === "POST watch/a/read")).toBe(true);
   expect(await screen.findByText("Source a: 4 new")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST watch/b/read")).toBe(false);
@@ -339,7 +338,7 @@ test("with no connections and no AI account yet, the screen offers choosing one,
 
 test("Connections holds only accounts and sources: nothing closed or set aside is listed or asked for there", async () => {
   const { calls } = open([source("a")]);
-  await screen.findByRole("row", { name: "Source a" });
+  await screen.findByRole("listitem", { name: "Source a" });
   expect(screen.queryByText("Set aside by rules")).not.toBeInTheDocument();
   expect(screen.queryByText("Closed without you seeing")).not.toBeInTheDocument();
   expect(screen.queryByText("Nothing has been set aside yet. Newsletters, sales and automated notices are listed here once a mailbox is connected and mail arrives.")).not.toBeInTheDocument();
@@ -422,7 +421,7 @@ describe("adding a source", () => {
   test("nothing is shown of the form until the button is pressed", async () => {
     const user = userEvent.setup();
     open([source("a")]);
-    await screen.findByRole("row", { name: "Source a" });
+    await screen.findByRole("listitem", { name: "Source a" });
     expect(screen.queryByRole("form", { name: "Add mail, calendar or folder" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Add mail, calendar or folder" }));
     expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
@@ -1377,54 +1376,54 @@ describe("several accounts", () => {
   const openAccounts = (sources: Source[]) =>
     open(sources, { "GET sign-ins": () => [signIn([{ address: ALEX, status: "signed_in" }, { address: BLAKE, status: "expired" }, { address: CASEY, status: "signed_in" }])] });
 
-  test("one account that has to sign in is one line naming it with Sign in again, and its rows say so, not Failed or Read", async () => {
+  test("one account that has to sign in is one card naming it with Sign in again, and its rows say so, not Failed or Read", async () => {
     const refused = run({ outcome: "failed", error_kind: "auth", started_at: "2026-03-04T11:00:00+00:00" });
     openAccounts([
       mailSource("a", ALEX),
       mailSource("b1", BLAKE, { last: refused, account_state: "expired", problem: "The service asked to sign in again." }),
-      mailSource("b2", BLAKE, { label: `Calendar, ${BLAKE}`, last: refused, account_state: "expired", problem: "The service asked to sign in again." }),
-      mailSource("b3", BLAKE, { label: `Sent mail, ${BLAKE}`, last: run(), account_state: "expired" }),
+      mailSource("b2", BLAKE, { label: `Calendar, ${BLAKE}`, reads: ["calendar"], last: refused, account_state: "expired", problem: "The service asked to sign in again." }),
+      mailSource("b3", BLAKE, { label: `Sent mail, ${BLAKE}`, author: "PER-1", last: run(), account_state: "expired" }),
       mailSource("c", CASEY),
     ]);
-    const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
-    // One line for Blake, not one for each of the three rows, and none for the others.
-    expect(within(needs).getAllByRole("listitem")).toHaveLength(1);
-    // The account's row: its name, its state in words with the time it was last read, and how many connections it holds.
-    expect(needs).toHaveTextContent(BLAKE);
-    expect(needs).toHaveTextContent(/Needs sign-in since/);
-    expect(needs).toHaveTextContent("3 connections");
-    expect(within(needs).getAllByRole("listitem")[0]).toHaveAttribute("data-state", "danger");
-    expect(within(needs).getByRole("button", { name: `Sign in again as ${BLAKE}` })).toBeInTheDocument();
+    const cards = await screen.findAllByRole("region", { name: new RegExp(`^${ALEX}|^${BLAKE}|^${CASEY}`) });
+    // One card for each account, the one that needs the person first.
+    expect(cards.map((c) => c.getAttribute("data-connection-card"))).toEqual([BLAKE, ALEX, CASEY]);
+    const card = cards[0];
+    expect(card).toHaveAttribute("data-need", "again");
+    // The card: its name, its state in words with the time it was last read, and the one button that fixes it.
+    expect(within(card).getByRole("heading", { name: BLAKE })).toBeInTheDocument();
+    expect(within(card).getAllByText(/Needs sign-in since/).length).toBeGreaterThan(0);
+    expect(within(card).getByRole("button", { name: `Sign in again as ${BLAKE}` })).toBeInTheDocument();
+    expect(within(card).getAllByRole("listitem")).toHaveLength(3);
     // The rows of that account say what they need, never a green Read (the third's own last read was fine) and never a wall of problems.
     for (const label of [`Inbox, ${BLAKE}`, `Calendar, ${BLAKE}`, `Sent mail, ${BLAKE}`]) {
       const item = await row(label);
-      expect(within(item).getByText("Sign in again")).toBeInTheDocument();
-      expect(within(item).queryByText("Read")).toBeNull();
+      expect(item.querySelector("[data-state-mark]")).toHaveTextContent(/^Not read (since |yet)/);
+      expect(item.querySelector("[data-state-mark]")).not.toHaveTextContent(/^Read /);
       expect(within(item).queryByText("Failed")).toBeNull();
       expect(item.querySelector(".problem-note")).toBeNull();
     }
     // The healthy accounts are read, and each row names its own account.
-    expect(within(await row(`Inbox, ${ALEX}`)).getByText("Read")).toBeInTheDocument();
-    expect(within(await row(`Inbox, ${CASEY}`)).getByText("Read")).toBeInTheDocument();
+    expect((await row(`Inbox, ${ALEX}`)).querySelector("[data-state-mark]")).toHaveTextContent(/^Read /);
+    expect((await row(`Inbox, ${CASEY}`)).querySelector("[data-state-mark]")).toHaveTextContent(/^Read /);
   });
 
   test("an account that is signed out says it is not being read, and nothing says Read for it", async () => {
     openAccounts([mailSource("a", ALEX, { account_state: "signed_out" }), mailSource("c", CASEY)]);
-    const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
-    expect(needs).toHaveTextContent(ALEX);
-    expect(needs).toHaveTextContent(/Signed out since/);
-    expect(needs).toHaveTextContent("1 connection");
-    expect(within(needs).getAllByRole("listitem")[0]).toHaveAttribute("data-state", "warn");
+    const card = await screen.findByRole("region", { name: ALEX });
+    expect(card).toHaveAttribute("data-need", "signed_out");
+    expect(card).toHaveTextContent(/Signed out since/);
     const item = await row(`Inbox, ${ALEX}`);
-    expect(within(item).getByText("Signed out")).toBeInTheDocument();
-    expect(within(item).queryByText("Read")).toBeNull();
+    expect(item.querySelector("[data-state-mark]")).toHaveTextContent(/^Not read /);
+    expect(item.querySelector("[data-state-mark]")).not.toHaveTextContent(/^Read /);
     expect(item).toHaveTextContent(`Not read until you sign in to ${ALEX}`);
   });
 
   test("with every account signed in there is no line asking for a sign-in", async () => {
     openAccounts([mailSource("a", ALEX), mailSource("c", CASEY)]);
     await row(`Inbox, ${ALEX}`);
-    expect(screen.queryByRole("list", { name: "Accounts that need you to sign in" })).toBeNull();
+    expect(document.querySelector("[data-need]")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Sign in again as / })).toBeNull();
   });
 
   test("a connection's change form lists the sides it serves, and a tick is saved at once as its sides", async () => {

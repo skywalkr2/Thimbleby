@@ -288,23 +288,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .asks .what { margin: 0; }
 .ask-answer, .ask-item { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
 .ask-item { border-left: 3px solid var(--border); padding-left: var(--space-3); }
-.source-table { width: 100%; border-collapse: collapse; text-align: left; }
-.source-table th, .source-table td { border-bottom: 1px solid var(--border); padding: var(--space-3); vertical-align: top; }
-.source-table thead th { color: var(--text-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
-.source-table tbody > tr:last-child > * { border-bottom: 0; }
-.source-row > th { min-width: 12rem; font-weight: var(--weight-regular); }
-.source-row > th > strong, .source-summary { display: block; }
-.source-row > th > strong { font-weight: var(--weight-semibold); }
-.source-summary { margin-top: var(--space-1); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
 .source-step { display: grid; gap: var(--space-1); }
 .source-step h4 { margin: 0; font-size: var(--text-md); }
-/* A connection that needs the person: a 3px edge on its leading side and a soft tint, as a row's state does (ui/Row). */
-.source-row[data-state="warn"] { --state-tint: var(--warn-soft); --state-edge: var(--warn); }
-.source-row[data-state="danger"] { --state-tint: var(--danger-soft); --state-edge: var(--danger); }
-.source-row[data-state] { background: linear-gradient(90deg, var(--state-tint) 0, transparent 60%); }
-.source-row[data-state] > :first-child { box-shadow: inset 3px 0 0 var(--state-edge); }
-.source-row-details { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
-.source-row-details > :first-child { margin-top: 0; }
 .list-accordion-item { border-bottom: 1px solid var(--border); }
 .list-accordion-item:last-child { border-bottom: 0; }
 .list-accordion > summary { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0 var(--space-2); min-height: var(--row-h); padding: var(--row-py) var(--row-px); cursor: pointer; list-style: none; }
@@ -316,19 +301,6 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .list-accordion-meta { grid-column: 2; color: var(--text-muted); font-size: var(--text-sm); }
 .list-accordion-body { min-width: 0; padding: 0 var(--row-px) var(--space-3); }
 @media (max-width: 640px) {
-  .source-table, .source-table tbody { display: block; }
-  .source-table thead tr, .source-table thead th { display: block; }
-  .source-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  .source-table tbody { display: grid; }
-  .source-table tbody > tr { display: grid; }
-  .source-row { border-bottom: 1px solid var(--border); padding: var(--space-2) 0; }
-  .source-row > th { min-width: 0; }
-  .source-row > th, .source-row > td { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); border: 0; padding: var(--space-1) var(--space-3); }
-  .source-row > th { display: block; padding-bottom: var(--space-2); }
-  .source-row > td::before { content: attr(data-label); color: var(--text-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
-  .source-row > td:last-child { justify-content: flex-end; }
-  .source-row > td:last-child::before { margin-right: auto; }
-  .source-row-details { margin-inline: var(--space-1); }
   .list-accordion-meta { align-self: start; }
 }
 

@@ -30,6 +30,8 @@ type Account = S["SignInAccount"];
 export const addonOfSignIn = (name: string): string | null => (name.includes("/") ? name.split("/", 1)[0] : null);
 
 export function SignIns(props: {
+  /** Where an account's own line is drawn: in this row (the default), or not at all because the screen draws each account as a card. */
+  accountsIn?: "row" | "cards";
   onOpenAddons: () => void;
   /** Opens the form that adds a source, on the kinds of this add-on (null: all kinds). */
   onChooseSource: (plugin: string | null, kind?: string, account?: string) => void;
@@ -63,7 +65,7 @@ export function SignIns(props: {
       <p className="hint">{t("sign_in.intro")}</p>
       <RowList>
         {signIns.data.map((item) => (
-          <SignInRow key={item.name} item={item} onChooseSource={props.onChooseSource} />
+          <SignInRow key={item.name} item={item} accountsIn={props.accountsIn} onChooseSource={props.onChooseSource} />
         ))}
       </RowList>
     </section>
@@ -72,7 +74,7 @@ export function SignIns(props: {
 
 /** One sign-in: where it stands in words, with its actions. Once signed in, the next step is the primary action
  * (choosing what to read); signing out and signing in again are in the menu. */
-export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string | null, kind?: string, account?: string) => void }) {
+export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; onChooseSource: (plugin: string | null, kind?: string, account?: string) => void }) {
   const { t } = useWords();
   const act = useAct();
   const [signingOut, setSigningOut] = useState(false);
@@ -259,7 +261,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
       }
       menu={<RowMenu label={item.label} actions={actions} buttonId={menuId} />}
     >
-          {accounts.length > 0 && (
+          {accounts.length > 0 && props.accountsIn !== "cards" && (
             <ItemList aria-label={t("sign_in.accounts")}>
               {accounts.map((a) => {
                 const who = a.address ?? t("sign_in.account_unnamed");
@@ -390,7 +392,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
 
 /** Asks before signing out, and says what stops. Signing out can't be taken back with Undo, so it is one of the few things
  * that ask first; Cancel and Escape leave everything as it was. */
-function SignOutConfirm(props: { label: string; account: string | null; acting: boolean; onCancel: () => void; onConfirm: () => void }) {
+export function SignOutConfirm(props: { label: string; account: string | null; acting: boolean; onCancel: () => void; onConfirm: () => void }) {
   const { t } = useWords();
   const titleId = useId();
   const where = props.account ?? props.label;

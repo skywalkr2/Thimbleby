@@ -1,4 +1,4 @@
-import { addMonths, gridHours, hourOf, minutesOf, moveBy, placeOverlaps, rangeOf, rememberView, startOfMonth, startOfWeek, storedView, weekdayIndex } from "./calendar";
+import { addMonths, clashGroups, gridHours, hourOf, minutesOf, moveBy, placeOverlaps, rangeOf, rememberView, startOfMonth, startOfWeek, storedView, weekdayIndex } from "./calendar";
 
 const MON = [0, 1, 2, 3, 4];
 
@@ -76,4 +76,22 @@ test("the view is remembered, and a browser that won't keep it gives the default
   expect(() => rememberView("day")).not.toThrow();
   blocked.mockRestore();
   set.mockRestore();
+});
+
+describe("clashGroups", () => {
+  const at = (title: string, start: number, end: number) => ({ item: title, start, end });
+
+  test("meetings that overlap are one group, from the first start to the last end, with how long two are on at once", () => {
+    const [group, ...rest] = clashGroups([at("a", 9 * 60, 10 * 60), at("b", 9 * 60 + 30, 10 * 60 + 30), at("lone", 13 * 60, 14 * 60)]);
+    expect(rest).toEqual([]);
+    expect(group.items).toEqual(["a", "b"]);
+    expect([group.start, group.end, group.overlap]).toEqual([9 * 60, 10 * 60 + 30, 30]);
+  });
+
+  test("one that ends as the next begins does not overlap it, and a run through a middle one is one group of three", () => {
+    expect(clashGroups([at("a", 60, 120), at("b", 120, 180)])).toEqual([]);
+    const [chain] = clashGroups([at("a", 60, 120), at("b", 90, 150), at("c", 140, 200)]);
+    expect(chain.items).toEqual(["a", "b", "c"]);
+    expect(chain.overlap).toBe(30);
+  });
 });

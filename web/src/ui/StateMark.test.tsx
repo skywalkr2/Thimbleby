@@ -52,3 +52,12 @@ test("a row that needs the person says so on the row: its state, for the edge an
   expect(rows[0]).toHaveTextContent("Needs sign-in");
   expect(rows[0].querySelector("[data-state-mark] svg")).not.toBeNull();
 });
+
+test("a quiet state keeps the dot even when it needs the person: the word says it, and the dot takes its tone", () => {
+  const { container } = render(<StateMark tone="danger" quiet>Not read since 10:51 AM</StateMark>);
+  const mark = container.querySelector("[data-state-mark]")!;
+  expect(mark).toHaveAttribute("data-tone", "danger");
+  expect(mark).toHaveAttribute("data-quiet");
+  expect(mark.querySelector("svg")).toBeNull();
+  expect(mark).toHaveTextContent("Not read since 10:51 AM");
+});

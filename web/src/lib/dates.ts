@@ -193,6 +193,18 @@ const dateOf = (iso: string): Date => {
   return new Date(y, m - 1, d);
 };
 
+const weekdayLongFormat = new Intl.DateTimeFormat(undefined, { weekday: "long" });
+
+/** The weekday of a yyyy-mm-dd date in full, "Wednesday". */
+export function weekdayLong(iso: string): string {
+  return weekdayLongFormat.format(dateOf(iso));
+}
+
+/** A day in full words with no year, "Wednesday, October 28", for a day's heading in a list. */
+export function dayLong(iso: string): string {
+  return longDayFormat.format(dateOf(iso));
+}
+
 /** A day in full, "Tuesday, October 27, 2026", for the heading of a one-day view. */
 export function fullDay(iso: string): string {
   return fullDayFormat.format(dateOf(iso));

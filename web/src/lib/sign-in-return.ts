@@ -7,7 +7,7 @@ import { announceSignIn } from "./sign-in-window";
 import { useToasts } from "./toasts";
 import { useWords } from "./wording";
 
-const OUTCOMES = new Set(["done", "failed", "refused", "expired"]);
+const OUTCOMES = new Set(["done", "failed", "refused", "expired", "different"]);
 // The service's own words are untrusted text: shown as text only, and cut so a long one can't fill the screen.
 const MAX_ERROR = 80;
 const MAX_DETAIL = 200;
@@ -20,6 +20,8 @@ export function clearSignInParams(): void {
   url.searchParams.delete("name");
   url.searchParams.delete("error");
   url.searchParams.delete("detail");
+  url.searchParams.delete("address");
+  url.searchParams.delete("expected");
   const query = url.searchParams.toString();
   window.history.replaceState(window.history.state, "", `${url.pathname}${query ? `?${query}` : ""}${url.hash}`);
 }
@@ -57,6 +59,8 @@ export function useSignInReturn(): void {
     const name = params.get("name");
     const error = cut(params.get("error") ?? "", MAX_ERROR);
     const detail = cut(params.get("detail") ?? "", MAX_DETAIL);
+    const address = cut(params.get("address") ?? "", MAX_DETAIL);
+    const expected = cut(params.get("expected") ?? "", MAX_DETAIL);
     // The address is cleaned first, so a second run of this effect (or a reload) finds nothing to announce. Then the
     // screen the sign-in was started from opens again.
     clearSignInParams();
@@ -64,7 +68,7 @@ export function useSignInReturn(): void {
     if (from && !window.location.hash) window.location.hash = from;
     if (!OUTCOMES.has(outcome)) return;
     // A window the app opened for the sign-in tells the screen that waits for it, then closes itself.
-    announceSignIn({ outcome, name, error, detail });
+    announceSignIn({ outcome, name, error, detail, address, expected });
     if (window.opener) {
       try {
         window.close();
@@ -77,6 +81,7 @@ export function useSignInReturn(): void {
       if (outcome === "refused" && error) {
         message = detail ? t("sign_in.return.refused_detail", { error, detail }) : t("sign_in.return.refused_error", { error });
       }
+      if (outcome === "different") message = t("sign_in.return.different", { address, expected });
       if (outcome === "done") {
         message = t("sign_in.return.done_generic");
         try {

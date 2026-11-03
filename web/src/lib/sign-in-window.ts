@@ -11,6 +11,9 @@ export interface SignInAnnounced {
   name: string | null;
   error: string;
   detail: string;
+  /** For a sign-in that came back as another account: the address it came back as, and the one it was meant for. */
+  address?: string;
+  expected?: string;
 }
 
 const CHANNEL = "cockpit.sign-in";
@@ -47,12 +50,13 @@ function listen(onMessage: (m: SignInAnnounced) => void): () => void {
   };
 }
 
-export type SignInPhase = "idle" | "starting" | "waiting" | "done" | "refused" | "closed" | "blocked" | "failed";
+export type SignInPhase = "idle" | "starting" | "waiting" | "done" | "refused" | "different" | "closed" | "blocked" | "failed";
 
 const WATCH_MS = 1000;
 
 export function useSignInWindow(name: string): {
-  start: () => Promise<void>;
+  /** Opens the service's page. With `account` (an address) the sign-in is for that account: another one is refused. */
+  start: (account?: string) => Promise<void>;
   /** Stops waiting: the window is closed if it is still open and the screen goes back to where it was, with nothing signed in. */
   cancel: () => void;
   phase: SignInPhase;
@@ -81,6 +85,9 @@ export function useSignInWindow(name: string): {
       if (m.outcome === "done") {
         setPhase("done");
         setText("");
+      } else if (m.outcome === "different") {
+        setPhase("different");
+        setText(t("sign_in.return.different", { address: m.address ?? "", expected: m.expected ?? "" }));
       } else if (m.outcome === "refused") {
         setPhase("refused");
         setText(
@@ -101,7 +108,19 @@ export function useSignInWindow(name: string): {
     };
   }, [name, stop, t]);
 
-  const start = useCallback(async () => {
+  const cancel = useCallback(() => {
+    stop();
+    try {
+      opened.current?.close();
+    } catch {
+      // Already gone.
+    }
+    opened.current = null;
+    setText("");
+    setPhase("idle");
+  }, [stop]);
+
+  const start = useCallback(async (account?: string) => {
     stop();
     setText("");
     setPhase("starting");
@@ -114,7 +133,7 @@ export function useSignInWindow(name: string): {
     }
     opened.current = win;
     try {
-      const started = await api.startSignIn(name);
+      const started = await api.startSignIn(name, false, account);
       win.location.href = started.url;
     } catch (err) {
       try {
@@ -148,18 +167,6 @@ export function useSignInWindow(name: string): {
       );
     }, WATCH_MS);
   }, [name, stop, t]);
-
-  const cancel = useCallback(() => {
-    stop();
-    try {
-      opened.current?.close();
-    } catch {
-      // Already gone.
-    }
-    opened.current = null;
-    setText("");
-    setPhase("idle");
-  }, [stop]);
 
   const busy = phase === "starting" || phase === "waiting";
   return { start, cancel, phase, text, busy, problem: phase === "done" ? "" : text };

@@ -29,23 +29,32 @@ export function useAccountWords(): (account: AccountState) => string {
   };
 }
 
-export function AccountRow(props: { account: AccountState; onNavigate?: () => void }) {
-  const { t, tn } = useWords();
+/** Signing in again to one account: the sign-in that renews it (its add-on's), the window that opens, and how it went. The
+ * window is opened for that account's address, so another account signing in is refused rather than added. When the window has
+ * finished, every list is read again and the person is told. */
+export function useSignInAgain(account: AccountState) {
+  const { t } = useWords();
   const client = useQueryClient();
   const { push } = useToasts();
-  const words = useAccountWords();
-  const { account } = props;
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns, enabled: account.need !== null });
   const addon = addonOfConnector(account.connector);
   const item = (signIns.data ?? []).find((s) => addonOfSignIn(s.name) === addon);
-  const { start, phase, busy } = useSignInWindow(item?.name ?? "");
-  // The window that was opened says how it went: every list is read again and the person is told.
+  const flow = useSignInWindow(item?.name ?? "");
+  const address = account.sources.find((s) => s.account)?.account ?? undefined;
   useEffect(() => {
-    if (phase !== "done" || !item) return;
+    if (flow.phase !== "done" || !item) return;
     void client.invalidateQueries();
     push({ message: t("sign_in.return.done", { label: item.label }) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [flow.phase]);
+  return { item, ...flow, start: () => flow.start(address) };
+}
+
+export function AccountRow(props: { account: AccountState; onNavigate?: () => void }) {
+  const { t, tn } = useWords();
+  const words = useAccountWords();
+  const { account } = props;
+  const { item, start, busy } = useSignInAgain(account);
   const attention = needsYou(account.tone === "neutral" ? "ok" : account.tone);
   const titleId = `account-${account.key.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   return (

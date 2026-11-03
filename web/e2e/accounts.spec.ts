@@ -24,15 +24,19 @@ const go = (page: Page, hash: string) =>
 
 async function signIn(page: Page, address: string, first: boolean) {
   const section = page.locator("section", { has: page.locator("#sign-ins-title") }).first();
+  const card = page.getByRole("region", { name: address, exact: true });
   const button = first ? section.getByRole("button", { name: "Sign in to Example mail", exact: true }) : section.getByRole("button", { name: "Add another account to Example mail", exact: true });
   const [popup] = await Promise.all([page.waitForEvent("popup"), button.click()]);
   // The service's own page asks which account; the made-up one lists each address as a link.
   await popup.getByRole("link", { name: address, exact: true }).click();
   await popup.waitForEvent("close", { timeout: 30_000 }).catch(() => undefined);
-  await expect(section.getByText(address).first()).toBeVisible(LOADED);
+  // The account is a card of its own once it is signed in.
+  await expect(card).toBeVisible(LOADED);
 }
 
-const connections = (page: Page) => page.getByRole("table", { name: "Connections" });
+const connections = (page: Page) => page.getByRole("list", { name: "Connections", exact: true }).first();
+/** One account's card, by its address. */
+const card = (page: Page, address: string) => page.locator(`[data-connection-card="${address}"]`);
 
 test.describe.serial("several accounts", () => {
   test.beforeAll(async () => {
@@ -55,15 +59,23 @@ test.describe.serial("several accounts", () => {
     for (const [n, address] of addresses.entries()) await signIn(page, address, n === 0);
     // Six connections, each named by its account; none of them is just "Your inbox".
     for (const address of addresses) {
-      await expect(connections(page).getByRole("row", { name: `Your inbox, ${address}` })).toBeVisible(LOADED);
-      await expect(connections(page).getByRole("row", { name: `Your calendar, ${address}` })).toBeVisible(LOADED);
+      await expect(connections(page).getByRole("listitem", { name: `Your inbox, ${address}` })).toBeVisible(LOADED);
+      await expect(connections(page).getByRole("listitem", { name: `Your calendar, ${address}` })).toBeVisible(LOADED);
     }
-    await expect(connections(page).getByRole("row", { name: "Your inbox", exact: true })).toHaveCount(0);
+    await expect(connections(page).getByRole("listitem", { name: "Your inbox", exact: true })).toHaveCount(0);
     // Every row is read, and every account is asked for no sign-in while all are well.
     for (const address of addresses) {
-      await expect(connections(page).getByRole("row", { name: `Your inbox, ${address}` })).toContainText("Read", LOADED);
+      await expect(connections(page).getByRole("listitem", { name: `Your inbox, ${address}` })).toContainText("Read", LOADED);
     }
-    await expect(page.getByRole("list", { name: "Accounts that need you to sign in" })).toHaveCount(0);
+    // One card for each account address, each holding that account's inbox and calendar, and none asking to sign in.
+    await expect(page.locator("[data-connection-card]")).toHaveCount(3);
+    for (const address of addresses) {
+      await expect(card(page, address).getByRole("heading", { name: address, exact: true })).toBeVisible();
+      await expect(card(page, address).getByRole("listitem")).toHaveCount(2);
+      await expect(card(page, address)).toContainText("Connected");
+    }
+    await expect(page.locator("[data-connection-card][data-need]")).toHaveCount(0);
+    await expect(page.locator("table")).toHaveCount(0);
     await expect(page.locator("[data-status]").first()).not.toHaveAttribute("data-status", "connection_failed");
   });
 
@@ -131,7 +143,7 @@ test.describe.serial("several accounts", () => {
     await ask.getByRole("button", { name: "Done" }).click();
     // Later, the same sides are in the connection's own change form, beside the rest of its settings.
     await go(page, "settings/connections");
-    const row = connections(page).getByRole("row", { name: `Your inbox, ${addresses[1]}` });
+    const row = connections(page).getByRole("listitem", { name: `Your inbox, ${addresses[1]}` });
     await row.getByRole("button", { name: `More actions for Your inbox, ${addresses[1]}` }).click();
     await page.getByRole("menuitem", { name: "Change" }).click();
     const sides = page.getByRole("group", { name: `Your inbox, ${addresses[1]}: who is it for?` });
@@ -167,24 +179,23 @@ test.describe.serial("several accounts", () => {
     const failing = addresses[1];
     // Read it now: the service refuses the second account's sign-in.
     for (const label of [`Your inbox, ${failing}`, `Your calendar, ${failing}`]) {
-      const row = connections(page).getByRole("row", { name: label });
+      const row = connections(page).getByRole("listitem", { name: label });
       await row.getByRole("button", { name: `More actions for ${label}` }).click();
       await page.getByRole("menuitem", { name: "Read now" }).click();
     }
-    const needs = page.getByRole("list", { name: "Accounts that need you to sign in" });
-    await expect(needs).toBeVisible(LOADED);
-    await expect(needs.getByRole("listitem")).toHaveCount(1);
-    await expect(needs).toContainText(failing);
+    const needs = page.locator("[data-connection-card][data-need]");
+    await expect(needs).toHaveCount(1, LOADED);
+    await expect(needs).toHaveAttribute("data-connection-card", failing);
     await expect(needs.getByRole("button", { name: `Sign in again as ${failing}` })).toBeVisible();
     // Not nine identical red lines: the rows say what they need, and none of this account's says Read.
     for (const label of [`Your inbox, ${failing}`, `Your calendar, ${failing}`]) {
-      const row = connections(page).getByRole("row", { name: label });
-      await expect(row).toContainText("Sign in again");
+      const row = connections(page).getByRole("listitem", { name: label });
+      await expect(row).toContainText(/Not read (since|yet)/);
       await expect(row).not.toContainText(/\bRead\b(?! every)/);
       await expect(row.locator(".problem-note")).toHaveCount(0);
     }
     // The other accounts are read.
-    for (const address of [addresses[0], addresses[2]]) await expect(connections(page).getByRole("row", { name: `Your inbox, ${address}` })).toContainText("Read");
+    for (const address of [addresses[0], addresses[2]]) await expect(connections(page).getByRole("listitem", { name: `Your inbox, ${address}` })).toContainText("Read");
     // The header never says all good beside it; its popover names the account once.
     await expect(page.locator("[data-status]").first()).toHaveAttribute("data-status", "connection_failed", LOADED);
     await page.locator("[data-status]").first().click();
@@ -212,9 +223,9 @@ test.describe.serial("several accounts", () => {
     await expect(chip).toContainText("1 account needs you");
     await expect(chip).toHaveAttribute("data-tone", "danger");
     const failing = addresses[1];
-    const onPage = page.getByRole("list", { name: "Accounts that need you to sign in" }).getByRole("listitem");
+    const onPage = page.locator("[data-connection-card][data-need]");
     await expect(onPage).toHaveCount(1);
-    const pageWords = ((await onPage.locator("[data-state-mark]").innerText()) ?? "").trim();
+    const pageWords = ((await onPage.locator("header [data-state-mark]").first().innerText()) ?? "").trim();
     expect(pageWords).toMatch(/^Needs sign-in/);
 
     await chip.click();
@@ -246,6 +257,83 @@ test.describe.serial("several accounts", () => {
     const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
     await page.keyboard.press("Escape");
+  });
+
+  test("VS06. the calendars are toggles with their color: pressing one hides its entries and says Hidden, pressing it again shows them; the week never scrolls sideways at 1440, 1024 and 390", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto(`?token=${info.token}`);
+    for (const [width, lanes] of [[1440, 5], [1024, 5], [390, 0]] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await go(page, "schedule");
+      await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible(LOADED);
+      await page.locator("body").press("2");
+      const toggles = page.getByRole("list", { name: "Calendars" });
+      await expect(toggles.getByRole("button")).toHaveCount(3, LOADED);
+      if (lanes) await expect(page.locator("main ul[data-day]")).toHaveCount(lanes);
+      else await expect(page.locator("main [data-schedule-list]")).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      // On a phone the toggles scroll inside their own row, never moving the page.
+      if (width === 390) expect(["auto", "scroll"]).toContain(await toggles.evaluate((el) => getComputedStyle(el).overflowX));
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await go(page, "schedule");
+    await page.locator("body").press("1");
+    const toggles = page.getByRole("list", { name: "Calendars" });
+    const third = toggles.getByRole("button", { name: `Your calendar, ${addresses[2]}` });
+    const color = await third.locator("[data-color]").getAttribute("data-color");
+    const mine = page.locator(`main [data-entry-key][data-color="${color}"]`);
+    await expect(mine.first()).toBeVisible(LOADED);
+    await third.click();
+    await expect(third).toHaveAttribute("aria-pressed", "false");
+    await expect(third).toContainText("Hidden");
+    await expect(mine).toHaveCount(0);
+    await third.click();
+    await expect(third).toHaveAttribute("aria-pressed", "true");
+    await expect(mine.first()).toBeVisible();
+    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+    expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  });
+
+  test("VS18. on a phone the failing account's card is first, its name, its state and Sign in again before anything else; signing in as another account is refused in words, and the header agrees", async ({ page }) => {
+    test.setTimeout(180_000);
+    // The second account is still the one the service refused (set in the earlier tests).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`?token=${info.token}`);
+    await go(page, "settings/connections");
+    const failing = addresses[1];
+    const chip = page.locator("[data-status]").first();
+    await expect(chip).toContainText("1 account needs you", LOADED);
+    // One card for each account, the one that needs the person first.
+    const cards = page.locator("[data-connection-card]");
+    await expect(cards).toHaveCount(3, LOADED);
+    const first = cards.first();
+    await expect(first).toHaveAttribute("data-connection-card", failing);
+    await expect(first).toHaveAttribute("data-need", /./);
+    // Its name, its state and its one button come before what kind of service it is and before its connections.
+    const top = async (locator: ReturnType<Page["locator"]>) => (await locator.first().boundingBox())!.y;
+    const name = await top(first.getByRole("heading", { name: failing, exact: true }));
+    const state = await top(first.locator("[data-state-mark]"));
+    const again = await top(first.getByRole("button", { name: `Sign in again as ${failing}` }));
+    const service = await top(first.getByText("Example mail", { exact: true }));
+    const parts = await top(first.getByRole("listitem"));
+    expect(name).toBeLessThan(state);
+    expect(state).toBeLessThan(again);
+    expect(again).toBeLessThan(service);
+    expect(service).toBeLessThan(parts);
+    // The pill and the cards count the same accounts.
+    await expect(page.locator("[data-connection-card][data-need]")).toHaveCount(1);
+    // Signing in again as the wrong account: the service's page is asked for the first account, which is not this one.
+    const [popup] = await Promise.all([page.waitForEvent("popup"), first.getByRole("button", { name: `Sign in again as ${failing}` }).click()]);
+    await popup.getByRole("link", { name: addresses[0], exact: true }).click();
+    await popup.waitForEvent("close", { timeout: 30_000 }).catch(() => undefined);
+    const refused = first.getByRole("alert");
+    await expect(refused).toContainText(`That was a different account: ${addresses[0]}. Sign in as ${failing}.`, LOADED);
+    await expect(refused.getByRole("button", { name: "Try again" })).toBeVisible();
+    // Nothing was added or replaced: still three accounts, the same one needing the person, and the pill says the same.
+    await expect(cards).toHaveCount(3);
+    await expect(page.locator("[data-connection-card][data-need]")).toHaveCount(1);
+    await expect(chip).toContainText("1 account needs you");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 
   test("X84. setup's mail step with three accounts is one compact row for each, not a wall", async ({ page }) => {
@@ -299,10 +387,11 @@ test.describe.serial("several accounts", () => {
     expect(out.ok()).toBe(true);
     await go(page, "settings/connections");
     for (const label of [`Your inbox, ${addresses[1]}`, `Your calendar, ${addresses[1]}`]) {
-      const row = connections(page).getByRole("row", { name: label });
-      await expect(row).toContainText("Signed out", LOADED);
+      const row = connections(page).getByRole("listitem", { name: label });
+      await expect(row).toContainText(/Not read (since|yet)/, LOADED);
       await expect(row).not.toContainText(/\bRead\b(?! every)/);
     }
+    await expect(card(page, addresses[1])).toContainText("Signed out");
     const chip = page.locator("[data-status]").first();
     await expect(chip).toHaveAttribute("data-status", "connection_signed_out", LOADED);
     // The account needs the person (to sign in again), and the header counts it the way Connections lists it.

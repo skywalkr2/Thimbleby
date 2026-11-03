@@ -3,7 +3,7 @@
 // A source is added from a kind (the app's own or an add-on's) with a form built from that kind's settings; a row's menu
 // reads it now, changes it, turns it off or on, and removes it, each with Undo. Sources are taken in without a restart.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText as when } from "../lib/dates";
@@ -16,7 +16,7 @@ import { useAddonName } from "../lib/addon-names";
 import { formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { freshSettings, inOrder, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
-import { accountStates, accountsNeedingYou, signInNeed, sourceState, type AccountState } from "../lib/connections";
+import { signInNeed } from "../lib/connections";
 import { useSides } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { settingsView, viewHref } from "../lib/views";
@@ -30,8 +30,11 @@ import { MissingAddon, addonOfConnector } from "./MissingAddon";
 import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SignIns, addonOfSignIn } from "./SignIns";
-import { AccountRow } from "./AccountRow";
-import { RowList } from "../ui/RowList";
+import { ConnectionCardView } from "./ConnectionCard";
+import { connectionCards, type ConnectionCard } from "../lib/connection-cards";
+import { partStatus } from "../lib/connection-words";
+import { Icon, type IconName } from "../ui/Icon";
+import cardStyles from "./ConnectionCard.module.css";
 import { SourceSides } from "./SourceSides";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
@@ -44,7 +47,7 @@ import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 import { FormBlock } from "../ui/FormBlock";
 import { Pill } from "../ui/Pill";
-import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
+import { StateMark, needsYou } from "../ui/StateMark";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -169,6 +172,7 @@ export function Sources(props: {
   });
   const kinds = useQuery({ queryKey: ["watch-kinds"], queryFn: api.watchKinds });
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
+  const cards = connectionCards(sources.data ?? [], signIns.data ?? []);
   const [form, setForm] = useState<Form | null>(() => (props.add && !props.add.services ? { type: "add", plugin: props.add.plugin } : null));
   const [addDirty, setAddDirty] = useState(false);
   const [seen, setSeen] = useState(props.add?.n ?? 0);
@@ -230,7 +234,7 @@ export function Sources(props: {
           {t("sources.title")}
         </h2>
         <Actions>
-          <Button variant="primary"
+          <Button
             id={addButton}
             aria-expanded={form?.type === "add"}
             onClick={openAdd}
@@ -254,13 +258,6 @@ export function Sources(props: {
           {t("sources.links_open")}
         </a>
       </p>
-      <SignIns
-        onOpenAddons={() => props.onOpenAddons?.()}
-        onChooseSource={(plugin, _kind, account) => {
-          setAddDirty(false);
-          setForm({ type: "add", plugin, account });
-        }}
-      />
       <Drawer
         open={form?.type === "add"}
         title={form?.type === "add" && form.account ? t("sources.add_title_for", { account: form.account }) : t("sources.add_title")}
@@ -282,12 +279,11 @@ export function Sources(props: {
           />
         )}
       </Drawer>
-      {sources.data && <SignInNeeds accounts={accountsNeedingYou(accountStates(sources.data))} />}
       {sources.isPending ? (
         <Skeleton />
       ) : sources.isError ? (
         <EmptyState icon="alert" text={t("sources.load_failed")} action={{ label: t("action.try_again"), onClick: () => void sources.refetch() }} />
-      ) : sources.data.length === 0 ? (
+      ) : cards.length === 0 ? (
         // Asking how to add one needs an AI account; with none, the way on is choosing one, not a question that can't be answered.
         noAi ? (
           <EmptyState icon="rss" text={t("sources.empty_no_ai")} action={{ label: t("sources.empty_choose_ai"), href: viewHref("settings/ai") }} />
@@ -295,50 +291,56 @@ export function Sources(props: {
           <EmptyState icon="rss" text={t("sources.empty")} action={{ label: t("sources.empty_ask"), onClick: () => props.onAsk(t("sources.ask_text")) }} />
         )
       ) : (
-        <table className="source-table" aria-label={t("sources.title")}>
-          <thead>
-            <tr>
-              <th scope="col">{t("sources.table.connection")}</th>
-              <th scope="col">{t("sources.table.privacy")}</th>
-              <th scope="col">{t("sources.table.status")}</th>
-              <th scope="col">{t("sources.table.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sources.data.map((source) => (
-              <SourceRow
-                key={source.id}
-                source={source}
-                alert={announce?.has(source.id) ?? false}
-                kinds={kinds.data}
-                kindsFailed={kinds.isError}
-                signedOutOf={signedOutOf(source.connector, signIns.data)}
-                onOpenAddons={props.onOpenAddons}
-                changing={form?.type === "change" && form.id === source.id}
-                onChange={() => setForm({ type: "change", id: source.id })}
-                onChanged={() => setForm(null)}
+        <ul className={cardStyles.cards} aria-label={t("sources.title")} data-connection-cards="">
+          {cards.map((card) => (
+            <li key={card.key} className={cardStyles.cardItem}>
+              <ConnectionCardView
+                card={card}
+                privacy={privacyOnce(card, t)}
+                onChooseSource={(plugin, _kind, account) => {
+                  setAddDirty(false);
+                  setForm({ type: "add", plugin, account });
+                }}
+                renderPart={(source, showPrivacy) => (
+                  <SourcePart
+                    key={source.id}
+                    source={source}
+                    inAccount={card.kind === "account"}
+                    showPrivacy={showPrivacy}
+                    alert={announce?.has(source.id) ?? false}
+                    kinds={kinds.data}
+                    kindsFailed={kinds.isError}
+                    signedOutOf={signedOutOf(source.connector, signIns.data)}
+                    onOpenAddons={props.onOpenAddons}
+                    changing={form?.type === "change" && form.id === source.id}
+                    onChange={() => setForm({ type: "change", id: source.id })}
+                    onChanged={() => setForm(null)}
+                  />
+                )}
               />
-            ))}
-          </tbody>
-        </table>
+            </li>
+          ))}
+        </ul>
       )}
+      <SignIns
+        accountsIn="cards"
+        onOpenAddons={() => props.onOpenAddons?.()}
+        onChooseSource={(plugin, _kind, account) => {
+          setAddDirty(false);
+          setForm({ type: "add", plugin, account });
+        }}
+      />
     </section>
   );
 }
 
-/** The accounts that have to sign in for their connections to be read, one row each with Sign in again, however many
- * connections each holds: a signed-out or refused account is told once, not once for each of its rows. The header's status
- * popover draws the same rows from the same account states. */
-function SignInNeeds(props: { accounts: AccountState[] }) {
-  const { t } = useWords();
-  if (props.accounts.length === 0) return null;
-  return (
-    <RowList aria-label={t("sources.needs.label")} data-sign-in-needs="">
-      {props.accounts.map((account) => (
-        <AccountRow key={account.key} account={account} />
-      ))}
-    </RowList>
-  );
+/** The privacy of an account's connections said once in its header, when they all share one level; none when they differ. */
+function privacyOnce(card: ConnectionCard, t: T): ReactNode | null {
+  if (card.kind !== "account" || card.sources.length === 0) return null;
+  const levels = new Set(card.sources.map((s) => s.data_level ?? "internal"));
+  if (levels.size !== 1) return null;
+  const first = card.sources[0];
+  return <Pill describedAs={privacyFact(first, t)}>{t(`sources.level.${first.data_level ?? "internal"}`)}</Pill>;
 }
 
 /** The label of the sign-in a source reads through when every sign-in of its add-on is signed out, else none. */
@@ -349,8 +351,24 @@ export function signedOutOf(connector: string, signIns: S["SignInView"][] | unde
   return mine.length > 0 && mine.every((s) => s.status !== "signed_in") ? mine[0].label : null;
 }
 
-function SourceRow(props: {
+/** What kind of part of an account a connection is: its inbox, the mail the person sent, or a calendar; none for a place that is
+ * no account (a folder or a feed), which is named by its own label. */
+function partKind(source: Source): "inbox" | "sent" | "calendar" | null {
+  const reads = source.reads ?? [];
+  if (reads.includes("mail")) return source.author ? "sent" : "inbox";
+  if (reads.includes("calendar")) return "calendar";
+  return null;
+}
+
+const PART_ICON: Record<"inbox" | "sent" | "calendar", IconName> = { inbox: "inbox", sent: "send", calendar: "calendar" };
+
+/** One connection as a row of its card: what it is, what it holds, how it stands, its menu, and under it whatever needs
+ * saying about it (why it can't be read, the form that changes it). */
+function SourcePart(props: {
   source: Source;
+  /** In an account's card: named by what it is (Inbox, Sent mail, Calendar). Otherwise by its own label. */
+  inAccount: boolean;
+  showPrivacy: boolean;
   alert: boolean;
   kinds: Kind[] | undefined;
   kindsFailed: boolean;
@@ -370,28 +388,14 @@ function SourceRow(props: {
   const { source } = props;
   const titleId = `source-${source.id}`;
   const menuId = `${titleId}-menu`;
-  // An account that has to sign in is told once for the account, above the list, and not as a problem under each of its rows.
+  // An account that has to sign in is told once for the account, in its card, and not as a problem under each of its rows.
   const problem = signInNeed(source) ? null : problemOf(source, t, has);
   const lastWhen = source.read_at ? when(source.read_at) : "";
   const lastWords = lastReadText(source, t);
   // Told from this connection's own state and its account's: a row that is not being read (its account is signed out, or
   // has to sign in again) never says Read, whatever its last read said.
-  const need = signInNeed(source);
-  const state = sourceState(source);
-  const status: { text: string; tone: StateTone } =
-    state === "off"
-      ? { text: t("sources.off"), tone: "neutral" }
-      : state === "sign_in"
-        ? need === "signed_out"
-          ? { text: t("sources.status.signed_out"), tone: "warn" }
-          : { text: t("sources.status.sign_in"), tone: "danger" }
-        : state === "failed"
-          ? { text: t("sources.status.failed"), tone: "danger" }
-          : state === "offline" || state === "waiting"
-            ? { text: t(state === "offline" ? "sources.status.offline" : "sources.status.waiting"), tone: "warn" }
-            : state === "read"
-              ? { text: t("sources.status.read"), tone: "ok" }
-              : { text: t("sources.never"), tone: "neutral" };
+  const status = partStatus(source, t, tn);
+  const kind = props.inAccount ? partKind(source) : null;
 
   const readNow = async () => {
     setBusy(true);
@@ -433,21 +437,24 @@ function SourceRow(props: {
   ];
 
   // Until a read has worked there is no count to give: "0 items" would say it was read and found nothing.
+  const items = source.read_at && source.items > 0 ? tn("sources.items", source.items) : "";
   const facts = [
     source.connector_label || t("sources.kind_none"),
-    source.read_at && source.items > 0 ? tn("sources.items", source.items) : "",
+    items,
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
     ...(source.account ? [t("sources.reads_account", { account: source.account })] : []),
   ].filter(Boolean);
   const stopped = !source.enabled ? null : (props.signedOutOf ?? (signInNeed(source) === "signed_out" ? (source.account ?? source.connector_label) : null)) || null;
-  const schedule = [
-    stopped ? t("sources.not_read_signed_out", { label: stopped }) : source.enabled ? tn("sources.read_every", source.every_minutes) : "",
-    source.read_at ? t("sources.last_read", { when: lastWhen }) : "",
-  ];
+  const every = stopped ? t("sources.not_read_signed_out", { label: stopped }) : source.enabled ? tn("sources.read_every", source.every_minutes) : "";
+  const schedule = [every, source.read_at ? t("sources.last_read", { when: lastWhen }) : ""];
+  const changed = source.last?.outcome === "ok" && source.last.new + source.last.changed + source.last.removed > 0;
   const found = [
-    source.last ? lastWords : "",
+    source.last && (!kind || changed || source.last.outcome === "throttled") ? lastWords : "",
     source.failures > 1 ? t("sources.failures", { n: source.failures }) : "",
   ].filter(Boolean);
+  const lines = kind
+    ? [[t(`connection.part.${kind}_what`), items, every].filter(Boolean).join(" · "), found.join(" · ")]
+    : [facts.join(" · "), schedule.filter(Boolean).join(" · "), found.join(" · ")];
   const extra = Boolean(
     source.last?.unsorted ||
       (!source.connector_label && addonOfConnector(source.connector)) ||
@@ -457,55 +464,62 @@ function SourceRow(props: {
       props.changing,
   );
   return (
-    <>
-      <tr className="source-row" aria-labelledby={titleId} data-state={needsYou(status.tone) ? status.tone : undefined}>
-        <th scope="row">
-          <strong id={titleId}>{source.label}</strong>
-          <span className="source-summary">{facts.join(" · ")}</span>
-          {schedule.length > 0 && <span className="source-summary">{schedule.join(" · ")}</span>}
-          {found.length > 0 && <span className="source-summary">{found.join(" · ")}</span>}
-          {extra && (
-            <div className="source-row-details">
-              {source.last?.unsorted && (
-                <p className="hint" data-unsorted="">
-                  <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
-                </p>
-              )}
-              {!source.connector_label && addonOfConnector(source.connector) && (
-                <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
-              )}
-              {problem && (
-                <p className="problem-note" role={props.alert ? "alert" : undefined}>
-                  {problem}
-                </p>
-              )}
-              {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
-              {looking && <LookBack source={source} onClose={() => { setLooking(false); restoreFocus(() => document.getElementById(menuId)); }} />}
-              {props.changing && (
-                <SourceForm
-                  mode={{ type: "change", source }}
-                  kinds={props.kinds}
-                  kindsFailed={props.kindsFailed}
-                  onClose={() => {
-                    props.onChanged();
-                    restoreFocus(() => document.getElementById(menuId));
-                  }}
-                />
-              )}
-            </div>
+    <li className={cardStyles.part} aria-label={source.label} data-source-row={source.id} data-state={needsYou(status.tone) ? status.tone : undefined}>
+      <span className={cardStyles.lead} aria-hidden="true">
+        <Icon name={kind ? PART_ICON[kind] : source.reads?.includes("mail") ? "inbox" : "folder"} />
+      </span>
+      <div className={cardStyles.main}>
+        <p className={cardStyles.titleLine}>
+          <span className={cardStyles.title} id={titleId}>
+            {kind ? t(`connection.part.${kind}`) : source.label}
+          </span>
+          {props.showPrivacy && <Pill describedAs={privacyFact(source, t)}>{t(`sources.level.${source.data_level ?? "internal"}`)}</Pill>}
+        </p>
+        {lines.filter(Boolean).map((line, i) => (
+          <p key={i} className={cardStyles.meta}>
+            {line}
+          </p>
+        ))}
+      </div>
+      <div className={cardStyles.status}>
+        <StateMark tone={status.tone} quiet>
+          {status.text}
+        </StateMark>
+      </div>
+      <div className={cardStyles.menu}>
+        <RowMenu label={source.label} actions={actions} buttonId={menuId} />
+      </div>
+      {extra && (
+        <div className={cardStyles.extra} data-source-row-details="">
+          {source.last?.unsorted && (
+            <p className="hint" data-unsorted="">
+              <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
+            </p>
           )}
-        </th>
-        <td data-label={t("sources.table.privacy")}>
-          <Pill describedAs={privacyFact(source, t)}>{t(`sources.level.${source.data_level ?? "internal"}`)}</Pill>
-        </td>
-        <td data-label={t("sources.table.status")}>
-          <StateMark tone={status.tone}>{status.text}</StateMark>
-        </td>
-        <td data-label={t("sources.table.actions")}>
-          <RowMenu label={source.label} actions={actions} buttonId={menuId} />
-        </td>
-      </tr>
-    </>
+          {!source.connector_label && addonOfConnector(source.connector) && (
+            <MissingAddon plugin={addonOfConnector(source.connector)!} onOpenAddons={props.onOpenAddons} />
+          )}
+          {problem && (
+            <p className="problem-note" role={props.alert ? "alert" : undefined}>
+              {problem}
+            </p>
+          )}
+          {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
+          {looking && <LookBack source={source} onClose={() => { setLooking(false); restoreFocus(() => document.getElementById(menuId)); }} />}
+          {props.changing && (
+            <SourceForm
+              mode={{ type: "change", source }}
+              kinds={props.kinds}
+              kindsFailed={props.kindsFailed}
+              onClose={() => {
+                props.onChanged();
+                restoreFocus(() => document.getElementById(menuId));
+              }}
+            />
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 

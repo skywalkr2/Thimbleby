@@ -74,12 +74,33 @@ export function fullWhen(entry: Entry, date: string | null, t: T): string {
   return entry.ends ? t("schedule.event.day_and_time", { date: day(date), time: t("today.agenda.until", { time: wallTime(entry.ends) }) }) : t("schedule.event.all_day", { date: day(date) });
 }
 
-/** The entry as a button. `time` puts its start before its title (a list of titles), left off where the grid's position says it. */
+/** Where an entry is, for its second line: the calendar it is in by name, "In 2 calendars" for one held in several, "Added by you"
+ * for the app's own, nothing for a due date (its title says it). */
+export function calendarWords(entry: Entry, calendars: Calendars, t: T): string {
+  if (entry.kind === "due") return "";
+  if (entry.own) return t("schedule.entry.own");
+  const also = (entry.also_in ?? []).length;
+  if (also > 0) return t("schedule.in_calendars", { n: also + 1 });
+  return calendars.name(entry.source) ?? "";
+}
+
+/** The second line of an entry's block: when it begins and where it is. */
+export function blockLine(entry: Entry, calendars: Calendars, t: T): string {
+  return [shortWhen(entry, t), calendarWords(entry, calendars, t)].filter(Boolean).join(" · ");
+}
+
+/** The entry as a button. `time` puts its start before its title (a list of titles), left off where the grid's position says it.
+ * `block` is the grid's block: the title, then the time and calendar on a line under it, so a block says what it is at a glance. */
 export function EntryButton(props: {
   entry: Entry;
   date: string | null;
   calendars: Calendars;
   time: boolean;
+  block?: boolean;
+  /** A row of a clash card: the calendar's mark and the title, nothing else. */
+  clash?: boolean;
+  /** The block is too short for a second line of its own: the line runs on after the title. */
+  short?: boolean;
   selected: boolean;
   onOpen: (entry: Entry, date: string | null) => void;
   t: T;
@@ -88,22 +109,29 @@ export function EntryButton(props: {
   const status = deliveryStatusWord(entry, t);
   const when = props.time ? shortWhen(entry, t) : "";
   const color = !entry.own && entry.kind !== "due" ? props.calendars.color(entry.source) : undefined;
+  const line = props.block && !props.clash ? blockLine(entry, props.calendars, t) : "";
   return (
     <button
       type="button"
-      className={[styles.chip, entry.own || entry.kind === "due" ? styles.own : "", props.selected ? styles.selected : ""].filter(Boolean).join(" ")}
+      className={[props.clash ? styles.clashRow : styles.chip, props.block ? styles.block : "", entry.own || entry.kind === "due" ? styles.own : "", props.selected ? styles.selected : ""].filter(Boolean).join(" ")}
       data-entry-key={entryKey(entry, props.date)}
       data-kind={entry.kind}
       data-color={color}
       data-source={entry.own ? "own" : entry.source}
       data-selected={props.selected ? "" : undefined}
+      data-short={props.short ? "" : undefined}
       onClick={() => props.onOpen(entry, props.date)}
     >
-      {color && <span className={styles.mark} data-color={color} aria-hidden="true" />}
+      {color && (!props.block || props.clash) && <span className={styles.mark} data-color={color} aria-hidden="true" />}
       {when && <span className={styles.when}>{when}</span>}
       <span className={entry.cancelled ? `${styles.name} ${styles.struck}` : styles.name}>{entryTitle(entry, t)}</span>
       {entry.cancelled && <Pill tone="warn">{t("today.agenda.called_off")}</Pill>}
       {status && <Pill tone={entry.delivery?.status === "arrived" ? "ok" : "neutral"}>{status}</Pill>}
+      {line && (
+        <span className={styles.line} data-entry-line="">
+          {line}
+        </span>
+      )}
       <span className="sr">, {fromWords(entry, props.calendars, t)}</span>
     </button>
   );

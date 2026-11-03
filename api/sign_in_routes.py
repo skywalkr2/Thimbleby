@@ -161,14 +161,17 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         return view(s)
 
     @r.post("/sign-ins/{name:path}/start")
-    def start(name: str, acting: bool = False) -> SignInStarted:
+    def start(name: str, acting: bool = False, account: str | None = None) -> SignInStarted:
         """The address of the service's sign-in page. With `acting` it asks for the acting access as well as reading
-        (the person turned acting on for the account); without it, reading only."""
+        (the person turned acting on for the account); without it, reading only. With `account` (an address), the
+        sign-in is for that account: if the service answers with another address, nothing is kept."""
         s = find(name)
         if acting and not s.acting_scopes:
             raise HTTPException(status_code=409, detail=f"{s.label} has no acting access to ask for.")
         try:
-            url = flow.start(s, host.sign_in_app(s, ws.root)[0] or "", flow.redirect_uri(cfg.server), acting=acting)
+            url = flow.start(
+                s, host.sign_in_app(s, ws.root)[0] or "", flow.redirect_uri(cfg.server), acting=acting, expected=account
+            )
         except flow.SignInError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         return SignInStarted(url=url)
@@ -202,12 +205,19 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         from engine.net import WebClient
 
         web = WebClient(list(host.manifests[s.plugin].requires.network))
+        expected = flow.pending_expected(state)
         try:
             client_id, client_secret, _ = host.sign_in_app(s, ws.root)
             done, tokens = flow.finish(state, code, web, client_id or "", client_secret)
             # Whose account this is is read with the new tokens before they are kept, so each account is kept under
             # its own address; signing in again to an account replaces its tokens.
             address = host.read_account(done, ws.root, tokens)
+            # Signing in again to one account, as another: nothing is kept and the other account isn't added. The
+            # person is told which address came back and which one to sign in as.
+            if expected and address and not flow.same_account(address, expected):
+                return back(
+                    f"sign_in=different&name={quote(done.name)}&address={quote(address[:200])}&expected={quote(expected[:200])}"
+                )
             flow.keep(keys(done.plugin), done, tokens, address)
         except (flow.SignInError, ConnectorError):
             return back(f"sign_in=failed&name={quote(s.name)}")

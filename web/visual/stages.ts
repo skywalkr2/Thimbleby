@@ -82,11 +82,11 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
       });
       await page.getByRole("heading", { level: 2, name: "Connections" }).waitFor(LONG);
       for (const label of [`Your inbox, ${studio}`, `Your calendar, ${studio}`]) {
-        const row = page.getByRole("table", { name: "Connections" }).getByRole("row", { name: label });
+        const row = page.getByRole("listitem", { name: label });
         await row.getByRole("button", { name: `More actions for ${label}` }).click();
         await page.getByRole("menuitem", { name: "Read now" }).click();
       }
-      await page.getByRole("list", { name: "Accounts that need you to sign in" }).waitFor(LONG);
+      await page.locator("[data-connection-card][data-need]").first().waitFor(LONG);
       env.seed.failing = studio;
       await page.close();
       return;

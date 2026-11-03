@@ -48452,7 +48452,7 @@
     },
     "/api/sign-ins/{name}/start": {
       "post": {
-        "description": "The address of the service's sign-in page. With `acting` it asks for the acting access as well as reading\n(the person turned acting on for the account); without it, reading only.",
+        "description": "The address of the service's sign-in page. With `acting` it asks for the acting access as well as reading\n(the person turned acting on for the account); without it, reading only. With `account` (an address), the\nsign-in is for that account: if the service answers with another address, nothing is kept.",
         "operationId": "start_api_sign_ins__name__start_post",
         "parameters": [
           {
@@ -48472,6 +48472,22 @@
               "default": false,
               "title": "Acting",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account"
             }
           }
         ],

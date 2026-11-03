@@ -510,6 +510,14 @@ describe("coming back from the service", () => {
     expect(window.location.search).toBe("");
   });
 
+  test("a sign-in that came back as another account says which address came back and which one to sign in as, and cleans the address", async () => {
+    window.history.replaceState(null, "", "/?sign_in=different&name=demo%2Ftwo&address=robin%40example.com&expected=studio%40example.com");
+    fakeApi({ "GET sign-ins": () => LIST });
+    renderApp(<Return />);
+    expect(await screen.findByText("That was a different account: robin@example.com. Sign in as studio@example.com.")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+  });
+
   test("a refusal with the service's code and description shows both as text, and cleans the address", async () => {
     window.history.replaceState(
       null,

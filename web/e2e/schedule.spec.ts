@@ -5,11 +5,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
-// The lanes shown after pressing 2 and then 3. A view with no room for its columns isn't offered, so its key leaves the view
-// as it was: at 768 pressing 3 keeps the work week.
+// The days shown after pressing 2 and then 3. Below 1100px the Week view is the working days; on a phone the week is a list by
+// day (a section for each day, not a lane).
 const SIZES = [
-  { width: 390, height: 844, lanes: { work_week: 1, week: 1 } },
+  { width: 390, height: 844, lanes: { work_week: 5, week: 5 }, list: true },
   { width: 768, height: 900, lanes: { work_week: 5, week: 5 } },
+  { width: 1024, height: 900, lanes: { work_week: 5, week: 5 } },
   { width: 1440, height: 900, lanes: { work_week: 5, week: 7 } },
   { width: 2000, height: 1100, lanes: { work_week: 5, week: 7 } },
 ];
@@ -64,19 +65,20 @@ async function measure(page: Page) {
 
 test.describe("the calendar page", () => {
   for (const size of SIZES) {
-    test(`at ${size.width}px every view fits the window, and Week and Work week fall back to Day when their columns don't fit`, async ({ page }) => {
+    test(`at ${size.width}px every view fits the window; the week has ${size.list ? "a list by day" : size.lanes.week + " days"}`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: size.height });
       await seed(page);
       await open(page);
-      // The default view is the work week, or Day where its five columns don't fit.
-      await expect(page.locator("main ul[data-day]")).toHaveCount(size.lanes.work_week);
+      const days = (key: string) => (size.list && key !== "1" ? page.locator("main [data-schedule-list] section[data-day]") : page.locator("main ul[data-day]"));
+      // The default view is the work week: its days, or a list by day on a phone.
+      await expect(days("2")).toHaveCount(size.lanes.work_week);
       for (const [key, count] of [
         ["1", 1],
         ["2", size.lanes.work_week],
         ["3", size.lanes.week],
       ] as const) {
         await pick(page, key);
-        await expect(page.locator("main ul[data-day]")).toHaveCount(count);
+        await expect(days(key)).toHaveCount(count);
         const found = await measure(page);
         expect(found.page).toBeLessThanOrEqual(found.window);
         expect(found.body).toBeLessThanOrEqual(found.window);
@@ -84,7 +86,7 @@ test.describe("the calendar page", () => {
           expect(d.left).toBeGreaterThanOrEqual(0);
           expect(d.right).toBeLessThanOrEqual(found.window);
         }
-        if (count > 1) {
+        if (count > 1 && !size.list) {
           // Days sit side by side.
           expect(Math.abs(found.days[0].top - found.days[1].top)).toBeLessThanOrEqual(2);
           expect(found.days[1].left).toBeGreaterThan(found.days[0].left);
@@ -107,6 +109,55 @@ test.describe("the calendar page", () => {
       const found = await measure(page);
       expect(found.page).toBeLessThanOrEqual(found.window);
       expect(found.main).toBeLessThanOrEqual(found.window);
+    });
+  }
+
+  test("below 1100px the Week view is the working days and says so; at 1100px and over it is the whole week", async ({ page }) => {
+    await seed(page);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await open(page);
+    await pick(page, "3");
+    await expect(page.locator("main ul[data-day]")).toHaveCount(5);
+    await expect(page.locator("main [data-weekdays-only]")).toBeVisible();
+    // The tab still says Week; nothing is wider than the window.
+    await expect(page.getByRole("radio", { name: "Week" })).toHaveAttribute("aria-checked", "true");
+    const narrow = await measure(page);
+    expect(narrow.page).toBeLessThanOrEqual(narrow.window);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(page.locator("main ul[data-day]")).toHaveCount(7);
+    await expect(page.locator("main [data-weekdays-only]")).toHaveCount(0);
+  });
+
+  test("on a phone the week is a list by day, each entry a row that opens its details, and nothing scrolls sideways", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const today = await seed(page);
+    await open(page);
+    await pick(page, "3");
+    const list = page.locator("main [data-schedule-list]");
+    await expect(list).toBeVisible();
+    await expect(page.locator("main [data-grid]")).toHaveCount(0);
+    await expect(list.locator(`section[data-day="${today}"]`).getByRole("button", { name: /Walk through the proofs/ })).toBeVisible();
+    const found = await measure(page);
+    expect(found.page).toBeLessThanOrEqual(found.window);
+    expect(found.body).toBeLessThanOrEqual(found.window);
+    await list.getByRole("button", { name: /Walk through the proofs/ }).click();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Walk through the proofs" })).toBeFocused();
+  });
+
+  for (const width of [1440, 1024, 390]) {
+    test(`at ${width}px the Day, Week and Month views never scroll sideways, and pass the accessibility check`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seed(page);
+      await open(page);
+      for (const key of ["1", "3", "4"] as const) {
+        await pick(page, key);
+        await expect(page.locator("main [data-grid], main [data-month], main [data-schedule-list]").first()).toBeVisible();
+        const found = await measure(page);
+        expect(found.page, `view ${key} at ${width}`).toBeLessThanOrEqual(found.window);
+        expect(found.body).toBeLessThanOrEqual(found.window);
+        const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+        expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+      }
     });
   }
 

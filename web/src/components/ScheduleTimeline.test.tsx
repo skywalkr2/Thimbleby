@@ -49,6 +49,13 @@ async function open(lanes = LANES, over = {}, extra = {}) {
 const names = () => screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? "");
 
 describe("the Timeline", () => {
+  test("a calendar entry has its calendar's color, as it has on every other view; the app's own entries have none", async () => {
+    await open(LANES, {}, { "GET watch": () => [{ id: "cal-work", label: "Work calendar", connector: "k", connector_label: "K", enabled: true, every_minutes: 15, items: 1, failures: 0, problem: null, reads: ["calendar"], shown_color: "teal" }] });
+    const harbor = screen.getByRole("list", { name: "Items on the Harbor lane" });
+    await waitFor(() => expect(within(harbor).getByRole("button", { name: /^Calendar entry: Standup\./ })).toHaveAttribute("data-color", "teal"));
+    expect(within(harbor).getByRole("button", { name: /^Calendar entry: Site visit\./ })).not.toHaveAttribute("data-color");
+  });
+
   test("a lane for each project, indented under its parent, each item a button named by its kind, day and state", async () => {
     const { calls } = await open();
     expect(screen.getByRole("radio", { name: "Timeline" })).toHaveAttribute("aria-checked", "true");

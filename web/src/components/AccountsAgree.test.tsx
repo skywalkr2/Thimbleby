@@ -39,21 +39,23 @@ test("one account of three failing: the header and Connections say the same of t
       <Sources onAsk={() => undefined} />
     </RestartProvider>,
   );
-  const needs = await screen.findByRole("list", { name: "Accounts that need you to sign in" });
-  const onPage = within(needs).getAllByRole("listitem");
-  expect(onPage).toHaveLength(1);
+  const cards = await screen.findAllByRole("region", { name: /@example\.com$/ });
+  // One card for each account, the one that needs the person first.
+  expect(cards.map((c) => c.getAttribute("data-connection-card"))).toEqual([ACCOUNTS[1], ACCOUNTS[0], ACCOUNTS[2]]);
+  const onPage = cards[0];
+  expect(onPage).toHaveAttribute("data-need", "again");
   // The pill counts it.
   await waitFor(() => expect(document.querySelector("[data-status]")).toHaveTextContent("1 account needs you"));
+  expect(within(onPage).getAllByRole("listitem")).toHaveLength(2);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: /^App status: / }));
   const dialog = screen.getByRole("dialog", { name: "Status" });
   const inPopover = (await within(dialog).findAllByRole("listitem", { name: /@example\.com$/ })).filter((r) => r.getAttribute("data-account") === ACCOUNTS[1]);
   expect(inPopover).toHaveLength(1);
   // The same account, the same state, the same words, the same count of connections.
-  expect(inPopover[0].getAttribute("data-account")).toBe(onPage[0].getAttribute("data-account"));
-  expect(inPopover[0].getAttribute("data-state")).toBe(onPage[0].getAttribute("data-state"));
-  expect(inPopover[0].querySelector("[data-state-mark]")?.textContent).toBe(onPage[0].querySelector("[data-state-mark]")?.textContent);
-  expect(inPopover[0].textContent).toBe(onPage[0].textContent);
+  expect(inPopover[0].getAttribute("data-account")).toBe(onPage.getAttribute("data-connection-card"));
+  expect(inPopover[0].getAttribute("data-need")).toBe(onPage.getAttribute("data-need"));
+  expect(onPage.querySelector("[data-state-mark]")?.textContent).toBe(inPopover[0].querySelector("[data-state-mark]")?.textContent);
   expect(inPopover[0]).toHaveTextContent("2 connections");
   // And the popover lists all three accounts, each once.
   expect(within(dialog).getAllByRole("listitem", { name: /@example\.com$/ })).toHaveLength(3);

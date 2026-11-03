@@ -104,7 +104,7 @@ test("key families built at run time are complete", () => {
     "outgoing.what.calendar.create",
     "outgoing.what.calendar.answer",
     ...(s.DataFile.properties.layer.enum ?? []).map((x) => `dataform.layer.${x}`),
-    ...["done", "failed", "refused", "expired"].map((x) => `sign_in.return.${x}`),
+    ...["done", "failed", "refused", "expired", "different"].map((x) => `sign_in.return.${x}`),
     "op.note.under",
     "op.note.none",
     ...["email", "calendar", "change", "note", "pasted"].flatMap((x) => [`fact.src.kind.${x}`, `fact.src.kind_a.${x}`]),

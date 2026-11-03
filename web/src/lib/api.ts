@@ -712,8 +712,10 @@ export const api = {
 
   signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
   /** The service's sign-in page; with `acting`, asking for the wider access that acting needs as well. */
-  startSignIn: (name: string, acting = false) =>
-    call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start${acting ? "?acting=true" : ""}`),
+  startSignIn: (name: string, acting = false, account?: string) => {
+    const query = [acting ? "acting=true" : "", account ? `account=${encodeURIComponent(account)}` : ""].filter(Boolean).join("&");
+    return call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start${query ? `?${query}` : ""}`);
+  },
   /** Signs out of a service: one account by its key, or every account when none is named. */
   signOut: (name: string, account?: string) =>
     call<S["Ok"]>("DELETE", `sign-ins/${named(name)}${account ? `?account=${id(account)}` : ""}`),

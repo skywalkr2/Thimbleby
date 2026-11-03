@@ -147,6 +147,8 @@ export function Timeline(props: {
   sideName: (side: string) => string | undefined;
   selected: string | null;
   onOpen: (entry: Entry, date: string) => void;
+  /** The color of the calendar an entry is on, so a calendar entry has its calendar's color as it has on every other view. */
+  colorOf?: (entry: Entry) => string | undefined;
 }) {
   const { t } = useWords();
   const { data } = props;
@@ -235,6 +237,7 @@ export function Timeline(props: {
                                 data-state={item.state}
                                 data-bar={w > TOUCH ? "" : undefined}
                                 data-entry-key={item.entry ? key : undefined}
+                                data-color={item.entry && !item.entry.own && item.entry.kind !== "due" ? props.colorOf?.(item.entry) : undefined}
                                 data-selected={props.selected === key ? "" : undefined}
                                 aria-label={itemName(item, t)}
                                 onFocus={() => setActive({ item, lane })}

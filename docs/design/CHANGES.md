@@ -1027,6 +1027,23 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 318. Schedule and Connections built to the 4.6 mockups; signing in again to one account refuses another (2026-11-03; visual review VS06, VS18, X45, X53, X57, VC13)
+
+| Where | Before | Now |
+|---|---|---|
+| Connections (7.15) | A table of every connection (name, privacy, status, actions) under a list of services with an account list | One card for each account address, its connections as rows with a status ("Read 2 min ago", "Not read since 10:51 AM"), its sides as chips with Change, its privacy once; folders and feeds in one card; an account that needs the person first with its edge and Sign in again. **Built** (`web/src/lib/connection-cards.test.ts`, `connection-words.test.ts`, `web/src/components/ConnectionCard.test.tsx`, `Sources.test.tsx`, `AccountsAgree.test.tsx`; browser, written: `web/e2e/accounts.spec.ts` X79, X77, VC13, VS18) |
+| Connections on a phone (7.15, 7.13) | Five lines of the service and the sides before the button | Name, state and Sign in again first; the service, privacy and sides after. **Built** (CSS; browser, written: `accounts.spec.ts` VS18 measures the order) |
+| Signing in again (6.16, 7.15) | Any account the person chose was added; the account that needed signing in stayed failing with no word | The sign-in is started for the account's address (`POST /api/sign-ins/{name}/start?account=`); another address is refused, nothing kept or started, and the card says "That was a different account: <address>. Sign in as <expected>." with Try again. **Built** (`tests/test_sign_in_refused.py`, `web/src/components/ConnectionCard.test.tsx`, `SignIns.test.tsx`; browser, written: `accounts.spec.ts` VS18) |
+| A state inside a card (7.12) | Alert icon and bold for every connection that needs the person | `StateMark quiet`: the dot in the tone's color and the word. **Built** (`web/src/ui/StateMark.test.tsx`) |
+| The week grid (7.7) | A bold 12px title and a muted time on a gray fill, 56px an hour | A block with the calendar's color on a 3px edge and, softly, in its fill; the title in the control weight, the time and calendar on a second line; 72px an hour. **Built** (`web/src/components/ScheduleLayouts.test.tsx`, `ScheduleViews.test.tsx`) |
+| Meetings that overlap (7.7) | Side by side, narrow | One Clash card naming them ("3 at once" with the time for more than two). **Built** (`web/src/lib/calendar.test.ts`: clashGroups, `ScheduleLayouts.test.tsx`) |
+| An entry in two calendars (7.7) | Named in the words for a screen reader and in the pane | Shown once, "In 2 calendars" in its line. **Built** (`ScheduleLayouts.test.tsx`) |
+| Calendar legend (7.7) | Buttons with a round mark | Toggles with a tick box in the calendar's color, Hidden in words, scrolling inside their own row on a phone. **Built** (`ScheduleLayouts.test.tsx`, `ScheduleCalendars.test.tsx`; browser, written: `accounts.spec.ts` VS06) |
+| Widths (7.7, 7.13) | Week and work week fell back to Day when narrow | The Week is the working days below 1100px (and says so); on a phone the week is a list by day, a row for each entry and one row for a clash. **Built** (`ScheduleLayouts.test.tsx`; browser, written: `web/e2e/schedule.spec.ts`) |
+| Month, Timeline (7.7) | Gray dots and one accent for every calendar entry | The calendar's color on the month's dots and on a timeline entry's mark. **Built** (`ScheduleTimeline.test.tsx`) |
+| Page header of the Schedule (7.7) | Two outline buttons | A line under the title naming the clashes in view; Add to schedule is the one filled button. **Built** (`ScheduleLayouts.test.tsx`) |
+| Not built | | A clash the person marked fine on Today still shows as a Clash card; the weekend is not read while the Week shows the working days; the Day, Weekdays, Week, Month and Timeline are still a segmented control, not an underlined strip; the capture lists the Schedule and Connections states it cannot drive (long content, a large count, a failed save) |
+
 ## 317. A person's page, Quality and the setup's AI and mail steps built to the 4.6 mockups (2026-11-03; visual review VS01, VS03, VS13, VS15, VC10, VC11, VC12, X59, Y01)
 
 | Where | Before | Now |

@@ -10,58 +10,83 @@
 .none { margin: var(--space-3) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
 .caption { margin: 0; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); }
 
-/* An entry: a button with its title, its start and its calendar's color mark; the calendar's name is in its name for a
-   screen reader. The app's own entries and due dates have a dashed edge as well, so the kinds differ by shape. */
+/* An entry: a button with its title, its start and its calendar's color; the calendar's name is in its name for a screen
+   reader. A calendar's color is on the entry's 3px edge and, softly, in its fill, so a block is told from its neighbor at a glance
+   in day and night; the app's own entries and due dates have a dashed edge as well, so the kinds differ by shape. */
 .chip {
+  --cal: var(--border-strong);
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-1); width: 100%; min-width: 0; max-width: 100%; height: 100%;
-  min-height: 1.75rem; padding: var(--space-1) var(--space-2); text-align: left; font: inherit; font-size: var(--text-xs); line-height: var(--lh-xs);
-  color: var(--text); background: var(--surface-sunk); border: 0; border-left: 3px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; overflow: hidden;
+  min-height: 1.75rem; padding: var(--space-1) var(--space-2); text-align: left; font: inherit; font-size: var(--text-meta); line-height: var(--lh-meta);
+  color: var(--text); background: color-mix(in srgb, var(--cal) 14%, var(--surface)); border: 0; border-left: 3px solid var(--cal); border-radius: var(--radius-sm); cursor: pointer; overflow: hidden;
 }
-.chip:hover { background: var(--surface-hover); }
+.chip:hover { background: color-mix(in srgb, var(--cal) 22%, var(--surface)); }
 .chip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .own { border-left-style: dashed; }
 .selected { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .name { min-width: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
 .struck { text-decoration: line-through; }
 .when { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-/* A calendar's color: a small round mark beside its name. The name is always there, so the mark is never the only sign. The
-   color names are the order the app hands them out in; each stands for a slot of the theme's marks (--cal-1 to --cal-8), whose hues are the theme's. */
-.mark { display: inline-block; flex: none; width: 0.65em; height: 0.65em; margin-right: var(--space-1); border-radius: var(--radius-full); background: var(--text-subtle); vertical-align: baseline; }
-.mark[data-color="blue"] { background: var(--cal-1); }
-.mark[data-color="teal"] { background: var(--cal-2); }
-.mark[data-color="green"] { background: var(--cal-3); }
-.mark[data-color="orange"] { background: var(--cal-4); }
-.mark[data-color="red"] { background: var(--cal-5); }
-.mark[data-color="pink"] { background: var(--cal-6); }
-.mark[data-color="purple"] { background: var(--cal-7); }
-.mark[data-color="gray"] { background: var(--cal-8); }
-/* An entry of a calendar with a color has that color on its edge as well, beside the mark; its name is always in its words. */
-.chip[data-color="blue"] { border-left-color: var(--cal-1); }
-.chip[data-color="teal"] { border-left-color: var(--cal-2); }
-.chip[data-color="green"] { border-left-color: var(--cal-3); }
-.chip[data-color="orange"] { border-left-color: var(--cal-4); }
-.chip[data-color="red"] { border-left-color: var(--cal-5); }
-.chip[data-color="pink"] { border-left-color: var(--cal-6); }
-.chip[data-color="purple"] { border-left-color: var(--cal-7); }
-.chip[data-color="gray"] { border-left-color: var(--cal-8); }
+/* The grid's block: the title in the control weight, the time and the calendar on a line under it. A block too short for two lines
+   runs them on after the title. */
+.block { display: grid; align-content: start; align-items: start; gap: 0; border-radius: var(--radius-md); }
+.block .name { font-weight: var(--weight-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.line { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.block[data-short] { align-content: center; padding-block: 0; }
+.block > [data-pill] { justify-self: start; }
+/* A calendar's color: a small round mark beside its name (and the tick of its toggle). The name is always there, so the mark is never
+   the only sign. The color names are the order the app hands them out in; each stands for a slot of the theme's marks (--cal-1 to
+   --cal-8), whose hues are the theme's. */
+.mark { display: inline-block; flex: none; width: 0.65em; height: 0.65em; margin-right: var(--space-1); border-radius: var(--radius-full); background: var(--cal, var(--text-subtle)); vertical-align: baseline; }
+:is(.chip, .mark, .tick, .clashRow)[data-color="blue"] { --cal: var(--cal-1); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="teal"] { --cal: var(--cal-2); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="green"] { --cal: var(--cal-3); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="orange"] { --cal: var(--cal-4); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="red"] { --cal: var(--cal-5); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="pink"] { --cal: var(--cal-6); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="purple"] { --cal: var(--cal-7); }
+:is(.chip, .mark, .tick, .clashRow)[data-color="gray"] { --cal: var(--cal-8); }
 .mark[data-hidden] { background: transparent; box-shadow: inset 0 0 0 2px var(--text-subtle); }
 
-/* The legend: one button for each calendar, its mark, its name (cut with an ellipsis, in full on hover) and, when hidden, the word. */
-.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); min-width: 0; }
+/* A clash: the meetings that overlap are one card naming them all, with the word and an icon, so it is never told by color alone. */
+.slot[data-clash] { min-height: calc(var(--space-4) + (var(--n, 2) + 1) * var(--lh-meta)); z-index: 2; }
+.clash { box-sizing: border-box; height: 100%; margin: 0; padding: var(--space-1) var(--space-2); border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-soft); overflow: hidden; min-width: 0; }
+.clashHead { display: flex; align-items: center; gap: var(--space-1); margin: 0; font-size: var(--text-meta); line-height: var(--lh-meta); font-weight: var(--weight-semibold); color: var(--danger); }
+.clashRows { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
+.clashRows > li { min-width: 0; }
+.clashRow { --cal: var(--text-subtle); display: flex; align-items: center; gap: var(--space-1); width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--text-meta); line-height: var(--lh-meta); text-align: left; cursor: pointer; }
+.clashRow:hover .name { text-decoration: underline; }
+.clashRow:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.clashRow .name { font-weight: var(--weight-regular); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clashRow .mark { margin-right: 0; }
+
+/* The calendar toggles: the word, then one pill for each calendar with a tick box in its color; hidden is said in words as well as by
+   the empty box. On a phone the pills scroll inside their own row, never cut and never moving the page. */
+.toggles { display: flex; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
+.togglesLabel { flex: none; font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); min-width: 0; }
 .legend > li { min-width: 0; max-width: 100%; }
 .legendButton {
-  display: inline-flex; align-items: center; gap: var(--space-1); max-width: 100%; min-height: 24px; padding: 0 var(--space-2); font: inherit; font-size: var(--text-sm);
-  line-height: var(--lh-sm); color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: var(--radius-btn); cursor: pointer;
+  display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; min-height: var(--btn-h-sm); padding: 0 var(--space-3); font: inherit; font-size: var(--text-meta);
+  line-height: var(--lh-meta); font-weight: var(--weight-medium); color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-btn); cursor: pointer;
 }
 .legendButton[aria-pressed="false"] { color: var(--text-muted); background: var(--surface-sunk); }
 .legendButton:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.tick { --cal: var(--text-subtle); display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; border-radius: var(--radius-sm); background: var(--cal); color: var(--surface); }
+.tick[data-hidden] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--border-strong); }
 .legendName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legendHidden { flex: none; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
-@media (pointer: coarse) { .legendButton { min-height: var(--btn-h-sm); } }
+@media (max-width: 639.98px) {
+  .toggles { flex-direction: column; align-items: stretch; gap: var(--space-1); }
+  .legend { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: var(--space-1); scroll-snap-type: x proximity; }
+  .legend > li { flex: none; max-width: 80%; scroll-snap-align: start; }
+}
+:global([data-narrow]) .toggles { flex-direction: column; align-items: stretch; gap: var(--space-1); }
+:global([data-narrow]) .legend { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: var(--space-1); scroll-snap-type: x proximity; }
+:global([data-narrow]) .legend > li { flex: none; max-width: 80%; scroll-snap-align: start; }
 
 /* The time grid: an hour column and a column for each day, in three rows: the day headings, the all-day strip and the hours. */
 .grid {
-  --hour: 3.5rem; --hours-w: 4rem;
+  --hour: 4.5rem; --hours-w: 4rem;
   display: grid; grid-template-columns: var(--hours-w) repeat(var(--cols, 1), minmax(0, 1fr)); min-width: 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
 }
@@ -79,7 +104,7 @@
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--hour) - 1px), var(--border) calc(var(--hour) - 1px), var(--border) var(--hour));
 }
 .lane[data-today] { background-color: var(--today-tint); }
-.slot { position: absolute; min-width: 0; min-height: 1.75rem; padding: 0; box-sizing: border-box; border: 1px solid transparent; }
+.slot { position: absolute; min-width: 0; min-height: 2rem; padding: 0; box-sizing: border-box; border: 1px solid transparent; }
 .hour[data-first] { transform: none; }
 .now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--danger); z-index: 2; pointer-events: none; }
 .now::before { content: ""; position: absolute; left: -0.3rem; top: -0.3rem; width: 0.6rem; height: 0.6rem; border-radius: var(--radius-full); background: var(--danger); }
@@ -106,7 +131,9 @@
 .more { padding: 0 var(--space-2); font: inherit; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--accent-text); background: transparent; border: 0; cursor: pointer; text-decoration: underline; }
 .more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .dots { display: none; flex-wrap: wrap; gap: var(--space-1); padding: 0 var(--space-1); }
-.dot { width: 0.5rem; height: 0.5rem; border-radius: var(--radius-full); background: var(--text-muted); }
+.dot { width: 0.5rem; height: 0.5rem; border-radius: var(--radius-full); background: var(--cal, var(--text-muted)); }
+.dot[data-color="blue"] { --cal: var(--cal-1); } .dot[data-color="teal"] { --cal: var(--cal-2); } .dot[data-color="green"] { --cal: var(--cal-3); } .dot[data-color="orange"] { --cal: var(--cal-4); }
+.dot[data-color="red"] { --cal: var(--cal-5); } .dot[data-color="pink"] { --cal: var(--cal-6); } .dot[data-color="purple"] { --cal: var(--cal-7); } .dot[data-color="gray"] { --cal: var(--cal-8); }
 .dot[data-own] { background: transparent; box-shadow: inset 0 0 0 1px var(--text-muted); }
 /* In a narrow space a day keeps its number, its count and a row of dots; the day opens in Day view. */
 @container (max-width: 36rem) {
@@ -124,3 +151,32 @@
 /* An entry's details. */
 .pane { display: grid; gap: var(--space-3); min-width: 0; }
 .paneActs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+
+/* The week as a list by day, for a phone. */
+.list { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.listDay { min-width: 0; }
+.listDay[data-today] { background: var(--today-tint); }
+.listRows { list-style: none; margin: 0; padding: 0; min-width: 0; }
+.listRow { min-width: 0; border-top: 1px solid var(--border); }
+.listRow:first-child { border-top: 0; }
+.listButton { display: grid; grid-template-columns: var(--row-lead-w) minmax(0, 1fr); column-gap: var(--space-3); align-items: start; width: 100%; padding: var(--space-3) var(--space-4); text-align: left; font: inherit; color: var(--text); background: transparent; border: 0; cursor: pointer; min-width: 0; }
+.listButton:hover { background: var(--surface-hover); }
+.listButton:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.listButton[data-selected] { background: var(--accent-soft); }
+.listLead { display: grid; place-items: center; min-height: var(--lh-md); }
+.listMain { display: grid; min-width: 0; }
+.listTitle { font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--row-title-weight); overflow-wrap: anywhere; }
+.listMeta { font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); overflow-wrap: anywhere; }
+.listNone { margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); border-top: 1px solid var(--border); }
+.listClash { background: linear-gradient(90deg, var(--danger-soft) 0, transparent 70%), var(--surface); box-shadow: inset 3px 0 0 var(--danger); }
+.listClashHead { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4) 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--row-title-weight); }
+.listClashHead svg { color: var(--danger); flex: none; }
+.listClash .listButton { padding-block: var(--space-1); }
+.listClash .listRows { padding-bottom: var(--space-2); }
+.listClash .listRow { border-top: 0; }
+
+/* A calendar that needs the person to sign in: one line over the calendar, with the one button. */
+.staleList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); min-width: 0; }
+.stale { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: var(--radius-md); font-size: var(--text-meta); line-height: var(--lh-meta); min-width: 0; }
+.staleText { display: flex; align-items: flex-start; gap: var(--space-2); flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; }
+.staleText svg { flex: none; color: var(--danger); }

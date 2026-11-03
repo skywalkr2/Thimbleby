@@ -66,7 +66,7 @@ export function MonthGrid(props: {
               {all.length > 0 && (
                 <span className={styles.dots} aria-hidden="true">
                   {all.slice(0, DOTS).map((e, i) => (
-                    <span key={i} className={styles.dot} data-own={e.own || e.kind === "due" ? "" : undefined} />
+                    <span key={i} className={styles.dot} data-color={e.own || e.kind === "due" ? undefined : props.calendars.color(e.source)} data-own={e.own || e.kind === "due" ? "" : undefined} />
                   ))}
                 </span>
               )}

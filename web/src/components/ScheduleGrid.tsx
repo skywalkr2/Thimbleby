@@ -3,9 +3,10 @@
 // overlapping ones side by side. The hours are the configured ones, grown to hold an entry outside them. A line marks now on
 // today's column. Today is named in words in its heading, never only by color.
 import { useEffect, useRef } from "react";
-import { gridHours, minutesOf, placeOverlaps, SHORT, type Span } from "../lib/calendar";
+import { clashGroups, gridHours, minutesOf, placeOverlaps, SHORT, type Span } from "../lib/calendar";
 import { day, onTheClock, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
+import { Icon } from "../ui/Icon";
 import { EntryButton, entryKey, type Calendars, type Entry } from "./ScheduleEntry";
 import styles from "./Schedule.module.css";
 
@@ -28,6 +29,12 @@ function continuesPast(entry: Entry, date: string): boolean {
   return !!entry.end && entry.end.slice(0, 10) > date;
 }
 
+/** Whether an entry is a meeting that can clash with another: a calendar's or the app's own entry that has not been called off. */
+export const isMeeting = (entry: Entry): boolean => (entry.kind === "event" || entry.kind === "own") && !entry.cancelled;
+
+/** An entry shorter than this, in minutes, has its second line run on after the title. */
+const SHORT_BLOCK = 45;
+
 export function TimeGrid(props: {
   days: DayEntries[];
   today: string;
@@ -39,9 +46,15 @@ export function TimeGrid(props: {
   onOpen: (entry: Entry, date: string | null) => void;
 }) {
   const { t } = useWords();
-  const placed = props.days.map((d) => placeOverlaps(d.timed.map((e) => ({ item: e, ...spanOf(e, d.date) }))));
+  // Meetings that overlap are one clash card naming them all; the rest share their day's width side by side.
+  const perDay = props.days.map((d) => {
+    const spans = d.timed.map((e) => ({ item: e, ...spanOf(e, d.date) }));
+    const clashes = clashGroups(spans.filter((s) => isMeeting(s.item)));
+    const clashing = new Set(clashes.flatMap((c) => c.items));
+    return { placed: placeOverlaps(spans.filter((s) => !clashing.has(s.item))), clashes };
+  });
   const { from, to } = gridHours(
-    placed.flat().map((p) => ({ start: p.start, end: p.end })),
+    perDay.flatMap((d) => [...d.placed, ...d.clashes].map((p) => ({ start: p.start, end: p.end }))),
     props.startsAt,
     props.endsAt,
   );
@@ -82,7 +95,7 @@ export function TimeGrid(props: {
       </div>
       {props.days.map((d, i) => (
         <ul key={d.date} className={styles.lane} aria-label={label(d.date)} data-day={d.date} data-today={d.date === props.today ? "" : undefined}>
-          {placed[i].map((p, n) => (
+          {perDay[i].placed.map((p, n) => (
             <li
               key={`${entryKey(p.item, d.date)}:${n}`}
               className={styles.slot}
@@ -93,7 +106,29 @@ export function TimeGrid(props: {
                 width: `${100 / p.cols}%`,
               }}
             >
-              <EntryButton entry={p.item} date={d.date} calendars={props.calendars} time selected={props.selected === entryKey(p.item, d.date)} onOpen={props.onOpen} t={t} />
+              <EntryButton entry={p.item} date={d.date} calendars={props.calendars} time={false} block short={p.end - p.start < SHORT_BLOCK} selected={props.selected === entryKey(p.item, d.date)} onOpen={props.onOpen} t={t} />
+            </li>
+          ))}
+          {perDay[i].clashes.map((c, n) => (
+            <li
+              key={`clash:${c.start}:${n}`}
+              className={styles.slot}
+              style={{ top: `calc(${(c.start - from * 60) / 60} * var(--hour))`, height: `calc(${(c.end - c.start) / 60} * var(--hour))`, left: 0, width: "100%", ["--n" as string]: c.items.length }}
+              data-clash=""
+            >
+              <div className={styles.clash} role="group" aria-label={t("schedule.clash.label", { names: c.items.map((e) => e.title).join(", ") })}>
+                <p className={styles.clashHead}>
+                  <Icon name="alert" size={16} />
+                  {c.items.length > 2 ? t("schedule.clash.many", { n: c.items.length, time: wallTime(`2000-01-01T${String(Math.floor(c.start / 60)).padStart(2, "0")}:${String(c.start % 60).padStart(2, "0")}`) }) : t("schedule.clash.head")}
+                </p>
+                <ul className={styles.clashRows}>
+                  {c.items.map((e, k) => (
+                    <li key={`${entryKey(e, d.date)}:${k}`}>
+                      <EntryButton entry={e} date={d.date} calendars={props.calendars} time={false} block clash selected={props.selected === entryKey(e, d.date)} onOpen={props.onOpen} t={t} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </li>
           ))}
           {d.date === props.today && nowMinutes >= from * 60 && nowMinutes <= to * 60 && (

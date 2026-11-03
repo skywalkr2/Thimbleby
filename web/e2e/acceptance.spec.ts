@@ -952,9 +952,9 @@ test.describe.serial("acceptance scenario", () => {
   test("Connections shows how often each connection is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {
     await signIn(page);
     await go(page, "Connections");
-    const sources = page.getByRole("table", { name: "Connections" });
-    // One row per source, each saying it reads by itself and when it last did, with its privacy level and status in their own columns.
-    const rows = sources.getByRole("row").filter({ has: page.getByRole("button", { name: /^More actions for / }) });
+    const sources = page.getByRole("list", { name: "Connections", exact: true }).first();
+    // One row per source in its card, each saying it reads by itself and when it last did, with its status beside it.
+    const rows = sources.getByRole("listitem").filter({ has: page.getByRole("button", { name: /^More actions for / }) });
     await expect(rows.first()).toContainText(/Read every \d+ minutes · /);
     await page.getByRole("button", { name: "Add mail, calendar or folder" }).click();
     const form = page.getByRole("dialog", { name: "Add mail, calendar or folder" }).getByRole("form", { name: "Add mail, calendar or folder" });

@@ -44,7 +44,7 @@ function open(sources: Source[]) {
 }
 
 async function change(user: ReturnType<typeof userEvent.setup>, label: string) {
-  const item = await screen.findByRole("row", { name: label });
+  const item = await screen.findByRole("listitem", { name: label });
   await user.click(within(item).getByRole("button", { name: `More actions for ${label}` }));
   await user.click(await screen.findByRole("menuitem", { name: "Change" }));
   return screen.findByRole("form", { name: `Change ${label}` });
@@ -63,8 +63,9 @@ const t = (key: string, vars?: Record<string, string | number>) => {
 
 test("the row says how private it is and which side it follows", async () => {
   open([source("a")]);
-  const item = await screen.findByRole("row", { name: "Source a" });
-  expect(within(item).getByText(/Privacy: Private, because it serves Personal/)).toBeInTheDocument();
+  // Said once in the account's header when all its connections share it.
+  const card = await screen.findByRole("region", { name: "Source a" });
+  expect(within(card).getByText(/Privacy: Private, because it serves Personal/)).toBeInTheDocument();
 });
 
 test("a level the person set is said as theirs, and one nobody set says only the level", () => {
