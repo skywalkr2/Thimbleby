@@ -1,4 +1,4 @@
-import { addMonths, clashGroups, gridHours, hourOf, minutesOf, moveBy, placeOverlaps, rangeOf, rememberView, startOfMonth, startOfWeek, storedView, weekdayIndex } from "./calendar";
+import { addMonths, clashGroups, type ClashLink, gridHours, hourOf, minutesOf, moveBy, placeOverlaps, rangeOf, rememberView, startOfMonth, startOfWeek, storedView, weekdayIndex } from "./calendar";
 
 const MON = [0, 1, 2, 3, 4];
 
@@ -80,18 +80,28 @@ test("the view is remembered, and a browser that won't keep it gives the default
 
 describe("clashGroups", () => {
   const at = (title: string, start: number, end: number) => ({ item: title, start, end });
+  const pairs = (...named: Array<[string, string, ClashLink]>) => (a: string, b: string) => named.find(([x, y]) => x === a && y === b)?.[2];
+  const overlap = (minutes: number): ClashLink => ({ kind: "overlap", minutes, travel: 30 });
 
-  test("meetings that overlap are one group, from the first start to the last end, with how long two are on at once", () => {
-    const [group, ...rest] = clashGroups([at("a", 9 * 60, 10 * 60), at("b", 9 * 60 + 30, 10 * 60 + 30), at("lone", 13 * 60, 14 * 60)]);
+  test("entries the engine links are one group, from the first start to the last end, with the overlap it names", () => {
+    const [group, ...rest] = clashGroups([at("a", 9 * 60, 10 * 60), at("b", 9 * 60 + 30, 10 * 60 + 30), at("lone", 13 * 60, 14 * 60)], pairs(["a", "b", overlap(30)]));
     expect(rest).toEqual([]);
     expect(group.items).toEqual(["a", "b"]);
-    expect([group.start, group.end, group.overlap]).toEqual([9 * 60, 10 * 60 + 30, 30]);
+    expect([group.start, group.end, group.overlap, group.travel]).toEqual([9 * 60, 10 * 60 + 30, 30, 0]);
   });
 
-  test("one that ends as the next begins does not overlap it, and a run through a middle one is one group of three", () => {
-    expect(clashGroups([at("a", 60, 120), at("b", 120, 180)])).toEqual([]);
-    const [chain] = clashGroups([at("a", 60, 120), at("b", 90, 150), at("c", 140, 200)]);
+  test("two entries that overlap on the screen are no group unless the engine links them", () => {
+    expect(clashGroups([at("a", 9 * 60, 10 * 60), at("b", 9 * 60 + 30, 10 * 60 + 30)], () => undefined)).toEqual([]);
+  });
+
+  test("a run of links through a middle entry is one group, in either order of the pair", () => {
+    const [chain] = clashGroups([at("a", 60, 120), at("b", 90, 150), at("c", 140, 200)], pairs(["b", "a", overlap(30)], ["b", "c", overlap(10)]));
     expect(chain.items).toEqual(["a", "b", "c"]);
     expect(chain.overlap).toBe(30);
+  });
+
+  test("a group that clashes only for want of travel time says how long the places need", () => {
+    const [group] = clashGroups([at("a", 60, 120), at("b", 130, 180)], pairs(["a", "b", { kind: "travel", minutes: 20, travel: 30 }]));
+    expect([group.overlap, group.travel]).toEqual([0, 30]);
   });
 });

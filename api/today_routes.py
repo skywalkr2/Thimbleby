@@ -17,6 +17,8 @@ from api.schemas import (
     OwnerNameView,
     PriorityLineView,
     PriorityThingView,
+    ScheduleClashEntryView,
+    ScheduleClashView,
     ScheduleDayView,
     ScheduleEntryView,
     ScheduleView,
@@ -207,6 +209,17 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 for d in found
             ],
             on_its_way=[_entry_view(e) for e in schedule_module.on_its_way(store, cfg, now)],
+            clashes=[
+                ScheduleClashView(
+                    day=c.day,
+                    first=ScheduleClashEntryView(snapshot=c.first.item.snapshot, start=c.first.item.start),
+                    second=ScheduleClashEntryView(snapshot=c.second.item.snapshot, start=c.second.item.start),
+                    kind=c.state,  # type: ignore[arg-type]
+                    minutes=c.minutes,
+                    travel_minutes=c.travel,
+                )
+                for c in schedule_module.clashes(store, cfg, now, start, days)
+            ],
             work_days=schedule_module.work_days(cfg),
             week_starts_on=WEEKDAYS.index(cfg.ui.schedule.week_starts_on),
             grid_starts=cfg.ui.schedule.day_starts,

@@ -27114,6 +27114,72 @@
         "title": "RuntimeConfig",
         "type": "object"
       },
+      "ScheduleClashEntryView": {
+        "description": "One of the two entries of a clash: the `snapshot` and `start` of its schedule entry (`ScheduleEntryView`).",
+        "properties": {
+          "snapshot": {
+            "title": "Snapshot",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot",
+          "start"
+        ],
+        "title": "ScheduleClashEntryView",
+        "type": "object"
+      },
+      "ScheduleClashView": {
+        "description": "Two entries that clash, by the rules Today's clash lines follow (`kind`, `minutes`).",
+        "properties": {
+          "day": {
+            "description": "The day the later of the two starts, on the person's clock.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "first": {
+            "$ref": "#/components/schemas/ScheduleClashEntryView",
+            "description": "The entry that starts first."
+          },
+          "kind": {
+            "description": "overlap: they are on at the same time; travel: they are in different places with less time between them than `travel_minutes`.",
+            "enum": [
+              "overlap",
+              "travel"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "minutes": {
+            "description": "For an overlap, how long they are on at once; for travel, how many minutes short.",
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "second": {
+            "$ref": "#/components/schemas/ScheduleClashEntryView"
+          },
+          "travel_minutes": {
+            "description": "The travel time the rules ask for between two places (`steward.clashes.travel_minutes`).",
+            "title": "Travel Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "first",
+          "second",
+          "kind",
+          "minutes",
+          "travel_minutes"
+        ],
+        "title": "ScheduleClashView",
+        "type": "object"
+      },
       "ScheduleDayView": {
         "description": "One day of the schedule.",
         "properties": {
@@ -27420,6 +27486,14 @@
       "ScheduleView": {
         "description": "The schedule (GET /api/schedule): a run of days from `first`, in the person's time zone.",
         "properties": {
+          "clashes": {
+            "description": "The pairs of entries on these days that clash, by the same rules as Today's clash lines (design 6.32): never an all-day entry, one called off, declined or not accepted, or a pair the person said is fine. The screen draws a clash only for these pairs.",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleClashView"
+            },
+            "title": "Clashes",
+            "type": "array"
+          },
           "days": {
             "items": {
               "$ref": "#/components/schemas/ScheduleDayView"

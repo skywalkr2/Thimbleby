@@ -2936,6 +2936,31 @@ class ConnectedEventView(BaseModel):
     attendees: list[ConnectedPersonView] = Field(default_factory=list)
 
 
+class ScheduleClashEntryView(BaseModel):
+    """One of the two entries of a clash: the `snapshot` and `start` of its schedule entry (`ScheduleEntryView`)."""
+
+    snapshot: str
+    start: str
+
+
+class ScheduleClashView(BaseModel):
+    """Two entries that clash, by the rules Today's clash lines follow (`kind`, `minutes`)."""
+
+    day: date = Field(description="The day the later of the two starts, on the person's clock.")
+    first: ScheduleClashEntryView = Field(description="The entry that starts first.")
+    second: ScheduleClashEntryView
+    kind: Literal["overlap", "travel"] = Field(
+        description="overlap: they are on at the same time; travel: they are in different places with less time "
+        "between them than `travel_minutes`."
+    )
+    minutes: int = Field(
+        description="For an overlap, how long they are on at once; for travel, how many minutes short."
+    )
+    travel_minutes: int = Field(
+        description="The travel time the rules ask for between two places (`steward.clashes.travel_minutes`)."
+    )
+
+
 class ScheduleView(BaseModel):
     """The schedule (GET /api/schedule): a run of days from `first`, in the person's time zone."""
 
@@ -2945,6 +2970,12 @@ class ScheduleView(BaseModel):
     on_its_way: list[ScheduleEntryView] = Field(
         default_factory=list,
         description="The parcels and orders with no date yet: on no day, so listed apart.",
+    )
+    clashes: list[ScheduleClashView] = Field(
+        default_factory=list,
+        description="The pairs of entries on these days that clash, by the same rules as Today's clash lines (design "
+        "6.32): never an all-day entry, one called off, declined or not accepted, or a pair the person said is fine. "
+        "The screen draws a clash only for these pairs.",
     )
     work_days: list[int] = Field(
         description="The days of the working week, Monday as 0 through Sunday as 6, from "

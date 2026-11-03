@@ -35,11 +35,11 @@ def _record(view: Any, item: AgendaItem) -> Any | None:
     return view.get("event", found) if found else None
 
 
-def timed(store: Any, cfg: Any, now: datetime, through: date) -> list[Timed]:
-    """The timed entries on today and every day through `through`, earliest first."""
+def timed(store: Any, cfg: Any, now: datetime, through: date, start: date | None = None) -> list[Timed]:
+    """The timed entries on every day from `start` (today when none) through `through`, earliest first."""
     view = store.read()
     found = []
-    for item in agenda(store, cfg, now, through=through):
+    for item in agenda(store, cfg, now, through=through, start=start):
         if item.cancelled or item.all_day:
             continue
         try:

@@ -152,30 +152,57 @@ export function placeOverlaps<T>(items: readonly { item: T; start: number; end: 
   return placed;
 }
 
-export interface ClashGroup<T> extends Span {
-  /** The entries that overlap one another, by when they begin. */
-  items: T[];
-  /** The longest time, in minutes, that two of them are on at once. */
-  overlap: number;
+/** How two entries clash, as the engine says it (the same rules as Today's clash lines): they overlap, or they are in different
+ * places with too little time between them. `minutes` is how long they overlap, or how many minutes short the travel time is;
+ * `travel` is the travel time asked for between two places. */
+export interface ClashLink {
+  kind: "overlap" | "travel";
+  minutes: number;
+  travel: number;
 }
 
-/** The meetings that overlap in time, each run of them one group of two or more (a clash); an entry that overlaps nothing is in
- * no group, and one that ends as the next begins does not overlap it. The group spans from its first start to its last end. */
-export function clashGroups<T>(items: readonly { item: T; start: number; end: number }[]): ClashGroup<T>[] {
+export interface ClashGroup<T> extends Span {
+  /** The entries that clash with one another, by when they begin. */
+  items: T[];
+  /** The longest overlap, in minutes, of two of them; zero when they clash only for want of travel time. */
+  overlap: number;
+  /** For a group that clashes only for want of travel time: the minutes asked for between the places; otherwise zero. */
+  travel: number;
+}
+
+/** The entries the engine says clash, each run of linked entries one group of two or more; an entry linked to none is in no group.
+ * Whether two clash is `linked`'s answer, never the drawing's: an overlap on the screen is not a clash unless the engine named
+ * it. The group spans from its first start to its last end. */
+export function clashGroups<T>(items: readonly { item: T; start: number; end: number }[], linked: (a: T, b: T) => ClashLink | undefined): ClashGroup<T>[] {
   const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end);
-  const groups: { members: typeof sorted; end: number }[] = [];
-  for (const entry of sorted) {
-    const last = groups[groups.length - 1];
-    if (last && entry.start < last.end) {
-      last.members.push(entry);
-      last.end = Math.max(last.end, entry.end);
-    } else groups.push({ members: [entry], end: entry.end });
+  const parent = sorted.map((_, n) => n);
+  const root = (n: number): number => (parent[n] === n ? n : (parent[n] = root(parent[n])));
+  const links = new Map<number, ClashLink[]>();
+  for (const [n, a] of sorted.entries())
+    for (const [m, b] of sorted.entries()) {
+      if (m <= n) continue;
+      const link = linked(a.item, b.item) ?? linked(b.item, a.item);
+      if (!link) continue;
+      parent[root(m)] = root(n);
+      links.set(n, [...(links.get(n) ?? []), link]);
+    }
+  const groups = new Map<number, { members: typeof sorted; links: ClashLink[] }>();
+  for (const [n, entry] of sorted.entries()) {
+    const group = groups.get(root(n)) ?? { members: [], links: [] };
+    group.members.push(entry);
+    group.links.push(...(links.get(n) ?? []));
+    groups.set(root(n), group);
   }
-  return groups
+  return [...groups.values()]
     .filter((g) => g.members.length > 1)
     .map((g) => {
-      let overlap = 0;
-      for (const [n, a] of g.members.entries()) for (const b of g.members.slice(n + 1)) overlap = Math.max(overlap, Math.min(a.end, b.end) - Math.max(a.start, b.start));
-      return { items: g.members.map((m) => m.item), start: g.members[0].start, end: g.end, overlap };
+      const overlaps = g.links.filter((l) => l.kind === "overlap");
+      return {
+        items: g.members.map((m) => m.item),
+        start: g.members[0].start,
+        end: Math.max(...g.members.map((m) => m.end)),
+        overlap: Math.max(0, ...overlaps.map((l) => l.minutes)),
+        travel: overlaps.length ? 0 : Math.max(0, ...g.links.map((l) => l.travel)),
+      };
     });
 }

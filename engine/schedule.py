@@ -10,6 +10,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+from engine import day_clashes, suggestions
 from engine.config.schema import WEEKDAYS
 from engine.connectors import moment
 from engine.sides import side_of_agenda_item, side_of_item
@@ -134,6 +135,20 @@ def schedule(store: Any, cfg: Any, now: datetime, start: date | None = None, day
         day.timed.sort(key=lambda e: (_at(e, day.date, here), e.item.title.casefold()))
         out.append(day)
     return out
+
+
+def clashes(
+    store: Any, cfg: Any, now: datetime, start: date | None = None, days: int | None = None
+) -> list[day_clashes.Found]:
+    """The clashes among the entries of the days `schedule` gives for the same `start` and `days`, by the rules Today's
+    clash lines follow (`engine.day_clashes`): overlaps and too little travel time between places, never an all-day
+    entry, one called off or declined, or one the person hasn't accepted, and never a clash the person said is fine."""
+    here = zone(cfg)
+    first = start or now.astimezone(here).date()
+    count = max(1, min(MOST_DAYS, days if days is not None else cfg.ui.today.schedule_days))
+    found = day_clashes.in_range(store, cfg, now, first, first + timedelta(days=count - 1))
+    fine = suggestions.fine_clashes(store.read())
+    return [f for f in found if f.key not in fine]
 
 
 def work_days(cfg: Any) -> list[int]:

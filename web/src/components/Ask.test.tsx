@@ -252,11 +252,16 @@ test("with an address a report has a mail link with its title and text encoded, 
   expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).not.toHaveAttribute("data-variant", "primary");
 });
 
-test("without an address a report has no mail link and Copy stays the main action", async () => {
+test("without an address a report still has the mail link, which opens a blank To line, and it is the main action", async () => {
   withReport(draft(), null);
   const row = await item("Question a");
-  expect(within(row).queryByRole("link", { name: /Open in your mail/ })).toBeNull();
-  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveAttribute("data-variant", "primary");
+  const link = within(row).getByRole("link", { name: "Open in your email app: A missing button" });
+  expect(link).toHaveAttribute(
+    "href",
+    `mailto:?subject=${encodeURIComponent("A missing button")}&body=${encodeURIComponent("It would help\r\nto have one.")}`,
+  );
+  expect(link).toHaveAttribute("data-variant", "primary");
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveAttribute("data-variant", "quiet");
 });
 
 test("a report too long for a mail link has none, and says to copy it", async () => {

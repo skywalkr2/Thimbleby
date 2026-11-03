@@ -187,7 +187,7 @@ test.describe("People and record pages", () => {
     await go(page, "settings/business");
     await row.getByRole("button", { name: "Remove Quarry Studio" }).click();
     const ask = row.getByRole("group", { name: /What happens to the projects and to-dos in Quarry Studio/ });
-    await ask.getByRole("checkbox", { name: /Also remove Quarry Studio from your organizations/ }).check();
+    await ask.getByRole("checkbox", { name: /Also take Quarry Studio off your list of organizations/ }).check();
     await ask.getByRole("button", { name: "Move them to Personal" }).click();
     await expect(page.getByText(/Removed Quarry Studio\./)).toBeVisible(LOADED);
     await go(page, "records/people");

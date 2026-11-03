@@ -2,14 +2,14 @@
 // calendar's mark, its title and, under it, when it is, where and which calendar it is in ("In 2 calendars" for one held in
 // several). Meetings that overlap are one row naming them, with how long they overlap. A day with nothing says so. Every row
 // opens the entry's details, as a block of the grid does.
-import { clashGroups, minutesOf, SHORT } from "../lib/calendar";
+import { minutesOf, SHORT } from "../lib/calendar";
 import { dayLong, wallTime, weekdayLong } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { GroupLabel } from "../ui/GroupLabel";
 import { Icon } from "../ui/Icon";
 import { MarkDot, type CalendarColor } from "../ui/MarkDot";
 import { calendarWords, entryKey, entryTitle, type Calendars, type Entry } from "./ScheduleEntry";
-import { isMeeting, type DayEntries } from "./ScheduleGrid";
+import { clashCards, clashHeading, type DayEntries } from "./ScheduleGrid";
 import styles from "./Schedule.module.css";
 
 type T = ReturnType<typeof useWords>["t"];
@@ -22,7 +22,7 @@ function rangeWords(entry: Entry, t: T): string {
   return entry.ends ? t("today.agenda.until", { time: wallTime(entry.ends) }) : "";
 }
 
-type Row = { type: "entry"; entry: Entry; at: number } | { type: "clash"; entries: Entry[]; overlap: number; at: number };
+type Row = { type: "entry"; entry: Entry; at: number } | { type: "clash"; entries: Entry[]; heading: string; at: number };
 
 export function ScheduleList(props: {
   days: DayEntries[];
@@ -58,12 +58,12 @@ export function ScheduleList(props: {
           const start = minutesOf(e.begins) ?? 0;
           return { item: e, start, end: Math.max(minutesOf(e.ends) ?? start + SHORT, start + 1) };
         });
-        const clashes = clashGroups(spans.filter((s) => isMeeting(s.item)));
+        const clashes = clashCards(d, spans);
         const clashing = new Set(clashes.flatMap((c) => c.items));
         const rows: Row[] = [
           ...d.all_day.map((entry): Row => ({ type: "entry", entry, at: -1 })),
           ...spans.filter((s) => !clashing.has(s.item)).map((s): Row => ({ type: "entry", entry: s.item, at: s.start })),
-          ...clashes.map((c): Row => ({ type: "clash", entries: c.items, overlap: c.overlap, at: c.start })),
+          ...clashes.map((c): Row => ({ type: "clash", entries: c.items, heading: clashHeading(c, t), at: c.start })),
         ].sort((a, b) => a.at - b.at);
         const heading = t(d.date === props.today ? "schedule.list.day_today" : "schedule.list.day", { date: dayLong(d.date) });
         return (
@@ -82,7 +82,7 @@ export function ScheduleList(props: {
                     <li key={`clash:${row.at}:${n}`} className={`${styles.listRow} ${styles.listClash}`} data-clash="" role="group" aria-label={t("schedule.clash.label", { names: row.entries.map((e) => e.title).join(", ") })}>
                       <p className={styles.listClashHead}>
                         <Icon name="alert" size={16} />
-                        <span>{row.overlap > 0 ? t("schedule.clash.overlap", { n: row.overlap }) : t("schedule.clash.head")}</span>
+                        <span>{row.heading}</span>
                       </p>
                       <ul className={styles.listRows}>
                         {row.entries.map((entry, k) => (

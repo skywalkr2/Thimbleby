@@ -55,12 +55,18 @@ def entry_link(entry: Timed) -> tuple[str, str] | None:
 
 def upcoming(store: Any, cfg: Any, now: datetime) -> list[Found]:
     """Every clash from today through the configured days ahead whose later entry hasn't ended, earliest first."""
+    today = now.astimezone(zone(cfg)).date()
+    found = in_range(store, cfg, now, today, today + timedelta(days=cfg.steward.clashes.days_ahead))
+    return [f for f in found if max(f.first.end, f.second.end) > now]
+
+
+def in_range(store: Any, cfg: Any, now: datetime, first_day: date, last_day: date) -> list[Found]:
+    """Every clash among the entries on the days from `first_day` through `last_day`, earliest first, by the same rules
+    whatever the range: ended ones are included, and the ones the person said are fine are not left out here (the
+    callers choose, through `engine.suggestions.fine_clashes`)."""
     here = zone(cfg)
-    today = now.astimezone(here).date()
     settings = cfg.steward.clashes
-    entries = [
-        t for t in timed(store, cfg, now, through=today + timedelta(days=settings.days_ahead)) if not t.tentative
-    ]
+    entries = [t for t in timed(store, cfg, now, through=last_day, start=first_day) if not t.tentative]
     by_id: dict[str, Timed] = {}
     events = []
     for entry in entries:
@@ -77,8 +83,6 @@ def upcoming(store: Any, cfg: Any, now: datetime) -> list[Found]:
             first, second = second, first
         if same_entry(first.item.title, first.start, second.item.title, second.start):
             continue  # one appointment held twice, not a clash
-        if max(first.end, second.end) <= now:
-            continue
         later = second.start.astimezone(here)
         overlap = clash.overlap_minutes > 0
         minutes = clash.overlap_minutes if overlap else clash.travel_shortfall_minutes or 0

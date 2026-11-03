@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { addDays } from "../lib/dates";
-import { allDay, entry, scheduleRoutes, TODAY, type Content } from "../lib/schedule-fixtures";
+import { allDay, clash, entry, scheduleRoutes, TODAY, type Content } from "../lib/schedule-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
 import { Schedule } from "./Schedule";
 
@@ -15,18 +15,23 @@ const calendar = (id: string, label: string, shown_color: S["WatchSourceView"]["
   ({ id, label, connector: "k", connector_label: "Calendar", enabled: true, every_minutes: 15, items: 1, last: null, read_at: null, failures: 0, problem: null, reads: ["calendar"], shown_color }) as S["WatchSourceView"];
 const CALENDARS = [calendar("cal-a", "Home calendar", "blue"), calendar("cal-b", "Clinic calendar", "teal")];
 
+const venue = entry({ title: "Venue walk-through", source: "cal-a", begins: `${TODAY}T14:30:00+00:00`, ends: `${TODAY}T15:30:00+00:00` });
+const budget = entry({ title: "Budget check-in", source: "cal-b", begins: `${TODAY}T14:45:00+00:00`, ends: `${TODAY}T15:15:00+00:00` });
+const pickup = entry({ title: "School pickup", source: "cal-a", begins: `${TODAY}T14:50:00+00:00`, ends: `${TODAY}T15:20:00+00:00` });
 const content: Content = (date) =>
   date === TODAY
     ? {
         all_day: [allDay("Due: revised budget", date, { source: "cal-b" })],
         timed: [
-          entry({ title: "Venue walk-through", source: "cal-a", begins: `${date}T14:30:00+00:00`, ends: `${date}T15:30:00+00:00` }),
-          entry({ title: "Budget check-in", source: "cal-b", begins: `${date}T14:45:00+00:00`, ends: `${date}T15:15:00+00:00` }),
-          entry({ title: "School pickup", source: "cal-a", begins: `${date}T14:50:00+00:00`, ends: `${date}T15:20:00+00:00` }),
+          venue,
+          budget,
+          pickup,
           entry({ title: "Quarterly review", source: "cal-a", also_in: ["cal-b"], begins: `${date}T10:00:00+00:00`, ends: `${date}T11:00:00+00:00` }),
         ],
       }
     : {};
+// The engine names the three meetings' pairs; the screen draws a clash only for pairs it names.
+const CLASHES = [clash(venue, budget, { minutes: 30 }), clash(venue, pickup, { minutes: 30 }), clash(budget, pickup, { minutes: 25 })];
 
 function window_(over: { wide?: boolean; phone?: boolean }) {
   vi.stubGlobal("matchMedia", (query: string) => ({
@@ -39,7 +44,7 @@ function window_(over: { wide?: boolean; phone?: boolean }) {
 
 async function open(view: string) {
   window.localStorage.setItem("cockpit:schedule-view", view);
-  fakeApi(scheduleRoutes(content, {}, { "GET watch": () => CALENDARS }));
+  fakeApi(scheduleRoutes(content, { clashes: CLASHES }, { "GET watch": () => CALENDARS }));
   renderApp(<Schedule />);
   await waitFor(() => expect(document.querySelector("[data-grid], [data-month], [data-schedule-list]")).not.toBeNull());
   await waitFor(() => expect(document.querySelector(`[data-day="${TODAY}"]`)).not.toBeNull());

@@ -2934,6 +2934,7 @@
   "schedule.clash.label": "Clash: {names}",
   "schedule.clash.and": "{a} and {b}",
   "schedule.clash.overlap": "Clash · they overlap by {n} min",
+  "schedule.clash.travel": "Clash · travel: you need {n} min to get from one place to the other",
   "schedule.clash.sub.one": "1 clash, on {day}",
   "schedule.clash.sub.other": "{n} clashes, the first on {day}",
   "schedule.list.range": "{start}–{end}",

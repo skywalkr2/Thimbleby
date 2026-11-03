@@ -7,7 +7,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
-import { clashGroups, minutesOf, moveBy, rangeOf, rememberView, SHORT, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
+import { minutesOf, moveBy, rangeOf, rememberView, SHORT, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
 import { RANGE_DAYS, RANGES, rememberRange, storedRange, type TimelineRange } from "../lib/timeline";
 import { addDays, fullDay, todayOn, monthDayLong, monthDayYear, monthYear, weekdayLong } from "../lib/dates";
 import { typing } from "../lib/keys";
@@ -27,7 +27,7 @@ import { NewEvent } from "./NewEvent";
 import { EntryButton, entryKey, entryTitle, type Calendars, type Entry } from "./ScheduleEntry";
 import { ScheduleLegend, useHiddenCalendars } from "./ScheduleLegend";
 import { EntryDetails } from "./ScheduleEntryPane";
-import { isMeeting, TimeGrid, type DayEntries } from "./ScheduleGrid";
+import { clashCards, TimeGrid, type DayEntries } from "./ScheduleGrid";
 import { ScheduleList } from "./ScheduleList";
 import { ScheduleStale } from "./ScheduleStale";
 import { MonthGrid } from "./ScheduleMonth";
@@ -122,7 +122,12 @@ export function Schedule() {
     const byDate = new Map((data?.days ?? []).map((d) => [d.date, d]));
     return range.shown.map((d) => {
       const found = byDate.get(d);
-      return { date: d, all_day: (found?.all_day ?? []).filter((e) => filter.shows(e.side, e.views) && visible(e)), timed: (found?.timed ?? []).filter((e) => filter.shows(e.side, e.views) && visible(e)) };
+      return {
+        date: d,
+        all_day: (found?.all_day ?? []).filter((e) => filter.shows(e.side, e.views) && visible(e)),
+        timed: (found?.timed ?? []).filter((e) => filter.shows(e.side, e.views) && visible(e)),
+        clashes: (data?.clashes ?? []).filter((c) => c.day === d),
+      };
     });
   }, [data, range, filter.picked, hidden]);
   const onItsWay = useMemo(() => (data?.on_its_way ?? []).filter((e) => filter.shows(e.side, e.views)), [data, filter.picked]);
@@ -219,7 +224,7 @@ export function Schedule() {
 
   const unit = view === "month" ? "month" : view === "day" ? "day" : isTimeline ? "timeline" : "week";
   // How many clashes the days shown hold, and the first day one is on.
-  const clashes = days.flatMap((d) => clashGroups(d.timed.filter(isMeeting).map((e) => ({ item: e, start: minutesOf(e.begins) ?? 0, end: Math.max(minutesOf(e.ends) ?? (minutesOf(e.begins) ?? 0) + SHORT, (minutesOf(e.begins) ?? 0) + 1) }))).map(() => d.date));
+  const clashes = days.flatMap((d) => clashCards(d, d.timed.map((e) => ({ item: e, start: minutesOf(e.begins) ?? 0, end: Math.max(minutesOf(e.ends) ?? (minutesOf(e.begins) ?? 0) + SHORT, (minutesOf(e.begins) ?? 0) + 1) }))).map(() => d.date));
   const subtitle = isTimeline || view === "month" || clashes.length === 0 ? undefined : t(clashes.length === 1 ? "schedule.clash.sub.one" : "schedule.clash.sub.other", { n: clashes.length, day: weekdayLong(clashes[0]) });
   const back = { day: t("schedule.back.day"), week: t("schedule.back.week"), month: t("schedule.back.month"), timeline: t("schedule.back.timeline") }[unit];
   const forward = { day: t("schedule.forward.day"), week: t("schedule.forward.week"), month: t("schedule.forward.month"), timeline: t("schedule.forward.timeline") }[unit];

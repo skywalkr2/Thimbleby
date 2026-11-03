@@ -51,8 +51,8 @@ The last picture was taken before the stale-calendar line over the Schedule (bel
 | schedule | The view switch is an underlined strip (Week, Day, Month, Timeline) | It is the app's segmented control with a Work week choice, kept with its keys 1 to 5 and 19 tests; the strip is a separate change to the control |
 | schedule | "Today" sits in the title row | It sits with the arrows, where the period moves; the title row holds the one filled button |
 | schedule | "This week · 1 clash on Wednesday" | The line says "1 clash, on Tuesday" (the view's clashes); the unit ("This week") is not told |
-| schedule | The clash says "30 min short" and has Open both | The Schedule knows overlaps, not travel gaps; each meeting in the card is its own button, since no page shows both |
-| schedule | A clash a person marked "It's fine" on Today | The Schedule does not read that mark; it still draws the card |
+| schedule | The clash says "30 min short" and has Open both | A travel clash says it is about travel and the minutes asked for between the places ("Clash · travel: you need 30 min to get from one place to the other"), not how many are short; each meeting in the card is its own button, since no page shows both |
+| schedule | A clash a person marked "It's fine" on Today | Closed: the Schedule's clashes come from the engine's rules, the same as Today's, so a marked pair is two ordinary entries (section 318) |
 | schedule | The weekend while the Week shows the working days | Not read; the line under the grid says so (an honest note, not the data) |
 | schedule | Calendars are named "Your calendar, <address>" | They are the connections' labels, from the add-on; renaming a calendar is a feature the product does not have |
 | schedule | All-day chips collapse into "+2 more" | The strip lists every all-day entry for the day |

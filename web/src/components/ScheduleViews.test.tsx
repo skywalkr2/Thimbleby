@@ -3,7 +3,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { addDays, fullDay, monthDayLong, monthDayYear, monthYear } from "../lib/dates";
-import { allDay, entry, scheduleRoutes, TODAY, WEEK, type Content } from "../lib/schedule-fixtures";
+import { allDay, clash, entry, scheduleRoutes, TODAY, WEEK, type Content } from "../lib/schedule-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { Schedule } from "./Schedule";
 
@@ -208,22 +208,40 @@ describe("the keys and the arrows", () => {
 });
 
 describe("the grid", () => {
-  test("meetings that overlap are one clash card naming them, and one alone takes the whole lane", async () => {
+  test("meetings the engine pairs are one clash card naming them, and one alone takes the whole lane", async () => {
     const user = userEvent.setup();
-    await open((date) => (date === TODAY ? { timed: [entry({ title: "Planning", begins: `${date}T09:15:00+00:00`, ends: `${date}T10:00:00+00:00` }), ...(WEEK(date).timed ?? [])] } : {}));
+    const planning = (date: string) => entry({ title: "Planning", begins: `${date}T09:15:00+00:00`, ends: `${date}T10:00:00+00:00` });
+    const standup = (WEEK(TODAY).timed ?? [])[0];
+    await open((date) => (date === TODAY ? { timed: [planning(date), ...(WEEK(date).timed ?? [])] } : {}), { clashes: [clash(standup, planning(TODAY))] });
     await user.click(radio("Day"));
     const card = await screen.findByRole("group", { name: "Clash: Standup, Planning" });
     // The word and an icon say it, and both meetings are in it, each one a button that opens it.
     expect(within(card).getByText("Clash")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: /Standup/ })).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: /Planning/ })).toBeInTheDocument();
-    const clash = (card.closest("li") as HTMLElement).style;
+    const clashStyle = (card.closest("li") as HTMLElement).style;
     const dentist = ((await screen.findByRole("button", { name: /Dentist/ })).closest("li") as HTMLElement).style;
     // The card spans from the first start (09:00, the grid starting at 07:00) to the last end (10:00).
-    expect([clash.left, clash.width]).toEqual(["0px", "100%"]);
-    expect(clash.top).toBe("calc(2 * var(--hour))");
-    expect(clash.height).toBe("calc(1 * var(--hour))");
+    expect([clashStyle.left, clashStyle.width]).toEqual(["0px", "100%"]);
+    expect(clashStyle.top).toBe("calc(2 * var(--hour))");
+    expect(clashStyle.height).toBe("calc(1 * var(--hour))");
     expect([dentist.left, dentist.width]).toEqual(["0%", "100%"]);
+  });
+
+  test("only the pairs the engine lists are drawn as a clash: an overlap it does not list (marked fine, not attended) is two ordinary entries", async () => {
+    const user = userEvent.setup();
+    const at = (title: string, from: string, to: string, date = TODAY) => entry({ title, begins: `${date}T${from}:00+00:00`, ends: `${date}T${to}:00+00:00`, start: `${date}T${from}:00+00:00` });
+    const [one, two, three, four, five, six] = [at("Kickoff", "08:00", "09:00"), at("Intro", "08:30", "09:30"), at("Lunch", "12:00", "13:00"), at("Errand", "12:30", "13:30"), at("Site visit", "15:00", "16:00"), at("Supplier call", "16:10", "17:00")];
+    await open((date) => (date === TODAY ? { timed: [one, two, three, four, five, six] } : {}), { clashes: [clash(one, two), clash(five, six, { kind: "travel", minutes: 20, travel_minutes: 30 })] });
+    await user.click(radio("Day"));
+    // Kickoff and Intro are listed: one card. Lunch and Errand overlap but are not: two entries side by side, in no card.
+    expect(await screen.findByRole("group", { name: "Clash: Kickoff, Intro" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /Lunch|Errand/ })).toBeNull();
+    for (const title of ["Lunch", "Errand"]) expect((await screen.findByRole("button", { name: new RegExp(title) })).closest("[data-clash]")).toBeNull();
+    // Two entries with no overlap that the engine lists for travel are a card that says it is about travel and the minutes asked for.
+    const travel = await screen.findByRole("group", { name: "Clash: Site visit, Supplier call" });
+    expect(within(travel).getByText("Clash · travel: you need 30 min to get from one place to the other")).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-clash]")).toHaveLength(2);
   });
 
   test("entries that are not meetings and overlap sit side by side", async () => {

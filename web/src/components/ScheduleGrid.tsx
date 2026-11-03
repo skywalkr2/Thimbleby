@@ -3,7 +3,8 @@
 // overlapping ones side by side. The hours are the configured ones, grown to hold an entry outside them. A line marks now on
 // today's column. Today is named in words in its heading, never only by color.
 import { useEffect, useRef } from "react";
-import { clashGroups, gridHours, minutesOf, placeOverlaps, SHORT, type Span } from "../lib/calendar";
+import type { S } from "../lib/api";
+import { clashGroups, gridHours, minutesOf, placeOverlaps, SHORT, type ClashGroup, type Span } from "../lib/calendar";
 import { day, onTheClock, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Icon } from "../ui/Icon";
@@ -14,6 +15,8 @@ export interface DayEntries {
   date: string;
   all_day: Entry[];
   timed: Entry[];
+  /** The pairs of entries the engine says clash on this day (the same rules as Today's clash lines); empty when none. */
+  clashes: S["ScheduleClashView"][];
 }
 
 /** Where a timed entry sits on its day, in minutes after midnight. One with no end is drawn short, unless it goes on past
@@ -29,8 +32,20 @@ function continuesPast(entry: Entry, date: string): boolean {
   return !!entry.end && entry.end.slice(0, 10) > date;
 }
 
-/** Whether an entry is a meeting that can clash with another: a calendar's or the app's own entry that has not been called off. */
-export const isMeeting = (entry: Entry): boolean => (entry.kind === "event" || entry.kind === "own") && !entry.cancelled;
+const clashId = (e: { snapshot: string; start: string }): string => `${e.snapshot}#${e.start}`;
+
+/** The clash cards of a day: the entries the engine paired, each run of them one card. An overlap the engine did not name (an
+ * all-day entry, one the person is not attending, a pair marked fine) is two ordinary entries. */
+export function clashCards(day: DayEntries, spans: { item: Entry; start: number; end: number }[]): ClashGroup<Entry>[] {
+  const pairs = new Map(day.clashes.map((c) => [`${clashId(c.first)}|${clashId(c.second)}`, { kind: c.kind, minutes: c.minutes, travel: c.travel_minutes }]));
+  return clashGroups(spans, (a, b) => pairs.get(`${clashId(a)}|${clashId(b)}`));
+}
+
+/** The words at the head of a clash card: how long the meetings overlap, or that the places are too far apart for the time between. */
+export function clashHeading(group: ClashGroup<Entry>, t: (key: string, values?: Record<string, string | number>) => string): string {
+  if (group.overlap > 0) return t("schedule.clash.overlap", { n: group.overlap });
+  return group.travel > 0 ? t("schedule.clash.travel", { n: group.travel }) : t("schedule.clash.head");
+}
 
 /** An entry shorter than this, in minutes, has its second line run on after the title. */
 const SHORT_BLOCK = 45;
@@ -49,7 +64,7 @@ export function TimeGrid(props: {
   // Meetings that overlap are one clash card naming them all; the rest share their day's width side by side.
   const perDay = props.days.map((d) => {
     const spans = d.timed.map((e) => ({ item: e, ...spanOf(e, d.date) }));
-    const clashes = clashGroups(spans.filter((s) => isMeeting(s.item)));
+    const clashes = clashCards(d, spans);
     const clashing = new Set(clashes.flatMap((c) => c.items));
     return { placed: placeOverlaps(spans.filter((s) => !clashing.has(s.item))), clashes };
   });
@@ -119,7 +134,7 @@ export function TimeGrid(props: {
               <div className={styles.clash} role="group" aria-label={t("schedule.clash.label", { names: c.items.map((e) => e.title).join(", ") })}>
                 <p className={styles.clashHead}>
                   <Icon name="alert" size={16} />
-                  {c.items.length > 2 ? t("schedule.clash.many", { n: c.items.length, time: wallTime(`2000-01-01T${String(Math.floor(c.start / 60)).padStart(2, "0")}:${String(c.start % 60).padStart(2, "0")}`) }) : t("schedule.clash.head")}
+                  {c.items.length > 2 ? t("schedule.clash.many", { n: c.items.length, time: wallTime(`2000-01-01T${String(Math.floor(c.start / 60)).padStart(2, "0")}:${String(c.start % 60).padStart(2, "0")}`) }) : c.travel > 0 ? t("schedule.clash.travel", { n: c.travel }) : t("schedule.clash.head")}
                 </p>
                 <ul className={styles.clashRows}>
                   {c.items.map((e, k) => (

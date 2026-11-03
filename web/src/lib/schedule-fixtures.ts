@@ -49,6 +49,17 @@ export const WEEK: Content = (date) =>
       }
     : {};
 
+/** A clash the engine names between two timed entries of one day (an overlap of 15 minutes unless `over` says otherwise). */
+export const clash = (first: Entry, second: Entry, over: Partial<S["ScheduleClashView"]> = {}): S["ScheduleClashView"] => ({
+  day: (second.begins ?? second.start).slice(0, 10),
+  first: { snapshot: first.snapshot, start: first.start },
+  second: { snapshot: second.snapshot, start: second.start },
+  kind: "overlap",
+  minutes: 15,
+  travel_minutes: 30,
+  ...over,
+});
+
 export function page(first: string, days: number, content: Content = WEEK, over: Partial<Page> = {}): Page {
   return {
     today: TODAY,
@@ -59,6 +70,7 @@ export function page(first: string, days: number, content: Content = WEEK, over:
       return { date, all_day: found.all_day ?? [], timed: found.timed ?? [] };
     }),
     on_its_way: [],
+    clashes: [],
     work_days: [0, 1, 2, 3, 4],
     week_starts_on: 0,
     grid_starts: "07:00",

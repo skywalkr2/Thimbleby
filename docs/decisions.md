@@ -30,8 +30,11 @@ and toggles. The Add to schedule button is the screen's one filled button.
 **Why:** the reviewer's score found a table and a wall of rows where one account was meant to read as one thing, week blocks with
 weak text and fills, and a refused sign-in that silently added a second account (the person had no way to know the wrong one was
 used). **Impact:** one new optional query parameter on a sign-in's start route (generated types and OpenAPI refreshed); no other API
-change; no plugin API change. `StateMark` takes `quiet` (a dot that keeps its tone) for a state inside a card. **Left:** the
-Schedule's clash is any two meetings that overlap (it does not know which a person marked "It's fine" on Today); the weekend is not
+change; no plugin API change. `StateMark` takes `quiet` (a dot that keeps its tone) for a state inside a card. **Later in the
+same batch:** the Schedule's clashes now come from the same rules as Today's: `GET /api/schedule` lists the pairs
+(`engine/schedule.py` `clashes`, over `engine/day_clashes.py` `in_range`, which Today's `upcoming` also uses), and the screen draws a Clash
+card only for them, so a pair marked fine, an all-day entry or one not accepted is not one, and a travel clash says so. The web copies
+no clash rule. **Left:** the weekend is not
 fetched while the Week view shows the working days; `docs/project/u3-differences/schedule-connections.md` lists the rest.
 Change log: section 318.
 

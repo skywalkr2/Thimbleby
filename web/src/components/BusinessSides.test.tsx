@@ -166,7 +166,7 @@ test("removing a business can take its organization with it, and one Undo brings
   });
   renderApp(<BusinessSides />);
   const ask = await remove(user, SHOP);
-  await user.click(within(ask).getByRole("checkbox", { name: /Also remove .* from your organizations/ }));
+  await user.click(within(ask).getByRole("checkbox", { name: /Also take .* off your list of organizations/ }));
   await user.click(within(ask).getByRole("button", { name: "Move them to Personal" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-shop/remove")?.body).toEqual({ where: "personal", organization: "remove" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
@@ -185,7 +185,7 @@ test("the organization is kept unless it is ticked", async () => {
   });
   renderApp(<BusinessSides />);
   const ask = await remove(user, SHOP);
-  expect(within(ask).getByRole("checkbox", { name: /Also remove .* from your organizations/ })).not.toBeChecked();
+  expect(within(ask).getByRole("checkbox", { name: /Also take .* off your list of organizations/ })).not.toBeChecked();
   await user.click(within(ask).getByRole("button", { name: "End them with it" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-shop/remove")?.body).toEqual({ where: "end", organization: "keep" }));
 });
