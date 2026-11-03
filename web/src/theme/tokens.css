@@ -154,6 +154,7 @@
   /* The product's mark in the header comes in a day and a night version; exactly one is drawn, by the theme in force (the system's,
      or the person's own choice), through these two. */
   --mark-day-display: block; --mark-night-display: none;
+  --brand-glyph: var(--brand-300);   /* the small brass star of a brand moment (decorative) */
   color-scheme: light;
 }
 

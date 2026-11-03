@@ -257,10 +257,11 @@ const watched = (id: string, over: Partial<S["WatchSourceView"]> = {}): S["Watch
 test("an empty Today says nothing needs you together with what was read", async () => {
   const read = new Date().toISOString();
   show([], { "GET watch": () => [watched("a", { read_at: read, last: { outcome: "ok", started_at: read, new: 0, changed: 0, removed: 0 } })] });
-  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /Nothing needs you · Checked 1 connection, last at /.test(el.textContent ?? ""));
+  // Every source read, setup done and a run has happened: the all-clear card, with what was read as a quiet line under it.
+  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-all-clear") === true && /Checked 1 connection, last at /.test(el.textContent ?? ""));
   expect(empty).toBeInTheDocument();
+  expect(within(empty).getByRole("heading", { name: "Nothing needs you" })).toBeInTheDocument();
   expect(screen.getAllByText(/Checked 1 connection, last at /)).toHaveLength(1); // the empty state's: the header's popover holds the other line
-  expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
 });
 
 test("when a source couldn't be read, neither the heading nor the empty Today says nothing needs you alone", async () => {

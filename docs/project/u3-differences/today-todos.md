@@ -40,6 +40,7 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | todos-states | Questions showed "Nothing matches these filters" with no filter set | The tab says it is empty (`OpenItems.test.tsx`); the line under the title counts both tabs, as the two tab counts add up |
 | todos-states | A ticked to-do vanished; only the toast had Undo | The row stays where it was, struck through, "Done just now" and Undo, until the person changes tab or filter (`OpenItems.test.tsx`) |
 | all | Skeletons were nearly invisible | The bars use the border tone and shimmer to the well tone, in day and night |
+| today-states | The brand card's mark, display title, "A little more room to think…" and "See what was handled today" | The all-clear is now the card, with the coverage line and Missed something? under it; the button shows only when something was handled today (change log 325, `TodayAllClear.test.tsx`) |
 
 ## Left, with the reason
 
@@ -51,7 +52,6 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | today | The brief card above the queue | Data-dependent (it appears when a form is due), not in the sample |
 | today | The mockup's rail is shorter than the queue by design | Caps are in rows (`RAIL_ROWS`, 3); the layout does not force the length, so a rail with long rows can still be longer than a short queue. The cap is a constant, not a setting (decision needed) |
 | today | The mockup's tab bar (Today, To-dos, +, Schedule, More) | The shell's, not this step's; the build's bar says Today, Keeping track, +, Search, More |
-| today-states | The brand card's mark, display title, "A little more room to think…" and "See what was handled today" | Reached now (change log 324), and the build draws the real empty card: a check mark and one line, "Nothing needs you · Checked 2 connections, last at 8:05 PM", with Missed something?. The line says what was read so an empty Today is never mistaken for "couldn't check" (6.32, `Coverage.tsx`); the mockup's card would be a new component and wording the owner decides |
 | today-states | The side filter opened as a list, with a fifth side | At 1440 the sides are always a strip; the list is the phone's sheet, which the drive opens at 390 only |
 | today-states | A save that failed, Changed somewhere else | Toasts, as `states-phone.md` explains |
 | todos | The long titles clamp to two lines | Not changed in this pass; the row's `clamp` is not given to the to-do row (P2 left) |

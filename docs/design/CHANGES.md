@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 325. Today's all-clear is the brand card (2026-11-03; final review group f8)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's empty state, all clear (7.7) | A check icon and one line, "Nothing needs you · Checked 2 connections, last at 8:05 PM", with Missed something? | When setup is done, a run has happened, every source was read and nothing waits: a card with the brand mark (decorative; the night mark in the night theme), "Nothing needs you" in the display face, "A little more room to think…", and "See what was handled today" (to Handled for you, drawn only when something was handled today). The coverage stays under it as a quiet line with Missed something?, so an empty Today is never mistaken for "couldn't check". The other empty states are unchanged, and a source that was not read still gives the one line "Nothing found that needs you · …". **Built** (`web/src/components/TodayAllClear.test.tsx`, `Today.test.tsx`) |
+
 ## 324. The capture reaches "Nothing needs you"; the Schedule's header on a phone is one short row (2026-11-03; final review group f7)
 
 | Where | Before | Now |

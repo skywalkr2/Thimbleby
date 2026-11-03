@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Today's all-clear is the brand card (final review, group f8; section 325)
+
+**Decided:** (owner: build to the 4.6 mockup; design by the main session.) When setup is done, the assistant has run, every
+source was read and nothing waits, Today's empty state is a calm card: the brand mark (decorative, the night version in the night
+theme), "Nothing needs you" in the display face, "A little more room to think. {assistant} keeps watching your mail and calendars and
+brings anything new here.", and "See what was handled today" (opens Handled for you), which shows only when something was handled
+today. The coverage ("Checked 2 connections, last at 8:05 PM") stays under the card as a quiet line with "Missed something?", so an
+empty Today is never mistaken for "couldn't check". The other empty states (setup unfinished, connect, hand in, and nothing found
+while a source was not read or not read yet, which keeps its one line) are unchanged. **Impact:** `TodayAllClear` (web), four wording
+keys (`queue.allclear.*`); no config key, API or op change. Change log: section 325.
+
 ## 2026-11-03: The capture reaches "Nothing needs you", and the Schedule's header on a phone is one short row (final review, group f7; section 324)
 
 **Decided:** (owner: nothing is left undone before the gate; design by the main session.) The test server takes `--all-clear`, which makes a

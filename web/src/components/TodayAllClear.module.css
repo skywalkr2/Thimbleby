@@ -1,0 +1,10 @@
+/* The all-clear card: centred, calm, never wider than its column; the mark follows the theme. */
+.card { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-12) var(--space-6); text-align: center; color: var(--text-muted); min-width: 0; }
+.mark { width: 56px; height: 56px; }
+.markDay { display: var(--mark-day-display); }
+.markNight { display: var(--mark-night-display); }
+.glyph { color: var(--brand-glyph); font-size: var(--text-lg); line-height: 1; }
+.title { margin: var(--space-2) 0 0; color: var(--text); font-family: var(--font-display); font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-medium); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.text { margin: 0; max-width: 44ch; font-size: var(--text-md); line-height: var(--lh-md); }
+.coverage { margin: 0; max-width: 52ch; font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-subtle); overflow-wrap: anywhere; }
+.card > a[data-variant] { margin-top: var(--space-2); }
