@@ -2,6 +2,7 @@
 // field (its last row asks the assistant), the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
 // Hand something in, Help and the person's initials, which open the user menu: their name and Settings, their own pages, how the assistant is
 // doing, then theme and density.
+// The brand shows the workspace's own logo when it has one, else the product's mark (day or night by the theme), then the name in the display face.
 // Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the search field shrinks; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
 // before the Ask field gives any up.
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,8 @@ import { useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { SearchBox } from "../components/SearchBox";
 import { useAnythingToMiss, useMissedOne } from "../components/MissedOne";
+import markDay from "../assets/brand/mark-day.svg";
+import markNight from "../assets/brand/mark-night.svg";
 import { afterClose } from "../ui/afterClose";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
@@ -119,9 +122,11 @@ export function Header(props: {
         {rc.logo ? (
           <img className={styles.logo} src={`${rc.api_base}/brand/logo`} alt="" />
         ) : (
-          <span className={styles.mark} aria-hidden="true">
-            {initials(rc.workspace_name)}
-          </span>
+          <>
+            {/* The product's mark, in its day and night versions: one is drawn, by the theme in force (tokens.css). The name beside it says what it is. */}
+            <img className={`${styles.logo} ${styles.markDay}`} src={markDay} alt="" data-brand-mark="day" />
+            <img className={`${styles.logo} ${styles.markNight}`} src={markNight} alt="" data-brand-mark="night" />
+          </>
         )}
         {!props.narrow && <span className={styles.name}>{rc.workspace_name}</span>}
       </a>

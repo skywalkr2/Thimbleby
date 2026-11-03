@@ -5,7 +5,7 @@
   padding: var(--space-3) var(--page-pad); background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); min-width: 0; flex: 1 1 auto; }
-.title h1 { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
+.title h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-medium); }
 .intro { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
 .layout {
   display: grid; grid-template-columns: var(--settings-nav-w) minmax(0, 680px); gap: var(--space-12); justify-content: center;
@@ -34,7 +34,7 @@
 /* The open step: one column, its explanation under its title. */
 .step { min-width: 0; display: grid; gap: var(--space-4); align-content: start; }
 .eyebrow { margin: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
-.stepTitle { margin: calc(var(--space-2) * -1) 0 0; font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-semibold); }
+.stepTitle { margin: calc(var(--space-2) * -1) 0 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-medium); letter-spacing: -0.01em; }
 .stepTitle:focus, .stepTitle:focus-visible { outline: none; box-shadow: none; }
 .explanation { margin: 0; color: var(--text-muted); font-size: var(--text-md); line-height: var(--lh-md); max-width: var(--measure); }
 .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); min-width: 0; align-content: start; }

@@ -4,6 +4,28 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The product's own palette, faces and mark are the default; night surfaces lift (VP16, VP06; section 312)
+
+**Decided:** (1) The default tokens are the UI/UX reviewer's 4.6 palette: warm paper by day and a burgundy accent, near-black
+surfaces by night and a brass accent. The workspace's own color (`ui.brand.color`) still replaces the accent, and the contrast
+check behind it still refuses a color whose text cannot be read; what changed is that the text on the accent is now a token pair
+(`--brand-on` by day, `--brand-on-night` by night), each chosen white or near-black for the color, so a chosen color is readable in
+both themes (before, one value served both). (2) State colors (danger, warn, ok) are their own hues and never the accent: danger
+moved to `#b93815` by day and `#ff8a75` by night, warn to `#ff9a5c` by night. Side marks (`--side-1` to `--side-5`) and calendar
+marks (`--cal-1` to `--cal-8`) are muted hues that are neither; the calendar's color names the engine hands out (`blue` to `gray`)
+stand for the slots `--cal-1` to `--cal-8` in the order given, so the engine is unchanged. (3) Night surfaces lift level by level
+(canvas, pane, well and hover, then what floats), and a pane has a hairline and a faint top light, so a card is seen by its
+surface and not only its edge. (4) Inter for the interface and Fraunces for page titles (the h1 of a screen and of the setup
+frame, a setup step's title) and the name beside the mark, both from npm as variable-font packages (exact versions, SIL Open
+Font License, listed in `NOTICE`), imported once in the entry and served by the app: no font is fetched from a host at run time.
+(5) The product's mark (a day and a night picture, decorative) is drawn in the header beside the workspace's name, the one for the
+theme in force, the person's own choice included; a workspace logo still wins; the tab's icon is the mark. *Why:* the review
+scored the brand 1 to 1.5 on every screen; the owner wants the build to match the mockups before the gate week. *Not done here:*
+the mark and name from one product file (P101's mechanism), the app icon, the all-clear Today greeting and the other brand
+moments (VP17), and the component rules of the mockups (rows, one filled button, state sheets), which are later steps of the
+visual track. *Impact:* tokens, two npm dependencies, two pictures, no new setting (`ui.brand.color`'s description now names the
+default), no API model, no engine change. Change log: section 312.
+
 ## 2026-11-03: A date edited again before the follow-on run starts is one run, a move with nothing tied starts none, and a run whose only ops are notes files nothing (X72's source; section 311)
 
 **Decided:** (1) Edits to one record before its follow-on run starts make one request: when a changeset moves a dated field and

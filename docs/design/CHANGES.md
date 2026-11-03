@@ -1027,6 +1027,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 312. The product's palette, faces and mark; night surfaces lift (2026-11-03; visual review VP16, VP06)
+
+| Where | Before | Now |
+|---|---|---|
+| Default palette (7.12) | Cool gray paper and an indigo accent by day and night | Warm paper and a burgundy accent by day; near-black surfaces and a brass accent by night (`web/src/theme/tokens.css`, all three layers, under the same selectors). **Built** (`web/src/theme/brand.test.ts`, `web/src/theme/dayMode.test.ts`) |
+| State colors (7.12) | Red, amber and green hues near the brand's | Their own hues in both themes (danger `#b93815` / `#ff8a75`, warn `#8a4f00` / `#ff9a5c`, ok `#1b6b44` / `#7fd3a5`), never the accent. **Built** (`brand.test.ts`: "the state colors have hues of their own") |
+| Side and calendar marks (7.12) | Eight calendar hues, some the state colors' neighbors; no side colors | `--side-1` to `--side-5` and `--cal-1` to `--cal-8`, muted, none a state color; the Schedule reads them. **Built** (`brand.test.ts`: "side and calendar colors differ from every state color") |
+| Night surfaces (7.12) | Cool blue-gray, a pane edge by hairline only | Each level lifts (canvas, pane, well and hover, raised); a pane has a hairline and a faint top light. **Built** (`brand.test.ts`: "night surfaces lift") |
+| The accent's text (7.12, `lib/theme.ts`) | One value (`--text-on-accent`) set for both themes when white was unreadable | `--brand-on` (day) and `--brand-on-night` set from the chosen color, white or near-black for each. **Built** (`brand.test.ts`: "the text on a chosen color is readable"; `lib/theme.test.ts`) |
+| Type (7.12) | System faces | Inter for the interface, Fraunces for page titles, setup step titles and the name beside the mark, bundled by the build; nothing fetched at run time. **Built** (`brand.test.ts`: "the faces"; browser test `web/e2e/brand.spec.ts`, written, not yet run) |
+| The mark (7.1, 7.12) | A monogram of the workspace's name | The product's mark, a day and a night picture chosen by the theme in force (the person's own choice included); a workspace logo still wins; the tab's icon is the mark. **Built** (`web/src/shell/Header.test.tsx`; `brand.spec.ts`, written, not yet run) |
+
+- **04 (`ui.brand.color`):** the description says an empty color uses the app's own colors (burgundy by day, brass by night).
+- **Left for the next steps of the visual track:** the mark and name from one product file, the app icon, the brand moments
+  (VP17: the all-clear Today, the greeting), and the mockups' component rules.
+
 ## 311. One follow-on run for repeated edits, none when nothing is tied, no note from a run with nothing to say (2026-11-03; sweep X72's source)
 
 | Where | Before | Now |

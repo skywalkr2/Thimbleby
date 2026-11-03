@@ -133,7 +133,7 @@ export default defineConfig({
       const use = { baseURL: `http://127.0.0.1:${s.port}${s.base === "/" ? "/" : `${s.base}/`}` };
       return [
         { name: s.name, testMatch: /acceptance\.spec\.ts/, use },
-        { name: `${s.name}-shell`, testMatch: /shell\.spec\.ts/, use, dependencies: [s.name] },
+        { name: `${s.name}-shell`, testMatch: /(shell|brand)\.spec\.ts/, use, dependencies: [s.name] },
         // The panes the shell opens (drawer, Ask pane, the stages board, review mode), and every main screen's accessibility
         // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
         { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },

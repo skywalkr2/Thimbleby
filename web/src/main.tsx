@@ -1,3 +1,5 @@
+import "@fontsource-variable/inter";
+import "@fontsource-variable/fraunces";
 import "./theme/tokens.css";
 import "./styles.css";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";

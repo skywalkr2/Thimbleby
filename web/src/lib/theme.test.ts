@@ -36,8 +36,9 @@ test("the brand shades are derived from the color", () => {
   expect(contrast(tokens["--brand-300"], "#171a20")).toBeGreaterThan(4.5);
   expect(contrast(tokens["--brand-200"], "#171a20")).toBeGreaterThan(contrast(tokens["--brand-300"], "#171a20"));
   expect(contrast(tokens["--brand-900"], "#ffffff")).toBeGreaterThan(10);
-  // White text on this color is readable, so the text on the accent isn't touched.
-  expect(tokens["--text-on-accent"]).toBeUndefined();
+  // White text on this color is readable, so it is the text on the day accent; the night accent is a light shade, so its text is near-black.
+  expect(tokens["--brand-on"]).toBe("#ffffff");
+  expect(contrast(tokens["--brand-on-night"], tokens["--brand-300"])).toBeGreaterThanOrEqual(4.5);
   for (const value of Object.values(tokens)) expect(value).toMatch(/^#[0-9a-f]{6}$/);
 });
 
@@ -52,8 +53,8 @@ test("the link shade reads on the surface and on the soft tint, even for a pale 
 test("white on a pale brand color is replaced by near-black", () => {
   const tokens = brandTokens("#f2b65c")!;
   expect(contrast("#ffffff", "#f2b65c")).toBeLessThan(4.5);
-  expect(tokens["--text-on-accent"]).toBe("#14171f");
-  expect(contrast(tokens["--text-on-accent"], "#f2b65c")).toBeGreaterThan(4.5);
+  expect(tokens["--brand-on"]).toBe("#171717");
+  expect(contrast(tokens["--brand-on"], "#f2b65c")).toBeGreaterThan(4.5);
 });
 
 test("applyBrand sets the primitives on the page and clears them again", () => {

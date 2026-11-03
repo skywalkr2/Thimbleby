@@ -5,3 +5,12 @@ This product is licensed under the Functional Source License, Version 1.1, with 
 (FSL-1.1-ALv2; see LICENSE). Each version becomes available under the Apache License, Version 2.0 on the second
 anniversary of the date it is made available.
 Redistributions and derivative works must keep this NOTICE file and the copyright notices.
+
+Bundled components
+The web app bundles these fonts, served with it and never fetched from a host at run time. Both are licensed under the SIL Open
+Font License, Version 1.1 (https://openfontlicense.org), which allows them to be bundled and redistributed with this product:
+- Inter (variable), Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter), through the npm package
+  @fontsource-variable/inter.
+- Fraunces (variable), Copyright 2020 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces), through the npm
+  package @fontsource-variable/fraunces.
+The fonts' own license text ships with each package.

@@ -1,6 +1,7 @@
 // Branding and appearance (design 7.12). The workspace's brand color becomes the brand primitives of the token file, with
-// the hover, soft and dark-mode shades derived from it and the text on the accent switched to near-black when white
-// would fall below 4.5:1. The theme and the density come from this device's choice, or else from the workspace.
+// the hover, soft and dark-mode shades derived from it and the text on each accent (day and night), white or near-black, chosen so it
+// is at least 4.5:1 whenever the color allows. The theme and the density come
+// from this device's choice, or else from the workspace.
 import { useSyncExternalStore } from "react";
 import type { S } from "./api";
 
@@ -83,10 +84,14 @@ function fromOklch(color: Oklch): Rgb {
 
 const mix = (a: Rgb, b: Rgb, amount: number): Rgb => [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * amount) as Rgb;
 const WHITE: Rgb = [255, 255, 255];
-const NEAR_BLACK = "#14171f";
+const NEAR_BLACK = "#171717";
+
+/** The text for a color: white when it reads (4.5:1), else whichever of white and the near-black reads better. */
+const readableOn = (color: string): string => (contrast("#ffffff", color) >= 4.5 || contrast("#ffffff", color) >= contrast(NEAR_BLACK, color) ? "#ffffff" : NEAR_BLACK);
 
 /** The brand primitives for a color: the color itself (600), hover (700), the link shade (650), the light tint (50) and
- * the dark-mode shades (300, 200 and the deep tint 900); plus the text on the accent when white would not be readable. */
+ * the dark-mode shades (300, 200 and the deep tint 900); plus the text on the day accent (`--brand-on`) and on the night
+ * accent (`--brand-on-night`), each white or near-black. */
 export function brandTokens(color: string): Record<string, string> | null {
   const rgb = parseHex(color);
   if (!rgb) return null;
@@ -109,7 +114,8 @@ export function brandTokens(color: string): Record<string, string> | null {
     "--brand-200": toHex(fromOklch({ ...calm, l: Math.min(lighter + 0.06, 0.92) })),
     "--brand-900": toHex(fromOklch({ l: 0.3, c: Math.min(base.c * 0.45, 0.09), h: base.h })),
   };
-  if (contrast("#ffffff", toHex(rgb)) < 4.5) tokens["--text-on-accent"] = NEAR_BLACK;
+  tokens["--brand-on"] = readableOn(toHex(rgb));
+  tokens["--brand-on-night"] = readableOn(tokens["--brand-300"]);
   return tokens;
 }
 
@@ -124,7 +130,7 @@ export function accentContrast(color: string): { text: "white" | "dark"; ratio: 
   return { text, ratio, ok: ratio >= 4.5 };
 }
 
-const BRAND_NAMES = ["--brand-600", "--brand-700", "--brand-650", "--brand-50", "--brand-300", "--brand-200", "--brand-900", "--text-on-accent"];
+const BRAND_NAMES = ["--brand-600", "--brand-700", "--brand-650", "--brand-50", "--brand-300", "--brand-200", "--brand-900", "--brand-on", "--brand-on-night"];
 
 /** Sets the brand primitives on the page, or clears them when there is no (valid) brand color. */
 export function applyBrand(color: string | null | undefined, root: HTMLElement = document.documentElement): void {

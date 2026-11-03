@@ -122,7 +122,7 @@ Every row of the host's tracking copy (`docs/project/sweep-04ffc21e-tracking.md`
 | VP03 | Visual B | Type scale v2 | In progress | ◐ Partly | 16/15/13 built; 12px sentence-case group labels; 12px help (V1, V2) | V1–V5 |
 | VP04 | Visual B | Primary discipline | In progress | ◐ Partly | One primary per region guarded; two filled per viewport common (V2) | V1–V5 |
 | VP05 | Visual B | Status and state rows | In progress | ◐ Partly | Header status built; status as tags not dot-and-word; no warn/danger rows (V2, V4) | V1–V5 |
-| VP06 | Visual B | Night elevation and focus | In progress | ◐ Partly | Overlays lift; cards hairline only at night; first-row ring always on (V2) | V1–V5 |
+| VP06 | Visual B | Night elevation and focus | In progress (2026-11-03, change log 312): night surfaces lift level by level (canvas, pane, well and hover, raised) and a pane has a hairline and a faint top light (`web/src/theme/brand.test.ts`: "night surfaces lift", "text on every surface it sits on is AA" in both themes). **Left:** the first-row focus ring that is always on (V2), to be fixed with the row anatomy (VP02) | ◐ Partly | Overlays lift; cards hairline only at night; first-row ring always on (V2) | V1–V5 |
 | VP07 | Visual B | State sheet per screen | To do | ✗ Not built | No state sheets; loading, error, offline, conflict states missing everywhere (V1–V4) | V1–V5 |
 | VP08 | Visual B | Phone shell | To do | ◐ Partly | Tab bar with icons, "+" circle and sheets; rows not stacked; side strip unusable at 390 (V1, V2, V4) | V1–V5 |
 | VP09 | Visual C | Interaction and motion | To do | — Not checkable | Motion and interaction are not visible in captures | V1–V5 |
@@ -132,7 +132,7 @@ Every row of the host's tracking copy (`docs/project/sweep-04ffc21e-tracking.md`
 | VP13 | Visual C | Hit targets | To do | ✗ Not built | 18px circles, 14px "…", 68x20 Remove buttons (V2, V3) | V1–V5 |
 | VP14 | Visual B, C | Mockups v2 then v3 (reviewer) | To do | ◐ In progress | Reviewer: mockups-46 (ten pages plus state sheets), being scored cold | V1–V5 |
 | VP15 | Visual C | Design QA in the build | To do | — Not checkable | Process item; no screenshot comparisons seen | V1–V5 |
-| VP16 | Visual B | The brand in the app | In progress | ◐ Partly | Pills only; tokens, mark, fonts and state colours not built; brand scores 1–1.5 (V1–V4) | V1–V5 |
+| VP16 | Visual B | The brand in the app | In progress (2026-11-03, change log 312): the 4.6 palette is the default, day and night, with state colors of their own hues and side and calendar marks (`web/src/theme/brand.test.ts`: the contrast pairs, "the state colors have hues of their own", "side and calendar colors differ from every state color"); Inter and Fraunces bundled ("the faces"); the mark in the header by the theme in force and as the tab's icon (`web/src/shell/Header.test.tsx`, "the mark follows the theme in force"); the workspace color still replaces the accent ("the workspace's own color still replaces the accent"). Browser test `web/e2e/brand.spec.ts` written, not yet run. **Left:** the mark and name from one product file (P101), the app icon, the brand moments (VP17), and the mockups' component rules | ◐ Partly | Pills only; tokens, mark, fonts and state colours not built; brand scores 1–1.5 (V1–V4) | V1–V5 |
 | VP17 | Visual C | Brand moments | To do | ✗ Not built | No brand moments (V1–V3) | V1–V5 |
 
 ## New items from the re-sweep (README section 3), added by the host

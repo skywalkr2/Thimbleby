@@ -6,6 +6,8 @@
 .titleLine { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
 .title { margin: 0; min-width: 0; font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 h2.title, h3.title { font-size: var(--text-section); line-height: var(--lh-section); }
+/* A page's title (the h1) is the one place the display face is used besides the brand. */
+h1.title { font-family: var(--font-display); font-weight: var(--weight-medium); letter-spacing: -0.01em; }
 .sub { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin-top: var(--space-2); min-width: 0; }

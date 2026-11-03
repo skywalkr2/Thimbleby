@@ -1,28 +1,34 @@
 /* Design tokens for the UI (design 7.12). Three layers: primitives (raw values), semantic roles (what a value is for)
    and component tokens (where it is used). Components read only semantic and component tokens; the workspace's brand
    color overrides the --brand-* primitives at start-up (src/lib/theme.ts). This is the only file allowed to hold raw
-   colors. Every text pair below meets WCAG 2.2 AA in light and dark. */
+   colors. Every text pair below meets WCAG 2.2 AA in light and dark. The default palette is the product's own: warm paper
+   and a burgundy accent by day, near-black surfaces that lift level by level and a brass accent by night. State colors
+   (danger, warn, ok) have hues of their own and are never the accent; side and calendar marks are muted hues that are
+   neither. */
 
 :root {
   /* ---------- 1. Primitives ---------- */
-  /* Neutrals: cool gray, 12 steps */
-  --gray-0: #ffffff;  --gray-25: #f8f9fa; --gray-50: #f3f4f6; --gray-100: #eef0f3; --gray-150: #e1e4e9;
-  --gray-300: #c4c9d2; --gray-450: #878f9d; --gray-550: #636b7b; --gray-650: #525a69; --gray-800: #2a2f39;
-  --gray-900: #171a20; --gray-950: #0e1014;
+  /* Neutrals: warm paper by day (0 to 450), near-black with a faint warmth by night (800 to 950) */
+  --gray-0: #fefdfb;  --gray-25: #f8f5ef; --gray-50: #f6f2ea; --gray-100: #f5f3ee; --gray-150: #e6e1d8;
+  --gray-300: #cfc9bd; --gray-450: #857f74; --gray-550: #6a6a6a; --gray-650: #5c5c5c; --gray-800: #2c3030;
+  --gray-900: #16171a; --gray-950: #0c0d0e;
 
-  /* Brand (overridden from the workspace's brand color). Default: indigo */
-  --brand-600: #3446b5; --brand-700: #28388f; --brand-650: #2e3fa6; --brand-50: #eceffc;
-  --brand-300: #8b98ff; --brand-200: #a9b3ff; --brand-900: #232a52;
+  /* Brand (overridden from the workspace's brand color). Default: burgundy by day, brass by night. 600 is the day accent,
+     300 the night accent; "on" is the text on each. */
+  --brand-600: #741e25; --brand-700: #5e171d; --brand-650: #741e25; --brand-50: #f3ecdf;
+  --brand-300: #e5c78d; --brand-200: #f0d7a6; --brand-900: #251c1e;
+  --brand-on: #fff2d8; --brand-on-night: #2a0c10;
 
-  /* Status hues */
-  --amber-700: #8a4f00; --amber-50: #fff3dc; --amber-300: #f2b65c; --amber-950: #33260f;
-  --red-700: #b3261e;   --red-50: #fdecea;   --red-300: #ff8a80;   --red-950: #3a1a18;
+  /* Status hues: their own, never the brand's */
+  --amber-700: #8a4f00; --amber-50: #fff3dc; --amber-300: #ff9a5c; --amber-950: #2a1d14;
+  --red-700: #b93815;   --red-50: #fbece6;   --red-300: #ff8a75;   --red-950: #331814;
   --green-700: #1b6b44; --green-50: #e6f4ec; --green-300: #7fd3a5; --green-950: #132c1e;
   --yellow-200: #ffe58f;
 
-  /* Type: one system UI family; tabular numbers for dates and counts */
-  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-ui);          /* one family; a brand may set a face here for page titles only */
+  /* Type: Inter for the interface and Fraunces for page titles and brand moments only, both bundled with the app (see
+     main.tsx); the system faces after them are what shows while a face loads and if it cannot. Tabular numbers for dates and counts. */
+  --font-ui: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces Variable", Fraunces, Georgia, "Times New Roman", serif;   /* page titles, setup step titles, the greeting, the name beside the mark */
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
   --text-xs: 12px;   --lh-xs: 16px;      /* pills, keycaps, captions and group headers only: never a paragraph */
@@ -48,9 +54,9 @@
 
   /* Elevation: only floating things get shadows */
   --elev-0: none;
-  --elev-1: 0 1px 2px rgb(16 20 28 / 0.06);
-  --elev-2: 0 4px 12px rgb(16 20 28 / 0.10), 0 1px 3px rgb(16 20 28 / 0.08);       /* menus, popovers */
-  --elev-3: 0 16px 40px rgb(16 20 28 / 0.18), 0 2px 6px rgb(16 20 28 / 0.10);      /* dialogs, drawers, toasts */
+  --elev-1: 0 1px 2px rgb(23 23 23 / 0.06);
+  --elev-2: 0 4px 12px rgb(23 23 23 / 0.10), 0 1px 3px rgb(23 23 23 / 0.08);       /* menus, popovers */
+  --elev-3: 0 12px 32px rgb(23 23 23 / 0.12), 0 2px 6px rgb(23 23 23 / 0.06);      /* dialogs, drawers, toasts */
 
   /* Motion */
   --dur-fast: 120ms; --dur-base: 180ms; --dur-slow: 260ms;
@@ -82,18 +88,18 @@
   --target-icon: 32px;         /* an icon-only button is at least this square */
 
   /* ---------- 2. Semantic roles (light) ---------- */
-  --canvas: #f4f5f7;                 /* page background: close to the panes, which part from it by a soft edge */
+  --canvas: var(--gray-100);         /* page background: close to the panes, which part from it by a soft edge */
   --surface: var(--gray-0);          /* panes, header, sidebar, inputs */
-  --surface-sunk: #f6f7f9;           /* wells, code, expanded detail: a hint of tint, not a slab */
-  --surface-hover: var(--gray-25);
-  --border: #e8eaef;                 /* decorative dividers: they recede */
-  --border-strong: #848c9a;          /* input and control boundaries: 3.4:1 on surface, 3.1:1 on canvas */
-  --text: #1d2230;                   /* 15.9:1 on surface: softer than near-black */
-  --text-muted: #4e5565;             /* 7.5:1 on surface, 7.0:1 on sunk */
-  --text-subtle: var(--gray-550);    /* 4.7:1 on sunk; meta only */
-  --text-on-accent: #ffffff;
+  --surface-sunk: var(--gray-25);    /* wells, code, expanded detail: a hint of tint, not a slab */
+  --surface-hover: var(--gray-50);
+  --border: var(--gray-150);         /* decorative dividers: they recede */
+  --border-strong: var(--gray-450);  /* input and control boundaries: 3.9:1 on surface, 3.6:1 on canvas */
+  --text: #171717;                   /* 17.6:1 on surface */
+  --text-muted: var(--gray-650);     /* 6.6:1 on surface, 6.2:1 on sunk */
+  --text-subtle: var(--gray-550);    /* 5.0:1 on sunk; meta only */
+  --text-on-accent: var(--brand-on);
   --text-on-danger: #ffffff;
-  --btn-border: #cfd4dc;             /* a secondary button's outline: its label names it, so it needs no 3:1 edge */
+  --btn-border: var(--gray-300);     /* a secondary button's outline: its label names it, so it needs no 3:1 edge */
 
   --accent: var(--brand-600);        /* primary buttons, selected nav, links */
   --accent-hover: var(--brand-700);
@@ -103,16 +109,19 @@
   --warn: var(--amber-700);   --warn-soft: var(--amber-50);
   --danger: var(--red-700);   --danger-soft: var(--red-50);
   --ok: var(--green-700);     --ok-soft: var(--green-50);
-  --mark: var(--yellow-200);  --mark-text: #14171f;     /* evidence highlight */
+  --mark: var(--yellow-200);  --mark-text: #171717;     /* evidence highlight */
 
-  /* Calendar marks (the schedule): each is at least 4.5:1 on --surface and 3:1 on --canvas and --surface-sunk (WCAG
-     non-text contrast), in dark too; the calendar's name is always shown beside it. */
-  --cal-blue: #2b63c4; --cal-teal: #0b7a75; --cal-green: #2f7d32; --cal-orange: #b85c00;
-  --cal-red: #c0392b; --cal-pink: #b83280; --cal-purple: #7a4bc0; --cal-gray: #5f6675;
+  /* Side and calendar marks: muted hues, none of them a state color (danger, warn, ok) or the accent, each at least 3:1 on
+     --surface, --canvas and --surface-sunk (WCAG non-text contrast), in dark too. A side or a calendar's name is always
+     shown beside its mark. A calendar takes the next slot of --cal-1 to --cal-8 (the first three are the same hues as
+     the first three sides); a side takes --side-1 to --side-5. */
+  --side-1: #4f6d8f; --side-2: #2f7d72; --side-3: #8a5a8c; --side-4: #7a7a3a; --side-5: #a0703a;
+  --cal-1: var(--side-1); --cal-2: var(--side-2); --cal-3: var(--side-3); --cal-4: var(--side-4); --cal-5: var(--side-5);
+  --cal-6: #a24a78; --cal-7: #5a5fa8; --cal-8: #6c675c;
 
   --focus-gap: var(--surface);
   --focus-ring: var(--accent);
-  --overlay: rgb(14 16 20 / 0.40);
+  --overlay: rgb(23 23 23 / 0.40);
 
   /* ---------- 3. Component tokens ---------- */
   --btn-h: 34px; --btn-h-sm: 30px; --btn-px: 14px; --btn-px-sm: 10px;
@@ -126,7 +135,7 @@
   /* Where day and night differ in shape, not only in color: a pane's edge is a soft shadow by day and a hairline by night,
      and group headers lose their band by day. Type, row titles, buttons and links are the same in both. */
   --pane-border: transparent;
-  --pane-edge: 0 0 0 1px rgb(20 24 34 / 0.05), 0 1px 3px rgb(20 24 34 / 0.05);
+  --pane-edge: 0 0 0 1px rgb(23 23 23 / 0.05), 0 1px 3px rgb(23 23 23 / 0.05);
   --band-bg: transparent; --band-text: var(--text-muted); --band-bottom: 0 solid transparent;
   --row-title-weight: var(--weight-semibold);
   --pill-neutral-bg: transparent; --pill-neutral-edge: inset 0 0 0 1px var(--border);
@@ -137,23 +146,26 @@
   --surface-raised: var(--surface); --overlay-edge: 0 0 0 0 transparent;
   --row-btn-bg: var(--surface); --row-btn-border: var(--btn-border); --row-btn-text: var(--text); --row-btn-hover: var(--surface-sunk);
   --today-tint: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+  /* The product's mark in the header comes in a day and a night version; exactly one is drawn, by the theme in force (the system's,
+     or the person's own choice), through these two. */
+  --mark-day-display: block; --mark-night-display: none;
   color-scheme: light;
 }
 
 /* ---------- Dark ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: var(--gray-950);
+    --canvas: var(--gray-950);        /* each level lifts: canvas, then the panes on it, then wells and hover, then what floats */
     --surface: var(--gray-900);
-    --surface-sunk: #1d2129;
-    --surface-hover: #1b1f26;
+    --surface-sunk: #1c1d20;
+    --surface-hover: #1f2023;
     --border: var(--gray-800);
-    --border-strong: #6f7788;        /* 3.9:1 on surface */
-    --text: #e8ebf1;
-    --text-muted: #a7afbd;
-    --text-subtle: #8d95a5;
-    --text-on-accent: #0c0f22;
-    --text-on-danger: #1c0b0a;
+    --border-strong: #6f7473;        /* 3.8:1 on surface */
+    --text: #f4f4f2;
+    --text-muted: #aaaead;
+    --text-subtle: #8f9392;
+    --text-on-accent: var(--brand-on-night);
+    --text-on-danger: #2a0d08;
     --accent: var(--brand-300);
     --accent-hover: var(--brand-200);
     --accent-text: var(--brand-200);
@@ -162,35 +174,36 @@
     --danger: var(--red-300);   --danger-soft: var(--red-950);
     --ok: var(--green-300);     --ok-soft: var(--green-950);
     --mark: #5e5016; --mark-text: #f4ecc8;
-    --cal-blue: #7fa8f5; --cal-teal: #4fd1c5; --cal-green: #7fd18a; --cal-orange: #f5a455;
-    --cal-red: #f28b82; --cal-pink: #f58ac0; --cal-purple: #b79af2; --cal-gray: #a7afbd;
+    --side-1: #8fb0d6; --side-2: #6fc2b4; --side-3: #c79ac9; --side-4: #bdbd7a; --side-5: #e0b07a;
+    --cal-6: #e58fb8; --cal-7: #a9aef0; --cal-8: #b3ad9f;
     --overlay: rgb(0 0 0 / 0.55);
     --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
-    --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
+    --elev-3: 0 12px 32px rgb(0 0 0 / 0.5);
     --btn-border: var(--border-strong);
-    --pane-border: var(--border); --pane-edge: none;
+    --pane-border: var(--border); --pane-edge: inset 0 1px 0 rgb(255 255 255 / 0.04);   /* a hairline and a faint top light: a card is seen by its surface, not only its edge */
     --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
     --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
-    --surface-raised: #21262f; --overlay-edge: 0 0 0 1px var(--border-strong);
+    --surface-raised: #25262a; --overlay-edge: 0 0 0 1px var(--border-strong);
     --row-btn-bg: var(--accent-soft); --row-btn-border: transparent; --row-btn-text: var(--accent-text); --row-btn-hover: color-mix(in srgb, var(--accent-soft) 78%, var(--accent));
     --today-tint: color-mix(in srgb, var(--accent-soft) 35%, var(--surface));
+    --mark-day-display: none; --mark-night-display: block;
     color-scheme: dark;
   }
 }
 /* The same values as the media block, for the in-app theme choice. */
 :root[data-theme="dark"] {
-  --canvas: var(--gray-950);
+  --canvas: var(--gray-950);        /* each level lifts: canvas, then the panes on it, then wells and hover, then what floats */
   --surface: var(--gray-900);
-  --surface-sunk: #1d2129;
-  --surface-hover: #1b1f26;
+  --surface-sunk: #1c1d20;
+  --surface-hover: #1f2023;
   --border: var(--gray-800);
-  --border-strong: #6f7788;
-  --text: #e8ebf1;
-  --text-muted: #a7afbd;
-  --text-subtle: #8d95a5;
-  --text-on-accent: #0c0f22;
-  --text-on-danger: #1c0b0a;
+  --border-strong: #6f7473;        /* 3.8:1 on surface */
+  --text: #f4f4f2;
+  --text-muted: #aaaead;
+  --text-subtle: #8f9392;
+  --text-on-accent: var(--brand-on-night);
+  --text-on-danger: #2a0d08;
   --accent: var(--brand-300);
   --accent-hover: var(--brand-200);
   --accent-text: var(--brand-200);
@@ -199,19 +212,20 @@
   --danger: var(--red-300);   --danger-soft: var(--red-950);
   --ok: var(--green-300);     --ok-soft: var(--green-950);
   --mark: #5e5016; --mark-text: #f4ecc8;
-  --cal-blue: #7fa8f5; --cal-teal: #4fd1c5; --cal-green: #7fd18a; --cal-orange: #f5a455;
-  --cal-red: #f28b82; --cal-pink: #f58ac0; --cal-purple: #b79af2; --cal-gray: #a7afbd;
+  --side-1: #8fb0d6; --side-2: #6fc2b4; --side-3: #c79ac9; --side-4: #bdbd7a; --side-5: #e0b07a;
+  --cal-6: #e58fb8; --cal-7: #a9aef0; --cal-8: #b3ad9f;
   --overlay: rgb(0 0 0 / 0.55);
   --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
   --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
-  --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
+  --elev-3: 0 12px 32px rgb(0 0 0 / 0.5);
   --btn-border: var(--border-strong);
-  --pane-border: var(--border); --pane-edge: none;
+  --pane-border: var(--border); --pane-edge: inset 0 1px 0 rgb(255 255 255 / 0.04);   /* a hairline and a faint top light: a card is seen by its surface, not only its edge */
   --band-bg: var(--canvas); --band-text: var(--text-subtle); --band-bottom: 1px solid var(--border);
   --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
-  --surface-raised: #21262f; --overlay-edge: 0 0 0 1px var(--border-strong);
+  --surface-raised: #25262a; --overlay-edge: 0 0 0 1px var(--border-strong);
   --row-btn-bg: var(--accent-soft); --row-btn-border: transparent; --row-btn-text: var(--accent-text); --row-btn-hover: color-mix(in srgb, var(--accent-soft) 78%, var(--accent));
   --today-tint: color-mix(in srgb, var(--accent-soft) 35%, var(--surface));
+  --mark-day-display: none; --mark-night-display: block;
   color-scheme: dark;
 }
 

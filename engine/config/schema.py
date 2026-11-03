@@ -2636,7 +2636,8 @@ class BrandSettings(ConfigModel):
         None,
         pattern=r"^#[0-9a-fA-F]{6}$",
         description="The accent color for buttons, links and the selected view. Lighter and darker shades are worked "
-        "out from it; Settings warns when it would be hard to see. Empty uses the app's indigo.",
+        "out from it; Settings warns when it would be hard to see. Empty uses the app's own colors (burgundy by day, "
+        "brass by night).",
         json_schema_extra={"widget": "color"},
     )
     logo: str | None = Field(

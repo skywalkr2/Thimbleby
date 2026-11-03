@@ -709,7 +709,7 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `walkthrough`: `first_promises` (5): how many promises found in the person's own mail the new-start walkthrough's first-result
   screen shows, soonest day first (7.8).
 - `brand`: `color` (`#rrggbb`, picked in Settings; the app works out shades from it and Settings warns in plain words when it
-  would be hard to see; empty uses the app's indigo), `logo` (the name of a PNG, JPEG, WebP or SVG file in the config folder,
+  would be hard to see; empty uses the app's own colors, burgundy by day and brass by night), `logo` (the name of a PNG, JPEG, WebP or SVG file in the config folder,
   which Settings uploads there and names for the person; empty shows the workspace's initials; a name with no such picture
   is refused when saved) and `logo_max_kb` (512, 16 to 4096; files only: the largest picture the upload takes in); demo values in
   both fictional workspaces (change log 304).

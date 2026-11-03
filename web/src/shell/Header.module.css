@@ -11,14 +11,15 @@
 }
 .brand {
   display: flex; align-items: center; gap: var(--space-2); flex: none; min-width: 28px; max-width: 240px;
-  color: var(--text); text-decoration: none; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold);
+  color: var(--text); text-decoration: none; font-size: var(--text-lg); line-height: var(--lh-lg);
   border-radius: var(--radius-md);
 }
 .brand:hover { color: var(--accent-text); }
-.mark, .logo { width: 28px; height: 28px; flex: none; border-radius: var(--radius-md); }
-.mark { display: grid; place-items: center; background: var(--accent); color: var(--text-on-accent); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
-.logo { object-fit: contain; }
-.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logo { width: 28px; height: 28px; flex: none; border-radius: var(--radius-md); object-fit: contain; }
+/* The product's mark has a day and a night version; the theme in force (the system's, or the person's own choice) shows one. */
+.markDay { display: var(--mark-day-display); }
+.markNight { display: var(--mark-night-display); }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); font-weight: var(--weight-medium); letter-spacing: -0.01em; }
 .chip { flex: none; }
 .ask { flex: 1 10000 auto; min-width: 96px; max-width: 640px; }
 .spacer { flex: 1 1 0; min-width: 0; }

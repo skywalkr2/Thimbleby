@@ -1,4 +1,6 @@
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RestartProvider } from "../lib/restart";
@@ -64,12 +66,31 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-test("the brand is a link to Today, named for what it does, with a monogram of the workspace name", () => {
+test("the brand is a link to Today, named for what it does, with the product's mark and the workspace name", () => {
   show();
   const brand = screen.getByRole("link", { name: "Go to Today · Example Workspace" });
   expect(brand).toHaveAttribute("href", expect.stringMatching(/#today$/));
   expect(brand).toHaveTextContent("Example Workspace");
-  expect(brand).toHaveTextContent("EW");
+  // The mark is decorative (the name beside it is the text), and comes in a day and a night version, one drawn at a time.
+  const marks = Array.from(brand.querySelectorAll("img[data-brand-mark]"));
+  expect(marks.map((m) => m.getAttribute("data-brand-mark"))).toEqual(["day", "night"]);
+  for (const mark of marks) expect(mark).toHaveAttribute("alt", "");
+  expect(marks[0].getAttribute("src")).not.toBe(marks[1].getAttribute("src"));
+  expect(marks[0].className).not.toBe(marks[1].className);
+});
+
+test("the mark switches with the theme in force, the person's own choice as well as the system's", () => {
+  const css = readFileSync(join(__dirname, "Header.module.css"), "utf8");
+  expect(css).toMatch(/\.markDay \{ display: var\(--mark-day-display\); \}/);
+  expect(css).toMatch(/\.markNight \{ display: var\(--mark-night-display\); \}/);
+  // The two display tokens are set under the same selectors as the rest of the night values, so the theme menu's choice and the system's both reach them.
+  const tokens = readFileSync(join(__dirname, "..", "theme", "tokens.css"), "utf8");
+  const light = tokens.slice(0, tokens.indexOf("/* ---------- Dark"));
+  const media = tokens.slice(tokens.indexOf('@media (prefers-color-scheme: dark)'), tokens.indexOf(':root[data-theme="dark"] {'));
+  const chosen = tokens.slice(tokens.indexOf(':root[data-theme="dark"] {'), tokens.indexOf("/* ---------- Density"));
+  expect(light).toContain("--mark-day-display: block; --mark-night-display: none;");
+  expect(media).toContain(":root:not([data-theme=\"light\"])");
+  for (const night of [media, chosen]) expect(night).toContain("--mark-day-display: none; --mark-night-display: block;");
 });
 
 test("a workspace with a logo shows the image, found under the API's brand address", () => {
@@ -77,6 +98,8 @@ test("a workspace with a logo shows the image, found under the API's brand addre
   const image = screen.getByRole("link", { name: "Go to Today · Example Workspace" }).querySelector("img")!;
   expect(image).toHaveAttribute("src", "api/brand/logo");
   expect(image).toHaveAttribute("alt", "");
+  // The workspace's own logo wins: the product's mark is not drawn beside it.
+  expect(screen.getByRole("link", { name: "Go to Today · Example Workspace" }).querySelector("[data-brand-mark]")).toBeNull();
 });
 
 test("a demo workspace shows the Demo chip, in words, and others don't", () => {
@@ -200,7 +223,7 @@ test("on a phone only the logo, the status chip and the avatar are in the header
   const brand = within(header).getByRole("link", { name: "Go to Today · Example Workspace" });
   // The name is the link's accessible name; it takes no room on screen.
   expect(brand).not.toHaveTextContent("Example Workspace");
-  expect(brand).toHaveTextContent("EW");
+  expect(brand.querySelector("img[data-brand-mark]")).not.toBeNull();
   await within(header).findByRole("button", { name: /^App status: / });
   expect(within(header).queryByRole("button", { name: /^Helper/ })).toBeNull();
   expect(Array.from(header.querySelectorAll("button, a")).map((el) => el.getAttribute("aria-label") ?? el.textContent)).toHaveLength(3);

@@ -37,9 +37,9 @@ const pairs: Array<[string, string, number]> = [
   ["--text", "--canvas", 14],
   ["--text", "--surface-sunk", 14],
   ["--text", "--accent-soft", 13],
-  ["--text-muted", "--surface", 7],
+  ["--text-muted", "--surface", 6.5],
   ["--text-muted", "--canvas", AA],
-  ["--text-muted", "--surface-sunk", 6.9],
+  ["--text-muted", "--surface-sunk", 6.1],
   ["--text-muted", "--accent-soft", AA],
   ["--text-subtle", "--surface", AA],
   ["--text-subtle", "--canvas", AA],
@@ -75,25 +75,26 @@ test("the parts of a control that must be seen are 3:1: input edges, the focus r
 });
 
 test("the day values are the reviewed ones, and decorative edges stay quiet", () => {
-  expect(light("--text")).toBe("#1d2230");
-  expect(light("--text-muted")).toBe("#4e5565");
-  expect(light("--canvas")).toBe("#f4f5f7");
-  expect(light("--surface-sunk")).toBe("#f6f7f9");
-  expect(light("--border")).toBe("#e8eaef");
-  expect(light("--btn-border")).toBe("#cfd4dc");
+  expect(light("--text")).toBe("#171717");
+  expect(light("--text-muted")).toBe("#5c5c5c");
+  expect(light("--canvas")).toBe("#f5f3ee");
+  expect(light("--surface-sunk")).toBe("#f8f5ef");
+  expect(light("--border")).toBe("#e6e1d8");
+  expect(light("--btn-border")).toBe("#cfc9bd");
   // Dividers and a button outline are decorative or named by their label; neither is used for an input.
   expect(contrast(light("--border"), light("--surface"))).toBeLessThan(1.3);
 });
 
 test("night mode keeps its values and its bordered, banded look; type, row titles and links are the same as by day", () => {
   expect(dark["--canvas"]).toBe("var(--gray-950)");
-  expect(dark["--text"]).toBe("#e8ebf1");
-  expect(dark["--text-muted"]).toBe("#a7afbd");
-  expect(dark["--surface-sunk"]).toBe("#1d2129");
+  expect(dark["--text"]).toBe("#f4f4f2");
+  expect(dark["--text-muted"]).toBe("#aaaead");
+  expect(dark["--surface-sunk"]).toBe("#1c1d20");
   expect(dark["--border"]).toBe("var(--gray-800)");
   expect(dark["--btn-border"]).toBe("var(--border-strong)");
   expect(dark["--pane-border"]).toBe("var(--border)");
-  expect(dark["--pane-edge"]).toBe("none");
+  // A card is seen by its surface and a faint top light as well as its hairline (VP06).
+  expect(dark["--pane-edge"]).toBe("inset 0 1px 0 rgb(255 255 255 / 0.04)");
   expect(dark["--band-bg"]).toBe("var(--canvas)");
   expect(dark["--band-bottom"]).toBe("1px solid var(--border)");
   expect(dark["--pill-neutral-bg"]).toBe("var(--surface-sunk)");

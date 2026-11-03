@@ -24,7 +24,7 @@ export function BrandContrast(props: { color: string }) {
   );
 }
 
-const APP_COLOR = "#3446b5";
+const APP_COLOR = "#741e25";
 
 /** The accent color: the browser's color control, saved when the person is done choosing, and a way back to the app's own. */
 export function ColorControl(props: {
