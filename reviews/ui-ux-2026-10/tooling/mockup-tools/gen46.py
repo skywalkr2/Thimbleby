@@ -95,7 +95,7 @@ rail = f'''
 
 today_head = f'''
 <div class="ph"><div><h1>Good afternoon, Robin</h1><div class="sub">Wednesday, October 28 · <b>4 things need you</b>, starting with one decision</div></div></div>
-<div class="filters"><span class="chip"><span class="k">Side</span><span class="v">All four</span>{ic("chevron", "i s16")}</span><span class="chip"><span class="k">Showing</span>Needs you</span></div>'''
+<div class="filters"><span class="chip"><span class="k">Side</span><span class="v">All sides</span>{ic("chevron", "i s16")}</span><span class="chip"><span class="k">Showing</span>Needs you</span></div>'''
 
 page("today", "Today", today_head + f'<div class="layout">{today_main}{rail}</div>')
 
@@ -119,7 +119,7 @@ clear = '''<div class="panel"><div class="empty"><img class="mk logo-light" src=
 loading = '<div class="panel">' + ''.join(
     f'<div class="row"><div class="lead"><div class="skel" style="width:18px"></div></div><div><div class="skel" style="width:{w}%"></div><div class="skel" style="width:{w-25}%;margin-top:8px;height:10px"></div></div><div></div></div>'
     for w in (62, 48, 70, 55)) + '</div>'
-failing = f'''<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>1 of 3 accounts needs you.</b> studio@calloway.example asked to sign in again, so its mail and calendar haven't been read since 10:51 AM.</div><a class="btn secondary sm">Sign in again</a></div>'''
+failing = f'''<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>1 of 3 accounts needs you.</b> studio@calloway.example asked to sign in again, so its mail and calendar haven't been read since 10:51 AM.</div><a class="btn primary sm">Sign in again</a></div>'''
 offline = f'''<div class="banner"><span class="bi">{ic("refresh")}</span><div class="tx"><b>You're offline.</b> Everything is saved on this computer. Mail last came in at 10:42 AM.</div><a class="btn secondary sm">Try now</a></div>'''
 conflict = f'''<div class="panel" style="margin-top:20px"><div class="row" data-state="warn"><div class="lead" style="color:var(--warn)">{ic("refresh")}</div>
 <div><div class="t">Send the headcount</div><div class="m"><span class="state warn">Changed on your phone just now</span> {SEP} due <b>Thu, Nov 5</b> (was Tue, Nov 3). Your edit here is kept.</div></div>
@@ -141,7 +141,7 @@ def sheet_block(label, html):
     return f'<div style="margin-top:36px"><div class="group" style="padding:0 0 10px">{label}</div>{html}</div>'
 
 
-FAIL_STATUS = f'<span class="status warnpill" aria-label="1 account needs you">{ic("alert", "i s16")}<span class="sl">1 account needs you</span></span>'
+FAIL_STATUS = f'<span class="status warnpill" aria-label="1 account needs you">{ic("alert", "i s16")}<span class="sl">1 account needs you</span><span class="sls">1</span></span>'
 page("today-states", "Today, its states",
      '<div class="ph"><div><h1>Today: its states</h1><div class="sub">The same page in each state a real install meets</div></div></div>'
      + sheet_block("All clear (brand moment)", clear) + sheet_block("Loading (skeleton at row height, no shift)", loading)
@@ -162,7 +162,7 @@ def todo(t, m, state=None, q=False, act=""):
 todos = f'''
 <div class="ph"><div><h1>To-dos and questions</h1><div class="sub"><b>12 open</b> · 1 overdue · 2 due today</div></div></div>
 <div class="tabs"><a class="on">To-dos<span class="n">10</span></a><a>Questions<span class="n">2</span></a><a>Done<span class="n">31</span></a></div>
-<div class="filters"><span class="chip"><span class="k">Who</span><span class="v">Everyone</span>{ic("chevron", "i s16")}</span><span class="chip"><span class="k">Side</span><span class="v">All four</span>{ic("chevron", "i s16")}</span></div>
+<div class="filters"><span class="chip"><span class="k">Who</span><span class="v">Everyone</span>{ic("chevron", "i s16")}</span><span class="chip"><span class="k">Side</span><span class="v">All sides</span>{ic("chevron", "i s16")}</span></div>
 <div class="panel" style="margin-top:16px">
  <div class="inlineadd"><span class="plus">{ic("plus")}</span>Add a to-do… try "call the landlord by Friday"</div>
  <div class="group danger">Overdue <span class="n">1</span></div>
@@ -208,7 +208,7 @@ for d, name in enumerate(days):
         blocks += (f'<div class="calev {k}{" clash" if clash else ""}" style="top:{top_px}px;height:{max(dur * 64, 48)}px;left:{left};width:calc({width} - 4px)">'
                    f'<b>{tt}</b><span>{fmt(st)} · {pl}</span></div>')
     if d == 2:
-        blocks += (f'<div class="calclash" style="top:{6.5 * 64}px;min-height:{1.25 * 64}px"><div class="ch">{ic("alert", "i s16")}Clash · 30 min short</div>'
+        blocks += (f'<div class="calclash" style="top:{6.5 * 64}px;min-height:{1.25 * 64}px"><div class="ch">{ic("alert", "i s16")}Clash</div>'
                    f'<div class="cr"><span class="dot" style="background:var(--cal-3)"></span>2:30 Venue walk-through</div><div class="cr"><span class="dot" style="background:var(--cal-2)"></span>2:45 Budget check-in</div></div>')
     now = '<div class="now" style="top:410px"></div>' if d == 2 else ''
     dn = name.split()[0] + (f' <span class="todaydot">{name.split()[1]}</span>' if d == 2 else " " + name.split()[1])
@@ -244,12 +244,13 @@ def acct(addr, service, sides, parts, fail=False, setup=False):
     status = (f'<span class="state danger">{ic("alert", "i s16")}Needs sign-in since 10:51 AM</span>' if fail else f'<span class="state ok">{ic("check", "i s16")}Connected</span>')
     act = '<a class="btn primary sm">Sign in again</a>' if fail else ''
     return (f'<div class="acct{" fail" if fail else ""}"><div class="hd"><div class="av">{ic("inbox")}</div><div style="min-width:0"><div class="nm">{addr}</div>'
-            f'<div class="sv">{service}{" mail and calendar" if setup else ""} {SEP} {status} {SEP} <span title="Only you can see what it reads">Private to you</span></div><div class="sv" style="margin-top:6px">For {chips} <a class="link" style="font-size:13px">Change</a></div></div><div class="acts" style="display:flex;gap:8px">{act}<a class="more" aria-label="More for {addr}">{ic("more")}</a></div></div>{parts}</div>')
+            f'<div class="sv">{service}{" and calendar" if setup else ""} {SEP} {status} {SEP} <span title="Only you can see what it reads">Private to you</span></div><div class="sv" style="margin-top:6px">For {chips} <a class="link" style="font-size:13px">Change</a></div></div><div class="acts" style="display:flex;gap:8px">{act}<a class="more" aria-label="More for {addr}">{ic("more")}</a></div></div>{parts}</div>')
 
 
 conn = f'''
 <div class="crumb">Settings {ic("chevron", "i s16")}</div>
 <div class="ph"><div><h1>Connections</h1><div class="sub">The mail, calendars and folders Reginald reads. Each one is read only for the sides you pick.</div></div><div class="spacer"></div><a class="btn secondary sm">{ic("plus", "i s16")}Add a connection</a></div>
+<span class="chip show-tablet" style="margin-top:16px"><span class="k">Section</span><span class="v">Connections</span>{ic("chevron", "i s16")}</span>
 <div class="set"><div class="setnav"><div class="h">You</div><a>Profile</a><a>Appearance</a><div class="h">Assistant</div><a>AI and spending</a><a class="on">Connections</a><a>Add-ons</a><div class="h">Your data</div><a>Your sides</a><a>Backups</a><a>Lists</a><div class="h">More</div><a>Notices</a><a>Advanced</a></div>
 <div>
 {acct("studio@calloway.example", "Example mail", [("Calloway Upholstery", "s3"), ("Lantern Row Studio", "s4")],
@@ -286,8 +287,8 @@ person = f'''
 <dt>Phone</dt><dd>+1 555 0142</dd><dt>Sides</dt><dd><span class="sidechip"><span class="dot s3"></span>Calloway Upholstery</span></dd>
 <dt>Birthday</dt><dd>Mar 14</dd></dl></div>
 <div class="card"><h3>Files from Maya <span class="group" style="padding:0"><span class="n">2</span></span><a class="act link">See all</a></h3>
-<div class="ci" style="grid-template-columns:20px 1fr auto"><span style="color:var(--text-muted)">{ic("folder", "i s16")}</span><div><div class="tt">Venue floor plan.pdf</div><div class="mm">From "Venue list" · today</div></div><span></span></div>
-<div class="ci" style="grid-template-columns:20px 1fr auto"><span style="color:var(--text-muted)">{ic("folder", "i s16")}</span><div><div class="tt">Fabric swatches.jpg</div><div class="mm">Oct 20</div></div><span></span></div></div>
+<div class="ci" style="grid-template-columns:36px 1fr auto"><span class="ftag">PDF</span><div><div class="tt">Venue floor plan.pdf</div><div class="mm">From "Venue list" · today</div></div><span></span></div>
+<div class="ci" style="grid-template-columns:36px 1fr auto"><span class="ftag">JPG</span><div><div class="tt">Fabric swatches.jpg</div><div class="mm">Oct 20</div></div><span></span></div></div>
 <div class="card"><h3>Ask about Maya</h3><div class="input" style="color:var(--text-subtle);font-size:14px;padding-right:6px">Ask anything about Maya<span class="spacer"></span><span class="iconbtn" style="width:32px;height:32px;background:var(--accent-soft);color:var(--accent-text)">{ic("send", "i s16")}</span></div></div></div>
 </div>'''
 page("person", "Maya Okafor", person, on="people", tab="more")
@@ -297,7 +298,7 @@ def tile(label, num, delta, good, spark):
     col = "var(--ok)" if good else "var(--danger)"
     bars = ''.join(f'<span style="height:{h}px;background:{"var(--accent)" if i == len(spark) - 1 else "var(--border-strong)"};opacity:{1 if i == len(spark) - 1 else .45}"></span>' for i, h in enumerate(spark))
     return (f'<div class="card tile" style="margin:0"><div style="font-size:13px;color:var(--text-muted)">{label}</div><div style="font:600 32px/40px var(--font-ui);margin-top:6px">{num}</div>'
-            f'<div style="display:flex;align-items:end;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:{col}">{delta}</span><span class="spark">{bars}</span></div></div>')
+            f'<div style="display:flex;align-items:end;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:{col}">{delta}</span></div></div>')
 
 
 quality = f'''
@@ -393,12 +394,12 @@ states_page("todos-states", "To-dos", "todos", [
 ], tab="work")
 states_page("schedule-states", "Schedule", "sched", [
     ("A week with nothing in it", empty("Nothing on this week", "Your three calendars are clear. Add something, or look at next week.", "Next week")),
-    ("One calendar can't be read", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>The Studio calendar isn’t up to date.</b> studio@calloway.example needs you to sign in again. Entries shown are from 10:51 AM.</div><a class="btn secondary sm">Sign in again</a></div>'),
+    ("One calendar can't be read", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>The Studio calendar isn’t up to date.</b> studio@calloway.example needs you to sign in again. Entries shown are from 10:51 AM.</div><a class="btn primary sm">Sign in again</a></div>'),
     ("Three meetings at once", f'<div class="calclash" style="position:relative;max-width:300px"><div class="ch">{ic("alert", "i s16")}3 at once · 2:30 PM</div><div class="cr"><span class="dot" style="background:var(--cal-3)"></span>Venue walk-through</div><div class="cr"><span class="dot" style="background:var(--cal-2)"></span>Budget check-in</div><div class="cr"><span class="dot" style="background:var(--cal-1)"></span>School pickup</div></div>'),
     ("Loading", skel(2)),
 ], tab="sched", status=FAIL_STATUS)
 states_page("connections-states", "Connections", "settings", [
-    ("No accounts yet", empty("Connect your mail and calendar", "Reginald reads only what you connect, and only for the sides you pick.", "Add a connection")),
+    ("No accounts yet", empty("Connect your mail and calendar", "Reginald reads only what you connect, and only for the sides you pick.", "Add a connection").replace("btn secondary sm", "btn primary sm")),
     ("Signing in again", f'<div class="acct"><div class="hd"><div class="av">{ic("inbox")}</div><div><div class="nm">studio@calloway.example</div><div class="sv"><span class="spin"></span>Waiting for the sign-in window…</div></div><div class="acts"><a class="btn secondary sm">Cancel</a></div></div></div>'),
     ("All healthy", acct("robin@example.com", "Example mail", [("Personal", "s1")], part("inbox", "Inbox", "Mail sent to you", "", "Read 5 min ago"))),
 ], status=FAIL_STATUS)
