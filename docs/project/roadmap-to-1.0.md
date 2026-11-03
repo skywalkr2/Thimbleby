@@ -46,7 +46,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   5. **Phase I:** I-0 to I-0d, then I-0p, the public repository (P113), then the installers (I-1), then the tester
      milestone with the first public alpha (I-2).
 - **Open boxes in phases B and S below are not all current.** Several were built under later batches and not ticked.
-  The reconcile happens after U3's fix round, under P125: every open box is checked against the code, then ticked with
+  The reconcile runs in the next free helper slot during U3, under P125: every open box is checked against the code, then ticked with
   its test and moved to `roadmap-done.md`, or kept with what is left.
 - **Held, not dropped:**
   - `includes:` (P62, P39) and the test kit cases P71 and P72 wait for the next plugin API release.
