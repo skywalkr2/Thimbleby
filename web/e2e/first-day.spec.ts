@@ -30,7 +30,8 @@ test.describe("the first day", () => {
         for (const run of emptyRuns(parts)) failures.push(`${screen.name} at ${width}: ${run.join(", ")}`);
       }
     }
-    console.log(rows.join("\n"));
+    // The parts seen on each screen go with the test's report, not the run's output.
+    await test.info().attach("parts on each screen", { body: rows.join("\n"), contentType: "text/plain" });
     expect(failures).toEqual([]);
   });
 
