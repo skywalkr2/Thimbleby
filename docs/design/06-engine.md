@@ -1126,7 +1126,14 @@ the project management pack (6.24), which builds on these links. From the functi
   what is tied, asking whether the plan for it still holds. A drafted correction for someone a tied item already reached
   stays as it was: a `question.add` to that person (open, so it waits for the person; nothing is sent). The run may
   also `note`; the `follow-on-reach` check refuses any other question, and the packet marks every record as outside
-  content. A request whose move was undone or changed again before it runs is closed without a call
+  content. **Repeated edits are one run** (decisions, 2026-11-03): a change that moves a record while a follow-on request
+  about it has not started (`queued`, no run made, not replaced, folded or dismissed) joins that request's `follows_also`
+  instead of queuing another, and the run reads what moved across all its changes, the first value before and the last
+  after; a request already running or finished is never changed. **Nothing tied, no run:** when no record is tied to the
+  moves that still stand the request closes as "Nothing tied to this needed a change." before any packet, estimate or
+  call, and an answer whose only ops are notes is applied as no change (the dispatcher drops them before the applier; a
+  note beside a question stays) and reads the same. A request whose move was undone or changed again before it runs, or
+  whose edits ended where they began, is closed without a call
   (`tests/test_follow_on.py`, listed in the roadmap's L7 item (see roadmap-done.md): `test_no_due_or_text_change_ever_applies_from_a_follow_on_run`,
   `test_an_action_due_between_the_old_and_the_new_day_is_tied_and_one_outside_it_is_not`,
   `test_an_action_due_between_the_old_and_new_day_gets_a_question_to_its_owner_that_waits_and_undoes`,

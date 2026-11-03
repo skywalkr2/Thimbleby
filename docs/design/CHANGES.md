@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 311. One follow-on run for repeated edits, none when nothing is tied, no note from a run with nothing to say (2026-11-03; sweep X72's source)
+
+| Where | Before | Now |
+|---|---|---|
+| Follow-on requests (6.7) | One request per change that moved a day: five edits of one to-do's day queued five | A later change to the same record joins the request that has not started (`follows_also`); the run reads the first value before and the last after, and edits that end where they began close it as stale with no call. **Built** (`tests/test_follow_on.py::test_repeated_edits_to_one_to_do_before_the_run_starts_make_one_request_with_the_first_before_and_last_after`, `::test_edits_that_end_where_they_began_close_the_one_request_as_stale_with_no_call`, `::test_a_request_already_running_is_not_changed_by_a_later_edit`) |
+| A move with nothing tied (6.7) | A run was made and paid for, to say nothing needed a change | Closed as "Nothing tied to this needed a change." before any packet, estimate or call. **Built** (`tests/test_follow_on.py::test_a_move_with_nothing_tied_closes_with_no_packet_no_call_and_nothing_spent`) |
+| A run with only notes (6.7) | Each note was filed (one echoed the run's packet) | The notes are dropped before the applier and the request reads as nothing tied; a note beside a question stays. **Built** (`tests/test_follow_on.py::test_a_run_answering_only_notes_files_none_and_reads_nothing_tied`, `::test_a_run_with_a_question_and_a_note_files_both`; browser: `web/e2e/data-and-trust.spec.ts` "five quick due-date edits…", written, not yet run) |
+| What changed | A follow-on that found nothing to bring in line showed as an "After '…' moved" row | Left out of What changed (`follow_on.closed_quietly`): it changed nothing (test `test_a_follow_on_that_found_nothing_to_bring_in_line_is_left_out_of_what_changed`) |
+
 ## 309. The re-sweep's Today and work screens (2026-11-03; sweep X86 to X93, X14, X24, X44, X69)
 
 - **7.14 Title rule, 04 (`ui.title_words`):** a row's title is short: the first sentence when it fits the configured words, else the

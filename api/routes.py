@@ -202,6 +202,7 @@ from engine import (
     answer_groups,
     catch_up,
     endings,
+    follow_on,
     held_ask,
     learned,
     new_terms,
@@ -1760,6 +1761,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 continue  # mail set aside as not work is listed in the Set aside folder
             if catch_up.waits_on_go(d) or source_intake.waits_on_go(d):
                 continue  # learning runs held for the catch-up list's go, and a new source's intake, are one line
+            if follow_on.closed_quietly(d):
+                continue  # a follow-on that found nothing to bring in line changed nothing
             view = None
             cs = None
             source = sources.get(d.get("source") or "")

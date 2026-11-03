@@ -100,6 +100,17 @@ def queue(tx: Any, cfg: Any, now: str) -> str | None:
     moves = moves_of(tx, changeset_id)
     if not moves:
         return None
+    earlier = _waiting_for(tx, {(m.kind, m.record) for m in moves})
+    if earlier is not None:
+        # Another edit of the same record before the run has started: one run answers the edits together.
+        tx.update(
+            "request",
+            earlier.id,
+            {"follows_also": [*(earlier.data.get("follows_also") or []), changeset_id]},
+            _ENGINE,
+            read_version=earlier.version,
+        )
+        return earlier.id
     data = {
         "task": TASK,
         "about": {"kind": moves[0].kind, "id": moves[0].record},
@@ -112,26 +123,66 @@ def queue(tx: Any, cfg: Any, now: str) -> str | None:
     return tx.create("request", data, _ENGINE).id
 
 
+def changesets_of(request: Mapping[str, Any]) -> list[str]:
+    """The changes a request answers, oldest first: the one it was queued for, then the later edits folded into it.
+    A request made before edits were folded has no list of later ones."""
+    first = request.get("follows")
+    return [*([first] if first else []), *(request.get("follows_also") or [])]
+
+
+def _merged(view: Any, changeset_ids: Iterable[str]) -> dict[tuple[str, str, str], Move]:
+    """For each record and field the given changes touched, in ledger order, the first value before and the last
+    after, whether or not the field ended where it began."""
+    merged: dict[tuple[str, str, str], Move] = {}
+    for changeset_id in changeset_ids:
+        for row in view.changes_of(changeset_id):
+            if not is_move(row["kind"], row["version"], row["field"], row["before"], row["after"], row["op"]):
+                continue
+            key = (row["kind"], row["record_id"], row["field"])
+            first = merged.get(key)
+            merged[key] = Move(
+                row["kind"],
+                row["record_id"],
+                row["field"],
+                first.before if first else row["before"],
+                row["after"],
+                row["actor"],
+            )
+    return merged
+
+
+def _waiting_for(view: Any, records: set[tuple[str, str]]) -> Any | None:
+    """The oldest follow-on request still waiting for its first run (queued, no run made for it, not replaced or folded
+    away) about any of these records, or None. A request already running or finished is never changed."""
+    for req in view.find("request", {"task": TASK, "state": "queued"}):
+        d = req.data
+        if d.get("changeset") or not d.get("follows"):
+            continue
+        if (
+            d.get("superseded_by")
+            or d.get("folded_into")
+            or d.get("dismissed")
+            or view.find("run", {"request": req.id})
+        ):
+            continue
+        touched = _merged(view, changesets_of(d))
+        if any((kind, record) in records for kind, record, _ in touched):
+            return req
+    return None
+
+
 def moves_of(view: Any, changeset_id: str | None) -> list[Move]:
     """The moves a change made, read from its ledger entries: for each record and field, the first value before and the
     last after; a field back where it began is no move."""
     if not changeset_id:
         return []
-    merged: dict[tuple[str, str, str], Move] = {}
-    for row in view.changes_of(changeset_id):
-        if not is_move(row["kind"], row["version"], row["field"], row["before"], row["after"], row["op"]):
-            continue
-        key = (row["kind"], row["record_id"], row["field"])
-        first = merged.get(key)
-        merged[key] = Move(
-            row["kind"],
-            row["record_id"],
-            row["field"],
-            first.before if first else row["before"],
-            row["after"],
-            row["actor"],
-        )
-    return [m for m in merged.values() if m.before != m.after]
+    return [m for m in _merged(view, [changeset_id]).values() if m.before != m.after]
+
+
+def moves_of_request(view: Any, request: Mapping[str, Any]) -> list[Move]:
+    """The moves a request answers, across every change folded into it, in the order they were made: the first value
+    before and the last after, so a field back where it began is no move."""
+    return [m for m in _merged(view, changesets_of(request)).values() if m.before != m.after]
 
 
 def _current(view: Any, move: Move) -> bool:
@@ -144,15 +195,18 @@ def _current(view: Any, move: Move) -> bool:
 
 def skip_reason(store: Any, cfg: Any, request: Mapping[str, Any]) -> str | None:
     """Why a follow-on request has nothing to do any more, in plain words, or None: following is off, the change is
-    gone, or none of its moves still stands."""
+    gone, none of its moves still stands, or nothing is tied to the moves that do."""
     if not cfg.dispatch.knowledge.follow_on:
         return "Following moves is switched off."
     view = store.read()
-    moves = moves_of(view, request.get("follows"))
-    if not moves:
+    merged = _merged(view, changesets_of(request))
+    if not merged:
         return "The change this was for is gone."
-    if not any(_current(view, m) for m in moves):
+    standing = [m for m in merged.values() if m.before != m.after and _current(view, m)]
+    if not standing:
         return STALE
+    if not tied_records(view, cfg, standing):
+        return NOTHING_TIED  # nothing for a run to look at: no packet, no estimate, no call
     return None
 
 
@@ -168,6 +222,28 @@ def close(store: Any, request_id: str, why: str) -> None:
                 _CLOSE,
                 read_version=current.version,
             )
+
+
+def closed_quietly(request: Mapping[str, Any]) -> bool:
+    """Whether a follow-on request ended with nothing to bring in line (nothing tied, or the move no longer stands): it
+    changed nothing, so the list of what changed leaves it out."""
+    return (
+        request.get("task") == TASK
+        and request.get("state") == "done"
+        and request.get("waiting") in (NOTHING_TIED, STALE)
+    )
+
+
+def without_lone_notes(changeset: Any, problems: list[Any]) -> tuple[Any, list[Any]]:
+    """A follow-on answer whose only ops are notes has nothing to say that needs the person: a note says only what a
+    run could not do with a question, and alone it files nothing. Its ops are dropped before the changeset is applied
+    (the changeset then has no ops, so `finish` closes the request), with the problems that were about them. A note
+    beside a question stays, whatever the question's outcome."""
+    ops = changeset.ops
+    if not ops or any(getattr(op, "op", None) != "note" for op in ops):
+        return changeset, problems
+    quiet = changeset.model_copy(update={"ops": [], "summary": NOTHING_TIED})
+    return quiet, [p for p in problems if getattr(p, "op", None) is None]
 
 
 def finish(store: Any, request_id: str, changeset_id: str) -> None:
@@ -391,7 +467,7 @@ def reach_problem(view: Any, cfg: Any, request: Mapping[str, Any], op: Any, peop
         )
     if name != "question.add":
         return None
-    moves = moves_of(view, request.get("follows"))
+    moves = moves_of_request(view, request)
     tied = tied_records(view, cfg, moves)
     to = people.resolve(op.to).person
     if to in {p for t in tied for p in reached(view, t.kind, t.data)}:
@@ -512,7 +588,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     from engine.prompts import render
 
     view = store.read()
-    moves = moves_of(view, req.data.get("follows"))
+    moves = moves_of_request(view, req.data)
     if not moves:
         raise PacketRefused("the change this was for is gone")
     people = People(store, cfg)

@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: A date edited again before the follow-on run starts is one run, a move with nothing tied starts none, and a run whose only ops are notes files nothing (X72's source; section 311)
+
+**Decided:** (1) Edits to one record before its follow-on run starts make one request: when a changeset moves a dated field and
+a follow-on request about the same record is still `queued` (no run made for it, not replaced, folded or dismissed), the
+changeset joins that request's new `follows_also` list (`follows` stays the first change; a request made before has no list and
+reads as before). What it answers is read across all its changes in ledger order: the first value before, the last after, so a
+field back where it began is no move and the request closes as `STALE` with no call. A request already running, in review or done
+is never changed; a later edit queues its own. (2) A request whose moves still stand but that has nothing tied to them (found by
+code) closes as `NOTHING_TIED` before any packet, estimate or call, so nothing is spent. (3) A follow-on answer whose only ops are
+notes is applied as no change: the dispatcher drops them (and the problems about them) before the applier, the request reads
+`NOTHING_TIED`, and a note beside a question or drafted correction stays. *Why:* the reviewer's re-sweep found five edits of one
+to-do's day made five runs and five notes, one of them echoing the run's packet; a note on its own is only a run saying it has
+nothing to ask, and no run should cost money or the person's attention for that. *Impact:* one new field on the request record
+(`follows_also`, so `docs/plugin-guide.md` is regenerated), no setting, no API model changed, no new op; the applier's checks are unchanged. Change log: section 311.
+
 ## 2026-11-03: The re-sweep's Today and work screens: short titles, one count, one question, the band and the wrap-up told straight, setup said on Today, a phone that shows every word, accounts named as people know them (X86 to X93, X14, X24, X44, X69, and the open rows of these screens; section 309)
 
 **Decided:** (1) X86: a row's title is short, by `ui.title_words` (default 12): the first sentence when it fits, else the first

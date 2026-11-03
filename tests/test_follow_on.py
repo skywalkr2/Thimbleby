@@ -702,3 +702,113 @@ def test_an_answer_with_no_change_finishes_the_request_and_a_move_undone_before_
     closed = store.read().get("request", second.id).data
     assert (closed["state"], closed["waiting"]) == ("done", follow_on.STALE)
     assert not store.read().list("run")[1:]  # no call was made for it
+
+
+# ---- one run for repeated edits, no run when nothing is tied, no note from a run with nothing to say ---------------
+
+
+def edit_days(env, action: str, days: list[str]) -> list[str]:
+    return [edit(env, "action", action, due=day) for day in days]
+
+
+def calls_made(store) -> int:
+    return len(store.read().list("run"))
+
+
+def test_repeated_edits_to_one_to_do_before_the_run_starts_make_one_request_with_the_first_before_and_last_after(env):
+    _, _, store = env
+    action = make(store, "action", due=OLD)
+    days = ["2026-10-23", NEW, "2026-10-25", "2026-10-26", "2026-10-27"]
+    changesets = edit_days(env, action, days)
+    (queued,) = follow_ons(store)
+    assert queued.data["follows"] == changesets[0]
+    assert queued.data["follows_also"] == changesets[1:]
+    assert follow_on.changesets_of(queued.data) == changesets
+    (move,) = follow_on.moves_of_request(store.read(), queued.data)
+    assert (move.kind, move.record, str(move.before), str(move.after)) == ("action", action, OLD, days[-1])
+    # one change alone still reads as before, and an old request with no list of later ones stays readable
+    assert [str(m.after) for m in follow_on.moves_of(store.read(), changesets[0])] == [days[0]]
+    assert follow_on.changesets_of({"follows": "CS-1"}) == ["CS-1"]
+
+
+def test_a_later_edit_of_another_record_queues_its_own_request(env):
+    _, _, store = env
+    first, second = make(store, "action", due=OLD), make(store, "action", due=OLD)
+    edit(env, "action", first, due=NEW)
+    edit(env, "action", second, due=NEW)
+    assert len(follow_ons(store)) == 2
+    assert all(not r.data["follows_also"] for r in follow_ons(store))
+
+
+def test_edits_that_end_where_they_began_close_the_one_request_as_stale_with_no_call(env):
+    _, _, store = env
+    action = make(store, "action", due=OLD)
+    edit_days(env, action, ["2026-10-23", NEW, "2026-10-25", "2026-10-26", OLD])
+    (queued,) = follow_ons(store)
+    assert follow_on.moves_of_request(store.read(), queued.data) == []
+    asked = scripted({"summary": "never asked", "ops": []})
+    assert run(env, queued.id) is None
+    closed = store.read().get("request", queued.id).data
+    assert (closed["state"], closed["waiting"]) == ("done", follow_on.STALE)
+    assert asked == [] and calls_made(store) == 0
+
+
+def test_a_move_with_nothing_tied_closes_with_no_packet_no_call_and_nothing_spent(env):
+    _, _, store = env
+    action = make(store, "action", due=OLD)
+    edit(env, "action", action, due=NEW)
+    (queued,) = follow_ons(store)
+    assert tied(env, queued.id) == {}
+    asked = scripted({"summary": "never asked", "ops": []})
+    assert run(env, queued.id) is None
+    closed = store.read().get("request", queued.id).data
+    assert (closed["state"], closed["waiting"]) == ("done", follow_on.NOTHING_TIED)
+    assert closed["attempts"] == 0 and closed.get("changeset") is None
+    assert asked == [] and calls_made(store) == 0 and not store.read().list("note")
+
+
+def note_op(text: str = "Nothing here needs a change.") -> dict:
+    return {"op": "note", "text": text, "project": PROJECT["id"]}
+
+
+def test_a_run_answering_only_notes_files_none_and_reads_nothing_tied(env):
+    _, _, store = env
+    _, _, queued = moved_entry(env)
+    scripted({"summary": "Noted what I saw.", "ops": [note_op(), note_op("Another thing.")]})
+    cs_id = run(env, queued.id)
+    assert store.read().get("changeset", cs_id).data["ops"] == []
+    assert store.read().list("note") == []
+    done = store.read().get("request", queued.id).data
+    assert (done["state"], done["waiting"]) == ("done", follow_on.NOTHING_TIED)
+
+
+def test_a_run_with_a_question_and_a_note_files_both(env):
+    _, _, store = env
+    _, action, queued = moved_entry(env)
+    scripted({"summary": "Asked the owner.", "ops": [ask_date(OWNER, action), note_op("One more thing to know.")]})
+    cs_id = run(env, queued.id)
+    assert statuses_of(store, cs_id) == ["applied", "applied"]
+    made = [r["kind"] for o in store.read().get("changeset", cs_id).data["ops"] for r in o["records"]]
+    assert sorted(made) == ["note", "question"]
+    assert store.read().get("request", queued.id).data["state"] == "review"
+
+
+def test_a_request_already_running_is_not_changed_by_a_later_edit(env):
+    _, _, store = env
+    action = make(store, "action", due=OLD)
+    first = edit(env, "action", action, due=NEW)
+    (queued,) = follow_ons(store)
+    with store.transaction() as tx:
+        tx.update("request", queued.id, {"state": "running"}, _PM, read_version=queued.version)
+    second = edit(env, "action", action, due="2026-10-30")
+    running, later = sorted(follow_ons(store), key=lambda r: r.data["created_at"] + r.id)
+    assert (running.id, running.data["follows"], running.data["follows_also"]) == (queued.id, first, [])
+    assert later.data["follows"] == second and later.data["state"] == "queued"
+
+
+def test_a_follow_on_that_found_nothing_to_bring_in_line_is_left_out_of_what_changed():
+    assert follow_on.closed_quietly({"task": follow_on.TASK, "state": "done", "waiting": follow_on.NOTHING_TIED})
+    assert follow_on.closed_quietly({"task": follow_on.TASK, "state": "done", "waiting": follow_on.STALE})
+    assert not follow_on.closed_quietly({"task": follow_on.TASK, "state": "queued", "waiting": follow_on.NOTHING_TIED})
+    assert not follow_on.closed_quietly({"task": follow_on.TASK, "state": "done", "waiting": "Applied"})
+    assert not follow_on.closed_quietly({"task": "notes", "state": "done", "waiting": follow_on.NOTHING_TIED})

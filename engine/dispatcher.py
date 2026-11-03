@@ -468,6 +468,8 @@ def process(
         _set(store, request_id, task="ask", state="queued", waiting="With the assistant, starting now")
         return None
     changeset = changeset.model_copy(update={"ops": localize_ops(changeset.ops, cfg)})
+    if kind.name == follow_on.TASK:
+        changeset, problems = follow_on.without_lone_notes(changeset, problems)
     if kind.name == "notes":
         # A booking the input carries as structured data becomes the app's own calendar entry, by rules.
         changeset = booking_entries.add_to(changeset, cfg, store.read(), ctx.inputs.raw_input)

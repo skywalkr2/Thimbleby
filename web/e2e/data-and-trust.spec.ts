@@ -289,3 +289,35 @@ test("removing the account the assistant's work runs on asks first, and Today of
   await expect(page.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add an AI account" }).first()).toBeVisible(LOADED);
 });
+
+test("five quick due-date edits to one to-do leave one What changed row of the edits and no note from a follow-on run", async ({ page }) => {
+  test.setTimeout(180_000);
+  const stamp = Date.now() % 100_000;
+  const text = `Send the headcount ${stamp}.`;
+  const todo = await theTodo(page, text);
+  await page.goto("?token=e2e-token");
+  // Five edits of the day, one after another, as fast as a person can save them.
+  let version = todo.version;
+  const days = [3, 4, 5, 6, 7].map(ahead);
+  for (const day of days) {
+    const saved = await page.request.post("api/records/edit", { headers: AUTH, data: { kind: "action", id: todo.id, fields: { due: day }, read_version: version } });
+    expect(saved.ok(), await saved.text()).toBe(true);
+    version = ((await (await page.request.get(`api/record?kind=action&id=${todo.id}`, { headers: AUTH })).json()) as { version: number }).version;
+  }
+  type Row = { id: string; state: string; follows: string | null; edits?: Array<{ id: string }>; changeset: { ops: Array<{ op: string }> } | null };
+  const rows = async () => (await (await page.request.get("api/changes", { headers: AUTH })).json()) as Row[];
+  // The assistant's follow-on work settles: nothing is tied to a to-do's day, so it closes without a run.
+  await expect.poll(async () => (await rows()).every((r) => !["queued", "running"].includes(r.state)), { timeout: 60_000, message: "the follow-on work settled" }).toBe(true);
+  const all = await rows();
+  const own = all.filter((r) => (r.edits ?? []).length > 1);
+  expect(own.some((r) => (r.edits ?? []).length === days.length), "the five edits are one row").toBe(true);
+  const followOns = all.filter((r) => r.follows !== null);
+  expect(followOns.length, "at most one follow-on outcome for the five edits").toBeLessThanOrEqual(1);
+  for (const row of followOns) expect(row.changeset?.ops.some((o) => o.op === "note") ?? false, "the follow-on filed no note").toBe(false);
+  const notes = (await (await page.request.get("api/notes", { headers: AUTH })).json()) as Array<{ text: string }>;
+  expect(notes.filter((n) => n.text.includes(text) || n.text.includes("What moved")), "no note repeats what the run was sent").toEqual([]);
+  // On the screen: one row of the person's edits, "You changed … 5 times".
+  await openScreen(page, "work/changed");
+  await expect(page.getByText(`You changed Send the headcount ${stamp}`).first()).toBeVisible(LOADED);
+  await expect(page.getByText(`${days.length} times`).first()).toBeVisible(LOADED);
+});

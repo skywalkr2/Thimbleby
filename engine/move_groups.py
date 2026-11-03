@@ -83,7 +83,7 @@ def group(view: Any, people: Any, here: ZoneInfo, lines: list[Any], make_line: A
         request = view.get("request", request_id) if request_id else None
         if request is None or request.data.get("task") != follow_on.TASK:
             continue
-        moves = follow_on.moves_of(view, request.data.get("follows"))
+        moves = follow_on.moves_of_request(view, request.data)
         if not moves:
             continue
         asked[line.question] = (request, moves[0])

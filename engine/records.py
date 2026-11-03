@@ -1554,6 +1554,11 @@ class Request(Record):
         description="The change (a changeset id) whose event a plugin answered with this work, or whose moved date or "
         "replaced fact a follow-on run answers, if any.",
     )
+    follows_also: list[str] = Field(
+        default_factory=list,
+        description="For a follow-on run: the later changes to the same records that were folded into it before it "
+        "started, oldest first, so one run answers them all; `follows` is the first.",
+    )
     sensitivity: Literal["open", "internal", "restricted"] | None = Field(
         None, description="How sensitive the person said what they handed in is; it only ever raises the level."
     )
@@ -3018,6 +3023,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("changeset", "changeset"),
         ("previous", "request"),
         ("follows", "changeset"),
+        ("follows_also[]", "changeset"),
         ("folded_into", "request"),
         ("superseded_by", "request"),
         ("may_answer[]", "action"),
