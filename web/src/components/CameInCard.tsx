@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { todayOn, wallTime, weekday } from "../lib/dates";
+import { clockDay, clockTime, todayOn, weekday } from "../lib/dates";
 import { useSetAside } from "../lib/set-aside";
 import { useSides } from "../lib/sides";
 import { anyReading } from "../lib/sources";
@@ -98,7 +98,7 @@ export function useCameInCard(onAddSource?: () => void): { settled: boolean; dra
       : [{ id: "personal", label: t("setaside.personal"), run: () => void isPersonal(mail) }];
   };
   const sourceName = useSourceNames(items.map((m) => m.source));
-  const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
+  const received = (iso: string) => (clockDay(iso) === today ? clockTime(iso) : weekday(clockDay(iso)));
   const settled = !arrived.isPending && !watch.isPending;
   // A source that reads mail is connected: the card is there to read it now, even when nothing came in.
   const connected = !!watch.data && watch.data.some((s) => s.enabled && (s.reads ?? ["mail"]).includes("mail"));

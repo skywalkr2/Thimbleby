@@ -9,6 +9,8 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { reachWords } from "../lib/knowledge";
 import { reachChoices, useReachNames, useReachWords, type ReachChoice } from "../lib/reach";
+import { plainDates } from "../lib/read";
+import { useReadable } from "../lib/readable";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -126,7 +128,7 @@ export function ProposalEvidence(props: { p: Proposal }) {
   if (!quote) return null;
   return (
     <p className={styles.evidence}>
-      {t("learned.evidence")} <q>{quote}</q>
+      {t("learned.evidence")} <q>{plainDates(quote)}</q>
       {p.trust === "untrusted" && (
         <>
           {" "}
@@ -141,11 +143,12 @@ export function ProposalEvidence(props: { p: Proposal }) {
  * overlaps nothing. */
 export function ProposalOverlap(props: { p: Proposal }) {
   const { t } = useWords();
+  const readable = useReadable();
   const twin = props.p.overlaps_with;
   if (!twin) return null;
   return (
     <p className={styles.evidence} data-overlaps={twin.id}>
-      {t("learned.overlaps")} <a href={entryHref(twin)}>{twin.text}</a> · {t(twin.status === "active" ? "learned.overlaps.kept" : "learned.overlaps.waiting")}
+      {t("learned.overlaps")} <a href={entryHref(twin)}>{readable(twin.text)}</a> · {t(twin.status === "active" ? "learned.overlaps.kept" : "learned.overlaps.waiting")}
     </p>
   );
 }
@@ -222,11 +225,12 @@ export function ProposalForms(props: { p: Proposal; state: ReturnType<typeof use
 function ProposalLine(props: { p: Proposal }) {
   const { t, tn } = useWords();
   const { p } = props;
+  const readable = useReadable();
   const state = useProposal(p);
   return (
     <div className={styles.line} data-learned={p.id}>
       <p className={styles.said}>
-        <span className={styles.label}>{t("learned.label")}</span> {p.text}
+        <span className={styles.label}>{t("learned.label")}</span> {readable(p.text)}
       </p>
       <ProposalEvidence p={p} />
       <ProposalOverlap p={p} />
@@ -259,11 +263,12 @@ function KeptLine(props: { line: S["LearnedLine"] }) {
   const { t } = useWords();
   const act = useAct();
   const { line } = props;
+  const readable = useReadable();
   const undo = line.undo;
   return (
     <div className={styles.line} data-learned={line.proposal?.id}>
       <p className={styles.said}>
-        <span className={styles.label}>{t("learned.label")}</span> {line.proposal?.text}
+        <span className={styles.label}>{t("learned.label")}</span> {readable(line.proposal?.text)}
       </p>
       {undo && (
         <div className={styles.acts}>

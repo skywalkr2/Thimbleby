@@ -36,6 +36,7 @@ from engine import (
     sides,
     signature_contact,
     singling_out,
+    stale_day,
     standing_yes,
 )
 from engine import agenda as agenda_module
@@ -943,12 +944,21 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         "accepted is no action",
                     )
                 )
-            same = _same_promise(view, ctx, op)
+            # The same input read again (a re-run after one item was sent back) gives the items already kept once more:
+            # applying it folds each into its open item, so there is nothing to ask about it.
+            again = (
+                ctx.inputs.source is not None
+                and _identical_open(
+                    view, op, ctx.inputs.source, _due(view, ctx, ctx.inputs.source, op.due_words, op.due)[0], ctx
+                )
+                is not None
+            )
+            same = None if again else _same_promise(view, ctx, op)
             if same is not None and ctx.actor != "pm":
                 due, _ = _due(view, ctx, ctx.inputs.source, op.due_words, op.due)
                 if not _exact_repeat(same, op, ctx.inputs.source, due, ctx):
                     lint(i, "near-duplicate-promise", _looks_like_promise(same, ctx))
-            for existing in [] if same is not None else known_actions:
+            for existing in [] if same is not None or again else known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
                     state = {"done": "done action", "dropped": "dropped action"}.get(
                         existing.data["status"], "open action"
@@ -1586,6 +1596,18 @@ def _exact_repeat(existing: Any, op: ActionAddOp, source: str | None, due: date 
     )
 
 
+def _identical_open(view: Any, op: ActionAddOp, source: str | None, due: date | None, ctx: Context) -> Any | None:
+    """The open (or waiting for an owner) action the same input already made from the same words and quoted passage, or
+    None. Found by what it is, whoever owns it and whoever it is owed to: a to-do with no one it is promised to is
+    repeated in the same way as one that has someone."""
+    if source is None:
+        return None
+    for existing in view.list("action"):
+        if existing.data["status"] in ("open", "held") and _exact_repeat(existing, op, source, due, ctx):
+            return existing
+    return None
+
+
 def _looks_like_promise(existing: Any, ctx: Context) -> str:
     """What the assistant is told when a new promise looks like an open one: the open promise, and the two ways to
     answer."""
@@ -2084,7 +2106,19 @@ def edit_record(store: Store, tx: Tx, op: Any, w: WriteContext) -> None:
         from engine import sides
 
         fields = sides.person_write(tx, store.plugins.cfg, fields)[0]  # `side` and `sides` are kept in step
+    before_due = None
+    if op.record.kind == "action" and "due" in fields and "text" not in fields:
+        was = tx.get("action", op.record.id)
+        before_due = was.data.get("due") if was is not None else None
     tx.update(op.record.kind, op.record.id, fields, w, read_version=op.read_version)
+    if before_due is not None and fields["due"] != before_due:
+        # The words that ended in the old day lose it: the new due date alone says the day. Written under its own op
+        # name, so it is not counted as the person correcting the assistant's wording.
+        now = tx.get("action", op.record.id)
+        tidied = stale_day.without_day(now.data["text"], str(before_due))
+        if tidied != now.data["text"]:
+            own = replace(w, op="record.tidy" + (f"#{w.op.partition('#')[2]}" if "#" in w.op else ""))
+            tx.update("action", op.record.id, {"text": tidied}, own, read_version=now.version)
     if "name" in fields:
         from engine.organizations import keep_names_together
 
@@ -4156,8 +4190,8 @@ def _apply_op(
         due_event = placed if op.due_at_event and placed else None
         if due_event:
             due, check = _event_day(tx, due_event), False
-        same = _same_promise(tx, ctx, op)
-        if same is not None and _exact_repeat(same, op, source, due, ctx):
+        same = _identical_open(tx, op, source, due, ctx)
+        if same is not None:
             _merge_promise(tx, same, op, ctx, w, due, check, ev, today, source)
             made("action", same.id)
             return touched, None

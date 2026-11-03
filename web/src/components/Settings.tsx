@@ -50,6 +50,7 @@ import {
   useAfterSave,
 } from "../lib/settings-save";
 import { handOffSearch, takeSearch } from "../lib/settings-search";
+import { readUnsaved, writeUnsaved } from "../lib/settings-pending";
 import { placesFound, type Place } from "../lib/settings-find";
 import { accountName } from "../lib/ai-accounts";
 import { useAddonName } from "../lib/addon-names";
@@ -300,6 +301,9 @@ export function Settings(props: {
   }>({ lines: [], time: "" });
   const editsNow = useRef(edits);
   editsNow.current = edits;
+  // The settings whose saves are waiting or under way, for the "Saving…" cue, and the moment after the last one finished.
+  const [saving, setSaving] = useState<string[]>([]);
+  const [justSaved, setJustSaved] = useState(false);
   const content = useRef<HTMLDivElement>(null);
 
   const canList = useFolderListing(everything.some((i) => i.picker));
@@ -364,6 +368,29 @@ export function Settings(props: {
     rememberFingerprint(client, settings.data.fingerprint);
   }, [client, settings.data, settings.isFetching]);
 
+  // Typed values the saves have not yet answered are kept for the tab: a reload brings them back and saves them.
+  const [kept, setKept] = useState(false);
+  useEffect(() => {
+    if (!kept) return;
+    writeUnsaved(edits);
+  }, [kept, edits]);
+  useEffect(() => {
+    const flush = () => {
+      if (kept) writeUnsaved(editsNow.current);
+    };
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+    };
+  }, [kept]);
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = window.setTimeout(() => setJustSaved(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [justSaved]);
+
   const draftOf = (item: Item): Draft =>
     item.key in edits ? edits[item.key] : toDraft(item);
   const edit = (key: string, draft: Draft) => {
@@ -373,8 +400,22 @@ export function Settings(props: {
 
   // Saves go one at a time, each on the fingerprint the one before answered with.
   const chain = useRef<Promise<unknown>>(Promise.resolve());
-  const enqueue = (run: () => Promise<void>) => {
-    chain.current = chain.current.then(run, run);
+  const enqueue = (run: () => Promise<boolean | void>, keys: string[] = []) => {
+    setSaving((all) => [...all, ...keys]);
+    setJustSaved(false);
+    const done = async () => {
+      const saved = await run();
+      setSaving((all) => {
+        const next = [...all];
+        for (const k of keys) {
+          const at = next.indexOf(k);
+          if (at >= 0) next.splice(at, 1);
+        }
+        if (next.length === 0 && saved === true) setJustSaved(true);
+        return next;
+      });
+    };
+    chain.current = chain.current.then(done, done);
   };
   const drop = (key: string, sent?: Draft) =>
     setEdits((all) => {
@@ -388,10 +429,10 @@ export function Settings(props: {
     key: string,
     body: { changes?: Record<string, unknown>; reset?: string[] },
     sent?: Draft,
-  ) => {
+  ): Promise<boolean> => {
     const view = client.getQueryData<S["SettingsView"]>(["settings"]);
     const fingerprint = knownFingerprint(client, view?.fingerprint);
-    if (!view || !fingerprint) return;
+    if (!view || !fingerprint) return false;
     setProblems((all) => ({ ...all, [key]: "" }));
     try {
       const saved = await api.saveSettings({
@@ -421,7 +462,10 @@ export function Settings(props: {
       );
       drop(key, sent);
       setRefreshed({ lines: [], time: "" });
-      await afterSave(saved);
+      // The refresh of what the save changed is not waited for: the next save goes on at once, on the fingerprint this one
+      // answered with.
+      void afterSave(saved);
+      return true;
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         // Out of date: load again. What the person didn't touch takes what is saved now and is listed; what they
@@ -450,7 +494,7 @@ export function Settings(props: {
             [key]: t("settings.changed_since_opened"),
           }));
         }
-        return;
+        return false;
       }
       // A refused value says what is allowed beside its field, naming the field by the label its screen shows.
       const refused =
@@ -461,6 +505,7 @@ export function Settings(props: {
         ...all,
         [key]: refused ?? (err instanceof ApiError && err.detail ? err.detail : problemText(err, t)),
       }));
+      return false;
     }
   };
 
@@ -484,25 +529,51 @@ export function Settings(props: {
         drop(item.key, draft);
         return;
       }
-      await save(item.key, { changes: { [item.key]: parsed.value } }, draft);
-    });
+      return save(item.key, { changes: { [item.key]: parsed.value } }, draft);
+    }, [item.key]);
   };
+
+  // What was typed and not yet saved when the tab was last left comes back, and is saved.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !settings.data) return;
+    restored.current = true;
+    const stored = readUnsaved();
+    const back: Edits = {};
+    // In the order they were typed, since one limit may be refused above another that is typed after it.
+    const found: Item[] = [];
+    for (const [key, draft] of Object.entries(stored)) {
+      const item = settings.data.items.find((i) => i.key === key);
+      if (item && draft !== toDraft(item)) {
+        back[key] = draft;
+        found.push(item);
+      }
+    }
+    setKept(true);
+    if (found.length === 0) return;
+    setEdits(back);
+    for (const item of found) commit(item, back[item.key]);
+    // Once, when the settings first load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.data]);
 
   const reset = (item: Item) => {
     drop(item.key);
     enqueue(async () => {
-      await save(item.key, { reset: [item.key] });
+      const saved = await save(item.key, { reset: [item.key] });
       document.getElementById(`setting-${item.key}`)?.focus();
-    });
+      return saved;
+    }, [item.key]);
   };
 
   /** Puts several settings of one row back to their defaults in one save, so one toast reads it back with its Undo. */
   const resetMany = (items: Item[]) => {
     for (const item of items) drop(item.key);
     enqueue(async () => {
-      await save(items[0].key, { reset: items.map((i) => i.key) });
+      const saved = await save(items[0].key, { reset: items.map((i) => i.key) });
       document.getElementById(`setting-${items[0].key}`)?.focus();
-    });
+      return saved;
+    }, items.map((i) => i.key));
   };
 
   // With one side, the words that mean it are named for it, by the name of its project.
@@ -529,6 +600,7 @@ export function Settings(props: {
         commit={(draft) => commit(item, draft)}
         onReset={() => reset(item)}
         problem={problems[item.key]}
+        saving={saving.includes(item.key)}
         beside
         disabled={false}
         depth={depthOf(item, everything)}
@@ -839,6 +911,9 @@ export function Settings(props: {
           results()
         ) : (
           <>
+            <p className="hint save-status" role="status" data-save-status="">
+              {saving.length > 0 ? t("settings.saving") : justSaved ? t("settings.saved_status") : ""}
+            </p>
             <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
             {loaded && wanted !== section && (
               <p className="hint" role="status" data-not-available="">

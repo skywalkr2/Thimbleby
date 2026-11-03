@@ -251,6 +251,7 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .merged-controls { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; }
 .merged-controls select { width: auto; max-width: 100%; }
 .setting-label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+.save-status { min-height: 1.5em; margin: 0 0 var(--space-2); }
 .setting-changed { font-size: var(--text-sm); color: var(--text-muted); white-space: nowrap; }
 .setting-changed .link-button { font-size: var(--text-sm); }
 .setting-help { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }

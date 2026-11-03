@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, sinceDay, time, todayOn, whenText } from "./dates";
+import { clockDay, clockTime, dayAndTime, inputOn, isAfternoon, momentOf, nextMonday, onTheClock, setClockZone, sinceDay, time, todayOn, whenText } from "./dates";
 
 test("the coming Monday is never the day itself: a Monday holds for the Monday a week on", () => {
   // The 19th of October is a Monday in this year.
@@ -88,4 +88,16 @@ test("the afternoon starts at the configured hour on the person's clock", () => 
   expect(isAfternoon(at(2, 59), 12)).toBe(false);
   expect(isAfternoon(at(3), 12)).toBe(true);
   setClockZone(undefined);
+});
+
+test("a date-time with an offset is moved to the person's clock, and one with none is already theirs", () => {
+  process.env.TZ = "UTC";
+  setClockZone("America/Los_Angeles");
+  expect(clockTime(MOMENT)).toBe("7:37 AM");
+  expect(clockTime("2026-10-28T14:37:00+00:00")).toBe("7:37 AM");
+  expect(clockTime("2026-10-28T09:05:00-07:00")).toBe("9:05 AM");
+  expect(clockTime("2026-10-28T14:37:00")).toBe("2:37 PM");
+  expect(clockDay("2026-10-29T03:00:00Z")).toBe("2026-10-28");
+  expect(clockDay("2026-10-29T03:00:00")).toBe("2026-10-29");
+  expect(clockDay("2026-10-29")).toBe("2026-10-29");
 });

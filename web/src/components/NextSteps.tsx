@@ -8,6 +8,7 @@ import { useAct } from "../lib/act";
 import { projectChoices } from "../lib/project-choices";
 import { PlaceOptions } from "./PlaceOptions";
 import { useRowKeys } from "../lib/keys";
+import { plainDates } from "../lib/read";
 import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
@@ -188,7 +189,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
         {op.meta.note && <div className="hint">{op.meta.note}</div>}
         {op.evidence && (
           <div className="because">
-            {t("op.because")} <q>{op.evidence.quote}</q>
+            {t("op.because")} <q>{plainDates(op.evidence.quote)}</q>
           </div>
         )}
       </div>

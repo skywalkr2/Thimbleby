@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 307. The re-sweep's data-and-trust items (2026-11-03; X71, X01, X75, X16, X73, X37, X38, X72, X74, X76, the vendor-named key error)
+
+| Where | Before | Now |
+|---|---|---|
+| A to-do's Edit details (7.14) | A form of the record's own 25 fields ("PRJ-1", "[object Object]", Reply owed); a save of the day alone left the old day in the title | The short editor of its row; only what was touched is sent with the version read; the old day that ended the words is taken out by the applier (`record.tidy`, one Undo). Other core kinds' forms leave out the app's own bookkeeping; a message's page lists From and when. **Built** (`web/src/components/EditDetailsOfTodo.test.tsx`, `tests/test_stale_day.py`, `web/e2e/data-and-trust.spec.ts`) |
+| Settings quick edits (7.9) | Each save waited for a refresh of everything; no cue; a reload within seconds lost the last edits | The next save starts at once; a row and the page say Saving… then Saved; typed values are kept for the tab and saved after a reload, in the order typed. **Built** (`web/src/components/Settings.test.tsx`, `web/e2e/quick-edits.spec.ts`) |
+| Times with an offset (7.0) | The Schedule card, Came in and the week showed the digits as sent (UTC) beside "Now" in the person's zone | `clockTime` and `clockDay` move them to the person's clock. **Built** (`web/src/lib/dates.test.ts`, `web/src/components/Today.test.tsx`, `web/e2e/data-and-trust.spec.ts`) |
+| Ids, code and ISO dates (7.0) | The assistant's lessons, notes and the words of a change showed ids and a data dump; quotes, search and the Pause list showed year-month-day | `useReadable` names ids (or the kind), leaves dump lines out; quotes, search and Pause go through the date formatter. **Built** (`web/src/lib/read.test.ts`, `web/src/components/Notes.test.tsx`, `RecordPageNames.test.tsx`, `SearchBox.test.tsx`, `OnHold.test.tsx`, `web/e2e/data-and-trust.spec.ts`, and the internals scan reads a content hash and "(none)") |
+| A re-run after Send back (6.33) | The to-dos kept were added again unless they were owed to someone | An identical repeat from the same input folds into the open one whoever it is owed to. **Built** (`tests/test_promises.py::test_a_rerun_of_one_input_does_not_add_the_to_dos_that_were_kept_again`, `web/e2e/data-and-trust.spec.ts`) |
+| Removing the AI account (7.16) | Acted at once; Today still offered Start | Asks first when it stops the work; with no account the first go's line says so and offers Add an AI account. **Built** (`web/src/components/AiAccounts.test.tsx`, `Today.test.tsx`, `web/e2e/data-and-trust.spec.ts`) |
+| A service's own words in a failure (6.16) | They followed the plain words even when they named the service | Dropped when they name a service the catalog lists. **Built** (`tests/test_provider_safety.py::test_a_service_s_own_words_that_name_a_service_never_reach_the_screen`) |
+| Not built | | Undo of an account's removal after leaving the screen is the toast's, which stays while it offers Undo; a restore of a removed account from a list is not built |
+
 ## 306. Several emails and phones per person, a place and a repeat for the person's own entries, the person's own edits folded, a plain feedback preview (2026-11-02; sweep X40, X45, X29, X61)
 
 | Where | Before | Now |

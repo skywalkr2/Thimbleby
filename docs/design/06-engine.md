@@ -2532,7 +2532,7 @@ account added before its catalog entry named one still gets it (change log 278).
 settings for the account leave no model to answer is `no_allowed_model` (read from its words in `classify_error`): it
 falls to the next account and says to change those settings or pick another model. For these and for no credit the
 screen shows only the plain words and what to do, never the service's raw text or a program's terminal warnings
-(`tests/test_retired_model.py::test_a_refusal_whose_plain_words_say_it_all_shows_no_raw_text`).
+(`tests/test_retired_model.py::test_a_refusal_whose_plain_words_say_it_all_shows_no_raw_text`). For the other failures the service's own short reason may follow the plain words, but never when it names a service (the catalog's names: `engine/ai/task.py` `provider_reason`), since no vendor's name is shown to the person (`tests/test_provider_safety.py::test_a_service_s_own_words_that_name_a_service_never_reach_the_screen`).
 
 **Exit 0 with no answer is a failure** (built: `tests/test_silent_stops.py::test_a_program_that_exits_cleanly_with_nothing_on_its_output_is_no_output_never_an_empty_answer`,
 `test_an_empty_answer_file_and_a_missing_one_are_both_no_output`,
@@ -4972,7 +4972,8 @@ ways, and the golden cases and harness pairs are in demo-b (`tests/test_followup
   keeps stands as a separate promise. The question is put once (`JUDGMENT_LINTS`): keeping the add is the decision, not
   a failed check, so it never causes a further return or a stronger tier. With the lint `off` nothing is returned and the add stands. The one fold that
   stays is an identical repeat: the same words and the same quoted passage from the very same input already recorded
-  (the same input read twice) are added to the existing record (`also_said`) with a date within
+  (the same input read twice, as when one item of a change is sent back and the input is read again), whoever the to-do is owed
+  to and even when it is owed to no one, are added to the open record (`also_said`) with a date within
   `checks.tuning.near_duplicate_action.date_window_days` (3), because nothing is left to decide. The person's own add on
   a screen is never flagged.
 - **Crediting and chasing:** the person's "I pinged her" is news and the promise stays open; "Sam sent it" closes it,

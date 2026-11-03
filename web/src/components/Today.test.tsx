@@ -3,7 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
-import { day } from "../lib/dates";
+import { day, setClockZone, time, todayOn } from "../lib/dates";
 import { useShortcuts } from "../lib/keys";
 import { takeFilters } from "../lib/open-items";
 import { showNewLines } from "../lib/queue-hold";
@@ -470,6 +470,16 @@ test("the first go is one line with its price, and Go starts the tasks", async (
   expect(screen.getByText("Nothing is spent until you press Start.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST runs/first-go")).toBe(true));
+});
+
+test("with no AI account the first go's line offers to add one and never Start (sweep X76)", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([line("first_go", { key: "first_go", count: 3, estimate_usd: 0.3 })], { "GET status": () => statusFixture({}, { ai: { state: "not_set_up", detail: null } }) });
+  expect(await screen.findByText("3 items are waiting for an AI account")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
+  expect(screen.queryByText(/Start the assistant/)).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Add an AI account" }));
+  expect(calls.some((c) => c.route === "POST runs/first-go")).toBe(false);
 });
 
 test.each([
@@ -1252,4 +1262,30 @@ test("opened, a line reads its notes where there is no hover", async () => {
     return found!;
   });
   expect(detail).toHaveTextContent("Ask about the paper too");
+});
+
+// A time the server wrote with an offset (UTC, from a connected calendar or a mailbox) is written on the person's own clock,
+// the clock "Now" is on, never as the digits it was sent in (sweep X16, X73).
+test("the Schedule card and Came in write a time on the person's own clock, not in UTC", async () => {
+  setClockZone("Pacific/Kiritimati");
+  try {
+    const start = new Date(Date.now() + 2 * 3_600_000);
+    const heard: S["AgendaItemView"] = { ...meeting(), snapshot: "EVT-9", title: "Venue walk", own: false, all_day: false, start: start.toISOString(), end: null, days: [todayOn(new Date())] };
+    const arrived = new Date();
+    const sent = (): S["InboxView"] => ({ items: [{ snapshot: "SNAP-1", source: "mail-1", title: "Proof is ready", sender: "Robin Sample", received: arrived.toISOString(), unread: true, version: 1 }], left_out: 0, set_aside: 0 });
+    show([decision], { "GET today/agenda": () => [heard], "GET today/arrived": () => sent(), "GET today/week": () => busyWeek });
+    const rail = await screen.findByRole("group", { name: RAIL });
+    const schedule = await within(rail).findByRole("region", { name: "Schedule" });
+    await within(schedule).findByText("Venue walk");
+    const inUtc = (when: Date) => new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(when);
+    expect(schedule.textContent).toContain(time(start));
+    expect(time(start)).not.toBe(inUtc(start));
+    expect(schedule.textContent).not.toContain(inUtc(start));
+    const came = await within(rail).findByRole("region", { name: "Came in" });
+    await within(came).findByText("Proof is ready");
+    expect(came.querySelector("time.tb-when")?.textContent).toBe(time(arrived));
+    expect(time(arrived)).not.toBe(inUtc(arrived));
+  } finally {
+    setClockZone(undefined);
+  }
 });

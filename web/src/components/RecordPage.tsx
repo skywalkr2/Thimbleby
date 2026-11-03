@@ -53,6 +53,8 @@ import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
 import { Skeleton } from "../ui/Skeleton";
 import { plainTitle } from "../lib/title-dates";
+import { offeredInForm, shownAsDetail } from "../lib/record-internals";
+import { useEditDetailsOfTodo } from "./EditDetailsOfTodo";
 import { useFocusAfterRender } from "../lib/focus-after-render";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -144,6 +146,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     setEditing(false);
     focusAfterRender(() => editButton.current);
   };
+  // A to-do is edited with the short editor its row has, never a form of the record's own fields.
+  const todoEdit = useEditDetailsOfTodo(id, kind === "action", () => focusAfterRender(() => editButton.current));
 
   const info = new Map((fields.data?.fields ?? []).map((f) => [f.name, f]));
   // Every id the page can name: the people and projects on file, and whatever the server resolved for this record (an
@@ -163,7 +167,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const data = record.data;
   // A team's days off and a person's time away are edited in their own section, not in the form of ordinary details.
   const hasDaysOff = kind === "team" || kind === "person";
-  const offered = editableFields(fields.data?.fields ?? []).filter((f) => !(hasDaysOff && DAYS_OFF_FIELDS.has(f.name)));
+  const offered = editableFields(fields.data?.fields ?? []).filter((f) => !(hasDaysOff && DAYS_OFF_FIELDS.has(f.name)) && offeredInForm(kind, f.name));
   // The record's name, never its id: the page says it (a person is named by their full name).
   // While what resolves the names is still on its way the page has no name yet, and no detail: an id is never shown.
   const settled = !page.isPending && !people.isPending && !projects.isPending;
@@ -180,6 +184,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           .filter(([name]) => !(hasDaysOff && DAYS_OFF_FIELDS.has(name)))
           // A to-do's page says its owner and day once, in words, and keeps what only the app uses out of sight.
           .filter(([name]) => !(kind === "action" && TODO_HIDDEN.has(name)))
+          // What only the app keeps about an input (its hash, how it arrived, what watched it) is not a detail of it.
+          .filter(([name]) => shownAsDetail(kind, name))
           .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || name === "exceptions" || (name === "cancelled" && value !== true))))
@@ -216,6 +222,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     // Someone with only their own life is not told who does their own to-do.
     const mine = justMe && owners.length > 0 && owners.every((o) => o.person === me.data?.person);
     generic.unshift(...(mine ? [] : [{ name: "todo_owner", lines: [named.length > 0 ? named.join(", ") : t("open.nobody")] }]), { name: "todo_due", lines: [dueText] });
+  }
+  // A message says who it is from, in the sender's own words; how the watcher found it is not a detail.
+  if (data && settled && kind === "source") {
+    const author = (data.fields.watched as { author?: unknown } | null)?.author;
+    const from = typeof author === "string" ? author.replace(/\s*<[^>]*>/, "").trim() : "";
+    if (from) generic.unshift({ name: "from", label: t("record.from"), lines: [from] });
   }
   // The organization a side is, as part of the side's own page: what is known about it and who works for it.
   if (ownOrganization?.organization) {
@@ -411,7 +423,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               {eventActs.menu.length > 0 && <RowMenu label={t("acts.event.menu")} actions={eventActs.menu} />}
               {waitingOnYou && <AnswerOnToday question={id} />}
               {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
-              {!isPerson && data && (drawer || offered.length > 0) && !editing && (
+              {kind === "action" && data && todoEdit.entry && (
+                <Button ref={editButton} onClick={todoEdit.entry.run}>
+                  {t("record.edit")}
+                </Button>
+              )}
+              {!isPerson && kind !== "action" && data && (drawer || offered.length > 0) && !editing && (
                 <Button ref={editButton} onClick={() => setEditing(true)}>
                   {t("record.edit")}
                 </Button>
@@ -427,6 +444,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && invite.form}
       {data && eventActs.form}
       {data && eventActs.note}
+      {data && kind === "action" && todoEdit.form}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
       {data && kind === "action" && page.data?.tie && <TieLine action={id} text={plainTitle(page.data.name || "", due)} tie={page.data.tie} />}

@@ -7,6 +7,7 @@ import { useId, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { narrowedWithout } from "../lib/reach";
+import { useReadable } from "../lib/readable";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { RowMenu } from "./RowMenu";
@@ -50,15 +51,17 @@ export function Because(props: { cs: S["ChangesetView"] }) {
 function AppliedItem(props: { entry: Entry }) {
   const { t } = useWords();
   const { entry } = props;
+  const readable = useReadable();
+  const words = readable(entry.text);
   const [open, setOpen] = useState(false);
   return (
     <li className={styles.becauseItem} data-applied={entry.id}>
       <span>{t("because.told")}</span>
       <a className={styles.becauseText} href={entryHref(entry)}>
-        {entry.text}
+        {words}
       </a>
       {canChange(entry) && (
-        <RowMenu label={entry.text} actions={[{ id: "not-here", label: t("because.not_here"), run: () => setOpen(true) }]} />
+        <RowMenu label={words} actions={[{ id: "not-here", label: t("because.not_here"), run: () => setOpen(true) }]} />
       )}
       {open && (
         <div className={styles.becauseForm}>

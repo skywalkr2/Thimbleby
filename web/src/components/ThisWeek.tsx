@@ -3,7 +3,7 @@
 // inspector shows when no line is selected. It is never counted in Today's heading or the menu.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
-import { day, wallTime } from "../lib/dates";
+import { clockDay, clockTime, day } from "../lib/dates";
 import { usePlaceText } from "../lib/place";
 import { onSide, useSideFilter, type SideChoice } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -57,8 +57,8 @@ export function weekSummary(week: Week, tn: Tn, listed: ReadonlySet<string> = ne
 }
 
 function whenOf(m: Week["meetings"][number], t: T): string {
-  const first = m.days[0] ?? m.start.slice(0, 10);
-  return [day(first), m.all_day ? t("today.agenda.all_day") : wallTime(m.start)].join(" ");
+  const first = m.days[0] ?? clockDay(m.start);
+  return [day(first), m.all_day ? t("today.agenda.all_day") : clockTime(m.start)].join(" ");
 }
 
 /** The three groups of the week; a group with nothing in it is left out. The meetings in `listed` (by snapshot) are left out

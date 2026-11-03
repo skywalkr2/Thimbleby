@@ -28,3 +28,17 @@ test("a text that is only data is nothing, and a sentence with braces in it is n
   expect(plain("By 2026-11-02")).toBe(`By ${day("2026-11-02")}`);
   expect(plain(null)).toBe("");
 });
+
+// ---- the assistant's own text as words (sweep X37, X38, X72) ---------------------------------------------------------------
+
+test("a record id in the assistant's text is the record's name, else the kind of thing, and a data dump is left out", async () => {
+  const { plainText } = await import("./read");
+  const names = new Map([["PER-1", "Robin Sample"]]);
+  const name = (id: string) => names.get(id);
+  const kind = (prefix: string) => (prefix === "ACT" ? "a to-do" : "an item");
+  expect(plainText("Ask PER-1 about ACT-6 and FOO-3.", name, kind)).toBe("Ask Robin Sample about a to-do and an item.");
+  expect(plainText('{"id": "ACT-6"}', name, kind)).toBe("");
+  expect(plainText(['"ask": "PER-1"', "Moved to 2026-11-09", "(none)"].join("\n"), name, kind)).toBe(plainText("Moved to 2026-11-09", name, kind));
+  expect(plainText("Pick [Draft] first", name, kind)).toBe("Pick [Draft] first");
+  expect(plainText("", name, kind)).toBe("");
+});

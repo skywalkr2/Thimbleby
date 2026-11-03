@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { plain } from "../lib/read";
 import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { RowList } from "../ui/RowList";
@@ -107,9 +108,9 @@ export function SearchBox(props: {
             {rows.map((r) => (
               <li key={`${r.kind}/${r.id}`}>
                 <button type="button" className={styles.row} onClick={() => pick(r.kind, r.id)}>
-                  <span className={styles.main}>{r.title}</span>
+                  <span className={styles.main}>{plain(r.title)}</span>
                   <span className={styles.kind}>{kindLabel(r)}</span>
-                  {r.detail && <span className={styles.detail}>{r.detail}</span>}
+                  {r.detail && <span className={styles.detail}>{plain(r.detail)}</span>}
                 </button>
               </li>
             ))}

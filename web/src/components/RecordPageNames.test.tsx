@@ -268,8 +268,8 @@ test("a fact's page keeps where its words came from under More details, never be
 
 test("a core record's form shows no help written for developers, but a plugin's own help stays", async () => {
   const user = userEvent.setup();
-  serve("action", "ACT-1", { text: "Send the headcount", status: "open" }, [field("text", "text", { required: true }), field("status", "text")], page("action", "ACT-1", "Send the headcount", []));
-  const first = renderApp(<RecordPage kind="action" id="ACT-1" onBack={() => {}} />);
+  serve("fact", "FACT-1", { text: "The headcount is final", as_of: "2026-10-19" }, [field("text", "text", { required: true }), field("as_of", "date")], page("fact", "FACT-1", "The headcount is final", []));
+  const first = renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
   await user.click(await screen.findByRole("button", { name: "Edit details" }));
   const form = await screen.findByRole("form", { name: "Edit details" });
   expect(form.textContent).not.toMatch(/Help for/);
@@ -278,4 +278,56 @@ test("a core record's form shows no help written for developers, but a plugin's 
   renderApp(<RecordPage kind="plugin/chapter" id="CH-1" onBack={() => {}} />);
   await user.click(await screen.findByRole("button", { name: "Edit details" }));
   expect(await screen.findByText("What the chapter is called.")).toBeInTheDocument();
+});
+
+// What only the app keeps is not on a record's page or in its form (sweep X37, X38, X72).
+test("a message's page says who it is from and when, and shows nothing the watcher kept: no hash, no reference, no flags", async () => {
+  serve(
+    "source",
+    "SRC-4",
+    {
+      title: "Venue list",
+      received_at: "2026-10-28T09:00:00Z",
+      kind: "watched:journey-mail/mail",
+      content_hash: "6bdf0cc6ce1e0123456789",
+      trust: "untrusted",
+      watched: { source: "journey-mail", key: "m-1", author: "Pat Example <pat@example.com>", by_us: false, by_you: false, change: "new" },
+    },
+    [field("title", "text"), field("received_at", "text"), field("kind", "text"), field("content_hash", "text"), field("trust", "choice"), field("watched", "other")],
+    page("source", "SRC-4", "Venue list", []),
+  );
+  renderApp(<RecordPage kind="source" id="SRC-4" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  await within(details).findByText("Pat Example");
+  const terms = within(details).getAllByRole("term").map((x) => x.textContent);
+  expect(terms).toContain("From");
+  for (const gone of ["Content hash", "Kind", "Watched", "Reference", "By us", "By you", "Change"]) expect(terms).not.toContain(gone);
+  expect(details.textContent).not.toMatch(/6bdf0cc6|m-1|journey-mail|pat@example/);
+});
+
+test("a question's Edit details offers its words and who it is for, never the ids it is tied to or the run that made it", async () => {
+  const user = userEvent.setup();
+  serve(
+    "question",
+    "Q-3",
+    { title: "Which trim size?", text: "", to: "PER-1", status: "open", filed_by: { by: "alias" }, batch: "B-1", source: "SRC-1", raised_by: "REQ-1", projects: ["PRJ-1"], asker: "PER-1" },
+    [
+      field("title", "text", { required: true }),
+      field("to", "reference", { refers_to: "person" }),
+      field("status", "choice", { options: ["open", "answered"] }),
+      field("filed_by", "other"),
+      field("batch", "text"),
+      field("source", "text"),
+      field("raised_by", "text"),
+      field("projects", "list"),
+      field("asker", "reference", { refers_to: "person" }),
+    ],
+    page("question", "Q-3", "Which trim size?", []),
+  );
+  renderApp(<RecordPage kind="question" id="Q-3" onBack={() => {}} />);
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  const form = await screen.findByRole("form", { name: "Edit details" });
+  expect(within(form).getByRole("textbox", { name: "Title" })).toBeInTheDocument();
+  for (const gone of ["Batch", "Source", "Projects", "Status", "Asked by"]) expect(within(form).queryByLabelText(new RegExp(gone, "i"))).toBeNull();
+  expect(form.textContent).not.toMatch(/PRJ-1|REQ-1|B-1|SRC-1/);
 });

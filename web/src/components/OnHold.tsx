@@ -7,6 +7,8 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { revealOrKeep } from "../lib/reveal";
+import { plain } from "../lib/read";
+import { plainTitle } from "../lib/title-dates";
 import { toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
@@ -111,7 +113,7 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
           <optgroup label={t("hold.on_actions")}>
             {options.actions.map(([id, text]) => (
               <option key={id} value={id}>
-                {text}
+                {plainTitle(text)}
               </option>
             ))}
           </optgroup>
@@ -120,7 +122,7 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
           <optgroup label={t("hold.on_questions")}>
             {options.questions.map(([id, title]) => (
               <option key={id} value={id}>
-                {title}
+                {plain(title)}
               </option>
             ))}
           </optgroup>

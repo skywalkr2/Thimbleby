@@ -39,7 +39,7 @@ import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Pill, type PillTone } from "../ui/Pill";
 import { Row } from "../ui/Row";
-import { restoreFocus } from "./ModalPanel";
+import { DialogFooter, ModalPanel, restoreFocus } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./AiAccounts.module.css";
@@ -362,7 +362,11 @@ function AccountRow(props: {
     const backups = others.filter((a) => (a.backup_for ?? []).some((tier) => account.used_for.includes(tier)));
     return backups.find((a) => account.used_for.every((tier) => (a.backup_for ?? []).includes(tier))) ?? backups[0];
   })();
-  const remove = () =>
+  // Taking away the account the assistant's work runs on (with no backup to take over) stops that work, so it is asked first.
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const stopsWork = account.used_for.length > 0 && !heir;
+  const remove = () => (stopsWork ? setConfirmingRemove(true) : doRemove());
+  const doRemove = () =>
     void save(
       (fingerprint) => api.removeAccount(account.name, fingerprint, heir?.name),
       () =>
@@ -736,6 +740,7 @@ function AccountRow(props: {
     );
 
   return (
+    <>
     <Row
       pill={<Pill tone={pillTone}>{t(`ai_accounts.role.${role}`)}</Pill>}
       title={<span id={`${base}-title`}>{name}</span>}
@@ -984,5 +989,26 @@ function AccountRow(props: {
         </div>
       </div>
     </Row>
+    {confirmingRemove && (
+      <ModalPanel titleId={`${base}-remove`} onClose={() => setConfirmingRemove(false)}>
+        <h2 id={`${base}-remove`}>{t("ai_accounts.remove_title", { name })}</h2>
+        <p>{t("ai_accounts.remove_text")}</p>
+        <DialogFooter>
+          <Button variant="quiet" onClick={() => setConfirmingRemove(false)}>
+            {t("action.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setConfirmingRemove(false);
+              doRemove();
+            }}
+          >
+            {t("ai_accounts.remove_go")}
+          </Button>
+        </DialogFooter>
+      </ModalPanel>
+    )}
+    </>
   );
 }

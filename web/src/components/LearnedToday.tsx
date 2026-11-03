@@ -15,6 +15,7 @@ import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { ProposalEvidence, ProposalForms, ReachPicker, useProposal, type Proposal } from "./Learned";
+import { useReadable } from "../lib/readable";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./Learned.module.css";
 
@@ -148,6 +149,7 @@ function KeepAll(props: { terms: Proposal[] }) {
 function ProposalRow(props: { p: Proposal }) {
   const { t, tn } = useWords();
   const { p } = props;
+  const readable = useReadable();
   const state = useProposal(p);
   const menu: MenuAction[] = [
     { id: "just-this-time", label: t("learned.just_this_time"), run: () => void state.justThisTime() },
@@ -159,7 +161,7 @@ function ProposalRow(props: { p: Proposal }) {
     <Row
       data-learned={p.id}
       pill={<Pill>{t(`learned.from.${p.came_from}`)}</Pill>}
-      title={p.text}
+      title={readable(p.text)}
       meta={meta}
       oneLine
       primary={
@@ -167,7 +169,7 @@ function ProposalRow(props: { p: Proposal }) {
           {t("learned.keep")}
         </Button>
       }
-      menu={<RowMenu label={p.text} actions={menu} />}
+      menu={<RowMenu label={readable(p.text)} actions={menu} />}
     >
       <div className={styles.detail}>
         {!state.editing && <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} said={state.reachSaid} />}

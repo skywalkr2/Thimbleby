@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { addDays, todayOn, time, wallTime } from "../lib/dates";
+import { addDays, clockDay, clockTime, todayOn, time } from "../lib/dates";
 import { deliveryDetails, deliveryRange, deliveryStatusWord, isOnItsWay } from "../lib/deliveries";
 import { useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -63,14 +63,14 @@ export function groupByDay(events: Event[], today: string): DayGroup[] {
 
 function whenText(event: Event, date: string, t: T): string {
   if (event.all_day) return deliveryRange(event, t) ?? t("today.agenda.all_day");
-  const startDay = event.start.slice(0, 10);
-  const endDay = event.end?.slice(0, 10);
+  const startDay = clockDay(event.start);
+  const endDay = event.end ? clockDay(event.end) : undefined;
   if (date > startDay) {
-    return event.end && endDay === date ? t("today.agenda.until", { time: wallTime(event.end) }) : t("today.agenda.all_day");
+    return event.end && endDay === date ? t("today.agenda.until", { time: clockTime(event.end) }) : t("today.agenda.all_day");
   }
   return event.end && endDay === date
-    ? t("today.agenda.range", { start: wallTime(event.start), end: wallTime(event.end) })
-    : wallTime(event.start);
+    ? t("today.agenda.range", { start: clockTime(event.start), end: clockTime(event.end) })
+    : clockTime(event.start);
 }
 
 /** The Schedule card, which is always drawn (so Today's side column is never left blank), and whether it has anything to tell:

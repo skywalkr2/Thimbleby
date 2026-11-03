@@ -4,6 +4,35 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The re-sweep's data-and-trust items: Edit details is the short editor, quick edits are never lost, times are on one clock, no ids or code on screen, a re-run adds nothing twice, removing the account asks, no vendor's name (X71, X01, X75, X16, X73, X37, X38, X72, X74, X76; section 307)
+
+**Decided:** (1) X71: a to-do's Edit details is the short editor its row has (what, the day, how long, who, the side or project by name,
+how it repeats), never a form of the record's own fields; a save sends only what was touched with the version read. The other core
+kinds' forms leave out what only the app keeps (`web/src/lib/record-internals.ts`). The day written at the end of a to-do's words
+("... by 2026-11-04") is taken out of them by the applier when the due date moves from that day, as its own write under the op name
+`record.tidy` (so it is not a correction of the assistant, and Undo of the edit puts both back), so a title never contradicts the date.
+(2) X01, X75: a settings save no longer waits for the screen to refresh everything before the next one starts; a row and the page say
+Saving… and then Saved; what was typed and not yet answered is kept for the tab and saved after a reload, in the order typed.
+(3) X16, X73: a time written with an offset is shown on the person's own clock, never as the digits it was sent in. (4) X37, X38,
+X72: ids in the assistant's own text are names (or the kind of thing), data dumps are left out, quotes, search results and the list in
+Pause are written as the lists write them, and a message's page lists who it is from and when only. (5) X74: an identical repeat of
+a to-do from the same input folds into the open one whoever it is owed to, so reading the input again after one item is sent back adds
+none of the others. (6) X76: removing the account the work runs on, with no backup to take over, asks first (it stops the assistant's
+work); with no account Today's first go offers Add an AI account, never Start. (7) The service's own words that name a service
+(the catalog's names) are dropped from a failure's line; the plain words of its kind stay.
+
+**Decided by:** the owner, 2026-11-03: every item of the re-sweep is fixed before the gate week; the confirm on removing an account is
+the owner's rule (it stops the assistant's work).
+
+**Why:** a raw 25-field form and a rewritten title made a to-do look corrupt; a reload within seconds of an edit lost it; Now and the
+time beside it were in different zones; ids and code text on screen broke the plain-words rule; a re-run doubled the to-dos the
+person had kept; one click removed the only account with no word; and a vendor's name reached the person through the service's own
+error words, which only `classify_error` may read.
+
+**Impact:** `web/src/components/EditDetailsOfTodo.tsx`, `web/src/lib/record-internals.ts`, `web/src/lib/settings-pending.ts`,
+`web/src/lib/readable.ts`, `web/src/lib/dates.ts` (`clockTime`, `clockDay`), `engine/stale_day.py`, `engine/applier.py`, `engine/ai/task.py`.
+No new setting, no API model changed. Change log: section 307.
+
 ## 2026-11-02: Several emails and phones per person, a place and a repeat for the person's own entries, the person's own edits folded into one row a day, and a plain feedback preview (X40, X45, X29, X61)
 
 **Decided:** (1) X40: each kind of contact detail a person has (email, phone) holds a list. Mail from any of a person's

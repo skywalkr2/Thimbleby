@@ -286,8 +286,24 @@ test("removing the main account with no backup says so in the menu before the cl
   open();
   await user.click(within(await row("Main account")).getByRole("button", { name: "More actions for Main account" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove · Helper will have no account for its work" }));
+  // Taking away the account its work runs on stops that work, so it asks first (sweep X76).
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByRole("heading", { name: "Remove Main account?" })).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST ai/accounts/main/remove")).toBe(false);
+  await user.click(within(dialog).getByRole("button", { name: "Remove it" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/main/remove")?.body).toEqual({ fingerprint: "fp-1" }));
   expect(await screen.findByText("Removed Main account. Helper has no account for its work.")).toBeInTheDocument();
+});
+
+test("cancelling the question about removing the account the work runs on removes nothing", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "GET ai/accounts": () => [account("main", { label: "Main account", used_for: ["routine", "deep"] })] });
+  open();
+  await user.click(within(await row("Main account")).getByRole("button", { name: "More actions for Main account" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove · Helper will have no account for its work" }));
+  await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.some((c) => c.route === "POST ai/accounts/main/remove")).toBe(false);
 });
 
 test("a change that needs a restart asks first and never restarts by itself", async () => {

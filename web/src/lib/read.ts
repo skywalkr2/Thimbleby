@@ -41,3 +41,22 @@ export function plain(text: string | null | undefined): string {
   if (!text) return "";
   return isData(text) ? "" : plainDates(text);
 }
+
+/** The app's own record ids inside a text: capital letters, a hyphen and a number, standing alone ("ACT-6", "PER-1"). */
+const ID_IN_TEXT = /(?<![\w-])([A-Z][A-Z0-9]*)-[1-9][0-9]*(?![\w-])/g;
+
+/** A line that is a piece of a data dump: a bracket or brace, a quoted key, or the dump's own "(none)". */
+const DUMP_LINE = /^\s*(?:[}\]],?\s*$|[[{]\s*$|[[{]\s*["{[]|"[^"]*"\s*:|\(none\)\s*$)/;
+
+/** A text the assistant wrote, as words: a record id is its name (`name` finds it from the id) or, with none, the kind of
+ * thing it is (`kind` says it for the id's letters) or nothing; a line of a data dump is left out; dates are words. The
+ * stored text is never changed. */
+export function plainText(text: string | null | undefined, name: (id: string) => string | undefined, kind: (prefix: string) => string): string {
+  if (!text) return "";
+  const lines = text.split("\n").filter((line) => !DUMP_LINE.test(line));
+  const joined = lines.join("\n").trim();
+  if (!joined || isData(joined)) return "";
+  const named = joined.replace(ID_IN_TEXT, (found, prefix: string) => name(found) ?? kind(prefix));
+  // An id with nothing to say in its place leaves a stray colon or bracket pair behind.
+  return plainDates(named.replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ").replace(/^[\s:;,-]+/, "").trim());
+}

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any, Literal
 
 ErrorKind = Literal[
@@ -231,9 +233,38 @@ class IdentityUnknown:
 REASON_LIMIT = 200
 
 
+#: Words of the catalog's names that are not a service's own name.
+_NOT_A_NAME = frozenset({"another", "local", "other", "agent"})
+
+
+@lru_cache(maxsize=1)
+def _vendor_words() -> re.Pattern[str] | None:
+    """The names of the services the product's catalog lists (the first word of each name, and each id), as one pattern.
+    The names are read from the catalog, so no service is named here."""
+    from engine.setup import known_endpoints
+
+    words = set()
+    for entry in known_endpoints():
+        for word in (str(entry["id"]), str(entry["name"]).split(" ")[0]):
+            if len(word) >= 3 and word.lower() not in _NOT_A_NAME:
+                words.add(re.escape(word))
+    return (
+        re.compile(r"(?<![A-Za-z0-9])(?:" + "|".join(sorted(words)) + r")(?![A-Za-z0-9])", re.IGNORECASE)
+        if words
+        else None
+    )
+
+
 def provider_reason(detail: str, limit: int = REASON_LIMIT) -> str:
     """The provider's own words for a failure: the `error.message` (or `message`) of a JSON body inside the detail,
-    otherwise its first `limit` characters. Empty when there is no detail. It is the provider's text, shown as data."""
+    otherwise its first `limit` characters. Empty when there is no detail, and empty when the words name a service: the
+    person is never shown a vendor's name, and the plain words of the failure's kind already say what to do."""
+    said = _reason_text(detail, limit)
+    names = _vendor_words() if said else None
+    return "" if names is not None and names.search(said) else said
+
+
+def _reason_text(detail: str, limit: int) -> str:
     text = " ".join(detail.split())
     start, end = text.find("{"), text.rfind("}")
     if 0 <= start < end:

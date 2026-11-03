@@ -14,6 +14,8 @@ export const INTERNALS: Array<{ name: string; pattern: RegExp }> = [
   { name: "a locale code", pattern: /\b[a-z]{2}-[A-Z]{2}\b/ },
   { name: "JSON", pattern: /[{}]|"\w+"\s*:/ },
   { name: "a validation phrase", pattern: /\b(?:Input should|String should|Field required|value is not a valid|Value error|ensure this value|Extra inputs|Input is not)\b/i },
+  { name: "a content hash", pattern: /\b[0-9a-f]{16,}\b/ },
+  { name: "a data dump's empty marker", pattern: /\(none\)/ },
   { name: "a code word", pattern: /\bundefined\b|\bNaN\b|\[object Object\]|\(empty input\)/ },
 ];
 

@@ -204,3 +204,17 @@ test("pausing a chore that repeats asks until when, not what it is waiting for, 
   await user.click(screen.getAllByRole("button", { name: "Pause" }).find((b) => (b as HTMLButtonElement).type === "submit")!);
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "after the holidays" }));
 });
+
+test("the to-dos Pause offers are written as the lists write them: a day in the words is a day, never year-month-day", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    ...pickerRoutes,
+    "GET followups": () => [section({ actions: [action("ACT-1", "Send the index"), action("ACT-2", "Send the venue list by 2026-11-02.")], questions: [question("Q-4", "Can it ship by 2026-11-03?")] })],
+  });
+  renderApp(<Harness id="ACT-1" />);
+  await user.click(screen.getByRole("button", { name: "Pause" }));
+  const pick = screen.getByRole("combobox", { name: "Or pick what it waits on" });
+  await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(3));
+  expect(pick.textContent).not.toMatch(/2026-11-0\d/);
+  expect(within(pick).getByRole("group", { name: "To-dos" })).toHaveTextContent(/Send the venue list, due|Send the venue list by \w{3}, Nov 2/);
+});

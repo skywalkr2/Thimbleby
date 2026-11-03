@@ -514,6 +514,39 @@ def test_the_very_same_promise_from_the_very_same_input_is_folded_with_no_return
     assert flag.severity == "return" and promise.id in flag.message
 
 
+def test_a_rerun_of_one_input_does_not_add_the_to_dos_that_were_kept_again(env):
+    """Sending one item back reads the whole input again: the items the person kept come back identical and fold into
+    the ones already open, whoever they are owed to, and the one sent back is made anew (sweep X74)."""
+    _, cfg, store = env
+    me = cfg.workspace.user.person
+    quote = "We need a catering quote and a venue list."
+    source = "SRC-RERUN"
+    kept = {"op": "action.add", "text": "Get a catering quote.", "owners": [me], "evidence": {"quote": quote}}
+    other = {"op": "action.add", "text": "Get a venue list.", "owners": [me], "evidence": {"quote": quote}}
+    cs = CHANGESET.validate_python({"ops": [kept, other]}, context={"op_models": store.plugins.ops})
+    ctx = Context(store, cfg, People(store, cfg), ("action.add",), Inputs("REQ-1", source, quote, "", "trusted"))
+    apply_changeset(cs, check(cs, ctx), ctx, run=None, now=NOW)
+
+    def texts():
+        mine = {"Get a catering quote.", "Get a venue list."}
+        return sorted(
+            a.data["text"] for a in store.read().list("action") if a.data["status"] == "open" and a.data["text"] in mine
+        )
+
+    assert texts() == ["Get a catering quote.", "Get a venue list."]
+    # The venue list is sent back: it is dropped, then the input is read again and gives both items once more.
+    (venue,) = [a for a in store.read().list("action") if a.data["text"] == "Get a venue list."]
+    with store.transaction() as tx:
+        tx.update("action", venue.id, {"status": "dropped"}, _SETUP, read_version=venue.version)
+    again = Context(store, cfg, People(store, cfg), ("action.add",), Inputs("REQ-2", source, quote, "", "trusted"))
+    problems = check(cs, again)
+    assert not [p for p in problems if p.check in ("near-duplicate-action", "near-duplicate-promise") and p.op == 0]
+    apply_changeset(cs, problems, again, run=None, now=NOW)
+    assert texts() == ["Get a catering quote.", "Get a venue list."]
+    (catering,) = [a for a in store.read().list("action") if a.data["text"] == "Get a catering quote."]
+    assert [e["quote"] for e in catering.data["also_said"]] == [quote]
+
+
 def test_chasing_is_news_and_a_reported_done_is_credited_to_its_owner(env):
     _, cfg, store = env
     target = open_action(store)

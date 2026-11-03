@@ -12,6 +12,7 @@ const note = (id: string, text: string, over: Partial<S["NoteView"]> = {}): S["N
 const served = (notes: S["NoteView"][]) =>
   fakeApi({
     "GET notes": () => notes,
+    "GET people": () => [{ id: "PER-1", name: "Robin Sample", status: "active" }],
     "GET projects": () => [project("PRJ-1", "Harbor")],
     "GET setup/business": () => ({ business: false, name: "", personal: "PRJ-1", sides: [], chosen: "personal" }),
   });
@@ -39,4 +40,15 @@ test("with no notes it says how one is made, in one line", async () => {
   served([]);
   renderApp(<Notes />);
   expect(await screen.findByText("No notes yet. A note you hand in to be kept shows up here.")).toBeInTheDocument();
+});
+
+test("a note the assistant wrote from a data dump reads as words: no id, no code, no ISO date", async () => {
+  const dump = ["[", "{", '  "ask_whether_the_date_should_change": "Robin Sample (PER-1)",', "}", "]", "The headcount moved to 2026-11-09 for ACT-6.", "(none)"].join("\n");
+  served([note("N-3", dump), note("N-4", '{"kind": "action", "id": "ACT-6"}')]);
+  renderApp(<Notes />);
+  const list = await screen.findByRole("list", { name: "Notes" });
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows[0]).toHaveTextContent("The headcount moved to Mon, Nov 9 for a to-do.");
+  expect(rows[1]).toHaveTextContent("A note with no words of its own");
+  expect(list.textContent).not.toMatch(/PER-1|ACT-6|2026-11-09|ask_whether|[{}[\]"]/);
 });

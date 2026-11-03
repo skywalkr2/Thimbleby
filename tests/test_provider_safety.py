@@ -173,6 +173,31 @@ def test_a_failure_adds_the_providers_own_message(env):
     assert "(" not in _ai_failure(AiError("timeout"))
 
 
+def test_a_service_s_own_words_that_name_a_service_never_reach_the_screen(env):
+    """The reviewer saw the setup say a vendor's name beside a refused key. The words come from the service's own error
+    body, so they are dropped when they name any service the catalog lists; the plain words of the failure's kind stay
+    (sweep: the vendor-named key error)."""
+    from engine.ai.smoke import _problem
+    from engine.ai.task import provider_reason
+    from engine.dispatcher import _ai_failure, failure_in_words
+    from engine.setup import known_endpoints
+
+    hosted = [e for e in known_endpoints() if e.get("base_url") and e.get("needs_key")]
+    for entry in hosted:
+        name = str(entry["name"]).split(" ")[0]
+        body = f'HTTP 401: {{"error": {{"message": "{name} didn\'t accept this key"}}}}'
+        assert provider_reason(body) == ""
+        for said in (
+            _ai_failure(AiError("auth", body)),
+            failure_in_words(AiError("auth", body)),
+            _problem(AiError("auth", body)),
+        ):
+            assert name.lower() not in said.lower()
+            assert "(" not in said
+    # Words that name no service are still the account's own and still shown.
+    assert provider_reason('HTTP 401: {"error": {"message": "User not found."}}') == "User not found"
+
+
 def test_the_assistants_state_follows_the_account_the_test_and_the_last_refusal(env, monkeypatch):
     from engine.ai.smoke import ai_state
 

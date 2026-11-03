@@ -118,3 +118,12 @@ test("a work workspace keeps the usual placeholder and the Project label", async
   expect(await screen.findByRole("button", { name: /My life/ })).toHaveTextContent("Project");
   expect(screen.getByRole("searchbox")).toHaveAttribute("placeholder", "Search or ask Helper");
 });
+
+test("a result's title and detail never show a day as year-month-day", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET search": () => ({ results: [{ kind: "action", id: "A-2", title: "Send the venue list by 2026-11-02.", detail: "Due 2026-11-02" }] }) });
+  renderApp(<SearchBox onOpenRecord={vi.fn()} onAsk={vi.fn()} />);
+  await user.type(screen.getByRole("searchbox"), "venue");
+  const row = await screen.findByRole("button", { name: /Send the venue list/ });
+  expect(row.textContent).not.toMatch(/2026-11-02/);
+});

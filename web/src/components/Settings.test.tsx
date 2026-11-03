@@ -1866,3 +1866,56 @@ test("a search that is the start of a listed word counts, and a word with no mat
   await user.type(search, "qqqq");
   expect(screen.getByText("No settings match.")).toBeInTheDocument();
 });
+
+// Quick changes are never lost, and the screen says a save is under way (sweep X01, X75).
+const UNSAVED = "settings-unsaved";
+
+test("a value typed and not yet saved is kept for the tab and goes once its save is answered", async () => {
+  const user = userEvent.setup();
+  window.sessionStorage.clear();
+  const calls = api();
+  open();
+  const title = await screen.findByLabelText("The display name.");
+  await user.clear(title);
+  await user.type(title, "Harbor");
+  // Still being typed: a reload now would bring it back.
+  await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem(UNSAVED) ?? "{}")).toEqual({ "demo.title": "Harbor" }));
+  await user.tab();
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  await waitFor(() => expect(window.sessionStorage.getItem(UNSAVED)).toBeNull());
+});
+
+test("what was typed and not saved when the page was left comes back after a reload and is saved", async () => {
+  window.sessionStorage.setItem(UNSAVED, JSON.stringify({ "demo.title": "Harbor", "demo.limit": "9", "demo.on": false }));
+  const calls = api();
+  open();
+  await waitFor(() => expect(posted(calls)).toHaveLength(3));
+  expect(posted(calls).map((b) => (b as S["SettingsSave"]).changes)).toEqual([{ "demo.title": "Harbor" }, { "demo.limit": 9 }, { "demo.on": false }]);
+  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveValue("Harbor"));
+  await waitFor(() => expect(window.sessionStorage.getItem(UNSAVED)).toBeNull());
+  window.sessionStorage.clear();
+});
+
+test("a save under way says Saving, then Saved, on the page and on the row", async () => {
+  const user = userEvent.setup();
+  window.sessionStorage.clear();
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((done) => {
+    release = done;
+  });
+  api(ITEMS, {
+    "POST settings": async () => {
+      await held;
+      return { changes: [{ key: "demo.title", before: "Lantern", after: "Harbor", was_default: false, is_default: false }], fingerprint: "fp-9", needs_restart: false };
+    },
+  });
+  open();
+  const title = await screen.findByLabelText("The display name.");
+  await user.clear(title);
+  await user.type(title, "Harbor");
+  await user.tab();
+  await waitFor(() => expect(document.querySelector("[data-save-status]")).toHaveTextContent("Saving…"));
+  expect(rowOf("The display name.")).toHaveTextContent("Saving…");
+  release();
+  await waitFor(() => expect(document.querySelector("[data-save-status]")).toHaveTextContent("Saved"));
+});

@@ -26,6 +26,8 @@ export function SettingRow(props: {
   onChange: (draft: Draft) => void;
   /** Puts the setting back to its default; "Reset" is shown beside the label only while the value differs from it. */
   onReset?: () => void;
+  /** Its save is waiting or under way: the row says so in place of "Changed · Reset". */
+  saving?: boolean;
   /** Saves as it is made: a choice or a switch when it changes, a box when the cursor leaves it or Enter is pressed (a
    * list on leaving only). Given the value, since the draft held by the caller may not have caught up yet. */
   commit?: (draft: Draft) => void;
@@ -327,7 +329,12 @@ export function SettingRow(props: {
       <div className="setting-main" data-main>
         <div className="setting-head">
           {labelNode}
-          {changed && props.onReset && !props.plain && (
+          {props.saving && !props.plain && (
+            <span className="setting-changed" data-saving="">
+              {t("settings.saving")}
+            </span>
+          )}
+          {changed && !props.saving && props.onReset && !props.plain && (
             <span className="setting-changed">
               <span>{t("settings.changed")}</span>
               <span aria-hidden="true"> · </span>

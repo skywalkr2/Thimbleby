@@ -19,6 +19,8 @@ import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useQueue, useTodayCount } from "../lib/today";
 import { useFactLine } from "../lib/fact-line";
+import { plainDates } from "../lib/read";
+import { useReadable } from "../lib/readable";
 import { plainTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
@@ -837,6 +839,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
 
   const labelOf = useFieldLabel();
   const factLine = useFactLine();
+  const readable = useReadable();
   const { justMe } = useSides();
   const meta = metaLine(op, t, labelOf, !justMe);
   return (
@@ -855,7 +858,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
             </Pill>
           )}
         </div>
-        <div className="title">{op.op === "fact" ? factLine(op.title, op.meta.said_by) : plainTitle(op.title, op.meta.due)}</div>
+        <div className="title">{op.op === "fact" ? readable(factLine(op.title, op.meta.said_by)) : readable(plainTitle(op.title, op.meta.due))}</div>
         {meta && <div className="meta">{meta}</div>}
         {op.op === "note" && op.status === "applied" && (
           <div className="meta">
@@ -893,7 +896,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
       )}
       {op.evidence && (
         <div className="because">
-          {t("op.because")} <q>{op.evidence.quote}</q>{" "}
+          {t("op.because")} <q>{plainDates(op.evidence.quote)}</q>{" "}
           {props.source && (
             <button type="button" aria-expanded={showSource} onClick={() => setShowSource(!showSource)}>
               {t(showSource ? "op.hide_source" : "op.show_source")}

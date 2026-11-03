@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day, sinceDay, wallTime } from "../lib/dates";
+import { day, sinceDay, time } from "../lib/dates";
 import { backupAge } from "../lib/backup";
 import { useCoverage } from "../lib/coverage";
 import { useFirstGoText } from "../lib/first-go";
@@ -474,7 +474,7 @@ function NothingNext() {
           <Parts found={found} />
         </p>
       )}
-      {next && <p>{t("queue.inspector.next_check", { time: wallTime(next.toISOString()) })}</p>}
+      {next && <p>{t("queue.inspector.next_check", { time: time(next) })}</p>}
     </div>
   );
 }
@@ -583,6 +583,8 @@ function useReviewCount(): (line: QueueLine) => string {
 /** A line's title (design 7.14): what to do, in a verb. A line that holds one item is titled by the item itself, with its
  * pill saying what it is and its button what to do; a line that groups several says how many. */
 export function useLineTitle(): (line: QueueLine) => string {
+  // With no AI account there is nothing to start: the line says what waits for one.
+  const noAccount = useQuery({ queryKey: ["status"], queryFn: api.status }).data?.ai.state === "not_set_up";
   const { t, tn, has } = useWords();
   const titleWords = useTitleWords();
   const firstGoText = useFirstGoText();
@@ -622,7 +624,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "go":
         return t("queue.go", { what });
       case "first_go":
-        return firstGoText({ count: line.count, estimate: line.estimate_usd ?? null, unpriced: line.unpriced });
+        return noAccount ? tn("first_go.no_account", line.count) : firstGoText({ count: line.count, estimate: line.estimate_usd ?? null, unpriced: line.unpriced });
       case "refused":
         return t("queue.refused", { what });
       case "no_effect":
@@ -734,6 +736,7 @@ function QueueRow(props: {
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const titleWords = useTitleWords();
   const lineTitle = useLineTitle();
+  const noAccount = useQuery({ queryKey: ["status"], queryFn: api.status }).data?.ai.state === "not_set_up";
   const reviewCount = useReviewCount();
   const intakeWords = useIntakeWords();
   const { justMe } = useSides();
@@ -904,6 +907,16 @@ function QueueRow(props: {
         };
       }
       case "first_go":
+        // Without an AI account Start would start nothing: the one action is to add the account.
+        if (noAccount) {
+          return {
+            pill: t("queue.pill.go"),
+            tone: "warn",
+            meta: t("first_go.no_account_sub"),
+            primary: { label: t("queue.act.add_account"), run: () => props.handlers.onAddAccount?.() },
+            menu: [],
+          };
+        }
         return {
           pill: t("queue.pill.go"),
           tone: "warn",

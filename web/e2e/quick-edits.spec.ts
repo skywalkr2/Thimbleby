@@ -120,3 +120,41 @@ test("a field still being typed in when the save before it is answered keeps the
   await expect(box(page, LABELS[0])).toBeVisible(LOADED);
   for (const f of fields) await expect(box(page, f.label), `${f.label} after a reload`).toHaveValue(f.shown, LOADED);
 });
+
+// A reload while saves are still on their way loses nothing (sweep X01, X75): what was typed is kept for the tab, comes back
+// and is saved, and a save under way says so.
+test("three quick edits and a reload before the first save is answered keep all three, and a save under way says Saving", async ({ page }) => {
+  test.setTimeout(180_000);
+  // The computer answers slowly, so the reload comes while the saves are still on their way.
+  await page.route("**/api/settings", async (route) => {
+    if (route.request().method() === "POST") await new Promise((done) => setTimeout(done, 2_500));
+    await route.continue();
+  });
+  await page.goto("?token=e2e-token#settings/ai");
+  await expect(box(page, LABELS[0])).toBeVisible(LOADED);
+  const fields = await nextFields(page);
+  for (const f of fields) {
+    await box(page, f.label).click();
+    await box(page, f.label).fill(f.typed);
+    await page.keyboard.press("Tab");
+  }
+  // Saving is said at once, on the page and on the row, not only after the answer.
+  await expect(page.locator("[data-save-status]")).toHaveText("Saving…");
+  await expect(page.locator(`[data-key="ai.budgets.per_day_usd"] [data-saving]`)).toBeVisible();
+  await page.reload();
+  await expect(box(page, LABELS[0])).toBeVisible(LOADED);
+  // Whatever was on its way when the page went is saved now: the computer holds all three.
+  const keys = ["ai.budgets.confirm_above_usd", "ai.budgets.per_month_usd", "ai.budgets.per_day_usd"];
+  await expect
+    .poll(
+      async () => {
+        const view = (await (await page.request.get("api/settings", { headers: { Authorization: "Bearer e2e-token" } })).json()) as { items: Array<{ key: string; value: unknown }> };
+        return keys.map((key) => view.items.find((i) => i.key === key)?.value);
+      },
+      { timeout: 90_000, message: "all three changes were saved" },
+    )
+    .toEqual(fields.map((f) => Number(f.typed)));
+  await page.reload();
+  await expect(box(page, LABELS[0])).toBeVisible(LOADED);
+  for (const f of fields) await expect(box(page, f.label), `${f.label} after a second reload`).toHaveValue(f.shown, LOADED);
+});

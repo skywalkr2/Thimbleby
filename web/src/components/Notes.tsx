@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
 import { day } from "../lib/dates";
 import { usePlaceText } from "../lib/place";
+import { useReadable } from "../lib/readable";
 import { onSide, useSideFilter, useSideOf } from "../lib/sides";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -16,7 +17,9 @@ import { RowList } from "../ui/RowList";
 import { Skeleton } from "../ui/Skeleton";
 import { SideFilter } from "./SideFilter";
 
-const firstLine = (text: string) => text.split("\n").find((l) => l.trim())?.trim() ?? "";
+/** The first line of a note that reads as words: a piece of a data dump or a line left with nothing in it is passed over. */
+const firstLine = (text: string, readable: (text: string) => string) =>
+  text.split("\n").map((line) => readable(line.trim())).find(Boolean) ?? "";
 
 export function Notes() {
   const { t, tn } = useWords();
@@ -53,11 +56,12 @@ export function Notes() {
 
 function NoteRow(props: { note: S["NoteView"]; where: string }) {
   const { t } = useWords();
+  const readable = useReadable();
   const { note } = props;
   return (
     <Row
       pill={note.trust === "untrusted" ? <Pill tone="neutral">{t("notes.from_outside")}</Pill> : undefined}
-      title={<a href={viewHref(recordView("note", note.id))}>{firstLine(note.text)}</a>}
+      title={<a href={viewHref(recordView("note", note.id))}>{firstLine(note.text, readable) || t("notes.untitled")}</a>}
       meta={[note.created_at ? t("notes.filed_on", { when: day(note.created_at) }) : "", props.where].filter(Boolean).join(" · ") || undefined}
     />
   );

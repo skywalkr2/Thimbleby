@@ -147,6 +147,25 @@ export function wallTime(iso: string): string {
   return found ? timeFormat.format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
 }
 
+/** Whether a date-time carries an offset ("Z" or "+02:00"), so it is an instant and not a time already on the person's clock. */
+const hasOffset = (iso: string): boolean => /T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso.trim());
+
+/** The calendar day of a date-time the server wrote, on the person's clock: an instant with an offset is moved to their zone
+ * first, a date or a time with no offset is already theirs. */
+export function clockDay(iso: string): string {
+  if (!hasOffset(iso)) return iso.slice(0, 10);
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? iso.slice(0, 10) : onTheClock(parsed).date;
+}
+
+/** The time of day of a date-time the server wrote, on the person's clock (an instant with an offset is moved to their zone;
+ * one with none is already theirs, as `wallTime` reads it). */
+export function clockTime(iso: string): string {
+  if (!hasOffset(iso)) return wallTime(iso);
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? wallTime(iso) : time(parsed);
+}
+
 /** A time as the server wrote it, on the person's own clock: the time alone today, otherwise the day and the time. */
 export function wallWhen(iso: string): string {
   const clock = wallTime(iso);
