@@ -325,7 +325,7 @@ def test_the_person_may_name_the_area_and_a_name_already_a_project_is_refused(en
     _, cfg, store = env
     _four_dentist_items(store, cfg)
     taken = store.read().get("project", personal_of(cfg)).data["name"]
-    with pytest.raises(StoreError, match="already a project"):
+    with pytest.raises(StoreError, match="already have something called"):
         areas.keep(store, cfg, "dentist", f"  {taken.upper()} ")
     kept = areas.keep(store, cfg, "dentist", "Teeth  and health")
     assert store.read().get("project", kept.project).data["name"] == "Teeth and health"

@@ -136,7 +136,9 @@ def test_the_appearance_page_holds_light_or_dark_and_density_and_the_brand_is_in
     store.close()
     found = settings.describe(cfg)
     # The brand is on the page too, in its closed "More settings" fold, never listed again under Advanced.
-    assert {s.key for s in found if s.page == "appearance" and not s.advanced} == {"ui.theme", "ui.density"}
+    # How times are written (12 or 24 hours, and the time list's step) sits beside them (section 319).
+    shown = {"ui.theme", "ui.density", "ui.time_format", "ui.time_step"}
+    assert {s.key for s in found if s.page == "appearance" and not s.advanced} == shown
     more = {"ui.brand.color", "ui.brand.logo", "ui.schedule.day_starts", "ui.schedule.day_ends"}
     assert {s.key for s in found if s.page == "appearance" and s.advanced} == more
     assert {s.key for s in found if s.topic == "appearance"} == more

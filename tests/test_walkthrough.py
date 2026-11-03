@@ -555,7 +555,9 @@ def test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_not
             [new_op(text="Call about it")], store.read(), now, People(store, now), None, None, source=source
         )
         assert placed[0].project == second and placed[0].filed_by.by == "source"
-        # Two sides ticked narrow the choice to them and decide nothing alone; nothing ticked is "not said".
+        # Two sides ticked narrow the choice to them and decide nothing alone; nothing ticked is "not said". A source
+        # that serves sides and not Personal never files to Personal for want of a signal: what none places stays
+        # unfiled for the person's question (section 308, X81).
         both = [{**stored[0], "sides": [first, second]}]
         fingerprint = c.get("/api/settings").json()["fingerprint"]
         assert (
@@ -568,7 +570,7 @@ def test_the_sides_a_mailbox_serves_are_saved_through_settings_and_file_what_not
         placed = sides.file_by_people(
             [new_op(text="Call about it")], store.read(), now, People(store, now), None, None, source=source
         )
-        assert placed[0].filed_by is None and placed[0].project == ws.config(env={}).workspace.project.personal
+        assert placed[0].filed_by is None and placed[0].project is None
         none = [{**stored[0], "sides": []}]
         fingerprint = c.get("/api/settings").json()["fingerprint"]
         assert (

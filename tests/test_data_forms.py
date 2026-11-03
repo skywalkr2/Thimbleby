@@ -205,7 +205,7 @@ def test_a_pattern_reaches_one_level_of_folders_and_problems_show_on_the_list(en
     assert listed["chair/item.yaml"]["problem"].startswith("name:")
     body = {"file": "lamp/item.yaml", "layer": "workspace", "changes": {"low": 20}}
     refused = c.post(f"{api}/data-forms/p18/items/file", json=body)
-    assert refused.status_code == 409 and refused.json()["detail"] == "the least must not be more than the most"
+    assert refused.status_code == 409 and refused.json()["detail"] == "The least must not be more than the most."
     wrong = c.post(f"{api}/data-forms/p18/items/file", json={**body, "file": "lamp/notes.yaml"})
     assert wrong.status_code == 409
 
