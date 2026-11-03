@@ -42,14 +42,18 @@ afterEach(() => {
   setSideChoice("all");
 });
 
-test("on a phone the side filter is one list to pick from, with every side by its full name", async () => {
+test("on a phone the side filter is one button that opens a sheet of choices, with every side by its full name", async () => {
+  // The strip became a button and a sheet on a phone (VP08, section 319); the sheet is where each long name is whole.
   document.documentElement.setAttribute("data-narrow", "");
   fakeApi(routes());
   renderApp(<SideFilter />);
-  const list = await screen.findByRole("combobox", { name: "Show" });
-  expect(within(await snapshotOf(list)).getAllByRole("option").map((o) => o.textContent)).toEqual(["All", "Personal", ...SIDES.map((s) => s.name)]);
-  await userEvent.selectOptions(list, SIDES[2].name);
-  expect(list).toHaveValue(SIDES[2].project);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /^Side: / }));
+  const sheet = await screen.findByRole("dialog");
+  const choices = within(sheet).getAllByRole("button").filter((b) => b.hasAttribute("data-side-option"));
+  expect(choices.map((b) => b.textContent)).toEqual(["All", "Personal", ...SIDES.map((s) => s.name)]);
+  await user.click(choices[4]);
+  expect(await screen.findByRole("button", { name: `Side: ${SIDES[2].name}` })).toBeInTheDocument();
   expect(screen.queryByRole("radio")).toBeNull();
 });
 
