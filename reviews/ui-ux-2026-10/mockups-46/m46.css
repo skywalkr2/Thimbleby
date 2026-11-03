@@ -432,3 +432,9 @@ table.t th:first-child, table.t td:first-child { padding-left: 20px; }
 .calclash .cr .dot { margin: 5px 6px 0 0; flex: none; }
 .inlineadd .show-phone { display: none; }
 @media (max-width: 600px) { .inlineadd .show-phone { display: inline; } }
+/* phone rows: no empty actions row; buttons sit 10px under the meta */
+@media (max-width: 600px) {
+  .row { row-gap: 0; min-height: 0; padding-top: 12px; padding-bottom: 12px; }
+  .row .acts:not(:has(.btn)) { height: 0; margin: 0; }
+  .row .acts:has(.btn) { margin-top: 10px; }
+}
