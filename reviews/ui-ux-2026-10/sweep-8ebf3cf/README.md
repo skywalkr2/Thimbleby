@@ -168,7 +168,29 @@ The reviewer redrew the app at the 4.6 bar, in the product's brand. They superse
 - "⋯" always at the top right of a row on a phone
 - in-between widths: the rail drops under the main column, settings lose their submenu, the Schedule shows weekdays only
 
-**Scores:** see `visual/mockups-46-score-*.md`. They are scored cold by a separate reviewer against the 4.6 bar (4.6 overall, no point under 4.3, brand at least 4.5).
+**Every page also has a state sheet:**
+- `todos-states`, `schedule-states`, `connections-states`, `person-states` and `quality-states`
+- the shared minimum on each: offline, a failed save, long content, a large count
+- plus the page's own cases
+
+**Scores:** five cold passes by a separate reviewer against the 4.6 bar (4.6 overall, no point under 4.3, brand at least 4.5); see `visual/mockups-46-score-1.md` … `-5.md`.
+
+| Pass | Range |
+|---|---|
+| 1 | 3.8–4.5 |
+| 2 | 4.20–4.51 |
+| 3 | 4.2–4.5 |
+| 4 | 4.39–4.61 |
+| **5 (final)** | **Setup AI 4.63, Setup mail 4.60, Connections 4.59, Today 4.58, Person 4.58, To-dos 4.55, Quality 4.54, Schedule 4.46** |
+
+- **On the final pass:** no point below 4.3 anywhere, and brand 4.5–4.8 on every page.
+- **Fixed after the final score** (not re-scored): the run-together calendar names on Today, To-dos' width, Quality's intro and the colour of one extra false alert, the state-sheet titles, and the phone rows.
+- **Still open: build these to the bar.** The scorer's list is at the end of `visual/mockups-46-score-5.md`:
+  - the Schedule's week grid text and fills, and its Day, Month and Timeline views
+  - a trend visual on Quality
+  - Connections' phone card
+  - the person page's contact card at 1024 and on a phone
+  - brand icons
 
 ## 5. The path to 4.6
 

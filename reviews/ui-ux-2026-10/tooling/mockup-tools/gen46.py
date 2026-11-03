@@ -80,7 +80,7 @@ today_main = f'''
  <div class="group danger">At risk <span class="n">1</span></div>
  <div class="row" data-state="danger"><div class="lead" style="color:var(--danger)">{ic("alert")}</div>
   <div><div class="t">Venue walk-through and Budget check-in overlap</div>
-  <div class="m"><b>Today 2:30–3:00 PM</b> {SEP} <span class="side"><span class="dot" style="background:var(--cal-3)"></span>Studio calendar</span><span class="side"><span class="dot" style="background:var(--cal-2)"></span>Clinic calendar</span> {SEP} <b>30 min short</b></div></div>
+  <div class="m"><b>Today 2:30–3:00 PM</b> {SEP} <span class="side"><span class="dot" style="background:var(--cal-3)"></span>Studio calendar and</span><span class="side"><span class="dot" style="background:var(--cal-2)"></span>Clinic calendar</span> {SEP} <b>30 min short</b></div></div>
   <div class="acts"><a class="btn secondary sm">Open both</a><a class="more" aria-label="More for this clash">{ic("more")}</a></div></div>
  <div class="group">Look over <span class="n">2</span></div>
  <div class="row"><div class="lead">{ic("inbox")}</div>
@@ -95,8 +95,8 @@ today_main = f'''
 rail = f'''
 <div class="rail">
  <div class="card"><h3>Today's schedule<a class="act link">Open</a></h3>
-  <div class="ev c3"><div class="tm">2:30 PM</div><div><div class="tt">Venue walk-through</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span>&nbsp;· Studio calendar</div></div></div>
-  <div class="ev c2"><div class="tm">2:45 PM</div><div><div class="tt">Budget check-in</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span>&nbsp;· Clinic calendar</div></div></div>
+  <div class="ev c3"><div class="tm">2:30 PM</div><div><div class="tt">Venue walk-through</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span> <span style="color:var(--text-muted)">· Studio calendar</span></div></div></div>
+  <div class="ev c2"><div class="tm">2:45 PM</div><div><div class="tt">Budget check-in</div><div class="mm"><span class="state danger" style="font-size:12.5px">{ic("alert", "i s16")}Clash</span> <span style="color:var(--text-muted)">· Clinic calendar</span></div></div></div>
   <div class="ev c1"><div class="tm">6:00 PM</div><div><div class="tt">Choir practice</div><div class="mm">St Anne's hall · Home calendar</div></div></div>
  </div>
  <div class="card"><h3>Came in <span class="group" style="padding:0"><span class="n">3</span></span><a class="act link">See all</a></h3>
@@ -174,9 +174,9 @@ def todo(t, m, state=None, q=False, act=""):
 
 todos = f'''
 <div class="ph"><div><h1>To-dos and questions</h1><div class="sub"><b>12 open</b> · 1 overdue · 2 due today</div></div></div>
-<div class="tabs"><a class="on">To-dos<span class="n">10</span></a><a>Questions<span class="n">2</span></a><a>Done<span class="n">31</span></a></div>
+<div class="tabs" style="max-width:880px"><a class="on">To-dos<span class="n">10</span></a><a>Questions<span class="n">2</span></a><a>Done<span class="n">31</span></a></div>
 <div class="filters"><span class="chip"><span class="k">Who</span><span class="v">Everyone</span>{ic("chevron", "i s16")}</span><span class="chip"><span class="k">Side</span><span class="v">All sides</span>{ic("chevron", "i s16")}</span></div>
-<div class="panel" style="margin-top:16px">
+<div class="panel" style="margin-top:16px;max-width:880px">
  <div class="inlineadd"><span class="plus">{ic("plus")}</span><span><span class="hide-phone">Add a to-do… try "call the landlord by Friday"</span><span class="show-phone">Add a to-do…</span></span></div>
  <div class="group danger">Overdue <span class="n">1</span></div>
  {todo("Pay the deposit for the venue", f'<span class="state danger">{ic("alert", "i s16")}Due Mon, Oct 26</span> {SEP} Maya Okafor asked {SEP} {side(2)}', "danger")}
@@ -310,7 +310,7 @@ page("person", "Maya Okafor", person, on="people", tab="more")
 
 # ---------- How Reginald is doing ----------
 def tile(label, num, delta, good, spark):
-    col = "var(--ok)" if good else "var(--danger)"
+    col = "var(--ok)" if good else ("var(--warn)" if good is None else "var(--danger)")
     bars = ''.join(f'<span style="height:{h}px;background:{"var(--accent)" if i == len(spark) - 1 else "var(--border-strong)"};opacity:{1 if i == len(spark) - 1 else .45}"></span>' for i, h in enumerate(spark))
     return (f'<div class="card tile" style="margin:0"><div style="font-size:13px;color:var(--text-muted)">{label}</div><div style="font:600 32px/40px var(--font-ui);margin-top:6px">{num}</div>'
             f'<div style="display:flex;align-items:end;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:{col}">{delta}</span></div></div>')
@@ -318,10 +318,10 @@ def tile(label, num, delta, good, spark):
 
 quality = f'''
 <div class="crumb">Your menu {ic("chevron", "i s16")}</div>
-<div class="ph"><div><h1>How Reginald is doing</h1><div class="sub"><b>Kept on time is up 9 points, to 89%.</b> 2 false alerts to look at. Last 4 weeks, against the 4 before.</div></div><div class="spacer"></div><span class="chip"><span class="k">Period</span>Last 4 weeks{ic("chevron", "i s16")}</span></div>
+<div class="ph"><div><h1>How Reginald is doing</h1><div class="sub"><b>Kept on time is up 9 points, to 89%.</b><br>2 false alerts to look at · last 4 weeks, against the 4 before</div></div><div class="spacer"></div><span class="chip"><span class="k">Period</span>Last 4 weeks{ic("chevron", "i s16")}</span></div>
 <div class="tiles">
 {tile("Promises kept on time", "89%", "▲ 9 points better", True, [20, 23, 26, 30])}{tile("Promises found", "47", "▲ 4 more", True, [18, 24, 22, 30])}
-{tile("False alerts", "2", "▲ 1 more than before: worse", False, [4, 12, 4, 12])}{tile("Your time looking over", "10 min", "▼ 3 min less: better", True, [30, 27, 22, 20])}</div>
+{tile("False alerts", "2", "▲ 1 more than before", None, [4, 12, 4, 12])}{tile("Your time looking over", "10 min", "▼ 3 min less: better", True, [30, 27, 22, 20])}</div>
 <div class="layout"><div class="panel"><div class="group">Week by week</div>
 <table class="t wk"><tr><th>Week</th><th class="num">Found</th><th class="num">Kept on time</th><th class="num">False alerts</th><th class="num">Looking over</th></tr>
 <tr><td>Oct 5–11</td><td class="num">9</td><td class="num">82%</td><td class="num">0</td><td class="num">12 min</td></tr>
@@ -415,7 +415,7 @@ def states_page(name, title, on, blocks, tab="more", status=None, item="this cha
 
 
 done_all = f'''<div class="panel"><div class="empty"><div class="star">✳</div><h2>All done</h2><p>Nothing is open. New to-dos from your mail and notes land here.</p><a class="btn secondary sm">See what you finished</a></div></div>'''
-states_page("todos-states", "To-dos", "todos", [
+states_page("todos-states", "To-dos and questions", "todos", [
     ("All done (a brand moment)", done_all),
     ("Filtered to nothing", empty("No to-dos for Theo Brandt", "Theo isn't on any open to-do.", "Show everyone")),
     ("Questions", '<div class="panel">' + todo("Linen or velvet for the wingback chair?", f'Question for Maya Okafor {SEP} asked Oct 24', q=True, act='<a class="btn secondary sm">Answer</a>')
@@ -437,7 +437,7 @@ states_page("connections-states", "Connections", "settings", [
     ("Sign-in refused", f'<div class="banner danger"><span class="bi">{ic("alert")}</span><div class="tx"><b>That was a different account.</b> You signed in as robin@example.com; this connection is for studio@calloway.example.</div><a class="btn primary sm">Try again</a></div>'),
     ("Removing an account asks first", '<div class="card" style="max-width:460px;box-shadow:var(--shadow-pop)"><h3>Remove studio@calloway.example?</h3><p style="margin:0 0 16px;color:var(--text-muted);font-size:14px">Reginald stops reading its mail and calendar. Nothing already filed is deleted.</p><div style="display:flex;gap:8px;justify-content:flex-end"><a class="btn secondary sm">Keep it</a><a class="btn danger sm">Remove</a></div></div>'),
 ], status=FAIL_STATUS, item="Calloway Upholstery added to this account", long_title="maya.okafor.upholstery-and-restoration-orders@calloway-and-whitfield.example", count=("Calendars", 24))
-states_page("person-states", "A person", "people", [
+states_page("person-states", "Maya Okafor", "people", [
     ("Someone just added, with nothing yet", empty("Nothing with Theo yet", "To-dos, questions and messages with Theo Brandt show up here.", "Add a to-do for Theo")),
     ("A long name and no email", '<div class="card"><dl class="dl"><dt>Name</dt><dd class="wrap">Bartholomew Featherstonehaugh-Winterbottom</dd><dt>Email</dt><dd><a class="link">Add an email</a></dd></dl></div>'),
     ("Loading", skel(2)),

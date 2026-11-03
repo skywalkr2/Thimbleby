@@ -438,3 +438,4 @@ table.t th:first-child, table.t td:first-child { padding-left: 20px; }
   .row .acts:not(:has(.btn)) { height: 0; margin: 0; }
   .row .acts:has(.btn) { margin-top: 10px; }
 }
+.row .m .side + .side { margin-left: 6px; }
