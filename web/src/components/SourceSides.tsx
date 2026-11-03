@@ -108,7 +108,7 @@ export function SourceSides(props: { sources: Source[]; group?: boolean; what?: 
   const serving = options.filter((o) => ticked(o.id)).map((o) => o.name);
   const nameOf = (side: string) => options.find((o) => o.id === side)?.name ?? side;
   return (
-    <CheckboxGroup legend={props.group ? (props.account ? t("walkthrough.mail.sides.account.legend", { reads: kinds, account: props.account }) : t(`walkthrough.mail.sides.group.legend_${count}`)) : t("walkthrough.mail.sides.legend", { label: label })} data-source-sides={props.group ? undefined : mine[0]} data-sign-in-sides={props.group ? "" : undefined} aria-describedby={props.compact ? props.hintId : `${id}-hint`} className={props.compact ? "source-sides-compact" : undefined}>
+    <CheckboxGroup legend={props.group ? (props.account ? t("walkthrough.mail.sides.account.legend", { reads: kinds, account: props.account }) : t(`walkthrough.mail.sides.group.legend_${count}`)) : t("walkthrough.mail.sides.legend", { label: label })} legendHidden={props.compact} data-source-sides={props.group ? undefined : mine[0]} data-sign-in-sides={props.group ? "" : undefined} aria-describedby={props.compact ? props.hintId : `${id}-hint`} className={props.compact ? "source-sides-compact" : undefined}>
       {options.map((o) => (
         <label key={o.id} className="side-chip" data-ticked={ticked(o.id) ? "true" : undefined}>
           <input type="checkbox" checked={ticked(o.id)} disabled={settings.isPending} onChange={(e) => change(o.id, e.target.checked)} />

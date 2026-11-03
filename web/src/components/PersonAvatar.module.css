@@ -1,0 +1,10 @@
+/* The initials disc: a tint of the side's color behind the letters, in the display face. */
+.avatar { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius-full); background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); letter-spacing: 0.02em; }
+.avatar[data-size="lg"] { width: 48px; height: 48px; font-size: var(--text-md); }
+.avatar[data-size="md"] { width: 32px; height: 32px; font-size: var(--text-sm); }
+.avatar[data-slot="1"] { background: color-mix(in srgb, var(--side-1) 22%, var(--surface)); }
+.avatar[data-slot="2"] { background: color-mix(in srgb, var(--side-2) 22%, var(--surface)); }
+.avatar[data-slot="3"] { background: color-mix(in srgb, var(--side-3) 22%, var(--surface)); }
+.avatar[data-slot="4"] { background: color-mix(in srgb, var(--side-4) 22%, var(--surface)); }
+.avatar[data-slot="5"] { background: color-mix(in srgb, var(--side-5) 22%, var(--surface)); }
+.avatar[data-slot] { color: var(--text); }

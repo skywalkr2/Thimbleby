@@ -85,7 +85,10 @@ test("the page has a crumb back to People, says who they are under the name, and
   expect(crumb.getAttribute("href")).toMatch(/#records\/people$/);
   expect(await screen.findByRole("heading", { level: 1, name: ANA })).toBeInTheDocument();
   expect(screen.getAllByText("my sister").length).toBeGreaterThan(0);
-  expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  // The one filled button adds a to-do for them; Edit is on their contact card.
+  expect(screen.getByRole("button", { name: "Add a to-do for Ana" })).toBeInTheDocument();
+  const card = document.querySelector<HTMLElement>("[data-contact-card]")!;
+  expect(within(card).getByRole("button", { name: "Edit" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Edit details" })).toBeNull();
 });
 
@@ -94,12 +97,16 @@ test("the details panel says each fact once: how to reach them, who they are, th
   const details = await loaded();
   await within(details).findByText("Prefers short notes");
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
-  expect(terms).toEqual(["Email", "Phone", "Who they are", "Sides", "Last contact", "Dates", "What matters to them"]);
+  expect(terms).toEqual(["Email", "Phone", "Who they are", "Sides", "Dates", "What matters to them"]);
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Email")).toContain("ana@example.com");
   expect(value("Phone")).toBe("Add phone");
   expect(value("Sides")).toBe("PersonalShop");
-  expect(value("Last contact")).toContain(day("2026-10-19"));
+  // How you were last in touch is the head of the card, with their initials, not a row of it.
+  const head = document.querySelector<HTMLElement>("[data-contact-card] .contact-head")!;
+  expect(head).toHaveTextContent("Last contact");
+  expect(head).toHaveTextContent(day("2026-10-19"));
+  expect(within(head).getByText("AE")).toBeInTheDocument();
   expect(value("Dates")).toContain("Birthday is March 3");
   // The internal bookkeeping is nowhere, and the way to reach them is not said a second time anywhere on the page.
   expect(screen.queryByText("Name checked")).toBeNull();
@@ -220,4 +227,62 @@ test("the person's own page lists every job and business they keep, not only the
   renderApp(<RecordPage kind="person" id="PER-2" onBack={() => {}} />);
   const row = await screen.findByText("Your jobs and businesses");
   expect(row.closest("[data-definition]")!.querySelector("dd")!.textContent).toBe("ShopStudio");
+});
+
+// ---- the page to the 4.6 mockups: the primary, the contact card, the timeline and the box to ask --------------------------
+
+test("the one filled button adds a to-do for them: the form opens with the cursor in its words and them as the one who does it", async () => {
+  const user = userEvent.setup();
+  serve(friend);
+  await loaded();
+  await user.click(screen.getByRole("button", { name: "Add a to-do for Ana" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a to-do" });
+  expect(within(dialog).getByRole("combobox", { name: "Who does it" })).toHaveValue("PER-2");
+  expect(document.activeElement).toBe(within(dialog).getByRole("textbox", { name: /^What/ }));
+});
+
+test("the contact card has their initials on the color of their side, how you were last in touch and Edit, and the page marks the order of its parts", async () => {
+  serve({ ...friend, sides: ["PRJ-personal", "PRJ-shop"], side: "both" });
+  await loaded();
+  const card = document.querySelector<HTMLElement>("[data-contact-card]")!;
+  expect(within(card).getByText("AE")).toHaveAttribute("data-avatar", "");
+  expect(within(card).getByText("AE")).toHaveAttribute("aria-hidden", "true");
+  // The parts a narrow window puts in order: what is open, then the card, then the history, then the box to ask.
+  const grid = document.querySelector<HTMLElement>("[data-person-page]")!;
+  expect(grid.querySelector('[data-slot="open"]')).not.toBeNull();
+  expect(grid.querySelector('[data-slot="rest"]')).not.toBeNull();
+  expect(grid.querySelector('[data-slot="ask"]')).not.toBeNull();
+  expect(card.closest(".record-rail")).not.toBeNull();
+});
+
+test("the box to ask is a card of the rail, titled with their first name, with a send button inside it", async () => {
+  serve(friend);
+  await loaded();
+  expect(await screen.findByRole("heading", { name: "Ask about Ana" })).toBeInTheDocument();
+  const ask = document.querySelector<HTMLElement>('[data-slot="ask"]')!;
+  expect(within(ask).getByPlaceholderText("Ask anything about Ana")).toBeInTheDocument();
+  expect(within(ask).getByRole("button", { name: "Send" })).toBeInTheDocument();
+});
+
+test("each line of the timeline has an icon for who did it", async () => {
+  serve(friend, {}, pageOf({ activity: [
+    { at: "2026-10-12T09:00:00Z", kind: "action", id: "ACT-9", name: "Choose the font", op: "action.add#0", field: null, actor: "pm", by_assistant: false, made: "added" },
+    { at: "2026-10-12T10:00:00Z", kind: "action", id: "ACT-8", name: "Pick the paper", op: "action.add#0", field: null, actor: "assistant", by_assistant: true, made: "added" },
+  ] }));
+  await loaded();
+  const entries = await screen.findAllByRole("listitem").then((all) => all.filter((li) => li.hasAttribute("data-activity-entry")));
+  expect(entries).toHaveLength(2);
+  for (const entry of entries) expect(entry.querySelector("svg")).not.toBeNull();
+});
+
+test("with nothing open with them the page says so once, with the way to add a to-do for them", async () => {
+  const user = userEvent.setup();
+  serve(friend, {}, pageOf({ open_actions: [], open_questions: [], completed_actions: [] }));
+  await loaded();
+  const empty = await screen.findByText("Nothing with Ana yet");
+  expect(empty).toBeInTheDocument();
+  expect(screen.getByText("To-dos, questions and messages with Ana Example show up here.")).toBeInTheDocument();
+  const box = empty.closest("[data-person-nothing]") as HTMLElement;
+  await user.click(within(box).getByRole("button", { name: "Add a to-do for Ana" }));
+  expect(await screen.findByRole("dialog", { name: "Add a to-do" })).toBeInTheDocument();
 });

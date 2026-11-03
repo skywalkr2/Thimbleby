@@ -136,7 +136,7 @@ test.describe.serial("journey: new start", () => {
     // The step now leads with the result, and the services list is folded behind "Connect another".
     await expect(main.locator("[data-mail-result]")).toContainText("Example mail is connected.", { timeout: 90_000 });
     await expect(main.getByText(/Restart to finish connecting/)).toHaveCount(0);
-    await main.getByRole("button", { name: "Connect another" }).click();
+    await main.getByRole("button", { name: "Connect another account" }).click();
     await expect(row).toHaveAttribute("data-state", "ready");
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     // A page opened fresh after the restart resumes at this screen.
@@ -145,7 +145,7 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await visit(page);
     // Signed in once, nothing was asked of the assistant. A page opened fresh folds the list again.
-    await main.getByRole("button", { name: "Connect another" }).click();
+    await main.getByRole("button", { name: "Connect another account" }).click();
     await expect(row).toHaveAttribute("data-signed-in", "");
     await expect(row).toContainText("Reading your mail and calendar.");
     await expect(row).not.toContainText("Sign in to start reading");

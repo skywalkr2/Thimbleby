@@ -18,6 +18,7 @@ import { useSignInWindow } from "../lib/sign-in-window";
 import { useContinue } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
 import { addonOfSignIn } from "./SignIns";
 import { Icon } from "../ui/Icon";
@@ -301,22 +302,40 @@ export function WalkthroughMail(props: {
                       const mine = reads.filter((s) => (s.account ?? "") === account);
                       return (
                         <li key={account ?? ""} className="account-row" data-account-row={account ?? ""}>
-                          <span className="account-name">
-                            <strong title={account || undefined}>{account || title}</strong>
-                            <span className="hint">{listOf(mine.map(shortOf))}</span>
+                          <span className="account-icon" aria-hidden="true">
+                            <Icon name="inbox" size={18} />
                           </span>
-                          {hasSides && (
-                            <SignInSides
-                              sources={mine}
-                              what={listOf(mine.map(labelOf))}
-                              account={account || undefined}
-                              labelOf={labelOf}
-                              personal={business.data?.personal ?? null}
-                              sides={business.data?.sides ?? []}
-                              compact
-                              hintId={hintId}
-                            />
-                          )}
+                          <div className="account-main">
+                            <span className="account-name">
+                              <strong title={account || undefined}>{account || title}</strong>
+                              <span className="hint">{listOf(mine.map(shortOf))}</span>
+                            </span>
+                            <span className="account-state">
+                              <span>{title}</span>
+                              <span aria-hidden="true">·</span>
+                              <span className="account-ok">
+                                <Icon name="check" size={14} />
+                                <span>{t("walkthrough.mail.account.connected")}</span>
+                              </span>
+                            </span>
+                            {hasSides && (
+                              <div className="account-for">
+                                <span className="account-for-word" aria-hidden="true">
+                                  {t("walkthrough.mail.account.for")}
+                                </span>
+                                <SignInSides
+                                  sources={mine}
+                                  what={listOf(mine.map(labelOf))}
+                                  account={account || undefined}
+                                  labelOf={labelOf}
+                                  personal={business.data?.personal ?? null}
+                                  sides={business.data?.sides ?? []}
+                                  compact
+                                  hintId={hintId}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </li>
                       );
                     })}
@@ -354,9 +373,11 @@ export function WalkthroughMail(props: {
       )}
       {folded && (
         <FormBlock>
-          <Button variant="quiet" aria-expanded={false} onClick={() => setRevealed(true)}>
-            {t("walkthrough.mail.connect_another")}
-          </Button>
+          <div>
+            <Button variant="secondary" size="sm" icon="plus" aria-expanded={false} onClick={() => setRevealed(true)}>
+              {t("walkthrough.mail.connect_another")}
+            </Button>
+          </div>
         </FormBlock>
       )}
       {!folded && services.length > 0 && (
@@ -380,14 +401,19 @@ export function WalkthroughMail(props: {
       )}
       {services.length === 0 && (
         <FormBlock data-mail-none="">
-          <p className={packs.isError ? "problem-note" : "hint"} id="mail-none">
-            {t(packs.isError ? "walkthrough.mail.load_failed" : "walkthrough.mail.none")}
-          </p>
-          <Actions align="end">
-            <Button aria-describedby="mail-none" onClick={() => props.onChooseSource(null)}>
+          <EmptyState
+            icon="inbox"
+            title={packs.isError ? undefined : t("walkthrough.mail.none_title")}
+            text={
+              <span className={packs.isError ? "problem-note" : undefined} id="mail-none">
+                {t(packs.isError ? "walkthrough.mail.load_failed" : "walkthrough.mail.none")}
+              </span>
+            }
+          >
+            <Button icon="plus" aria-describedby="mail-none" onClick={() => props.onChooseSource(null)}>
               {t("walkthrough.mail.connect_one")}
             </Button>
-          </Actions>
+          </EmptyState>
         </FormBlock>
       )}
       {waiting && (
@@ -625,6 +651,23 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   );
 }
 
+/** What the screen says while the service's own window is open: where to finish, that this page carries on by itself, and the way
+ * to stop waiting. */
+function WaitingBanner(props: { onCancel: () => void }) {
+  const { t } = useWords();
+  return (
+    <div className="wait-banner" role="status" data-sign-in-waiting="">
+      <Icon name="external" size={16} />
+      <p>
+        <strong>{t("sign_in.window.waiting_title")}</strong> {t("sign_in.window.waiting_rest")}
+      </p>
+      <Button size="sm" onClick={props.onCancel}>
+        {t("action.cancel")}
+      </Button>
+    </div>
+  );
+}
+
 /** A sign-in of a running service: where it stands, and the button that opens the service's own page in its own window.
  *  The screen says it is waiting, then how it went; a refusal shows the service's reason and Try again. Right after the
  *  restart a connection needed (`resumed`, the service's name), the button reads "Sign in to {service}" and holds the cursor:
@@ -633,7 +676,7 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
   const { t } = useWords();
   const client = useQueryClient();
   const { item } = props;
-  const { start, phase, text } = useSignInWindow(item.name);
+  const { start, cancel, phase, text } = useSignInWindow(item.name);
   const button = useRef<HTMLButtonElement>(null);
   const resumed = props.resumed && item.status !== "signed_in" ? props.resumed : undefined;
   useEffect(() => {
@@ -662,11 +705,7 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
           ))}
           {several && (
             <>
-              {phase === "waiting" && (
-                <p className="hint" role="status">
-                  {t("sign_in.window.waiting")}
-                </p>
-              )}
+              {phase === "waiting" && <WaitingBanner onCancel={cancel} />}
               {text && (
                 <p className="problem-note" role="alert">
                   {text}
@@ -697,11 +736,7 @@ function ServiceSignIn(props: { item: SignIn; resumed?: string; onStarted?: () =
               {t("walkthrough.mail.resumed", { service: resumed })}
             </p>
           )}
-          {phase === "waiting" && (
-            <p className="hint" role="status">
-              {t("sign_in.window.waiting")}
-            </p>
-          )}
+          {phase === "waiting" && <WaitingBanner onCancel={cancel} />}
           {phase === "done" && (
             <p className="hint" role="status">
               {t("sign_in.window.done")}

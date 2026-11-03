@@ -1,11 +1,12 @@
 // What happened to a record (design 7.14, 7.12): a timeline grouped by day, each entry a plain sentence with its time, the
 // latest few first and "Show all activity" for the rest. The entries come newest first, and stay in that order. A day is
 // "Today", "Yesterday" or its month and day. A day is a heading over its own list, so the list items are the entries and
-// nothing else: a count of them is a count of what happened. `shown` is how many show before the rest is asked for.
+// nothing else: a count of them is a count of what happened. Each entry can carry an icon for who did it. `shown` is how many show before the rest is asked for.
 import { useState, type ReactNode } from "react";
 import { addDays, monthDay, todayOn, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Button } from "./Button";
+import { Icon, type IconName } from "./Icon";
 import styles from "./ActivityList.module.css";
 
 export interface ActivityEntry {
@@ -13,6 +14,8 @@ export interface ActivityEntry {
   /** When it happened, as the server wrote it on the person's own clock. */
   at: string;
   body: ReactNode;
+  /** A small icon for who or what it was (the person, the assistant), in the slot before the words. */
+  icon?: IconName;
 }
 
 export function ActivityList(props: { entries: ActivityEntry[]; shown?: number; label?: string }) {
@@ -41,8 +44,11 @@ export function ActivityList(props: { entries: ActivityEntry[]; shown?: number; 
             <ol className={styles.entries}>
               {group.entries.map((entry) => (
                 <li key={entry.key} className={styles.entry} data-activity-entry="">
-                  <span className={styles.time}>{wallTime(entry.at)}</span>
+                  <span className={styles.lead} aria-hidden="true">
+                    {entry.icon && <Icon name={entry.icon} size={16} />}
+                  </span>
                   <span className={styles.body}>{entry.body}</span>
+                  <span className={styles.time}>{wallTime(entry.at)}</span>
                 </li>
               ))}
             </ol>

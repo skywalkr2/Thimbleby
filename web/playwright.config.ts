@@ -161,7 +161,7 @@ export default defineConfig({
     { name: "just-me", testMatch: /just-me\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${justMe.port}/` } },
     { name: "sides", testMatch: /side-is-a-group\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sides.port}/` } },
     { name: "side-filter", testMatch: /side-filter\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sideFilter.port}/` } },
-    { name: "people-records", testMatch: /people-records\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${peopleRecords.port}/` } },
+    { name: "people-records", testMatch: /(people-records|person-quality-setup-46)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${peopleRecords.port}/` } },
     { name: "first-day", testMatch: /first-day.*\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${firstDay.port}/` } },
     { name: "quick-edits", testMatch: /quick-edits\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${quickEdits.port}/` } },
     { name: "data-and-trust", testMatch: /data-and-trust\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${dataTrust.port}/` } },

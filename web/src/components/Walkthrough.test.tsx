@@ -1965,7 +1965,7 @@ describe("Mail and calendar", () => {
     expect(opener).toHaveBeenCalledWith("", "_blank");
     // The app's own window never goes to the service.
     expect(assign).not.toHaveBeenCalled();
-    expect(await screen.findByText(/Waiting for you to sign in/)).toBeInTheDocument();
+    expect(await screen.findByText(/Finish signing in in the window that opened/)).toBeInTheDocument();
   });
 
   test("a refused sign-in shows the service's reason in plain words and Try again", async () => {
@@ -1974,7 +1974,7 @@ describe("Mail and calendar", () => {
     open();
     const mine = await row();
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
-    expect(await screen.findByText(/Waiting for you to sign in/)).toBeInTheDocument();
+    expect(await screen.findByText(/Finish signing in in the window that opened/)).toBeInTheDocument();
     act(() => announceSignIn({ outcome: "refused", name: "mail-addon/account", error: "access_denied", detail: "Not on the testers list" }));
     expect(await screen.findByText("The service didn't allow the sign-in (access_denied): Not on the testers list")).toBeInTheDocument();
     expect(assign).not.toHaveBeenCalled();
@@ -1988,7 +1988,7 @@ describe("Mail and calendar", () => {
     open();
     const mine = await row();
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
-    expect(await screen.findByText(/Waiting for you to sign in/)).toBeInTheDocument();
+    expect(await screen.findByText(/Finish signing in in the window that opened/)).toBeInTheDocument();
     popup.closed = true;
     expect(await screen.findByText("The sign-in window was closed before you finished.", {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in to The account" })).toHaveTextContent("Try again");
@@ -2132,7 +2132,7 @@ describe("Mail and calendar", () => {
     service("on", { signed: true });
     open();
     // The services list is folded to one line once something is connected.
-    await user.click(await screen.findByRole("button", { name: "Connect another" }));
+    await user.click(await screen.findByRole("button", { name: "Connect another account" }));
     const mine = await row();
     expect(await within(mine).findByText("Signed in as me@example.com")).toBeInTheDocument();
     expect(within(mine).getByText("Reading your mail and calendar.")).toBeInTheDocument();
@@ -2163,7 +2163,7 @@ describe("Mail and calendar", () => {
       "POST sign-ins/mail-addon/account/start": () => ({ url: "http://localhost:9090/login?another=1" }),
     });
     open();
-    await user.click(await screen.findByRole("button", { name: "Connect another" }));
+    await user.click(await screen.findByRole("button", { name: "Connect another account" }));
     const mine = await row();
     expect(await within(mine).findByText("Signed in as me@example.com")).toBeInTheDocument();
     expect(within(mine).getByText("Signed in as work@example.com")).toBeInTheDocument();
@@ -2209,7 +2209,7 @@ describe("Mail and calendar", () => {
     expect(block.contains(screen.getByRole("button", { name: "Continue" }))).toBe(true);
     expect(screen.queryByText("Services you can connect")).toBeNull();
     expect(screen.queryByText("Service mail-addon", { selector: "strong" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Connect another" }));
+    await user.click(screen.getByRole("button", { name: "Connect another account" }));
     expect(await screen.findByText("Services you can connect")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
@@ -2220,7 +2220,7 @@ describe("Mail and calendar", () => {
     open();
     expect(await screen.findByText("Services you can connect")).toBeInTheDocument();
     expect(screen.queryByText(/is connected\./)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Connect another" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Connect another account" })).toBeNull();
   });
 
   test("the set-aside choice is one line with Change, which shows the switch in place", async () => {
@@ -2619,6 +2619,39 @@ describe("Mail and calendar", () => {
     expect(screen.getAllByRole("group")).toHaveLength(3);
   });
 
+  test("each account row is a card: its mark, its address, what is read, that it is connected in words and a check, then For and the sides as chips", async () => {
+    twoAccounts(["avery.lane@example.com", "avery.lane.home@example.com", "avery.lane.studio@example.com"]);
+    open();
+    const rows = await screen.findByRole("list", { name: "The accounts being read" });
+    for (const item of within(rows).getAllByRole("listitem")) {
+      expect(item.querySelector(".account-icon svg")).not.toBeNull();
+      const state = item.querySelector<HTMLElement>(".account-state")!;
+      expect(within(state).getByText("Connected")).toBeInTheDocument();
+      expect(state.querySelector(".account-ok svg")).not.toBeNull();
+      expect(within(item.querySelector<HTMLElement>(".account-for")!).getByText("For")).toHaveAttribute("aria-hidden", "true");
+      // The chips are the ticks: a chip for each side, each a checkbox that can be changed in the row.
+      expect(item.querySelectorAll(".account-for .side-chip input[type=checkbox]").length).toBeGreaterThan(0);
+    }
+  });
+
+  test("while the service's window is open the step says to finish there and that this page carries on by itself, with a way to cancel", async () => {
+    const user = userEvent.setup();
+    service("on");
+    open();
+    const mine = await row();
+    await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
+    const banner = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>("[data-sign-in-waiting]");
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(banner).toHaveTextContent("Finish signing in in the window that opened. This page carries on by itself when you're done.");
+    await user.click(within(banner).getByRole("button", { name: "Cancel" }));
+    expect(document.querySelector("[data-sign-in-waiting]")).toBeNull();
+    // Nothing is signed in, and the button is there to start again.
+    expect(screen.getByRole("button", { name: "Sign in to The account" })).toBeEnabled();
+  });
+
   test("one account: the reading line and the sides question stay as they were, with no address added", async () => {
     twoAccounts(["sam@example.com"]);
     open();
@@ -2756,7 +2789,9 @@ describe("Mail and calendar", () => {
     expect(screen.queryByText(/No services listed/)).toBeNull();
     expect(screen.queryByText(/Connect another service/)).toBeNull();
     expect(screen.queryByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" })).toBeNull();
-    const buttons = within(document.querySelector<HTMLElement>("[data-mail-none]")!).getAllByRole("button");
+    const none = document.querySelector<HTMLElement>("[data-mail-none]")!;
+    expect(within(none).getByText("Connect your first account")).toBeInTheDocument();
+    const buttons = within(none).getAllByRole("button");
     expect(buttons.map((b) => b.textContent)).toEqual(["Connect one"]);
     await user.click(buttons[0]);
     expect(await screen.findByRole("form", { name: "Add mail, calendar or folder" })).toBeInTheDocument();

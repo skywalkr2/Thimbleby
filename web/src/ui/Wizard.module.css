@@ -24,8 +24,11 @@
 }
 .stepButton:hover { background: var(--surface-hover); color: var(--text); }
 .stepButton[aria-current="step"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
-.circle { flex: none; width: 18px; height: 18px; border-radius: var(--radius-full); border: 1.5px solid var(--border-strong); display: grid; place-items: center; }
-.circle[data-state="done"] { background: var(--ok); border-color: var(--ok); color: var(--text-on-accent); }
+.circle { flex: none; width: 22px; height: 22px; color: var(--text-muted); border-radius: var(--radius-full); border: 1.5px solid var(--border-strong); display: grid; place-items: center; }
+.circle[data-state="done"] { border-color: var(--text-muted); color: var(--text-muted); }
+/* The number in the display face, in italics, as the step rail of the mockups draws it. */
+.numeral { font-family: var(--font-display); font-style: italic; font-weight: var(--weight-medium); font-size: var(--text-sm); line-height: 1; }
+.stepButton[aria-current="step"] .circle { color: var(--accent-text); }
 .circle[data-state="skipped"] { border-style: dashed; color: var(--text-muted); }
 .stepButton[aria-current="step"] .circle { border-color: var(--accent); }
 .label { display: grid; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
@@ -33,7 +36,7 @@
 
 /* The open step: one column, its explanation under its title. */
 .step { min-width: 0; display: grid; gap: var(--space-4); align-content: start; }
-.eyebrow { margin: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.eyebrow { margin: 0; }
 .stepTitle { margin: calc(var(--space-2) * -1) 0 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-medium); letter-spacing: -0.01em; }
 .stepTitle:focus, .stepTitle:focus-visible { outline: none; box-shadow: none; }
 .explanation { margin: 0; color: var(--text-muted); font-size: var(--text-md); line-height: var(--lh-md); max-width: var(--measure); }
@@ -45,9 +48,14 @@
 
 /* The footer is fixed to the bottom of the window, over a surface that runs its full width. */
 .footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--border); }
-.footerInner { display: flex; align-items: center; gap: var(--space-3); max-width: 1100px; margin: 0 auto; padding: var(--space-3) var(--page-pad); padding-left: calc(var(--page-pad) + var(--settings-nav-w) + var(--space-12)); }
+.footerInner { display: grid; grid-template-columns: var(--settings-nav-w) minmax(0, 680px); gap: var(--space-12); justify-content: center; max-width: 1100px; margin: 0 auto; padding: var(--space-3) var(--page-pad); }
+/* The buttons are in the second track, the step's own column; with no rail the column is the only track. */
+.footerButtons { grid-column: 2; display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.layout[data-no-rail] .footerInner { grid-template-columns: minmax(0, 680px); }
+.layout[data-no-rail] .footerButtons { grid-column: 1; }
 .footerInFlow { position: static; }
-.footer.footerInFlow > .footerInner { padding-left: var(--space-4); padding-right: var(--space-4); }
+.footer.footerInFlow > .footerInner { display: block; padding-left: var(--space-4); padding-right: var(--space-4); }
+.footer.footerInFlow .footerButtons { grid-column: auto; }
 .grow { flex: 1 1 auto; }
 /* While a toast shows the footer keeps its place and the toast goes to the top (a dialog's rule), so none is over a button. */
 :global(html[data-toasts]) .root { padding-bottom: 0; }
@@ -61,8 +69,10 @@
 :global([data-narrow]) .steps[data-open="false"] { display: none; }
 :global([data-narrow]) .stepButton { width: auto; border: 1px solid var(--border); }
 /* On a phone the footer is a bar across the bottom with the buttons the width they need. */
-:global([data-narrow]) .footerInner { padding: var(--space-2) var(--space-4); flex-wrap: wrap; }
+:global([data-narrow]) .footerInner { grid-template-columns: minmax(0, 1fr); padding: var(--space-2) var(--space-4); }
+:global([data-narrow]) .footerButtons { grid-column: 1; flex-wrap: wrap; }
 @media (max-width: 1023.98px) {
   .layout { grid-template-columns: minmax(0, 680px); }
-  .footerInner { padding-left: var(--page-pad); }
+  .footerInner { grid-template-columns: minmax(0, 680px); }
+  .footerButtons { grid-column: 1; }
 }

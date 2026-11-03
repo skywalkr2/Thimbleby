@@ -1,9 +1,10 @@
 // The wizard's frame (design 7.8, 7.12, VC12): the whole window with a header (the title, how long it takes and the way to finish
-// later), a rail of the steps at the left, and one centred column 680px wide for the open step. Under the step's title is its
-// explanation, never a column of its own. The footer is fixed at the bottom of the window: Back, then "I'll do this later", then
+// later), a rail of the steps at the left (a numeral in the display face in each circle, a check once done), and one centred column 680px wide for the open step. Under the step's title is its
+// explanation, never a column of its own. The footer is fixed at the bottom of the window, its buttons on the edges of the step's column: Back, then "I'll do this later", then
 // the one primary button; on a phone it is a bar across the bottom. The rail marks a finished step with a check in a circle and a
 // skipped one with its words, and says which step is open by its bar and weight, not by a fill.
 import type { ReactNode, Ref } from "react";
+import { GroupLabel } from "./GroupLabel";
 import { Icon } from "./Icon";
 import styles from "./Wizard.module.css";
 
@@ -47,11 +48,11 @@ export function WizardRail(props: { label: string; place: ReactNode; stepsLabel:
         {props.toggle}
       </div>
       <ol className={styles.steps} id={props.listId} data-open={props.open}>
-        {props.steps.map((step) => (
+        {props.steps.map((step, index) => (
           <li key={step.id}>
             <button type="button" className={styles.stepButton} data-screen={step.id} data-state={step.state ?? undefined} aria-current={step.current ? "step" : undefined} onClick={() => props.onGo(step.id)}>
               <span className={styles.circle} data-state={step.state ?? undefined} aria-hidden="true">
-                {step.state === "done" ? <Icon name="check" size={12} /> : step.state === "skipped" ? <Icon name="minus" size={12} /> : null}
+                {step.state === "done" ? <Icon name="check" size={12} /> : step.state === "skipped" ? <Icon name="minus" size={12} /> : <span className={styles.numeral}>{index + 1}</span>}
               </span>
               <span className={styles.label}>
                 <span>{step.label}</span>
@@ -80,7 +81,11 @@ export function WizardStep(props: {
 }) {
   return (
     <main id="main" className={styles.step} tabIndex={-1} aria-labelledby={props.titleId} data-screen={props.screen}>
-      {props.eyebrow && <p className={styles.eyebrow}>{props.eyebrow}</p>}
+      {props.eyebrow && (
+        <GroupLabel as="p" className={styles.eyebrow} style={{ padding: 0 }}>
+          {props.eyebrow}
+        </GroupLabel>
+      )}
       <h2 id={props.titleId} ref={props.titleRef} tabIndex={-1} className={styles.stepTitle}>
         {props.title}
       </h2>
@@ -100,10 +105,13 @@ export function StepFooter(props: { back?: ReactNode; later?: ReactNode; primary
   return (
     <div className={props.inFlow ? `${styles.footer} ${styles.footerInFlow}` : styles.footer} ref={props.footRef} data-step-footer={props.inFlow ? "inline" : ""}>
       <div className={styles.footerInner}>
-        {props.back}
-        <span className={styles.grow} />
-        {props.later}
-        {props.primary}
+        {/* The buttons stand in the step's own column, so they line up with its left and right edges. */}
+        <div className={styles.footerButtons}>
+          {props.back}
+          <span className={styles.grow} />
+          {props.later}
+          {props.primary}
+        </div>
       </div>
     </div>
   );

@@ -13,6 +13,9 @@ import { EmptyState } from "../ui/EmptyState";
 import { FormField } from "../ui/FormField";
 import { LoadFailed } from "../ui/LoadFailed";
 import { PageHeader } from "../ui/PageHeader";
+import { ButtonLink } from "../ui/Button";
+import { Icon } from "../ui/Icon";
+import { QualityTrend } from "./QualityTrend";
 import { Panel } from "../ui/Panel";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Quality.module.css";
@@ -34,7 +37,8 @@ function Section(props: { id: string; title: string; hint?: string; children: Re
       <details className={`${styles.section} ${styles.collapsed}`} data-quality-section={props.id}>
         <summary>
           <span>{props.title}</span>
-          {props.empty && <span className={styles.emptySummary}>{` · ${t("quality.section.empty")}`}</span>}
+          {props.empty && <span className={styles.emptyCount}>0</span>}
+          {props.empty && <span className={styles.emptySummary}>{t("quality.section.empty")}</span>}
         </summary>
         {props.hint && <p className="hint">{props.hint}</p>}
         <div className={styles.detailBody}>{props.children}</div>
@@ -70,13 +74,35 @@ function Days(props: { label: string; rows: string[] }) {
   );
 }
 
-function StatTile(props: { title: string; value: string; change?: string }) {
+/** Whether a change is for the better: more is better for what was closed, fewer for false alerts and for time spent looking over;
+ * what was found is neither (finding more may only mean there was more to find). */
+type Better = "more" | "fewer" | null;
+
+function StatTile(props: { title: string; value: string; change?: string; delta?: number; better?: Better; trend?: { values: number[]; label: string } }) {
   const id = useId();
+  const { t } = useWords();
+  const dir = props.delta === undefined || props.delta === 0 ? null : props.delta > 0 ? "up" : "down";
+  const judged = dir && props.better ? ((props.better === "more") === (dir === "up") ? "better" : "worse") : null;
   return (
     <article className={styles.tile} aria-labelledby={id}>
       <h3 id={id}>{props.title}</h3>
       <p className={styles.value}>{props.value}</p>
-      {props.change && <p className={styles.change}>{props.change}</p>}
+      {props.change && (
+        <p className={styles.change} data-judged={judged ?? undefined}>
+          {dir && (
+            <span className={styles.arrow} aria-hidden="true">
+              {dir === "up" ? "▲" : "▼"}
+            </span>
+          )}
+          <span>{props.change}</span>
+          {judged && (
+            <span className={styles.judged} data-judgement={judged}>
+              {t(`quality.stat.${judged}`)}
+            </span>
+          )}
+        </p>
+      )}
+      {props.trend && <QualityTrend values={props.trend.values} label={props.trend.label} />}
     </article>
   );
 }
@@ -305,6 +331,12 @@ export function Quality(props: { onBack: () => void }) {
   const latest = weeks[weeks.length - 1];
   const delta = (current: number | undefined, before: number | undefined, time = false) =>
     current === undefined || before === undefined ? undefined : outcomeChange(t, tn, current - before, time);
+  const change = (current: number | undefined, before: number | undefined) => (current === undefined || before === undefined ? undefined : current - before);
+  // A line for each measure, week by week, oldest first, with the numbers said in its text alternative.
+  const trendOf = (title: string, values: number[], time = false) => ({
+    values,
+    label: t("quality.trend.label", { what: title, values: values.map((v) => (time ? t("quality.stat.minutes", { minutes: minutesOf(v) }) : String(v))).join(", ") }),
+  });
   const alertCount = view ? view.outcome.dismissed + view.outcome.corrected : 0;
   const latestAlerts = latest ? latest.dismissed + latest.corrected : undefined;
   const previousAlerts = previous ? previous.dismissed + previous.corrected : undefined;
@@ -332,22 +364,51 @@ export function Quality(props: { onBack: () => void }) {
         <LoadFailed message={t("quality.load_failed")} onRetry={() => void page.refetch()} />
       ) : (
         <>
+          <div className={styles.soWhat} data-quality-sowhat="">
+            <p className={styles.soWhatMain}>
+              {view.outcome.promises_found === 0 ? t("quality.sowhat.none") : tn("quality.sowhat.kept", view.outcome.promises_found, { kept: view.outcome.promises_kept })}
+            </p>
+            <p className={styles.soWhatMore}>{tn("quality.sowhat.alerts", alertCount)}</p>
+          </div>
           <p className={styles.window} data-quality-window="">
             {t("quality.window", { from: monthDay(view.since), to: monthDay(view.until) })}
           </p>
           <div className={styles.tiles} role="region" aria-label={t("quality.tiles.title")} data-quality-section="quality-outcome">
-            <StatTile title={t("quality.stat.found")} value={String(view.outcome.promises_found)} change={delta(latest?.promises_found, previous?.promises_found)} />
-            <StatTile title={t("quality.stat.kept")} value={String(view.outcome.promises_kept)} change={delta(latest?.promises_kept, previous?.promises_kept)} />
-            <StatTile title={t("quality.stat.alerts")} value={String(alertCount)} change={delta(latestAlerts, previousAlerts)} />
+            <StatTile
+              title={t("quality.stat.found")}
+              value={String(view.outcome.promises_found)}
+              change={delta(latest?.promises_found, previous?.promises_found)}
+              delta={change(latest?.promises_found, previous?.promises_found)}
+              trend={trendOf(t("quality.stat.found"), weeks.map((w) => w.promises_found))}
+            />
+            <StatTile
+              title={t("quality.stat.kept")}
+              value={String(view.outcome.promises_kept)}
+              change={delta(latest?.promises_kept, previous?.promises_kept)}
+              delta={change(latest?.promises_kept, previous?.promises_kept)}
+              better="more"
+              trend={trendOf(t("quality.stat.kept"), weeks.map((w) => w.promises_kept))}
+            />
+            <StatTile
+              title={t("quality.stat.alerts")}
+              value={String(alertCount)}
+              change={delta(latestAlerts, previousAlerts)}
+              delta={change(latestAlerts, previousAlerts)}
+              better="fewer"
+              trend={trendOf(t("quality.stat.alerts"), weeks.map((w) => w.dismissed + w.corrected))}
+            />
             <StatTile
               title={t("quality.stat.review")}
               value={view.review.median_seconds == null ? t("quality.stat.no_days") : t("quality.stat.minutes", { minutes: minutesOf(view.review.median_seconds) })}
               change={delta(latest?.review_seconds, previous?.review_seconds, true)}
+              delta={change(latest?.review_seconds, previous?.review_seconds)}
+              better="fewer"
+              trend={trendOf(t("quality.stat.review"), weeks.map((w) => w.review_seconds), true)}
             />
           </div>
           <div className={styles.sections}>
             <Panel title={t("quality.weeks.title")} className={styles.weekPanel}>
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} data-week-table="">
                 <table className={styles.table} aria-label={t("quality.weeks.title")}>
                   <thead>
                     <tr>
@@ -376,6 +437,33 @@ export function Quality(props: { onBack: () => void }) {
                   </tbody>
                 </table>
               </div>
+              {/* On a phone the same weeks are a list, each week a block with its numbers beside their names. */}
+              <ul className={styles.weekList} aria-label={t("quality.weeks.title")} data-week-list="">
+                {weeks.map((week) => (
+                  <li key={week.week} className={styles.weekItem}>
+                    <strong>{t("quality.weeks.range", { from: monthDay(week.week), to: monthDay(week.week_end) })}</strong>
+                    <dl>
+                      <div>
+                        <dt>{t("quality.stat.found")}</dt>
+                        <dd>{week.promises_found}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("quality.stat.kept")}</dt>
+                        <dd>{week.promises_kept}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("quality.stat.alerts")}</dt>
+                        <dd>{week.dismissed + week.corrected}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("quality.weeks.review")}</dt>
+                        <dd>{t("quality.stat.minutes", { minutes: minutesOf(week.review_seconds) })}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+                {weeks.length === 0 && <li>{t("quality.weeks.empty")}</li>}
+              </ul>
             </Panel>
 
             <div className={styles.side}>
@@ -386,15 +474,19 @@ export function Quality(props: { onBack: () => void }) {
                   ) : (
                     <ul className={styles.mistakeList}>
                       {missedItems.map((item) => (
-                        <li key={`${item.person}-${item.week}`}>
-                          <div className={styles.mistakeTitle}>
-                            {item.person ? (
-                              <a href={`#records/person/${encodeURIComponent(item.person)}`}>{item.person_name}</a>
-                            ) : (
-                              <span>{item.person_name}</span>
-                            )}
+                        <li key={`${item.person}-${item.week}`} className={styles.mistake}>
+                          <Icon name="alert" size={16} className={styles.mistakeMark} />
+                          <div className={styles.mistakeBody}>
+                            <div className={styles.mistakeTitle}>
+                              {item.person ? <a href={`#records/person/${encodeURIComponent(item.person)}`}>{item.person_name}</a> : <span>{item.person_name}</span>}
+                            </div>
+                            <p>{tn("quality.mistakes.week", item.count, { from: monthDay(item.week), to: monthDay(item.week_end) })}</p>
                           </div>
-                          <p>{tn("quality.mistakes.week", item.count, { from: monthDay(item.week), to: monthDay(item.week_end) })}</p>
+                          {item.person && (
+                            <ButtonLink size="sm" href={`#records/person/${encodeURIComponent(item.person)}`} aria-label={t("quality.mistakes.review_named", { name: item.person_name })}>
+                              {t("quality.mistakes.review")}
+                            </ButtonLink>
+                          )}
                         </li>
                       ))}
                     </ul>

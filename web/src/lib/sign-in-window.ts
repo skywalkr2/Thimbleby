@@ -53,6 +53,8 @@ const WATCH_MS = 1000;
 
 export function useSignInWindow(name: string): {
   start: () => Promise<void>;
+  /** Stops waiting: the window is closed if it is still open and the screen goes back to where it was, with nothing signed in. */
+  cancel: () => void;
   phase: SignInPhase;
   text: string;
   /** The window is opening or open: the button waits. */
@@ -147,6 +149,18 @@ export function useSignInWindow(name: string): {
     }, WATCH_MS);
   }, [name, stop, t]);
 
+  const cancel = useCallback(() => {
+    stop();
+    try {
+      opened.current?.close();
+    } catch {
+      // Already gone.
+    }
+    opened.current = null;
+    setText("");
+    setPhase("idle");
+  }, [stop]);
+
   const busy = phase === "starting" || phase === "waiting";
-  return { start, phase, text, busy, problem: phase === "done" ? "" : text };
+  return { start, cancel, phase, text, busy, problem: phase === "done" ? "" : text };
 }

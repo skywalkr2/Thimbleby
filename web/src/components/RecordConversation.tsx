@@ -39,7 +39,9 @@ export const CONVERSATION_KINDS: ReadonlySet<string> = new Set([
   "glossary_entry",
 ]);
 
-export function RecordConversation(props: { kind: string; id: string }) {
+/** `about` names who or what the card on the page's rail is about: it then shows its title ("Ask about <name>") and a short
+ * prompt, instead of the title kept for a screen reader and the longer one. */
+export function RecordConversation(props: { kind: string; id: string; about?: string }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
@@ -71,8 +73,8 @@ export function RecordConversation(props: { kind: string; id: string }) {
   const turns = talk.data?.turns ?? [];
   return (
     <section aria-labelledby={`${base}-title`} className="conversation" data-conversation="">
-      <h2 id={`${base}-title`} className="sr">
-        {t("conversation.title")}
+      <h2 id={`${base}-title`} className={props.about ? "conversation-title" : "sr"}>
+        {props.about ? t("conversation.about", { name: props.about }) : t("conversation.title")}
       </h2>
       {turns.length > 0 && (
         <RowList>
@@ -83,7 +85,7 @@ export function RecordConversation(props: { kind: string; id: string }) {
       )}
       <AskAboutThis
         label={t("conversation.label")}
-        placeholder={t("conversation.placeholder")}
+        placeholder={props.about ? t("conversation.about_placeholder", { name: props.about }) : t("conversation.placeholder")}
         hint={t("conversation.hint")}
         value={message}
         onChange={setMessage}

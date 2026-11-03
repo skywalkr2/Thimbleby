@@ -1311,3 +1311,77 @@ test("no model's name is on the account rows, nor in the line that offers to cha
   const text = visibleText(document.body);
   for (const name of MODEL_NAMES) expect(text).not.toContain(name);
 });
+
+// ---- the key's four states, to the 4.6 mockups: empty, checking, accepted, rejected ----
+
+test("the key box is empty at first, with no line under it and nothing marked", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pick(user, "Service A");
+  const box = screen.getByLabelText("Access key");
+  expect(box).toHaveValue("");
+  expect(box).not.toHaveAttribute("aria-invalid");
+  expect(document.querySelector("[data-key-state]")).toBeNull();
+});
+
+test("while the key is checked a spinner and a word say so, and the box is not marked yet", async () => {
+  const user = userEvent.setup();
+  api({ "POST ai/account-check": () => new Promise(() => undefined) });
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.paste("a-key");
+  const line = await waitFor(() => {
+    const found = document.querySelector<HTMLElement>('[data-key-state="checking"]');
+    expect(found).not.toBeNull();
+    return found!;
+  });
+  expect(line).toHaveTextContent("Checking it…");
+  expect(line.querySelector(".key-spinner")).toHaveAttribute("aria-hidden", "true");
+  expect(screen.getByLabelText("Access key")).toHaveAttribute("data-key-field-state", "checking");
+});
+
+test("an accepted key shows a check, the account's own label and Works, and a rejected one a mark and the reason the check gave", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pasted(user);
+  const accepted = document.querySelector<HTMLElement>('[data-key-state="accepted"]')!;
+  expect(within(accepted).getByText("Service A")).toHaveClass("key-label");
+  expect(within(accepted).getByText("Works. Ready to use.")).toBeInTheDocument();
+  expect(accepted.querySelector("svg")).not.toBeNull();
+  expect(screen.getByLabelText("Access key")).toHaveAttribute("data-key-field-state", "works");
+});
+
+test("a rejected key is marked with an icon and says the reason the check gave, in plain words, with the box marked invalid", async () => {
+  const user = userEvent.setup();
+  const message = "Service A didn't accept this key. Check it was copied whole, or make a new one.";
+  api({ "POST ai/account-check": () => ({ ok: false, reason: "failed", message }) });
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Access key"));
+  await user.paste("a-key");
+  const rejected = await waitFor(() => {
+    const found = document.querySelector<HTMLElement>('[data-key-state="rejected"]');
+    expect(found).not.toBeNull();
+    return found!;
+  });
+  expect(rejected).toHaveAttribute("role", "alert");
+  expect(rejected).toHaveTextContent(message);
+  expect(rejected.querySelector("svg")).not.toBeNull();
+  expect(screen.getByLabelText("Access key")).toHaveAttribute("aria-invalid", "true");
+});
+
+test("every Open link on the step is one style: a quiet small link with the page's domain said for a screen reader", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pick(user, "Service A");
+  const links = screen.getAllByRole("link", { name: /^Open the / });
+  expect(links.length).toBeGreaterThan(0);
+  for (const link of links) {
+    expect(link).toHaveAttribute("data-variant", "quiet");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  }
+});

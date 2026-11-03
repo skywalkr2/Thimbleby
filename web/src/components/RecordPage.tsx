@@ -23,6 +23,9 @@ import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonDrawer, heldReach, kindLabel, useContactKinds } from "./PersonForm";
 import { PersonReach } from "./PersonReach";
+import { PersonAvatar } from "./PersonAvatar";
+import { useAddTodo } from "./AddTodo";
+import { useSideSlot } from "../lib/marks";
 import { onWorkSide, usePersonMenu } from "./PersonMenu";
 import { PersonPicker } from "./PersonPicker";
 import { AgendaSection } from "./AgendaList";
@@ -242,6 +245,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // A person's details are read from the person as the lists read them, so a fact is said once: how to reach them, who they are
   // to you and on which sides, when you were last in touch, their dates and what matters to them.
   const personRows: Row[] = [];
+  // How you were last in touch is the head of a person's card, not a row of it.
+  let lastWords = "";
+  let lastNone = false;
   if (data && settled && kind === "person") {
     // Each kind lists every value the person has of it, with Remove and Add in place; the first two kinds are offered even when empty.
     const held = heldReach(data.fields.how_to_reach);
@@ -269,12 +275,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     }
     if (!isSelf && memory.data) {
       const touch = memory.data.last_in_touch;
-      personRows.push({
-        name: "last",
-        label: t("people.col.last"),
-        lines: [touch ? `${t(`person.touch.${touch.kind}`, { date: day(touch.on) })}${touch.subject ? ` · ${touch.subject}` : ""}` : t("person.no_contact")],
-        muted: !touch,
-      });
+      lastWords = touch ? `${t(`person.touch.${touch.kind}`, { date: day(touch.on) })}${touch.subject ? ` · ${touch.subject}` : ""}` : t("person.no_contact");
+      lastNone = !touch;
     }
     const aliases = (data.fields.aliases ?? []) as string[];
     if (aliases.length > 0) personRows.push({ name: "aliases", label: labelOf("aliases"), lines: [aliases.join(", ")] });
@@ -304,6 +306,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const heading = isSelf && name ? t("record.you_named", { name }) : name;
   const openCount = (page.data?.open_actions.length ?? 0) + (isSelf ? 0 : (page.data?.open_questions.length ?? 0));
   const menuOf = usePersonMenu(() => setEditing(true));
+  const addTodo = useAddTodo();
+  const slotOf = useSideSlot();
 
   if (sidePage) return <Skeleton />;
   const isPerson = kind === "person";
@@ -312,8 +316,30 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const activity = page.data && (
     <RecordActivity page={page.data} show={tabbed ? (tab === "open" ? ["completed", "facts", "repeat"] : ["activity"]) : ["repeat", "completed", "facts", "activity"]} shown={tabbed ? (tab === "overview" ? 3 : 20) : undefined} />
   );
+  // A person's details are a contact card: their initials on the color of their side, how you were last in touch, and Edit.
+  const asCard = isPerson && !isSelf;
+  const firstName = person?.first_name || name.split(" ")[0] || name;
+  const cardSlot = person ? slotOf((person.sides ?? [])[0]) : null;
   const detailsPanel = data && (
-    <div className="record-side record-sticky">
+    <div className={asCard ? "record-side" : "record-side record-sticky"} data-contact-card={asCard ? "" : undefined}>
+      {asCard && !editing && (
+        <div className="contact-head">
+          <PersonAvatar name={name} slot={cardSlot} />
+          <div className="contact-last">
+            {lastWords && (
+              <>
+                <span className="hint">{t("people.col.last")}</span>
+                <strong className={lastNone ? "muted" : undefined}>{lastWords}</strong>
+              </>
+            )}
+          </div>
+          {(drawer || offered.length > 0) && (
+            <Button ref={editButton} variant="quiet" size="sm" className="contact-edit" onClick={() => setEditing(true)}>
+              {t("setup.edit")}
+            </Button>
+          )}
+        </div>
+      )}
       <OriginLink origin={data.origin} />
       <section aria-labelledby="record-details">
         <h2 id="record-details" className="sr">
@@ -410,7 +436,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             <Button variant="primary" onClick={markDone}>
               {t("followups.mark_done")}
             </Button>
-          ) : isPerson && data && (drawer || offered.length > 0) && !editing ? (
+          ) : asCard && data && person ? (
+            <Button variant="primary" icon="plus" onClick={() => addTodo.open("", id)}>
+              {t("person.add_todo", { name: firstName })}
+            </Button>
+          ) : isPerson && !asCard && data && (drawer || offered.length > 0) && !editing ? (
             <Button ref={editButton} onClick={() => setEditing(true)}>
               {t("setup.edit")}
             </Button>
@@ -454,14 +484,18 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
-      {record.isError && gone && <EmptyState icon="alert" text={t("record.not_found")} />}
+      {record.isError && gone && isPerson && (
+        <EmptyState icon="alert" title={t("person.gone_title")} text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people") }} />
+      )}
+      {record.isError && gone && !isPerson && <EmptyState icon="alert" text={t("record.not_found")} />}
       {record.isError && !gone && (
         <EmptyState icon="alert" text={t("record.load_failed")} action={{ label: t("action.try_again"), onClick: () => void record.refetch() }} />
       )}
       {data && (
-        <div className="record-grid">
+        <div className="record-grid" data-person-page={asCard ? "" : undefined}>
           <div className="record-main">
             {tabbed && (
+              <div data-slot="tabs">
               <TabStrip
                 label={t("person.tabs")}
                 value={tab}
@@ -472,6 +506,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   { value: "activity", label: t("person.tab.activity") },
                 ]}
               />
+              </div>
             )}
             {kind === "action" && <PromiseWhy action={id} quiet omitOrigin skip={["owner", "due"]} />}
             {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
@@ -479,6 +514,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             {kind === "event" && <MeetingPrep entry={id} title={heading} />}
             {/* What is open comes first, then what finished and the history, and the box to talk about it last. */}
             {page.data && (!tabbed || tab !== "activity") && (
+              <div data-slot="open">
               <RecordActivity
                 page={page.data}
                 show={["open"]}
@@ -487,8 +523,18 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                 limit={tabbed && tab === "overview" ? 3 : undefined}
                 onSeeAll={() => setTab("open")}
               />
+              {asCard && tab === "overview" && openCount === 0 && (
+                <EmptyState
+                  icon="check"
+                  title={t("person.nothing_title", { name: firstName })}
+                  text={t("person.nothing_text", { name })}
+                  action={{ label: t("person.add_todo", { name: firstName }), onClick: () => addTodo.open("", id) }}
+                  data-person-nothing=""
+                />
+              )}
+              </div>
             )}
-            {activity}
+            {activity && <div data-slot="rest">{activity}</div>}
             {kind === "project" && justMe && id === personal && <Unfiled />}
             {kind === "project" && <SideInside id={id} />}
             {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
@@ -506,11 +552,22 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   onReview={open}
                 />
               ))}
-            {CONVERSATION_KINDS.has(kind) && (!tabbed || tab === "overview") && <RecordConversation kind={kind} id={id} />}
+            {CONVERSATION_KINDS.has(kind) && !asCard && (!tabbed || tab === "overview") && <RecordConversation kind={kind} id={id} />}
           </div>
-          {detailsPanel}
+          {asCard ? (
+            <div className="record-rail">
+              {detailsPanel}
+              {/* The box to ask about them is the last card of the rail, on a phone the last thing on the page. */}
+              <div className="record-side" data-slot="ask">
+                <RecordConversation kind={kind} id={id} about={firstName} />
+              </div>
+            </div>
+          ) : (
+            detailsPanel
+          )}
         </div>
       )}
+      {addTodo.form}
       {dialog}
     </section>
   );

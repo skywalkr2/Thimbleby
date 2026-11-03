@@ -1027,6 +1027,27 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 317. A person's page, Quality and the setup's AI and mail steps built to the 4.6 mockups (2026-11-03; visual review VS01, VS03, VS13, VS15, VC10, VC11, VC12, X59, Y01)
+
+| Where | Before | Now |
+|---|---|---|
+| A person's page, header (7.14) | **Edit** was the one filled button | **Add a to-do for <first name>** is; it opens the add form with them as the one who does it. **Built** (`web/src/components/PersonPage.test.tsx`: "the one filled button adds a to-do for them…") |
+| A person's details (7.14) | One panel of rows, "Last contact" a row | A contact card: their initials on a disc in their first side's color, how you were last in touch and **Edit** at its head, then the rows. **Built** (`PersonPage.test.tsx`: "the contact card has their initials…", "the details panel says each fact once…") |
+| The box to ask (6.25, 7.14) | In the main column, under the history | A rail card **Ask about <first name>** with the send button in the box; on a phone the last thing on the page. **Built** (`PersonPage.test.tsx`: "the box to ask is a card of the rail…") |
+| The page where columns stack (7.14) | Open, history, then the panel | Open with them, the contact card, the history, the box to ask (CSS order on `data-slot` parts). **Built** (`PersonPage.test.tsx`; browser `web/e2e/person-quality-setup-46.spec.ts`, written, not yet run) |
+| The timeline (7.14) | Time, then the words | An icon for who did it (assistant, adding, changing), the words, the time under them. **Built** (`PersonPage.test.tsx`: "each line of the timeline has an icon…") |
+| Nothing open, a person gone (7.14) | A hint; "This page isn't here any more" | "Nothing with <name> yet" with the add button; "This person isn't here any more" with Back to People. **Built** (`PersonPage.test.tsx`, `RecordPageRecords.test.tsx`) |
+| Quality's heading lines (7.17) | The window's dates only | A bold line saying what the figures mean, the false alerts to look at, then the window. **Built** (`web/src/components/Quality.test.tsx`: "the page says in one line…") |
+| Quality's tiles (7.17) | A sentence of change | An arrow and the sentence, and better or worse where one way is better; a trend line per tile with a text alternative. **Built** (`Quality.test.tsx`: "each change is said in words…", "a tile has a small trend picture…") |
+| The weekly table (7.17) | A table at every width | A list at 639px and under; the table above. **Built** (`Quality.test.tsx`: "the weeks are also a list…") |
+| Mistakes and empty measures (7.17) | A person's name and a count; a bordered box each | A row with a mark and **Review**; one card, a line each with a count of 0. **Built** (`Quality.test.tsx`: "a mistake is a row…", "a measure with nothing in it…") |
+| The wizard's rail and footer (7.8, 7.12) | Empty circles; the footer's left edge guessed | A numeral in the display face in each circle (a check once done); the buttons in the step's own column; the eyebrow as the small spaced label. **Built** (`web/src/ui/Wizard.test.tsx`) |
+| The key (7.8) | A hint, then "Works", then a problem note | Empty, checking (spinner and word), accepted (check, the account's label, "Works"), rejected (mark and the check's reason, box invalid); the steps one bordered list; one Open style. **Built** (`web/src/components/WelcomeAi.test.tsx`: "the key's four states…") |
+| The mail step's accounts and waiting (7.8) | Rows of text with ticks | A card each: mark, address, Connected, **For** and chips; "Connect your first account" with none; a banner with **Cancel** while the window is open. **Built** (`web/src/components/Walkthrough.test.tsx`: "each account row is a card…", "while the service's window is open…") |
+
+- **Wording:** `person.add_todo`, `person.nothing_*`, `person.gone_*`, `conversation.about*`, `quality.sowhat.*`, `quality.stat.better|worse`, `quality.trend.label`, `quality.mistakes.review*`, `walkthrough.mail.account.*`, `walkthrough.mail.none_title`, `sign_in.window.waiting_title|rest`; changed: "Connect another account".
+- **Left:** "Draft a message", "Files from <name>", a percentage "kept on time", a period chooser, "Private to you", the check disc on a chosen card, the details edited in place. `docs/project/u3-differences/person-quality-setup.md` lists each with its reason.
+
 ## 316. Today, the opened review and To-dos built to the 4.6 mockups (2026-11-03; visual review VS05, VS10, VS11, VC01)
 
 | Where | Before | Now |

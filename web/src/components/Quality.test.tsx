@@ -508,3 +508,77 @@ test("the heading says your assistant when it has no name", async () => {
   renderApp(<Quality onBack={() => undefined} />, {}, { unnamed: true });
   expect(screen.getByRole("heading", { level: 1, name: "How your assistant is doing" })).toBeInTheDocument();
 });
+
+// ---- the page to the 4.6 mockups: the one-line so what, the worded deltas, the trend, the weeks as a list, mistakes with an action ----
+
+test("the page says in one line what the figures mean, then how many false alerts there are to look at", async () => {
+  show(FULL);
+  await loaded();
+  const line = document.querySelector<HTMLElement>("[data-quality-sowhat]")!;
+  expect(within(line).getByText("6 of 9 promises were closed as done.")).toBeInTheDocument();
+  expect(within(line).getByText("3 false alerts to look at.")).toBeInTheDocument();
+});
+
+test("with nothing counted the so what says so, and with no false alerts it says none", async () => {
+  show(quality());
+  await loaded();
+  const line = document.querySelector<HTMLElement>("[data-quality-sowhat]")!;
+  expect(within(line).getByText("Nothing was counted in this window yet.")).toBeInTheDocument();
+  expect(within(line).getByText("No false alerts to look at.")).toBeInTheDocument();
+});
+
+test("each change is said in words with an arrow, and says better or worse where that is clear, so no color carries it alone", async () => {
+  show(FULL);
+  await loaded();
+  const tiles = screen.getByRole("region", { name: "Outcome measures" });
+  // More closed is better; more false alerts is worse; more promises found is neither.
+  expect(within(within(tiles).getByRole("article", { name: "Promises closed as done" })).getByText("better")).toBeInTheDocument();
+  expect(within(within(tiles).getByRole("article", { name: "False alerts" })).getByText("worse")).toBeInTheDocument();
+  expect(within(within(tiles).getByRole("article", { name: "Time spent looking over" })).getByText("worse")).toBeInTheDocument();
+  const found = within(tiles).getByRole("article", { name: "Promises found" });
+  expect(within(found).queryByText("better")).toBeNull();
+  expect(within(found).queryByText("worse")).toBeNull();
+  expect(within(found).getByText("▲")).toHaveAttribute("aria-hidden", "true");
+});
+
+test("a tile has a small trend picture whose text alternative says the numbers, and none with fewer than two weeks", async () => {
+  show(FULL);
+  await loaded();
+  const tiles = screen.getByRole("region", { name: "Outcome measures" });
+  const found = within(tiles).getByRole("article", { name: "Promises found" });
+  expect(within(found).getByRole("img", { name: "Promises found, week by week: 4, 5." })).toBeInTheDocument();
+  expect(within(within(tiles).getByRole("article", { name: "Time spent looking over" })).getByRole("img", { name: "Time spent looking over, week by week: 10 min, 15 min." })).toBeInTheDocument();
+  cleanup();
+  show(quality({ outcome: { ...FULL.outcome, weeks: [FULL.outcome.weeks[0]] } }));
+  await loaded();
+  expect(within(screen.getByRole("region", { name: "Outcome measures" })).queryByRole("img")).toBeNull();
+});
+
+test("the weeks are also a list for a narrow window, each week a block with its numbers beside their names", async () => {
+  show(FULL);
+  await loaded();
+  const list = document.querySelector<HTMLElement>("[data-week-list]")!;
+  const items = within(list).getAllByRole("listitem");
+  expect(items).toHaveLength(2);
+  expect(items[1]).toHaveTextContent("Oct 19 to Oct 25");
+  expect(within(items[1]).getByText("Promises found").nextElementSibling).toHaveTextContent("5");
+  expect(within(items[1]).getByText("Time looking over").nextElementSibling).toHaveTextContent("15 min");
+});
+
+test("a mistake is a row with its mark and its own action: Review opens the person's page", async () => {
+  show(FULL);
+  await loaded();
+  const mistakes = screen.getByRole("region", { name: "Mistakes to look at" });
+  const review = within(mistakes).getAllByRole("link", { name: "Review Casey Example" });
+  expect(review).toHaveLength(3);
+  expect(review[0]).toHaveAttribute("href", "#records/person/PER-1");
+});
+
+test("a measure with nothing in it shows a count of 0 and one line in a single list", async () => {
+  show(quality());
+  await loaded();
+  const summary = screen.getByText("Replays").closest("summary")!;
+  expect(within(summary).getByText("0")).toBeInTheDocument();
+  expect(within(summary).getByText("Nothing yet.")).toBeInTheDocument();
+  expect(summary.closest("details")!.parentElement).toBe(screen.getByText("Corrections that repeated").closest("details")!.parentElement);
+});

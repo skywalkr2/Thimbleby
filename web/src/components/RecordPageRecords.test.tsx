@@ -657,7 +657,9 @@ test("a page for a record that isn't there says so with a title, and offers no T
     "GET organizations": () => [],
   });
   renderApp(<RecordPage kind="person" id="PER-9" onBack={() => {}} />);
-  expect(await screen.findByText("This page isn't here any more. It may have been removed, or the address may be wrong.")).toBeInTheDocument();
+  expect(await screen.findByText("This person isn't here any more")).toBeInTheDocument();
+  expect(screen.getByText("They may have been merged with someone else or removed.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Back to People" })).toHaveAttribute("href", expect.stringMatching(/#records\/people$/));
   expect(screen.getByRole("heading", { name: "Not here" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   expect(screen.queryByText("This page didn't load.")).toBeNull();

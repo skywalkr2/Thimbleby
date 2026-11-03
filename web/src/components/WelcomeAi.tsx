@@ -938,19 +938,27 @@ export function WelcomeAi(props: {
     </CheckboxGroup>
   );
 
-  /** How the check of a new account stands, as a line: checking, "Works", or what to do about it. */
+  /** How the check of a new account stands, as a line: checking (a spinner and a word), accepted (a check, the account's label and
+   * "Works"), rejected (the reason the check gave, with a mark), or nothing yet. Never by color alone: each has its mark and words. */
   const verdictLine = (
     <div role="status" aria-live="polite" className="verdict">
-      {verdict.state === "checking" && <p className="hint">{t(kind?.needs_key ? "welcome.ai.checking_key" : "welcome.ai.checking_plain")}</p>}
+      {verdict.state === "checking" && (
+        <p className="key-state" data-key-state="checking">
+          <span className="key-spinner" aria-hidden="true" />
+          <span>{t(kind?.needs_key ? "welcome.ai.checking_key" : "welcome.ai.checking_plain")}</span>
+        </p>
+      )}
       {verdict.state === "works" && (
-        <p className="check-ok" data-works="">
-          <Icon name="check" size={14} />{" "}
-          {t("welcome.ai.works")}
+        <p className="check-ok key-state" data-works="" data-key-state="accepted">
+          <Icon name="check" size={14} />
+          {kind && <span className="key-label">{kind.name}</span>}
+          <span>{t("welcome.ai.works")}</span>
         </p>
       )}
       {verdict.state === "failed" && (
-        <p className="problem-note" role="alert">
-          {verdict.message}
+        <p className="problem-note key-state" role="alert" data-key-state="rejected">
+          <Icon name="alert" size={14} />
+          <span>{verdict.message}</span>
           {verdict.retired?.next && kind && (
             <>
               {" "}
@@ -974,7 +982,7 @@ export function WelcomeAi(props: {
   const link = (url: string | null | undefined, label: string) => {
     const domain = url ? domainOf(url) : null;
     return url && domain ? (
-      <ButtonLink href={url} target="_blank" rel="noopener noreferrer">
+      <ButtonLink variant="quiet" size="sm" href={url} target="_blank" rel="noopener noreferrer">
         {label} <Icon name="external" size={14} />
         <span className="sr"> {t("welcome.ai.step.opens", { domain })}</span>
       </ButtonLink>
@@ -1007,6 +1015,8 @@ export function WelcomeAi(props: {
           spellCheck={false}
           disabled={keyRef.trim() !== ""}
           aria-describedby="ai-key-hint"
+          aria-invalid={verdict.state === "failed" ? true : undefined}
+          data-key-field-state={verdict.state}
           onKeyDown={enterChecks}
           onBlur={(e) => {
             if (guide && e.target.value.trim() !== "" && verdict.state === "idle") void verify(kind, { key: e.target.value });
@@ -1081,7 +1091,7 @@ export function WelcomeAi(props: {
           <CheckboxGroup legend={t("welcome.ai.kind")}>
             {guide && <p className="hint">{t("welcome.ai.intro", { amount: credit ?? "" })}</p>}
             {gated && (
-              <RadioCards ref={firstKind}>
+              <RadioCards ref={firstKind} className="cards-three">
                 {featured.map((e) => kindChoice(e))}
                 <RadioCard name="ai-kind" value="" checked={elseShown} onChange={chooseSomethingElse} title={t("welcome.ai.else")} description={t("welcome.ai.else_note")} />
               </RadioCards>

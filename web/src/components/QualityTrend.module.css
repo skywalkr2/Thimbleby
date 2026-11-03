@@ -1,0 +1,4 @@
+/* The trend line under a tile's figure: a quiet line, the latest week as a dot. */
+.trend { display: block; width: 100%; max-width: 160px; height: 28px; margin-top: var(--space-2); overflow: visible; }
+.line { stroke: var(--text-muted); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.dot { fill: var(--accent); }

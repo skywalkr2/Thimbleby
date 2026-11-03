@@ -401,14 +401,30 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .else-line:hover { background: var(--surface-hover); }
 .else-line[aria-expanded="true"] { border-color: var(--accent); }
 .else-body { display: grid; gap: var(--space-3); padding-left: var(--space-3); min-width: 0; }
-.numbered-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
-.numbered-step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; }
-.step-number { display: inline-flex; align-items: center; justify-content: center; min-width: var(--space-6); min-height: var(--space-6); border-radius: var(--radius-full); background: var(--surface-sunk); font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+.numbered-steps { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.numbered-step { display: grid; grid-template-columns: var(--space-8) minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+.numbered-step:first-child { border-top: 0; }
+/* The step's number is a large italic numeral in the accent color. */
+.step-number { display: inline-flex; align-items: center; justify-content: center; font-style: italic; font-weight: var(--weight-semibold); font-size: var(--text-xl); line-height: 1; color: var(--accent-text); }
 .step-text { display: grid; gap: var(--space-1); min-width: 0; }
 .step-action { justify-self: end; }
 .numbered-step .step-text [data-field] { margin-top: var(--space-2); }
 [data-narrow] .numbered-step { grid-template-columns: auto minmax(0, 1fr); }
 .check-ok { margin: 0; color: var(--ok); font-weight: var(--weight-semibold); }
+/* The key's line under its field: a mark and words in each state (checking, accepted, rejected), the account's label before "Works". */
+.key-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); margin: 0; min-width: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.key-state > span { min-width: 0; overflow-wrap: anywhere; }
+.key-state[data-key-state="checking"] { color: var(--text-muted); }
+.key-state[data-key-state="rejected"] { border-left: 0; padding-left: 0; font-weight: var(--weight-semibold); }
+/* The few services the app offers first sit in one row of three where the column is wide enough. */
+@media (min-width: 640px) { [data-radio-cards].cards-three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.key-label { color: var(--text); }
+input[data-key-field-state="failed"] { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+input[data-key-field-state="works"] { border-color: var(--ok); }
+.key-label::after { content: ":"; }
+.key-spinner { width: 14px; height: 14px; flex: none; border-radius: var(--radius-full); border: 2px solid currentcolor; border-right-color: transparent; animation: key-spin 800ms linear infinite; }
+@keyframes key-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .key-spinner { animation: none; } }
 .verdict:empty { display: none; }
 .spend { padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunk); }
 .spend-line { margin: 0; }
@@ -492,6 +508,24 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
 .record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
+/* A person's page: the rail is their contact card, then the box to ask about them. Where the columns stack (a narrow window, a
+   phone) the card comes after what is open with them and before the history, and the box to ask is last. */
+.record-rail { display: grid; gap: var(--space-4); min-width: 0; align-content: start; }
+@media (min-width: 1100px) { .record-rail { position: sticky; top: var(--space-4); } }
+@media (max-width: 1099.98px) {
+  .record-grid[data-person-page] .record-main, .record-grid[data-person-page] .record-rail { display: contents; }
+  .record-grid[data-person-page] [data-slot="tabs"] { order: 1; }
+  .record-grid[data-person-page] [data-slot="open"] { order: 2; }
+  .record-grid[data-person-page] [data-contact-card] { order: 3; }
+  .record-grid[data-person-page] [data-slot="rest"] { order: 4; }
+  .record-grid[data-person-page] [data-slot="ask"] { order: 5; }
+}
+.contact-head { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.contact-last { display: grid; min-width: 0; flex: 1 1 auto; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.contact-last strong { font-weight: var(--weight-semibold); }
+.contact-edit { flex: none; }
+.conversation-title { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); }
+
 .muted { color: var(--text-muted); }
 @media (min-width: 1100px) { .record-sticky { position: sticky; top: var(--space-4); } }
 /* A side panel is narrow: each label sits above its value, so no pair wraps beside the other. */
@@ -555,10 +589,21 @@ pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pr
 
 /* Setup's mail step with several accounts: one compact row for each account (its address, what is read there, who it is for),
    not a block each, so three accounts are three rows and the page stays short. */
-.account-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
-.account-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); padding: var(--space-2) 0; border-top: 1px solid var(--border); }
+.account-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+/* Each account is a card: a mark, its address, what is read there and that it is connected (a check and the word), then who it is for. */
+.account-row { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--pane-edge); min-width: 0; }
+.account-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-sunk); color: var(--text-muted); }
+.account-main { display: grid; gap: var(--space-1); min-width: 0; }
 .account-row .account-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); min-width: 0; }
 .account-row .account-name strong { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.account-ok { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--ok); font-weight: var(--weight-semibold); }
+.account-for { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-1); min-width: 0; }
+.account-for-word { color: var(--text-muted); font-size: var(--text-sm); }
+.account-for fieldset { flex: 1 1 12rem; margin: 0; }
+/* While the service's own window is open: where to finish, that this page carries on by itself, and the way to stop waiting. */
+.wait-banner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: var(--radius-md); background: var(--surface); min-width: 0; }
+.wait-banner p { margin: 0; flex: 1 1 14rem; min-width: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
 .source-sides-compact { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-4); min-width: 0; margin: 0; }
 .source-sides-compact .check-line { display: inline-flex; min-width: 0; }
 .source-sides-compact .check-line span { min-width: 0; overflow-wrap: anywhere; }

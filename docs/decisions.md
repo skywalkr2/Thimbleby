@@ -4,6 +4,28 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: A person's page, Quality and the setup's AI and mail steps built to the 4.6 mockups (VS01, VS03, VS13, VS15, VC10, VC11, VC12, X59, Y01; section 317)
+
+**Decided:** (owner: these screens match the reviewer's mockups before the gate week; design by the main session.) *A person's page:* the
+one filled button is **Add a to-do for <first name>** (the add form opens with them as the one who does it); **Edit** moves to the
+contact card, which is the head of the rail: their initials on a disc in their first side's color, how you were last in touch,
+then the details, each address or number labelled and in full. Below it a card **Ask about <first name>** holds the box with its
+send button. Where the columns stack the order is what is open, the contact card, the history, the box to ask (the scorer asked for
+the card above Activity at 1024 and on a phone; the mockup had it below). The timeline's lines have an icon for who did it; with
+nothing open the page says so and offers the same button. *Quality:* one bold line says what the figures mean, then the false
+alerts, then the window; each tile says its change in a sentence with an arrow and, where one way is better, better or worse; each
+has a trend line (SVG, text alternative, no library); the weekly table is a list on a phone; a mistake is a row with its own
+**Review**; the measures with nothing in them are one list in one card with a count of 0 and a line each. *Setup:* the wizard's rail
+numbers its circles in the display face (a check once done); its footer's buttons stand on the edges of the step's column; the
+eyebrow is the small spaced label; the key's four states have a mark and words each; every Open link is one style; each mail account
+is a card with Connected, **For** and its side chips; no service is an empty state; waiting for the service's window is a banner with
+**Cancel**. *Not built, said so:* "Draft a message", "Files from <name>" and the Files tab (no person-to-file link), "Kept on time" as
+a percentage and a period chooser (the data counts what was closed), "Private to you" on a mail card, and the check disc on a chosen
+choice card (`RadioCard` stays as it is). *Why:* the reviewer's final pass left these pages partly matched (VS13 4.2, VS15 4.0, the
+setup rows 3.8 to 4.0). *Impact:* web only (no API model, no setting; no schema change); `PersonAvatar`, `QualityTrend` and the
+wizard's numerals and footer are new or changed; `useSignInWindow` gains `cancel`; the display face is now also used for the rail's
+numerals. Change log: section 317.
+
 ## 2026-11-03: Today, the opened review and To-dos built to the 4.6 mockups (VS05, VS10, VS11, VC01; section 316)
 
 **Decided:** (owner: these screens match the reviewer's mockups before the gate week; design by the main session.) *Today:* the

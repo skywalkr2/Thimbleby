@@ -209,6 +209,7 @@ export function RecordActivity(props: {
             entries={page.activity.map((e, i) => ({
               key: `${e.at}-${e.id}-${e.op}-${i}`,
               at: e.at,
+              icon: e.by_assistant ? "layers" : e.made ? "plus" : "refresh",
               body: (
                 <>
                   {e.made === "setup" ? (
