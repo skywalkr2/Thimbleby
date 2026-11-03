@@ -63,9 +63,8 @@ def event_state(data: dict[str, Any], here: tzinfo, *, attendees: bool = False) 
 def calendar_rows(view: Any) -> dict[str, list[dict[str, Any]]]:
     """The ledger rows the calendar rule wrote, by entry."""
     rows: dict[str, list[dict[str, Any]]] = {}
-    for row in view.ledger(kind="event"):
-        if row["op"] == CALENDAR_RULE:
-            rows.setdefault(row["record_id"], []).append(row)
+    for row in view.ledger(kind="event", op=CALENDAR_RULE):
+        rows.setdefault(row["record_id"], []).append(row)
     return rows
 
 

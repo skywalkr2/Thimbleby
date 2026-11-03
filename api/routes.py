@@ -779,6 +779,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/today/queue")
     def today_queue() -> list[QueueLineView]:
         """What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7)."""
+        with store.read_scope():
+            return _today_queue()
+
+    def _today_queue() -> list[QueueLineView]:
         from engine import areas, line_maker, sides
         from engine.today import zone
         from engine.today_queue import queue

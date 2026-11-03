@@ -117,3 +117,19 @@ def test_a_thread_reading_for_the_first_time_during_a_transaction_does_not_wait_
         reader.join(timeout=5)
         assert not reader.is_alive()
     assert seen == [None] and made.id.startswith("PER-")
+
+
+def test_the_ledger_can_be_asked_for_one_op_and_some_fields(store):
+    other = WriteContext(actor="pm", trust="trusted", op="test.other")
+    with store.transaction() as tx:
+        p = person(tx)
+        tx.update("person", p.id, {"full_name": "Renamed", "role": "Editor"}, other, read_version=p.version)
+    everything = store.read().ledger(kind="person")
+    assert {e["op"] for e in everything} == {"test", "test.other"}
+    by_op = store.read().ledger(kind="person", op="test.other")
+    assert by_op == [e for e in everything if e["op"] == "test.other"] and by_op
+    by_field = store.read().ledger(kind="person", fields=("role",))
+    assert by_field == [e for e in everything if e["field"] == "role"] and by_field
+    both = store.read().ledger(kind="person", record_id=p.id, op="test.other", fields=("full_name", "role"))
+    assert {e["field"] for e in both} == {"full_name", "role"}
+    assert store.read().ledger(kind="person", op="nothing.like.it") == []

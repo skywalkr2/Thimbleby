@@ -97,6 +97,26 @@ def id_number(record_id: str) -> int | None:
     return int(match["n"]) if match else None
 
 
+class ReadMemo:
+    """What one read scope has already read, so a request that asks for the same record or list again gets it without
+    another query. It holds the rows as the database returned them, never the parsed records, so every caller still gets
+    a record of its own. It is emptied the moment any transaction starts or ends, in this process, so it never answers
+    from before a write; it lives for one scope, which is one request."""
+
+    def __init__(self, writes: Callable[[], int]):
+        self._writes = writes
+        self._seen = writes()
+        self._rows: dict[Any, Any] = {}
+
+    def table(self) -> dict[Any, Any]:
+        """The rows read so far; empty again when a write has happened since they were read."""
+        now = self._writes()
+        if now != self._seen:
+            self._rows.clear()
+            self._seen = now
+        return self._rows
+
+
 class Store:
     """Access to a workspace's records, sequences and ledger.
 
@@ -111,6 +131,8 @@ class Store:
         # a transaction (a plugin's validator reading during an apply) never waits on that transaction.
         self._conns_lock = threading.Lock()
         self._local = threading.local()
+        #: Counts the transactions begun and ended in this process; a read scope's memo is only good while it holds.
+        self._writes = 0
         self._all: list[sqlite3.Connection] = []
         self._closed = False
         _ = self._conn  # open the first connection now so a bad path fails here
@@ -148,27 +170,50 @@ class Store:
                 self._all.clear()
 
     @contextmanager
+    def read_scope(self) -> Iterator[None]:
+        """Reads made with `read()` on this thread inside the block share one memo: the same record, list or lookup is
+        read from the database once. A transaction begun or ended anywhere in this process empties it, and a thread
+        inside a transaction of its own reads without it, so a scope never answers from before a write. Use it around
+        one request's reads."""
+        if getattr(self._local, "memo", None) is not None:
+            yield
+            return
+        self._local.memo = ReadMemo(lambda: self._writes)
+        try:
+            yield
+        finally:
+            self._local.memo = None
+
+    @contextmanager
     def transaction(self, *, notify: bool = True) -> Iterator[Tx]:
         with self._lock:
-            self._conn.execute("BEGIN IMMEDIATE")
-            tx = Tx(self._conn, self.clock, self.plugins.records)
+            # A write is under way: reads on this thread skip the memo, and what any scope has read is dropped now and
+            # again once the transaction has ended.
+            self._writes += 1
+            self._local.writing = getattr(self._local, "writing", 0) + 1
             try:
-                yield tx
-                cfg = getattr(getattr(self, "plugins", None), "cfg", None)
-                if cfg is not None:
-                    if tx.person_edits:
-                        from engine import learn
+                self._conn.execute("BEGIN IMMEDIATE")
+                tx = Tx(self._conn, self.clock, self.plugins.records)
+                try:
+                    yield tx
+                    cfg = getattr(getattr(self, "plugins", None), "cfg", None)
+                    if cfg is not None:
+                        if tx.person_edits:
+                            from engine import learn
 
-                        learn.record_edits(tx, cfg, self.clock())
-                    if tx.pending:
-                        from engine import follow_on
+                            learn.record_edits(tx, cfg, self.clock())
+                        if tx.pending:
+                            from engine import follow_on
 
-                        follow_on.queue(tx, cfg, self.clock())
-            except BaseException:
-                self._conn.execute("ROLLBACK")
-                raise
-            else:
-                self._conn.execute("COMMIT")
+                            follow_on.queue(tx, cfg, self.clock())
+                except BaseException:
+                    self._conn.execute("ROLLBACK")
+                    raise
+                else:
+                    self._conn.execute("COMMIT")
+            finally:
+                self._local.writing -= 1
+                self._writes += 1
         if notify:
             for event, payload in tx.events():
                 self.plugins.publish(event, payload, follows=tx.changeset)
@@ -188,14 +233,22 @@ class Store:
         """A read-only view outside a transaction, for simple lookups. While the plugins are still loading it sees
         only the core's record kinds."""
         plugins = getattr(self, "plugins", None)
-        return Tx(self._conn, self.clock, plugins.records if plugins is not None else None)
+        memo = None if getattr(self._local, "writing", 0) else getattr(self._local, "memo", None)
+        return Tx(self._conn, self.clock, plugins.records if plugins is not None else None, memo=memo)
 
 
 class Tx:
     """Operations inside one transaction."""
 
-    def __init__(self, conn: sqlite3.Connection, clock: Callable[[], str], models: dict | None = None):
+    def __init__(
+        self,
+        conn: sqlite3.Connection,
+        clock: Callable[[], str],
+        models: dict | None = None,
+        memo: ReadMemo | None = None,
+    ):
         self._c = conn
+        self._memo = memo  # set only on a read view made inside a read scope
         self._clock = clock
         self.models = REGISTRY if models is None else models
         self.pending: list[tuple] = []
@@ -245,19 +298,47 @@ class Tx:
     # ---- reading -----------------------------------------------------------------------------------------------------
 
     def get(self, kind: str, record_id: str, *, include_deleted: bool = False) -> Stored | None:
-        row = self._c.execute("SELECT * FROM records WHERE kind=? AND id=?", (kind, record_id)).fetchone()
+        row = self._remembered_row(kind, record_id)
         if row is None or (row["deleted"] and not include_deleted):
             return None
         return _stored(row)
 
+    def _remembered_row(self, kind: str, record_id: str) -> sqlite3.Row | None:
+        """The stored row of one record. A kind the read scope has already listed is answered from that list."""
+        if self._memo is None:
+            return self._c.execute("SELECT * FROM records WHERE kind=? AND id=?", (kind, record_id)).fetchone()
+        table = self._memo.table()
+        if (listed := table.get(("list", kind))) is not None:
+            if (index := table.get(("by id", kind))) is None:
+                index = table[("by id", kind)] = {r["id"]: r for r in listed}
+            return index.get(record_id)
+        return self._remembered(
+            ("get", kind, record_id),
+            lambda: self._c.execute("SELECT * FROM records WHERE kind=? AND id=?", (kind, record_id)).fetchone(),
+        )
+
+    def _remembered(self, key: Any, read: Callable[[], Any]) -> Any:
+        """What `read` returns, from the read scope's memo when this view has one and it already holds the key."""
+        if self._memo is None:
+            return read()
+        table = self._memo.table()
+        if key not in table:
+            table[key] = read()
+        return table[key]
+
     def list(self, kind: str, *, include_deleted: bool = False) -> list[Stored]:
-        rows = self._c.execute("SELECT * FROM records WHERE kind=?", (kind,)).fetchall()
+        rows = self._remembered(
+            ("list", kind), lambda: self._c.execute("SELECT * FROM records WHERE kind=?", (kind,)).fetchall()
+        )
         items = [_stored(r) for r in rows if include_deleted or not r["deleted"]]
         return sorted(items, key=lambda s: (id_number(s.id) or 0, s.id))
 
     def has(self, kind: str) -> bool:
         """Whether any live record of the kind exists."""
-        row = self._c.execute("SELECT 1 FROM records WHERE kind=? AND deleted=0 LIMIT 1", (kind,)).fetchone()
+        row = self._remembered(
+            ("has", kind),
+            lambda: self._c.execute("SELECT 1 FROM records WHERE kind=? AND deleted=0 LIMIT 1", (kind,)).fetchone(),
+        )
         return row is not None
 
     def find(self, kind: str, equals: dict[str, Any]) -> list[Stored]:
@@ -276,7 +357,7 @@ class Tx:
             else:
                 sql += f" AND json_extract(data, '$.{field}') = ?"
                 args.append(int(value) if isinstance(value, bool) else value)
-        rows = self._c.execute(sql, args).fetchall()
+        rows = self._remembered(("find", sql, tuple(args)), lambda: self._c.execute(sql, args).fetchall())
         return sorted((_stored(r) for r in rows), key=lambda s: (id_number(s.id) or 0, s.id))
 
     def since(self, kind: str, field: str, date: str) -> list[Stored]:
@@ -312,37 +393,70 @@ class Tx:
     def sequences(self) -> dict[str, int]:
         return {r["kind"]: r["next"] for r in self._c.execute("SELECT kind, next FROM sequences ORDER BY kind")}
 
-    def ledger(self, *, kind: str | None = None, record_id: str | None = None) -> list[dict[str, Any]]:
+    def ledger(
+        self,
+        *,
+        kind: str | None = None,
+        record_id: str | None = None,
+        op: str | None = None,
+        fields: Iterable[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """The ledger's entries, oldest first: all of them, or those of a kind, of one record, written by one op and
+        changing one of these fields. The database picks them, so only the ones asked for are read and parsed."""
         sql, args = "SELECT * FROM ledger", []
+        where: list[str] = []
         if kind is not None:
-            sql += " WHERE kind=?" + (" AND record_id=?" if record_id else "")
-            args = [kind] + ([record_id] if record_id else [])
-        rows = self._c.execute(sql + " ORDER BY seq", args).fetchall()
+            where.append("kind=?")
+            args.append(kind)
+            if record_id:
+                where.append("record_id=?")
+                args.append(record_id)
+        if op is not None:
+            where.append("op=?")
+            args.append(op)
+        if fields is not None:
+            names = list(fields)
+            where.append(f"field IN ({','.join('?' for _ in names)})")
+            args += names
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        rows = self._remembered(
+            ("ledger", sql, tuple(args)), lambda: self._c.execute(sql + " ORDER BY seq", args).fetchall()
+        )
         return [_ledger_row(r) for r in rows]
 
     def changes_of(self, changeset: str) -> list[dict[str, Any]]:
         """The ledger entries a change wrote, oldest first."""
-        rows = self._c.execute("SELECT * FROM ledger WHERE changeset=? ORDER BY seq", (changeset,)).fetchall()
+        rows = self._remembered(
+            ("changes", changeset),
+            lambda: self._c.execute("SELECT * FROM ledger WHERE changeset=? ORDER BY seq", (changeset,)).fetchall(),
+        )
         return [_ledger_row(r) for r in rows]
 
     def creations(self, kind: str) -> dict[str, tuple[str | None, str | None]]:
         """For every record of a kind, the change and the request named on the first ledger entry it ever got (the one
         that created it), keyed by record id. Either is None when the entry names none."""
-        rows = self._c.execute(
-            "SELECT record_id, changeset, request FROM ledger WHERE kind=? AND seq IN "
-            "(SELECT MIN(seq) FROM ledger WHERE kind=? GROUP BY record_id)",
-            (kind, kind),
-        ).fetchall()
+        rows = self._remembered(
+            ("creations", kind),
+            lambda: self._c.execute(
+                "SELECT record_id, changeset, request FROM ledger WHERE kind=? AND seq IN "
+                "(SELECT MIN(seq) FROM ledger WHERE kind=? GROUP BY record_id)",
+                (kind, kind),
+            ).fetchall(),
+        )
         return {r["record_id"]: (r["changeset"], r["request"]) for r in rows}
 
     def creators(self, kind: str) -> dict[str, tuple[str, str]]:
         """For every record of a kind, the actor and the time on the first ledger entry it ever got (who created it,
         and when), keyed by record id."""
-        rows = self._c.execute(
-            "SELECT record_id, actor, at FROM ledger WHERE kind=? AND seq IN "
-            "(SELECT MIN(seq) FROM ledger WHERE kind=? GROUP BY record_id)",
-            (kind, kind),
-        ).fetchall()
+        rows = self._remembered(
+            ("creators", kind),
+            lambda: self._c.execute(
+                "SELECT record_id, actor, at FROM ledger WHERE kind=? AND seq IN "
+                "(SELECT MIN(seq) FROM ledger WHERE kind=? GROUP BY record_id)",
+                (kind, kind),
+            ).fetchall(),
+        )
         return {r["record_id"]: (r["actor"], str(r["at"])) for r in rows}
 
     def field_changes(self, kind: str, fields: Iterable[str]) -> dict[str, list[dict[str, Any]]]:
@@ -350,11 +464,14 @@ class Tx:
         the record's version, the field, its value before and after, and when it changed (`at`)."""
         names = list(fields)
         marks = ",".join("?" for _ in names)
-        rows = self._c.execute(
-            f"SELECT record_id, version, field, before, after, at FROM ledger WHERE kind=? AND field IN ({marks}) "
-            "ORDER BY seq",
-            [kind, *names],
-        ).fetchall()
+        rows = self._remembered(
+            ("field changes", kind, tuple(names)),
+            lambda: self._c.execute(
+                f"SELECT record_id, version, field, before, after, at FROM ledger WHERE kind=? AND field IN ({marks}) "
+                "ORDER BY seq",
+                [kind, *names],
+            ).fetchall(),
+        )
         out: dict[str, list[dict[str, Any]]] = {}
         for row in rows:
             entry = {
@@ -370,8 +487,13 @@ class Tx:
     def last_changes(self, kind: str) -> dict[str, str]:
         """For every record of a kind, the time of the latest ledger entry it got (when it last changed), keyed by
         record id."""
-        rows = self._c.execute("SELECT record_id, MAX(at) AS at FROM ledger WHERE kind=? GROUP BY record_id", (kind,))
-        return {r["record_id"]: str(r["at"]) for r in rows.fetchall()}
+        rows = self._remembered(
+            ("last changes", kind),
+            lambda: self._c.execute(
+                "SELECT record_id, MAX(at) AS at FROM ledger WHERE kind=? GROUP BY record_id", (kind,)
+            ).fetchall(),
+        )
+        return {r["record_id"]: str(r["at"]) for r in rows}
 
     def changed_kinds(self, after: int) -> tuple[int, list[str]]:
         """The ledger's last position, and the record kinds written after position `after` (for live updates)."""

@@ -208,9 +208,7 @@ def build(ws: Any, view: Any, cfg: Any, people: Any, now: datetime) -> Plan:
         if entry is not None:
             keep((close.record or ("", close.ref))[:2], moment, entry)
     # A calendar the person reads moved or called off a meeting a promise was due at: a rule did it, outside any change.
-    for row in view.ledger(kind="action"):
-        if row["op"] != CALENDAR_RULE or row["field"] not in ("due", "news"):
-            continue
+    for row in view.ledger(kind="action", op=CALENDAR_RULE, fields=("due", "news")):
         moment = _moment(row["at"])
         action = view.get("action", row["record_id"])
         if moment is None or not (since < moment <= now) or action is None:

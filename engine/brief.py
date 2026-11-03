@@ -272,9 +272,8 @@ def _invitation_lines(c: _Day, since: datetime) -> list[tuple[datetime, Line]]:
     """What changed in the invitations the calendar entries came from, since `since`: a new invitation, and for one
     that was already there the changes `describe_change` names that matter."""
     rows: dict[str, list[dict[str, Any]]] = {}
-    for row in c.view.ledger(kind="event"):
-        if row["op"] == since_yesterday.CALENDAR_RULE:
-            rows.setdefault(row["record_id"], []).append(row)
+    for row in c.view.ledger(kind="event", op=since_yesterday.CALENDAR_RULE):
+        rows.setdefault(row["record_id"], []).append(row)
     found: list[tuple[datetime, Line]] = []
     for event in c.view.list("event"):
         data = event.data
@@ -820,8 +819,8 @@ def _morning(c: _Day) -> Brief:
 
 def _done(c: _Day) -> list[Line]:
     found: dict[str, tuple[datetime, Line]] = {}
-    for row in c.view.ledger(kind="action"):
-        if row["field"] != "status" or row["after"] != "done" or row["version"] == 1:
+    for row in c.view.ledger(kind="action", fields=("status",)):
+        if row["after"] != "done" or row["version"] == 1:
             continue
         when = _stamp(row["at"])
         if when is None or c.local_day(when) != c.today:
@@ -855,8 +854,8 @@ def _done(c: _Day) -> list[Line]:
 def _moved(c: _Day) -> list[Line]:
     lines: list[Line] = []
     seen: set[str] = set()
-    for row in c.view.ledger(kind="action"):
-        if row["field"] != "due" or row["version"] == 1 or row["before"] is None:
+    for row in c.view.ledger(kind="action", fields=("due",)):
+        if row["version"] == 1 or row["before"] is None:
             continue
         when = _stamp(row["at"])
         if when is None or c.local_day(when) != c.today:

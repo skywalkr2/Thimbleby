@@ -51,6 +51,10 @@ def build_brief_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def get_brief(form: Literal["morning", "evening", "monday"] | None = None) -> BriefView:
         """The form of the brief that is due now, or the one named. `form` is none before the morning time, and when the
         brief is turned off."""
+        with store.read_scope():
+            return _get_brief(form)
+
+    def _get_brief(form: Literal["morning", "evening", "monday"] | None) -> BriefView:
         found = brief.build(ws, store, cfg, worker.now(), form)
         people = People(store, cfg)
         goals = found.goals

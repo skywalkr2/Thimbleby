@@ -301,3 +301,23 @@ export async function expectQueueShows(page: Page, kinds: string[], { atLeast = 
       `"Show N new" button: ${waiting.length ? waiting.join(", ") : "absent"}`,
   );
 }
+
+/** Picks Personal in the side filter when the workspace has sides, so a quick add has a place and adds at once. A test
+ * on a shared server can't know whether an earlier test turned a side on, so it asks the server, then waits for the
+ * filter that answer means. */
+export async function pickPersonalIfSides(page: Page): Promise<void> {
+  const origin = new URL(page.url()).origin;
+  const base = new URL(page.url()).pathname.replace(/\/$/, "");
+  const answer = await page.request.get(`${origin}${base}/api/setup/business?token=e2e-token`);
+  const sides = answer.ok() ? ((await answer.json()) as { sides?: unknown[] }).sides ?? [] : [];
+  if (!sides.length) return;
+  const strip = page.getByRole("radiogroup", { name: "Show" });
+  const button = page.getByRole("button", { name: /^Side: / });
+  await expect(strip.or(button).first()).toBeVisible({ timeout: 20_000 });
+  if (await strip.count()) {
+    await strip.getByRole("radio", { name: "Personal" }).click();
+  } else {
+    await button.click();
+    await page.getByRole("dialog").locator("[data-side-option]").filter({ hasText: /^Personal$/ }).click();
+  }
+}

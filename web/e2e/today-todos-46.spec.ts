@@ -7,6 +7,7 @@
 //   - the opened review is an inset card with "Keep all", the screen's one filled button, and Decide has none while it is open;
 //   - neither screen scrolls sideways at 1440, 1024 or 390.
 import { expect, test, type Page } from "@playwright/test";
+import { pickPersonalIfSides } from "./journey-helpers";
 
 const LOADED = { timeout: 20_000 };
 const GREETING = /^Good (morning|afternoon|evening)/;
@@ -33,6 +34,7 @@ test.describe("To-dos", () => {
   test("the inline add row adds a to-do with Enter, says so with Undo, and the cursor stays in the row for the next one", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openTodos(page);
+    await pickPersonalIfSides(page);
     const field = page.getByRole("textbox", { name: "Add a to-do" });
     // It is the first line of the list, on every width.
     expect(await page.getByRole("list", { name: "Open to-dos" }).locator("> li").first().getByRole("textbox").count()).toBe(1);

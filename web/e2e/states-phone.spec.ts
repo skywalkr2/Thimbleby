@@ -9,6 +9,7 @@
 //     is no strip of sides (a button opens a sheet); every button in a row and in the bar is at least 44px; nothing scrolls sideways;
 //   - at 1024 the side filter is a button, the settings sections fold into a picker, and no two header controls overlap.
 import { expect, test, type APIRequestContext, type Page, type Route } from "@playwright/test";
+import { pickPersonalIfSides } from "./journey-helpers";
 
 const LOADED = { timeout: 20_000 };
 const AUTH = { Authorization: "Bearer e2e-token" };
@@ -140,6 +141,7 @@ test.describe("States of the list screens", () => {
     await page.goto("?token=e2e-token#work/open");
     const field = page.getByRole("textbox", { name: "Add a to-do" });
     await expect(field).toBeVisible(LOADED);
+    await pickPersonalIfSides(page);
     await page.route("**/api/todos", async (route) => {
       if (route.request().method() === "POST") await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "The app couldn't write to its folder." }) });
       else await route.continue();
