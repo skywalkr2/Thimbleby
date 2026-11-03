@@ -12,7 +12,7 @@ import { RecordConversation } from "./RecordConversation";
 import { Pill } from "../ui/Pill";
 import { Row, RowItem } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
@@ -97,7 +97,7 @@ function ItemRow(props: { item: S["SeriesItem"]; note?: string }) {
   return (
     <Row
       pill={<Pill tone="neutral">{t(item.kind === "action" ? "unfiled.kind.action" : "unfiled.kind.question")}</Pill>}
-      title={<a href={viewHref(recordView(item.kind, item.id))}>{plainTitle(item.text, item.due)}</a>}
+      title={<a href={viewHref(recordView(item.kind, item.id))}>{shortTitle(item.text, item.due)}</a>}
       meta={[item.due && t("op.meta.due", { date: day(item.due) }), item.rolled_from && t("series.rolled_from", { day: monthDay(item.rolled_from.on), title: item.rolled_from.title }), props.note]
         .filter(Boolean)
         .join(" · ")}

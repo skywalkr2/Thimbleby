@@ -1,5 +1,5 @@
 import type { S } from "./api";
-import { accountName, ago, broken, nextStep, orderAccounts, roleOf, stateOf, summarize, workWords } from "./ai-accounts";
+import { accountName, nameFromAddress, ago, broken, nextStep, orderAccounts, roleOf, stateOf, summarize, workWords } from "./ai-accounts";
 
 type A = S["AiAccountView"];
 const account = (name: string, extra: Partial<A> = {}): A => ({
@@ -110,4 +110,24 @@ test("how long ago is said in the sheet's words", () => {
   expect(ago("2026-10-16T11:59:00Z", now, t)).toBe('ai_accounts.ago.min.one{"n":1}');
   expect(ago("2026-10-16T11:00:00Z", now, t)).toBe('ai_accounts.ago.hours.one{"n":1}');
   expect(ago("2026-10-12T12:00:00Z", now, t)).toBe('ai_accounts.ago.days{"n":4}');
+});
+
+describe("an account is never named by where it lives (X93)", () => {
+  const plain = (key: string, vars: Record<string, string | number> = {}) => (key === "ai_accounts.default_name" ? `${vars.service} account` : "AI account");
+  const labelled = (label: string): Parameters<typeof accountName>[0] => ({ name: "x", kind: "k", label }) as never;
+  const kind = { id: "k", name: "Another service" } as never;
+
+  test("a label that is only a host and a port reads as the service's name", () => {
+    expect(accountName(labelled("127.0.0.1:9355"), kind, plain)).toBe("Another service account");
+    expect(accountName(labelled("localhost:8080"), kind, plain)).toBe("Another service account");
+    expect(accountName(labelled("10.0.0.5"), kind, plain)).toBe("Another service account");
+    expect(accountName(labelled("My server"), kind, plain)).toBe("My server");
+  });
+
+  test("a name made from a typed address is the domain, or the service's name for a host and a port", () => {
+    expect(nameFromAddress("http://127.0.0.1:9355/v1", "Fallback")).toBe("Fallback");
+    expect(nameFromAddress("http://localhost:11434", "Fallback")).toBe("Fallback");
+    expect(nameFromAddress(`${"https" + "://"}api.example.com/v1`, "Fallback")).toBe("api.example.com");
+    expect(nameFromAddress("not an address", "Fallback")).toBe("Fallback");
+  });
 });

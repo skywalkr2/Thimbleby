@@ -247,9 +247,11 @@ export function Walkthrough(
       hereWords: t("walkthrough.here"),
     };
   });
-  // The count is the rail's own: every row it lists, the last (where things stand) included, so "Step 7 of 8" sits beside eight rows.
-  const railAt = railSteps.findIndex((step) => step.id === current);
-  const position = railAt >= 0 ? { n: railAt + 1, total: railSteps.length } : null;
+  // The steps are numbered as Today's setup line counts them (the seven that count); the last row, where things stand, is
+  // the summary of them and has no number, so "Step 7 of 7" and "6 of 7 done" are the same seven.
+  const numbered = railSteps.filter((step) => step.id !== "done");
+  const railAt = numbered.findIndex((step) => step.id === current);
+  const position = railAt >= 0 ? { n: railAt + 1, total: numbered.length } : null;
   return (
     <ContinueSlotProvider value={register}>
       <WizardShell

@@ -256,7 +256,10 @@ test.describe.serial("journey: new start", () => {
     // Something was passed by, so the last screen says where things stand and is not headed Done.
     await expect(main.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
-    for (const step of ["workspace", "work", "ai", "mail", "promises", "backup"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
+    for (const step of ["workspace", "work", "ai", "mail", "backup"]) await expect(recap.locator(`[data-step="${step}"]`)).toContainText("Done");
+    // Nothing has been read yet: the first result waits for the Start on Today, and the list says so rather than "Done" (X14).
+    await expect(recap.locator('[data-step="promises"]')).toContainText("Starts when you press Start on Today");
+    await expect(recap.locator('[data-step="promises"]')).not.toContainText("Done");
     // Moving on from People with nobody added passes it, and says so.
     await expect(recap.locator('[data-step="people"]')).toContainText("No one added");
     const extras = main.getByRole("region", { name: "Optional extras" });

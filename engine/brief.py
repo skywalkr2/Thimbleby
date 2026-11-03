@@ -11,9 +11,9 @@ someone else did to the person's own things, and what changed in an invitation),
 the person's own to-dos due today, the day's squeeze), and *yes* (a reminder offered, and what the attention rules
 saved for the brief). An empty section is left out and a quiet day is one line.
 
-**The evening wrap-up** has *done* today (credited to whoever did it), *moved* (a date moved ahead today, and what is
-due today and still open) and *waiting* (what others owe the person, and the questions sent that nobody has answered).
-It is quiet when nothing moved and nobody is waited on.
+**The evening wrap-up** has *done* today (credited to whoever did it), *moved* (a date moved ahead today), *carried*
+(what is due today and still open) and *waiting* (what others owe the person, and the questions sent that nobody has
+answered). It is quiet when nothing moved, nothing is carried and nobody is waited on.
 
 **The Monday briefing** is the weekly form: the person's promises through the end of the week (weekend days
 included), what others promised them, the questions held to send, the answers to chase and the decisions waiting,
@@ -867,6 +867,10 @@ def _moved(c: _Day) -> list[Line]:
         day = firm_due(action.data)
         if day is None or day <= c.today:
             continue
+        # Moved means put off: a date moved earlier, or one first set today, was not moved to a later day.
+        before = _day_of(row["before"])
+        if before is None or before >= day:
+            continue
         seen.add(action.id)
         lines.append(
             Line(
@@ -877,12 +881,25 @@ def _moved(c: _Day) -> list[Line]:
                 link=("action", action.id),
             )
         )
-    for a in c.open_actions():
-        if a.id not in seen and c.mine(a.data) and firm_due(a.data) == c.today:
-            lines.append(
-                Line(f"carried:{a.id}", "carried", text=a.data["text"], day=c.today.isoformat(), link=("action", a.id))
-            )
     return lines
+
+
+def _carried(c: _Day, moved: list[Line]) -> list[Line]:
+    """What is due today and still open, with no date moved: it was not put off, so it is not in the moved section."""
+    seen = {line.link[1] for line in moved if line.link}
+    return [
+        Line(f"carried:{a.id}", "carried", text=a.data["text"], day=c.today.isoformat(), link=("action", a.id))
+        for a in c.open_actions()
+        if a.id not in seen and c.mine(a.data) and firm_due(a.data) == c.today
+    ]
+
+
+def _day_of(value: Any) -> date | None:
+    """The day a stored date or moment names, or none when it names no day."""
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
 
 
 def _waiting(c: _Day) -> list[Line]:
@@ -935,8 +952,16 @@ def _waiting(c: _Day) -> list[Line]:
 def _evening(c: _Day) -> Brief:
     rule = c.cfg.steward.brief
     moved, waiting = _moved(c), _waiting(c)
-    sections = [_cap(_done(c), "done", rule), _cap(moved, "moved", rule), _cap(waiting, "waiting", rule)]
-    return Brief("evening", c.today, sections=[s for s in sections if s.lines], quiet=not moved and not waiting)
+    carried = _carried(c, moved)
+    sections = [
+        _cap(_done(c), "done", rule),
+        _cap(moved, "moved", rule),
+        _cap(carried, "carried", rule),
+        _cap(waiting, "waiting", rule),
+    ]
+    return Brief(
+        "evening", c.today, sections=[s for s in sections if s.lines], quiet=not moved and not carried and not waiting
+    )
 
 
 # ---- the Monday briefing -------------------------------------------------------------------------------------------

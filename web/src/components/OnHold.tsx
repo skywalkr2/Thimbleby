@@ -8,7 +8,7 @@ import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { revealOrKeep } from "../lib/reveal";
 import { plain } from "../lib/read";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
@@ -113,7 +113,7 @@ export function useHold(action: { id: string; on_hold?: string | null; blocker?:
           <optgroup label={t("hold.on_actions")}>
             {options.actions.map(([id, text]) => (
               <option key={id} value={id}>
-                {plainTitle(text)}
+                {shortTitle(text)}
               </option>
             ))}
           </optgroup>

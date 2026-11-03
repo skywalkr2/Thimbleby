@@ -30,7 +30,7 @@ from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
 
-def _action(r: OpenAction) -> OpenActionView:
+def _action(r: OpenAction, me: str | None = None) -> OpenActionView:
     return OpenActionView(
         id=r.id,
         version=r.version,
@@ -59,6 +59,9 @@ def _action(r: OpenAction) -> OpenActionView:
         repeat=r.repeat,  # type: ignore[arg-type]
         effort_minutes=r.effort_minutes,
         remind_at=r.remind_at,
+        # What waits on the person, as the side menu counts it: theirs (or with no owner yet) and not on hold.
+        needs_you=r.state != "on_hold"
+        and (r.state == "no_owner" or (me is not None and any(o.person == me for o in r.owners))),
     )
 
 
@@ -83,7 +86,7 @@ def build_open_items_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         now = worker.now()
         today = now.astimezone(zone(cfg)).date()
         return OpenItemsView(
-            actions=[_action(a) for a in open_actions(store, cfg, today, now=now)],
+            actions=[_action(a, cfg.workspace.user.person) for a in open_actions(store, cfg, today, now=now)],
             questions=[_question(q) for q in open_questions(store, cfg, today)],
             stale_days=cfg.ui.today.stale_after_days,
         )

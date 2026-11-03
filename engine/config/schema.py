@@ -2838,6 +2838,13 @@ class UiFile(FileModel):
         description="How long a plain message stays on screen; a message with Undo or another button stays until "
         "dismissed or replaced, and 0 keeps every message until dismissed.",
     )
+    title_words: int = Field(
+        12,
+        ge=3,
+        le=40,
+        description="The most words a row's title holds before it is cut at a word and ends with an ellipsis: a to-do "
+        "pasted from a long note shows its first sentence, or its first words, and the whole is on its page.",
+    )
     links: list[dict[str, str]] = Field(
         default_factory=list,
         max_length=12,

@@ -4,6 +4,42 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The re-sweep's Today and work screens: short titles, one count, one question, the band and the wrap-up told straight, setup said on Today, a phone that shows every word, accounts named as people know them (X86 to X93, X14, X24, X44, X69, and the open rows of these screens; section 309)
+
+**Decided:** (1) X86: a row's title is short, by `ui.title_words` (default 12): the first sentence when it fits, else the first
+words cut at a word with an ellipsis; a run of letters with no space counts by its length; a day the row's meta already says is
+left out of the words and the stop before a comma goes (no ".," and no day twice). It is a display rule: the stored words are
+whole. (2) X87: every count on a screen comes from the rows beside it, with the noun that matches: the to-dos screen says "3 of
+these 5 to-dos need you" from the rows its tab counts (each row says `needs_you`, which is what the side menu counts) and "5
+open · 1 overdue" under its title; the intake review's number is the number its own words list; the setup's seven steps are the
+count Today's line, the walkthrough's "Step n of 7" and the last screen share, and the last screen (where things stand) is their
+summary with no number. (3) X88: a name asked in several inputs is one line, and no list to look over holds a question a line
+under Decide already asks. (4) X89: Follow-ups' due-soon band lists a to-do that still waits on the person (not yet sent, or sent
+with a follow-up due), never one only waiting on the other person's own date. (5) X90: the evening wrap-up's Moved lists a date put
+off to a later day; what is due today and still open is its own section. (6) X91: with setup unfinished, Today's heading and its
+empty state say which step is next. (7) X92: on a phone a line shows every word, the mark on a line of its own, and the opened
+review's rows are one column. (8) X93: an account is never named by its host and port. (9) X14: the first result is done only once
+the look back has run; while it waits for the person's Start it reads "Starts when you press Start on Today". (10) X24: a clash of
+connected events the app keeps no entry for still opens each (the calendar's page) and says where to change it. (11) X44: the
+wording sheet has a `.just_me` variant of an entry, read for a person whose workspace holds only their own life. (12) X69: the
+intro under Your promises no longer repeats its body. (13) The open rows of these screens: the send-back note, "Closed without you
+seeing", a missing record's page, Since yesterday's reasons, the "on it" toast and the answer's Today line, the contact buttons'
+size.
+
+**Decided by:** the owner, 2026-11-03: every item of the re-sweep is fixed before the gate week.
+
+**Why:** a pasted note became a three-sentence title and a long address a column of letters; the same facts were counted three
+ways on one screen; one question was asked three times; the Follow-ups band named things that waited on someone else; the
+wrap-up said "moved" of what had not moved; Today said nothing needed the person while setup did; the phone cut titles and drew
+words over words; an address stood for an account; Done claimed a look back that had read nothing.
+
+**Impact:** `web/src/lib/title-dates.ts`, `web/src/lib/wording.tsx`, `web/src/lib/setup-next.ts`, `web/src/lib/ai-accounts.ts`,
+`web/src/ui/Row.module.css`, `web/src/components/{BatchDetail,ClashDetail,Today,TodayEmpty,TodayQueue,OpenItems,FollowUps,BriefCard,Walkthrough,
+Ask,ProjectKnows,RecordPage,HandledClosed}.tsx`, `engine/today_queue.py`, `engine/brief.py`, `engine/setup.py`,
+`api/open_items_routes.py`. New setting `ui.title_words` (schema, default 12, both demo workspaces). API: `title_words` on the
+runtime configuration, `needs_you` on an open to-do, `event_page`, `other_event_page`, `calendar_link`, `other_calendar_link` on a
+queue line, and the reason `waits_for_go` on a setup step. Change log: section 309.
+
 ## 2026-11-03: Several accounts and sides: each connection told from its own account, one row for the same invitation and thread, accounts named, calendars with a color and a legend, every Today line on its side, sides served changeable, long names that hold (X77 to X85, X45)
 
 **Decided:** The re-sweep's several-accounts items (the owner has several mail accounts and sides and wants all of them fixed

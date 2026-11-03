@@ -29,6 +29,7 @@ const action = (id: string, text: string, over: Partial<S["OpenActionView"]> = {
   untouched_days: null,
   owner_question: null,
   to_send: false,
+  needs_you: true,
   ...over,
 });
 
@@ -59,10 +60,10 @@ const actions = [
     notes: "Ask about the paper too",
     origin: { kind: "link", url: `${WEB}docs.example.com/plan`, source: "S-1" },
   }),
-  action("A-2", "Order the sample copies", { owners: [{ person: "P-2", name: "Robin Sample" }], project: "PRJ-2", project_name: "Lighthouse", due: "2026-10-30" }),
+  action("A-2", "Order the sample copies", { owners: [{ person: "P-2", name: "Robin Sample" }], project: "PRJ-2", project_name: "Lighthouse", due: "2026-10-30", needs_you: false }),
   action("A-3", "Tidy the style sheet", { state: "stale", untouched_days: 30 }),
   action("A-4", "Book the room", { owners: [], state: "no_owner", owner_question: "Q-9" }),
-  action("A-5", "Wait for the printer's quote", { state: "on_hold", on_hold: "the printer's quote" }),
+  action("A-5", "Wait for the printer's quote", { state: "on_hold", on_hold: "the printer's quote", needs_you: false }),
 ];
 const questions = [
   question("Q-1", "Is the acknowledgments page final?"),
@@ -687,9 +688,19 @@ test("the overdue line's link shows the person's own overdue to-dos and no one e
   expect(screen.queryByText("Order the sample copies")).toBeNull();
 });
 
-test("the screen says how many need you in the words the side menu uses, from the same answer", async () => {
-  api({ "GET waiting": () => ({ changed: { total: 0, sides: [] }, handled: { total: 0, sides: [] }, followups: { total: 0, sides: [] }, open: { total: 4, sides: [] } }) });
+test("the line under the list counts the rows the tab counts, with the noun the tab names, and never a number of its own (X87)", async () => {
+  const user = userEvent.setup();
+  api();
   renderApp(<OpenItems />);
-  expect(await screen.findByText("4 need you")).toBeInTheDocument();
-  expect(screen.queryByText(/shown/)).not.toBeInTheDocument();
+  // Five to-dos are listed: three wait on the person (two of theirs and one with no owner yet), two don't.
+  expect(await screen.findByRole("button", { name: /^To-dos\b.*5/ })).toBeInTheDocument();
+  expect(await screen.findByText("3 of these 5 to-dos need you")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /^Questions\b/ }));
+  expect(await screen.findByText("1 of these 2 questions needs you")).toBeInTheDocument();
+});
+
+test("under the title it says how many to-dos are open and how many of them are overdue, from the rows listed (VS10)", async () => {
+  api();
+  renderApp(<OpenItems />);
+  expect(await screen.findByText("5 open · 1 overdue")).toBeInTheDocument();
 });

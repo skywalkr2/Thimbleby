@@ -336,6 +336,7 @@ def create_app(
             pm=cfg.workspace.user.person,
             narrow_below_px=cfg.ui.narrow_below_px,
             toast_seconds=cfg.ui.toast_seconds,
+            title_words=cfg.ui.title_words,
             shortcuts=cfg.ui.shortcuts,
             wording={**store.plugins.wording(), **cfg.ui.wording},
             demo=cfg.workspace.demo,

@@ -55,6 +55,8 @@ CORE_GROUPS = {
 COUNTED_STEPS = frozenset({"workspace", "work", "ai", "mail", "promises", "backup", "people"})
 #: Why a skipped step was skipped, when another step it needs was skipped.
 NEEDS_MAIL = "needs_mail"
+#: Why the first result reads as skipped when the person moved on while the look back was still waiting for their go.
+WAITS_FOR_GO = "waits_for_go"
 #: Why People reads as skipped when the person moved on from it without adding anyone: not everyone has people to add.
 NONE_ADDED = "none_added"
 #: What the person answered to the work question.
@@ -168,7 +170,8 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         "mail": mail_signed or mail_read,
         # The first result is ticked when something was handed in, or when the look back ran and the person has been
         # shown it (their walkthrough reached its screen), never while they are still on an earlier step.
-        "promises": _handed_in(view, requests) or (_looked_back(requests) and _first_result_reached(state)),
+        "promises": _handed_in(view, requests)
+        or (_looked_back(requests) and not _look_back_waits(requests) and _first_result_reached(state)),
         "backup": backup_state(ws, cfg).last_success is not None,  # a backup was made, not only a folder chosen
         "people": len(people) >= 2,
         "first_note": _handed_in(view, requests),
@@ -187,7 +190,10 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         kept in WALKTHROUGH_STEPS and WALKTHROUGH_STEPS.index(kept) > WALKTHROUGH_STEPS.index("people")
     )
     passed = {"promises": "promises" in skipped or moved_on or mail_skipped, "people": past_people}
-    reasons = {"promises": NEEDS_MAIL if mail_skipped else None, "people": NONE_ADDED if past_people else None}
+    reasons = {
+        "promises": NEEDS_MAIL if mail_skipped else WAITS_FOR_GO if _look_back_waits(requests) else None,
+        "people": NONE_ADDED if past_people else None,
+    }
     found = [
         Step(
             step,
@@ -299,6 +305,20 @@ def _looked_back(requests: list[Any]) -> bool:
     Today."""
     return any(
         r.data.get("intake") and not r.data.get("dismissed") and r.data.get("state") != "failed" for r in requests
+    )
+
+
+def _look_back_waits(requests: list[Any]) -> bool:
+    """Whether the look back was made but not started: its work waits for the person's go on Today, so nothing has been
+    read yet and the first result has not happened."""
+    from engine import source_intake
+    from engine.dispatcher import waits_on_first_go
+
+    return any(
+        r.data.get("intake")
+        and not r.data.get("dismissed")
+        and (source_intake.waits_on_go(r.data) or waits_on_first_go(r.data))
+        for r in requests
     )
 
 

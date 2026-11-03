@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { useSides } from "../lib/sides";
 import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -61,7 +61,7 @@ function SideQuestion(props: { question: Question }) {
       <p>{asked}</p>
       <ul className="plain-list" aria-label={under ? t("filing.items_label.beside", { kept: under }) : several ? t("filing.items_label.pick") : t("filing.items_label", { side: q.name })}>
         {q.items.map((i) => (
-          <li key={`${i.kind}:${i.id}`}>{plainTitle(i.text)}</li>
+          <li key={`${i.kind}:${i.id}`}>{shortTitle(i.text)}</li>
         ))}
       </ul>
       {several && (

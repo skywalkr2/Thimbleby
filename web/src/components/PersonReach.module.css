@@ -1,7 +1,8 @@
 /* A kind of contact detail on a person's page: each value on its own line with a small Remove, then Add. */
 .reach { display: grid; gap: var(--space-1); justify-items: start; min-width: 0; }
-.value { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); min-width: 0; max-width: 100%; }
+.value { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; max-width: 100%; }
 .value > span { overflow-wrap: anywhere; min-width: 0; }
-button.remove, button.add { padding-inline: 0; min-height: 0; }
+/* Small, but never under the floor a control may be (24px high), and the value and its Remove on one line. */
+button.remove, button.add { padding-inline: var(--space-1); min-height: var(--target-min); }
 .form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-width: 100%; }
 .form input { flex: 1 1 12rem; min-width: 0; }

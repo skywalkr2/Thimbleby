@@ -296,7 +296,7 @@ describe("opening", () => {
     expect(items[2]).toHaveTextContent("backups");
     // Welcome is no step: no list of steps, no place, no Back, one Start; the cursor is on the heading, as there is no field.
     expect(screen.queryByRole("navigation", { name: "Setup steps" })).toBeNull();
-    expect(screen.queryByText(/ of 8/)).toBeNull();
+    expect(screen.queryByText(/ of [78]$/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
     expect(screen.queryByRole("button", { name: "I'll do this later" })).toBeNull();
     await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Welcome" })).toHaveFocus());
@@ -307,7 +307,7 @@ describe("opening", () => {
     // A step that opens by itself starts at its heading, never in a field.
     await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "You" })).toHaveFocus());
     expect(screen.getByLabelText("Your full name")).not.toHaveFocus();
-    expect(screen.getByText("You · 1 of 8")).toBeInTheDocument();
+    expect(screen.getByText("You · 1 of 7")).toBeInTheDocument();
   });
 
   test("the first screen of a resumed walkthrough is You, not Welcome", async () => {
@@ -3108,19 +3108,33 @@ describe("one list of seven steps", () => {
     ["people", "People"],
   ];
 
-  test("progress counts every row the rail lists: 1 of 8 through 7 of 8, then the ending as 8 of 8, in the one order", async () => {
+  test("progress counts the seven steps Today's setup line counts, 1 of 7 through 7 of 7, and the ending has no number of its own (X87)", async () => {
     const ending: [S["WalkthroughView"]["step"], string][] = [...SEVEN, ["done", "Where things stand"]];
     for (const [at, label] of ending) {
       fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: at }), "GET watch": () => [] });
       const { unmount } = open();
       expect(await screenTitle()).toHaveTextContent(label);
       const n = ending.findIndex(([id]) => id === at) + 1;
-      expect(await screen.findByText(`${label} · ${n} of 8`)).toBeInTheDocument();
-      // The step line above the title and the rail agree: the number is the row's place, the total is the rows listed.
-      expect(screen.getByText(`Step ${n} of 8`)).toBeInTheDocument();
+      if (at === "done") {
+        // The summary row is not a step: nothing says "8 of 8", and the setup line's seven are the ones counted above.
+        expect(screen.queryByText(/ of 8/)).toBeNull();
+        expect(screen.queryByText(/^Step \d+ of/)).toBeNull();
+      } else {
+        expect(await screen.findByText(`${label} · ${n} of 7`)).toBeInTheDocument();
+        expect(screen.getByText(`Step ${n} of 7`)).toBeInTheDocument();
+      }
       expect(document.querySelectorAll("#walkthrough-steps [data-screen]")).toHaveLength(8);
       unmount();
     }
+  });
+
+  test("Your promises' intro no longer says what the screen's own text says about reading the mail in the background (X69)", async () => {
+    fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: "promises" }), "GET watch": () => [] });
+    open();
+    expect(await screenTitle()).toHaveTextContent("Your promises");
+    expect((document.body.textContent ?? "").match(/reads your recent mail in the background/g) ?? []).toHaveLength(0);
+    // The screen's own text is what says it (once); the intro under the title no longer does.
+    expect(await screen.findByText(/^The first thing the assistant does for you\.$/)).toBeInTheDocument();
   });
 
   test("Your promises' intro claims no follow-up and no Start: the screen says those itself when they are so", async () => {
@@ -3155,7 +3169,7 @@ describe("one list of seven steps", () => {
     try {
       fakeApi({ ...routes({}, CORE.map((id) => step(id)), { step: "you" }), "GET watch": () => [] });
       open();
-      expect(await screen.findByText("You · 1 of 8")).toBeInTheDocument();
+      expect(await screen.findByText("You · 1 of 7")).toBeInTheDocument();
       const steps = screen.getByRole("button", { name: "Steps" });
       const list = document.getElementById("walkthrough-steps")!;
       expect(steps).toHaveAttribute("aria-expanded", "false");
@@ -3166,7 +3180,7 @@ describe("one list of seven steps", () => {
       await user.click(within(list).getByRole("button", { name: /^Backups/ }));
       expect(await screenTitle()).toHaveTextContent("Backups");
       expect(screen.getByRole("button", { name: "Steps" })).toHaveAttribute("aria-expanded", "false");
-      expect(screen.getByText("Backups · 6 of 8")).toBeInTheDocument();
+      expect(screen.getByText("Backups · 6 of 7")).toBeInTheDocument();
     } finally {
       document.documentElement.removeAttribute("data-narrow");
     }

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
 import en from "../wording/en.json";
 import { RecordPage } from "./RecordPage";
 
@@ -643,4 +643,22 @@ test("someone else's page keeps its own words, their details and who they are to
   expect(screen.getAllByText("my sister")).toHaveLength(2);
   // How the person works with them is a question about people at work, and a sister isn't one.
   expect(screen.queryByText("How you work with them")).toBeNull();
+});
+
+test("a page for a record that isn't there says so with a title, and offers no Try again (X63)", async () => {
+  fakeApi({
+    "GET record?kind=person&id=PER-9": () => new Refuse(404, "person PER-9 doesn't exist"),
+    "GET kinds/person": () => ({ kind: "person", fields: [] }),
+    "GET record-pages/PER-9?kind=person": () => new Refuse(404, "no"),
+    "GET people": () => [],
+    "GET projects": () => [],
+    "GET settings": () => ({ fingerprint: "fp", items: [] }),
+    "GET lists": () => [],
+    "GET organizations": () => [],
+  });
+  renderApp(<RecordPage kind="person" id="PER-9" onBack={() => {}} />);
+  expect(await screen.findByText("This page isn't here any more. It may have been removed, or the address may be wrong.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Not here" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  expect(screen.queryByText("This page didn't load.")).toBeNull();
 });

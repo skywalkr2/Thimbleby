@@ -17629,6 +17629,18 @@
             "description": "It is open with no date, and the person's own or one they told someone about: the screen's \"Needs a date\" group at the top, where a date picker sets its day as the person's own change.",
             "title": "Needs Date"
           },
+          "needs_you": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "It waits on the person: theirs, or with no owner yet, and not on hold. The count the side menu shows is of these, so the screen's own count is worked out from the same rows.",
+            "title": "Needs You"
+          },
           "notes": {
             "anyOf": [
               {
@@ -24115,6 +24127,18 @@
             "description": "For a reminder line: when it was set for, on the person's own clock (their time zone).",
             "title": "At"
           },
+          "calendar_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the first meeting's address in its calendar, shown with its real domain.",
+            "title": "Calendar Link"
+          },
           "candidates": {
             "additionalProperties": {
               "type": "string"
@@ -24304,6 +24328,18 @@
             ],
             "description": "For an invitation, meeting_prep or meeting_capture line: the id of the calendar entry; its page is GET /api/meetings/{id}/prep and what happened at it is written down with POST /api/meetings/{id}/capture.",
             "title": "Event"
+          },
+          "event_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the page of what its calendar says about the first meeting (the event and the date of it), when the app keeps no entry for it.",
+            "title": "Event Page"
           },
           "expired": {
             "anyOf": [
@@ -24598,6 +24634,18 @@
             "description": "For a clash line: the title of the second meeting; `text` is the first.",
             "title": "Other"
           },
+          "other_calendar_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the second meeting's address in its calendar, shown with its real domain.",
+            "title": "Other Calendar Link"
+          },
           "other_ends": {
             "anyOf": [
               {
@@ -24621,6 +24669,18 @@
             ],
             "description": "For a clash line: the calendar entry to open, when one is kept for the second meeting.",
             "title": "Other Entry"
+          },
+          "other_event_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the same for the second meeting, when the app keeps no entry for it.",
+            "title": "Other Event Page"
           },
           "other_place": {
             "anyOf": [
@@ -26812,6 +26872,12 @@
             "title": "Timezone",
             "type": "string"
           },
+          "title_words": {
+            "default": 12,
+            "description": "The most words a row's title holds before it is cut (ui.title_words).",
+            "title": "Title Words",
+            "type": "integer"
+          },
           "toast_seconds": {
             "title": "Toast Seconds",
             "type": "number"
@@ -28819,7 +28885,8 @@
               {
                 "enum": [
                   "needs_mail",
-                  "none_added"
+                  "none_added",
+                  "waits_for_go"
                 ],
                 "type": "string"
               },
@@ -28827,7 +28894,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why a skipped step was skipped: needs_mail, when it needed a step that was skipped; none_added, when the person moved on from People without adding anyone.",
+            "description": "Why a skipped step was skipped: needs_mail, when it needed a step that was skipped; none_added, when the person moved on from People without adding anyone; waits_for_go, when the person moved on from the first result while the look back still waited for their go on Today (nothing has been read yet).",
             "title": "Reason"
           },
           "settings": {

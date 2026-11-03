@@ -42,7 +42,7 @@ export function AssistantCloses() {
             </p>
           ) : null}
           {mine.length === 0 ? (
-            <EmptyState text={t("sources.silent.empty")} />
+            <EmptyState text={t(found.data.measure.silent > 0 ? "sources.silent.empty_others" : "sources.silent.empty")} />
           ) : (
             <RowList>
               {mine.map((item) => (

@@ -19,7 +19,7 @@ import { useToasts } from "../lib/toasts";
 import { useDraftState, useRestored } from "../lib/draft";
 import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
-import { accountName, roleOf } from "../lib/ai-accounts";
+import { accountName, nameFromAddress, roleOf } from "../lib/ai-accounts";
 import { HARDER as HARDER_SHORT, planFor, useAccountActs, useConfirmAbove } from "../lib/ai-account-acts";
 import { AiAccounts } from "./AiAccounts";
 import { useSpendLine } from "./AiSpendLine";
@@ -199,8 +199,9 @@ export function WelcomeAi(props: {
   const labels = new Set((accounts.data ?? []).map((a) => accountName(a, endpoints.data?.find((e) => e.id === a.kind), t)));
   const defaultLabel = (() => {
     if (!kind) return "";
-    const at = asksAddress(kind) && address.trim() ? domainOf(address.trim()) : null;
-    const base = at ?? t("ai_accounts.default_name", { service: kind.name });
+    // Named for the service when the address typed is a host and a port (a server on this computer or a private network).
+    const fallback = t("ai_accounts.default_name", { service: kind.name });
+    const base = asksAddress(kind) && address.trim() ? nameFromAddress(address.trim(), fallback) : fallback;
     let n = 2;
     let found = base;
     while (labels.has(found)) found = `${base} ${n++}`;

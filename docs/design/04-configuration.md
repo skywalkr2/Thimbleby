@@ -675,7 +675,7 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   `send_back` s, `copy` c, `edit` e, `move` m (opens the stage menu of the card or row that has the cursor), `undo` u, `hand_in` n, `help` ?, `ask` /, `next_pane` ], `previous_pane` [. The last two
   move between the panes of a screen (7.7).
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
-- `toast_seconds` (7; how long a plain message stays: a toast with Undo or another button stays until dismissed or replaced; 0 keeps every toast until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
+- `title_words` (12; the most words a row's title holds before it is cut at a word and ends with an ellipsis, 7.7), `toast_seconds` (7; how long a plain message stays: a toast with Undo or another button stays until dismissed or replaced; 0 keeps every toast until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
 - `handled_group` (`kind`): how Handled for you groups what it lists to start with, `kind` (what the item is: bills,
   orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled) or

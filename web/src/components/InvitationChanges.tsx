@@ -2,7 +2,7 @@
 // the server found in the entry's history, worded from the sheet, newest state first as the server orders them. Nothing here
 // changes a record.
 import { day, wallTime } from "../lib/dates";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import type { S } from "../lib/api";
 
@@ -15,7 +15,7 @@ export function useChangeWords(): (change: Change) => string {
   const { t } = useWords();
   return (change) => {
     const vars = {
-      text: plainTitle(change.text ?? ""),
+      text: shortTitle(change.text ?? ""),
       name: change.name ?? "",
       date: day(change.day),
       time: clock(change.at),

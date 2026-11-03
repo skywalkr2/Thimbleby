@@ -3812,7 +3812,7 @@ people and details, and never acts in their name without their yes on the exact 
   shows and links to it (below): a changed or at-risk line states one fact plainly, an at-risk line says when it
   bites, a needs-your-yes line starts with what the person does and opens the exact content, an empty section is left out, a quiet day is one line, and no line reports status or progress (samples in
   `docs/project/steward-brief-samples.md`). The evening wrap-up has done today (credited to whoever did it), moved to
-  tomorrow and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
+  a later day (only a date put off), still open from today (due today, not moved) and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
   reports to, then the week's promises, questions, chases and decisions, and three to five goals the person confirms,
   under the same line rules (6.35; `docs/project/steward-wrapup-samples.md`).
   **Built (S2, the brief):** `engine/brief.py` makes the three forms by rules, reading Today's own lines, what changed
@@ -4629,7 +4629,8 @@ short test sign-in never warns on its first day. A meeting the person sets up (a
 `steward.meetings.setup_words`) counts from `steward.meetings.setup_lead_working_days` working days before its day when its to-do has no lead time of its
 own, names the day when that is past this week, and once its invitation is out (told to someone, or a linked calendar entry) shows
 only on its day, as hold. A clash line names both entries, each with its time and the calendar it comes from ("your
-notes" for the app's own), opens either entry, and offers "It's fine", which keeps that clash (those two entries on that
+notes" for the app's own), opens either entry (a connected event the app keeps no entry for opens the page of what its calendar says, with the calendar's
+own address, and the line says it is changed there: `event_page`, `calendar_link`, X24), and offers "It's fine", which keeps that clash (those two entries on that
 day) off Today until the person takes it back; moving or declining an entry on a connected calendar waits for the
 add-ons' calendar channel. A sign-in's renewal line uses sign-in words, never a key's, and lists what it serves by plain
 name.

@@ -22,7 +22,6 @@ import {
   type OpenQuestion,
 } from "../lib/open-items";
 import { useSaid } from "../lib/repeat";
-import { useWaiting, waitingUnder } from "../lib/waiting";
 import { revealOrKeep } from "../lib/reveal";
 import { openOnToday } from "./AnswerOnToday";
 import { onSide, useSideFilter, useSides } from "../lib/sides";
@@ -54,7 +53,7 @@ import { NotesTitle } from "./ActionNotes";
 import { dateAndTime, useRemindMe } from "./ReminderLine";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 
 import { EmptyState } from "../ui/EmptyState";
 import { FilterChip } from "../ui/FilterChip";
@@ -78,11 +77,17 @@ export function OpenItems() {
   const addTodo = useAddTodo();
   // With a side beside Personal, the list can be narrowed to one side; what is on no side shows under every choice.
   const side = useSideFilter();
-  // How many wait on the person: the side menu's number, from the same answer, under the same side choice.
-  const waiting = useWaiting();
-  const needYou = waiting ? waitingUnder(waiting.open, side.picked) : null;
   const actions = (items.data?.actions ?? []).filter((a) => onSide(a.side, side.picked, a.views, !!a.project_name));
   const questions = (items.data?.questions ?? []).filter((q) => onSide(q.side, side.picked, q.views, (q.projects ?? []).length > 0));
+
+  // How many of the rows the open tab counts wait on the person: worked out from those rows, so the tab's number, the list and this
+  // line never disagree (the side menu counts the same rows, of both tabs, under the same side choice).
+  const needYou = tab === "actions" ? actions.filter((a) => a.needs_you).length : questions.filter((q) => q.state === "yours").length;
+  const total = tab === "actions" ? actions.length : questions.length;
+
+  // "6 open · 1 overdue": the same rows the tab counts.
+  const late = actions.filter((a) => a.state === "overdue").length;
+  const subtitle = tab !== "actions" || actions.length === 0 ? undefined : late > 0 ? t("open.subtitle.late", { n: actions.length, late }) : tn("open.subtitle", actions.length);
 
   const projectName = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? actions.find((a) => a.project === id)?.project_name ?? id;
   const projectChoices = [...new Set(tab === "actions" ? actions.filter((a) => !a.side_name).map((a) => a.project).filter((p): p is string => !!p) : questions.flatMap((q) => q.projects ?? []))]
@@ -115,6 +120,7 @@ export function OpenItems() {
       <PageHeader
         id="open-title"
         title={t("open.title")}
+        subtitle={subtitle}
         primary={
           !items.isPending && actions.length + questions.length > 0 ? (
             <Button variant="primary" icon="plus" onClick={addTodo.open}>
@@ -183,7 +189,7 @@ export function OpenItems() {
               ))}
             </RowList>
           )}
-          {needYou !== null && <p className="hint">{tn("nav.count.open", needYou)}</p>}
+          {total > 0 && <p className="hint" data-need-count="">{tn(`open.need.${tab}`, needYou, { total })}</p>}
         </>
       )}
     </section>
@@ -281,7 +287,7 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean }) {
   // The title opens the to-do's own page.
   const title = (
     <NotesTitle notes={a.notes}>
-      <a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>
+      <a href={viewHref(recordView("action", a.id))}>{shortTitle(a.text, a.due)}</a>
     </NotesTitle>
   );
   return (

@@ -327,6 +327,11 @@ def test_clashes_after_today_include_too_little_travel_time_and_stop_at_the_days
         ("risk", "overlap", "Standup", "Review", day(1)),
         ("risk", "travel", "Site visit", "Supplier call", day(2)),
     ]
+    # Connected events the app keeps no entry for have no entry to open, so the line carries the page of what the
+    # calendar says about each (the event and its date), and the calendar's own address.
+    for each in lines:
+        assert each.entry is None and each.other_entry is None
+        assert each.event_page and "@" in each.event_page and each.other_event_page and "@" in each.other_event_page
     travel_line = next(x for x in lines if x.state == "travel")
     assert (travel_line.travel_minutes, travel_line.place, travel_line.other_place) == (
         travel,

@@ -9,7 +9,7 @@ import { takeFilters } from "../lib/open-items";
 import { showNewLines } from "../lib/queue-hold";
 import { RestartProvider } from "../lib/restart";
 import { forgetLine } from "../lib/today";
-import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
+import { fakeApi, renderApp, setupStep, setupView, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
 
 type Line = S["QueueLineView"];
@@ -211,6 +211,17 @@ test("with no AI service an empty Today says to connect one, and its button goes
   expect(onOpenGuide).toHaveBeenCalledWith("ai");
 });
 
+test("with setup unfinished an empty Today says which step is next, never that nothing needs the person (X91)", async () => {
+  const user = userEvent.setup();
+  const steps = ["workspace", "work", "ai", "mail", "promises", "backup", "people"].map((id) => setupStep(id, id === "workspace" ? { done: true } : {}));
+  const { onOpenGuide } = show([], { "GET setup": () => setupView(steps), "GET status": () => statusFixture({}, { ai: { state: "not_set_up", detail: null } }) });
+  expect(await screen.findByText("Setup isn't finished. Next in setup: Say what you'll use it for.")).toBeInTheDocument();
+  expect(screen.getByText(/Next in setup: Say what you'll use it for$/)).toBeInTheDocument();
+  expect(screen.queryByText(/Nothing needs you/)).toBeNull();
+  await user.click(within(document.querySelector<HTMLElement>('[data-queue-empty="setup"]')!).getByRole("button", { name: "Continue setup" }));
+  expect(onOpenGuide).toHaveBeenCalledWith("work");
+});
+
 test("with a service connected and nothing worked on yet, an empty Today says what to hand in", async () => {
   const user = userEvent.setup();
   const { onHandIn } = show([], { "GET status": () => statusFixture() });
@@ -374,8 +385,15 @@ const intakeReview: Line = line("intake_review", {
 
 test("what a new source's intake found is one review line that counts it in plain words", async () => {
   show([intakeReview]);
-  expect(await screen.findByText("Look over what was found in Inbox: 4 items")).toBeInTheDocument();
+  // The title counts what its own words list (3 to-dos and 2 questions), not the 4 inputs they were found in.
+  expect(await screen.findByText("Look over what was found in Inbox: 5 items")).toBeInTheDocument();
   expect(within(row("intake_review")).getByText("3 to-dos, 2 questions, 4 waiting for you")).toBeInTheDocument();
+});
+
+test("the intake line's number is the number of things its words count, and a source named Your inbox reads naturally mid-sentence (X87, X69)", async () => {
+  show([{ ...intakeReview, subject: "Your inbox", count: 3, outcome: { actions_added: 4 } }]);
+  expect(await screen.findByText("Look over what was found in your inbox: 4 items")).toBeInTheDocument();
+  expect(within(row("intake_review")).getByText("4 to-dos")).toBeInTheDocument();
 });
 
 test("Look over on an intake opens its items in the details: nothing is marked seen and nothing navigates", async () => {
@@ -402,6 +420,7 @@ test("what the first look back over the mail found is one line, Look over what w
   const found: Line = {
     ...intakeReview,
     count: 2,
+    outcome: { actions_added: 2 },
     changesets: ["CS-1", "CS-2"],
     items: [todo(0, "Send the headcount"), todo(1, "Book the hall", { key: "item:CS-2:0", changeset: "CS-2", request: "REQ-2" })],
   };
@@ -435,6 +454,14 @@ test("Not right on an item opens the note to send it back with, the correction t
   await user.type(note, "This is not a to-do.");
   await user.click(screen.getByRole("button", { name: "Send back" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/send-back")?.body).toEqual({ note: "This is not a to-do.", ops: [1] }));
+});
+
+test("the note to send an item back with asks about the item's words, with no stop left before the question mark (X19)", async () => {
+  const user = userEvent.setup();
+  show([{ ...review, items: [todo(0, "Bring the floor plan.")], count: 1, outcome: { actions_added: 1 } }]);
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  await user.click(await screen.findByRole("button", { name: /^Not right/ }));
+  expect(await screen.findByRole("textbox", { name: "What should Helper do differently about: Bring the floor plan?" })).toBeInTheDocument();
 });
 
 test("batches left unopened are one line, and each opens with its own All looks good, oldest first", async () => {

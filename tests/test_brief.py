@@ -725,18 +725,23 @@ def test_done_today_is_credited_to_whoever_did_the_work(env):
     assert yesterdays not in {x.link[1] for x in done} and unrelated not in {x.link[1] for x in done}
 
 
-def test_what_moved_ahead_today_and_what_is_still_open_today_carry_to_tomorrow(env):
+def test_the_moved_section_lists_only_what_was_moved_to_a_later_day_and_what_is_still_open_has_its_own(env):
     ws, cfg, store, clock = env
     shifted = own(store, cfg, "Edit the website", due=day(0))
+    pulled_in = own(store, cfg, "Book the venue", due=day(4))
     still = own(store, cfg, "Print the estimate", due=day(0))
     later = own(store, cfg, "Plan the review", due=day(3))
     at(clock, NOW + timedelta(hours=2))
     update(store, "action", shifted, due=day(1))
+    update(store, "action", pulled_in, due=day(2))  # earlier than it was: not put off
     found = built(env, "evening", EVENING)
     moved = {x.link[1]: x for x in lines_of(found, "moved")}
+    assert set(moved) == {shifted}, "only what was put off to a later day is under Moved"
     assert moved[shifted].kind == "moved_ahead" and moved[shifted].day == day(1)
-    assert moved[still].kind == "carried" and moved[still].day == day(0)
-    assert later not in moved
+    carried = {x.link[1]: x for x in lines_of(found, "carried")}
+    assert set(carried) == {still}, "what is due today and still open is its own section"
+    assert carried[still].kind == "carried" and carried[still].day == day(0)
+    assert later not in moved and later not in carried
     assert not found.quiet
 
 

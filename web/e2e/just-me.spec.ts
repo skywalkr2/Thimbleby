@@ -388,4 +388,29 @@ test.describe('"Just me" sees no work words', () => {
       expect(text).not.toMatch(words);
     }
   });
+
+  // X44 (reopened): the screens a person with only their own life reads say nothing of work, a job, a project or a meeting: the
+  // sheet's variants for them stand in.
+  test("the schedule, its timeline, stages, hand-over, quality and the AI accounts speak of their life, not of work", async ({ page }) => {
+    test.setTimeout(120_000);
+    const phrases = [/Work week/, /don't work/, /Add a meeting/, /Not filed under a project/, /a piece of work/, /equipment or contracts/, /Your work is kept/, /Everyday work/, /Harder work/, /Search your work/, /Promises on your own list/];
+    const seen: string[] = [];
+    const scan = async (where: string) => {
+      const text = await page.evaluate(() => document.body.innerText);
+      for (const words of phrases) if (words.test(text)) seen.push(`${where}: ${words}`);
+    };
+    await go(page, "schedule");
+    await heading(page, "Schedule");
+    await expect(page.getByRole("radio", { name: "Weekdays" })).toBeVisible(LOADED);
+    await scan("Schedule");
+    await page.getByRole("radio", { name: "Timeline" }).click();
+    await expect(page.getByText(/Not filed under an area|Nothing with a date/).first()).toBeVisible(LOADED);
+    await scan("Timeline");
+    for (const hash of ["work/stages", "handover", "quality", "settings/ai"]) {
+      await go(page, hash);
+      await expect(page.getByRole("heading").first()).toBeVisible(LOADED);
+      await scan(hash);
+    }
+    expect(seen).toEqual([]);
+  });
 });

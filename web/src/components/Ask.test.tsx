@@ -410,3 +410,26 @@ test("asking while Today waits for Start says it waits for Start, with a way to 
   expect(screen.queryByText(/is on it/)).toBeNull();
   expect(screen.getByRole("button", { name: "Go to Today" })).toBeInTheDocument();
 });
+
+test("the toast that says the assistant is on it goes once the answer to that question is on the screen (X26)", async () => {
+  const user = userEvent.setup();
+  let answered = false;
+  const calls = fakeApi({
+    "GET asks": () => (answered ? [ask("r1", { state: "done", answer: { text: "It is due Friday.", cites: [] } })] : []),
+    "POST ask": () => ({ id: "r1" }),
+    "GET today/queue": () => [],
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST asks/r1/read": () => ({ id: "r1" }),
+  });
+  const { client } = renderApp(<Ask onClose={() => undefined} />);
+  await user.type(screen.getByLabelText("Your question"), "What is due?");
+  await user.click(screen.getByRole("button", { name: "Ask" }));
+  expect(await screen.findByText(/is on it/)).toBeInTheDocument();
+  // The answer arrives as the live stream brings it.
+  answered = true;
+  await client.invalidateQueries({ queryKey: ["asks"] });
+  await waitFor(() => expect(screen.queryByText(/is on it/)).toBeNull());
+  expect(screen.getByText("It is due Friday.")).toBeInTheDocument();
+  // And Today holds no line to read the answer that is on the screen (X25).
+  await waitFor(() => expect(calls.some((c) => c.route === "POST asks/r1/read")).toBe(true));
+});

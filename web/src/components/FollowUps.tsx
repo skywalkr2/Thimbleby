@@ -56,7 +56,7 @@ import { FollowUpsByProject } from "./FollowUpsByProject";
 import { ReviewMode } from "./ReviewMode";
 import { CurrentCopy } from "./SameDocument";
 import { SendFrom } from "./SendFrom";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { Pill } from "../ui/Pill";
 
 import { EmptyState } from "../ui/EmptyState";
@@ -770,7 +770,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 {actions.map((a) => (
                   <li key={a.id}>
                     <span className="title">
-                      <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
+                      <NotesTitle notes={a.notes}>{shortTitle(a.text, a.due)}</NotesTitle>
                     </span>
                     {(a.project_name || a.side_name || dueWords(a, t)) && (
                       <span className="meta">
@@ -908,14 +908,18 @@ export function WaitingSection(props: { section: S["FollowupSection"]; compact: 
   );
 }
 
-/** What is due soon for one person (design 7.5): their to-dos that are overdue, due today or due within `ui.followups.soon_days`,
- * at the top of their group on every tab. What the open tab already lists is not repeated. A to-do that waits on a reply has
+/** What is due soon for one person (design 7.5): their to-dos that are overdue, due today or due within `ui.followups.soon_days`
+ * and still wait on the person (not yet sent, or sent with a follow-up due), at the top of their group on every tab. What
+ * the open tab already lists is not repeated. A to-do that waits on a reply has
  * its own row, with the primary it has on Waiting on them; one not yet sent has Show message, which opens the message. */
 function DueSoonBand(props: { section: S["FollowupSection"]; filter: Filter; compact: boolean; onShowMessage: (person: string) => void }) {
   const { tn } = useWords();
   const s = props.section;
-  // On Later nothing is a to-do, so every due soon to-do is from another tab.
-  const rows = s.is_pm ? [] : s.actions.filter((a) => a.due_soon && (props.filter === "send" ? !a.to_send : props.filter === "waiting" ? a.to_send : true));
+  // Only what still waits on the person: a to-do not yet sent, or one already sent whose follow-up is due. A sent to-do that
+  // only waits on the other person's own date is on Waiting on them and nowhere else. On Later nothing is a to-do, so every
+  // one of them is from another tab.
+  const waitsOnYou = (a: S["FollowupAction"]) => (a.to_send ? true : a.chase_due);
+  const rows = s.is_pm ? [] : s.actions.filter((a) => a.due_soon && waitsOnYou(a) && (props.filter === "send" ? !a.to_send : props.filter === "waiting" ? a.to_send : true));
   if (rows.length === 0) return null;
   const Heading = props.compact ? "h4" : "h3";
   const id = `soon-${s.person}`;
@@ -937,7 +941,7 @@ function DueSoonToSend(props: { action: S["FollowupAction"]; name: string; perso
     <Item>
       <div>
         <div className="title">
-          <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
+          <NotesTitle notes={a.notes}>{shortTitle(a.text, a.due)}</NotesTitle>
         </div>
         <div className="meta">
           <ActionMeta a={a} rest={[when, t("followups.by_project.to_send")].filter(Boolean).join(" · ")} />
@@ -1043,7 +1047,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
         ))}
         {actions.map((a) => (
           <li key={a.id}>
-            <span className="title">{plainTitle(a.text, a.due)}</span>
+            <span className="title">{shortTitle(a.text, a.due)}</span>
             <span className="meta">
               {[
                 a.due ? t(a.due_check ? "op.meta.due_check" : a.due < today ? "followups.nudge.overdue" : "op.meta.due", { date: day(a.due) }) : "",
@@ -1244,7 +1248,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
     <Item row ref={ref}>
       <div>
         <div className="title">
-          <NotesTitle notes={a.notes}>{plainTitle(a.text, a.due)}</NotesTitle>
+          <NotesTitle notes={a.notes}>{shortTitle(a.text, a.due)}</NotesTitle>
           {a.on_hold || a.blocker ? <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
         </div>
         {(a.project_name || a.side_name || rest) && (

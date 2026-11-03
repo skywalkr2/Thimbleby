@@ -15,7 +15,7 @@ import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { filedWords, movesToPick, useMoveFiled } from "./Filed";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { MissedOneLine } from "./MissedOne";
 import type { MenuGroup } from "../ui/MenuButton";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -52,7 +52,7 @@ export function whyWords(e: Entry, t: T): string {
 /** The act and its reason as one sentence: "Closed “Send the floor plan”: Ana said “it went out this morning”". */
 export function sentence(e: Entry, t: T): string {
   const key = e.act === "moved" && !e.day ? "since.act.moved_undated" : `since.act.${e.act}`;
-  return t(key, { title: plainTitle(e.title), why: whyWords(e, t), day: e.day ? day(e.day) : "" });
+  return t(key, { title: shortTitle(e.title), why: whyWords(e, t), day: e.day ? day(e.day) : "" });
 }
 
 type Drawn = { status: "loading" } | { status: "failed" } | { status: "ready"; asOf: string; entries: Entry[] };
@@ -126,7 +126,7 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
   const text = sentence(e, t);
   const unseen = !e.seen && CLOSES.has(e.act);
   const undone = async (run: () => Promise<unknown>, done: string) => {
-    const result = await act(run, () => ({ message: t(done, { title: plainTitle(e.title) }) }));
+    const result = await act(run, () => ({ message: t(done, { title: shortTitle(e.title) }) }));
     if (result !== undefined) props.onGone();
   };
   const menu: MenuAction[] = [];
@@ -139,7 +139,7 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
       run: () =>
         void act(
           () => api.undo(cs, [op]),
-          (report) => ({ message: report.restored.includes(op) ? t("since.undone", { title: plainTitle(e.title) }) : t("since.undo_failed") }),
+          (report) => ({ message: report.restored.includes(op) ? t("since.undone", { title: shortTitle(e.title) }) : t("since.undo_failed") }),
         ).then((report) => report?.restored.includes(op) && props.onGone()),
     });
   } else if (e.undo === "closer_look" && e.request && e.version != null) {
@@ -193,12 +193,12 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
       data-unseen={unseen ? "" : undefined}
       primary={
         record ? (
-          <Button size="sm" variant="primary" data-key="primary" aria-label={t("since.open_named", { title: plainTitle(e.title) })} onClick={() => props.onOpenRecord(record.kind, record.id)}>
+          <Button size="sm" variant="primary" data-key="primary" aria-label={t("since.open_named", { title: shortTitle(e.title) })} onClick={() => props.onOpenRecord(record.kind, record.id)}>
             {t("since.open")}
           </Button>
         ) : undefined
       }
-      menu={menu.length > 0 || groups.length > 0 ? <RowMenu label={plainTitle(e.title)} actions={menu} groups={groups} /> : undefined}
+      menu={menu.length > 0 || groups.length > 0 ? <RowMenu label={shortTitle(e.title)} actions={menu} groups={groups} /> : undefined}
     />
   );
 }

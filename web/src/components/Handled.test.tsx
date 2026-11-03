@@ -257,12 +257,12 @@ test("each list says so when it is empty", async () => {
     "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, groups: [], kinds: [], counts: { set_aside: 0, read: 0 } }),
     "GET handled?tab=read&q=": () => ({ ...READ, groups: [], kinds: [], counts: { set_aside: 0, read: 0 } }),
   });
-  expect(await screen.findByText("Nothing has been set aside yet. Newsletters, sales and automated notices are listed here once a mailbox is connected and mail arrives.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing has been set aside yet. Newsletters, sales and automated notices are listed here once mail arrives.")).toBeInTheDocument();
   // With nothing to find there is nothing to search or group, so those controls are not drawn.
   expect(screen.queryByRole("searchbox")).toBeNull();
   expect(screen.queryByRole("radio", { name: "Sender" })).toBeNull();
   await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 0" }));
-  expect(await screen.findByText("Nothing has been read with nothing to do yet. Mail that needed nothing from you is listed here once a mailbox is connected and mail arrives.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing has been read with nothing to do yet. Mail that needed nothing from you is listed here once mail arrives.")).toBeInTheDocument();
 });
 
 test("a set-aside row offers Bring it in, and in its menu Always set aside mail like this and Open the message, with no Keep set aside and no Treat as anywhere", async () => {
@@ -441,6 +441,23 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   await user.click(screen.getByRole("radio", { name: "Set aside before reading · 6" }));
   await screen.findByRole("button", { name: "Sales, promotions and social updates · 2" });
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
+});
+
+test("closes counted but made by rules say so and never claim everything closed was made or seen (X30)", async () => {
+  const user = userEvent.setup();
+  open({
+    "GET silent-closes": () => ({
+      ...NO_CLOSES,
+      count: 2,
+      closes: [{ ref: "request:REQ-a", kind: "rule", how: "closed", title: "Plan a", when: "2026-10-11T08:30:00+00:00", why: "x", rule: "Spacing", item: "file" }],
+      measure: { ...NO_CLOSES.measure, total: 2, silent: 2, rate: 1 },
+    }),
+  });
+  await user.click(await screen.findByRole("radio", { name: /^Read, nothing to do/ }));
+  const section = (await screen.findByRole("heading", { name: "Closed without you seeing" })).closest("section") as HTMLElement;
+  expect(within(section).getByText("2 of 2 closed without you seeing them")).toBeInTheDocument();
+  expect(within(section).queryByText("Everything that was closed, you made or saw.")).toBeNull();
+  expect(within(section).getByText(/Nothing here was closed by the assistant itself/)).toBeInTheDocument();
 });
 
 test("one close that was not seen reads 1 of 3 closed without you seeing it, and none reads that everything was seen", async () => {

@@ -43,6 +43,18 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
   const toast = useHandedToast();
   const asks = useQuery({ queryKey: ["asks"], queryFn: api.asks });
   const client = useQueryClient();
+  const { dismissAll } = useToasts();
+  // "Asked. {assistant} is on it." says nothing once the answer it was about is on the screen: it goes then.
+  const askedId = useRef<string | null>(null);
+  useEffect(() => {
+    const mine = askedId.current ? asks.data?.find((item) => item.id === askedId.current) : undefined;
+    if (mine?.answer) {
+      askedId.current = null;
+      dismissAll();
+      // The answer is being read right here, so Today holds no line for it to read (it would count one more thing for the person).
+      void api.readAnswer(mine.id).then(() => client.invalidateQueries({ queryKey: ["today"] }));
+    }
+  }, [asks.data, dismissAll]);
   // Opened at an answer from Today: reading it is what clears its line.
   useEffect(() => {
     if (!props.reveal) return;
@@ -58,6 +70,7 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
     const asked = await act(
       async () => {
         const made = await api.ask(text);
+        askedId.current = made.id;
         waits = await waitsForStart();
         return made;
       },

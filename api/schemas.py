@@ -1665,6 +1665,7 @@ class RuntimeConfig(BaseModel):
     pm: str | None
     narrow_below_px: int
     toast_seconds: float
+    title_words: int = Field(12, description="The most words a row's title holds before it is cut (ui.title_words).")
     shortcuts: dict[str, str]
     wording: dict[str, str]
     demo: bool = Field(False, description="The workspace holds made-up example data; every screen says so.")
@@ -3505,6 +3506,20 @@ class QueueLineView(BaseModel):
     other_entry: str | None = Field(
         None, description="For a clash line: the calendar entry to open, when one is kept for the second meeting."
     )
+    event_page: str | None = Field(
+        None,
+        description="For a clash line: the page of what its calendar says about the first meeting (the event and the "
+        "date of it), when the app keeps no entry for it.",
+    )
+    other_event_page: str | None = Field(
+        None, description="For a clash line: the same for the second meeting, when the app keeps no entry for it."
+    )
+    calendar_link: str | None = Field(
+        None, description="For a clash line: the first meeting's address in its calendar, shown with its real domain."
+    )
+    other_calendar_link: str | None = Field(
+        None, description="For a clash line: the second meeting's address in its calendar, shown with its real domain."
+    )
     travel_minutes: int | None = Field(
         None,
         description="For a clash line where the meetings are in different places: the travel time the app asks for "
@@ -4461,10 +4476,11 @@ class SetupStepView(BaseModel):
         description='A counted step\'s place in the one list of counted steps, from 1 (the 1 of "You · 1 of 7"); the '
         "walkthrough, its last screen and Today's setup line all read it from here.",
     )
-    reason: Literal["needs_mail", "none_added"] | None = Field(
+    reason: Literal["needs_mail", "none_added", "waits_for_go"] | None = Field(
         None,
         description="Why a skipped step was skipped: needs_mail, when it needed a step that was skipped; none_added, "
-        "when the person moved on from People without adding anyone.",
+        "when the person moved on from People without adding anyone; waits_for_go, when the person moved on from the "
+        "first result while the look back still waited for their go on Today (nothing has been read yet).",
     )
     applies: bool | None = Field(
         None, description="False when there is nothing for the person to do here, so the step isn't offered."
@@ -7307,6 +7323,11 @@ class OpenActionView(BaseModel):
         None,
         description="It is open with no date, and the person's own or one they told someone about: the screen's "
         '"Needs a date" group at the top, where a date picker sets its day as the person\'s own change.',
+    )
+    needs_you: bool | None = Field(
+        None,
+        description="It waits on the person: theirs, or with no owner yet, and not on hold. The count the side menu "
+        "shows is of these, so the screen's own count is worked out from the same rows.",
     )
     to_send: bool = Field(
         False, description="An owner other than the person hasn't been told about it yet (design 6.10)."

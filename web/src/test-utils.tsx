@@ -88,6 +88,7 @@ export function rcFixture(extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeCo
     pm: null,
     shortcuts: { undo: "u", hand_in: "n", help: "?", ask: "/" },
     toast_seconds: 0,
+    title_words: 12,
     version: "9.8.7",
     wording: {},
     workspace_name: "Workspace",

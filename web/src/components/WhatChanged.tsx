@@ -21,7 +21,7 @@ import { useQueue, useTodayCount } from "../lib/today";
 import { useFactLine } from "../lib/fact-line";
 import { plainDates } from "../lib/read";
 import { useReadable } from "../lib/readable";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
 import { ListDetail } from "../ui/ListDetail";
@@ -286,7 +286,7 @@ export function waitsForGo(c: S["ChangeItem"]): boolean {
  * person typed, their words are shown as their note and never as the title; until then (waiting, or stopped) they are all that
  * says what the change is. */
 export function changeTitle(item: S["ChangeItem"], t: T, has: (key: string) => boolean): string {
-  return plainTitle(titleWords(item.title, t, has) || item.source_title || (item.changeset ? "" : firstLine(item.note)) || t("changes.untitled"));
+  return shortTitle(titleWords(item.title, t, has) || item.source_title || (item.changeset ? "" : firstLine(item.note)) || t("changes.untitled"));
 }
 
 /** What a change asks the screen to open in its detail: the note to send it back with, or the choice of another account. */
@@ -427,7 +427,7 @@ function stateWord(item: S["ChangeItem"], gated: boolean): string {
 const folded = (item: S["ChangeItem"]): boolean => (item.edits ?? []).length > 1;
 
 /** "You changed Pay the deposit 5 times": the title of a row of folded edits. */
-const editsTitle = (item: S["ChangeItem"], t: T): string => t("changes.you_changed", { name: plainTitle(item.edited ?? "") || t("changes.untitled"), n: (item.edits ?? []).length });
+const editsTitle = (item: S["ChangeItem"], t: T): string => t("changes.you_changed", { name: shortTitle(item.edited ?? "") || t("changes.untitled"), n: (item.edits ?? []).length });
 
 /** One row for the person's own edits of one item on one day; choosing it lists the edits in the detail, each a change of its own
  * with its own Undo. */
@@ -858,7 +858,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
             </Pill>
           )}
         </div>
-        <div className="title">{op.op === "fact" ? readable(factLine(op.title, op.meta.said_by)) : readable(plainTitle(op.title, op.meta.due))}</div>
+        <div className="title">{op.op === "fact" ? readable(factLine(op.title, op.meta.said_by)) : readable(shortTitle(op.title, op.meta.due))}</div>
         {meta && <div className="meta">{meta}</div>}
         {op.op === "note" && op.status === "applied" && (
           <div className="meta">
@@ -887,7 +887,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
             </Button>
           )
         )}
-        <RowMenu label={plainTitle(op.title, op.meta.due)} actions={menu} />
+        <RowMenu label={shortTitle(op.title, op.meta.due)} actions={menu} />
       </Actions>
       {heldWords?.noting && heldWords.other && (
         <div className="full">
@@ -1079,7 +1079,7 @@ export function SendBackForm(props: { cs: string; onDone: (sent?: boolean) => vo
       }}
     >
       <label className="hint" htmlFor={`sb-${props.cs}-${props.op ?? "all"}`}>
-        {props.item ? t("changes.send_back_label_item", { item: props.item }) : t("changes.send_back_label")}
+        {props.item ? t("changes.send_back_label_item", { item: props.item.replace(/[.!?]+$/, "") }) : t("changes.send_back_label")}
       </label>
       <textarea id={`sb-${props.cs}-${props.op ?? "all"}`} ref={area} value={note} onChange={(e) => setNote(e.target.value)} required />
       {props.op !== undefined && (

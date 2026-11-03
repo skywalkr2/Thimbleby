@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import type { OpenAction } from "../lib/open-items";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { DateField } from "../ui/DateField";
@@ -27,7 +27,7 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: 
     void act(
       () => api.editRecord({ kind: "action", id: row.id, fields: { due: picked, due_words: null, due_check: false }, read_version: row.version }),
       (result) => ({
-        message: t("open.needs_date.saved", { text: plainTitle(row.text), date: day(picked) }),
+        message: t("open.needs_date.saved", { text: shortTitle(row.text), date: day(picked) }),
         undo: () => api.undo(result.changeset),
       }),
     );
@@ -44,12 +44,12 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: 
         {props.rows.map((a) => (
           <Row
             key={a.id}
-            title={<a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text)}</a>}
+            title={<a href={viewHref(recordView("action", a.id))}>{shortTitle(a.text)}</a>}
             meta={[a.owners.length > 0 ? a.owners.map((o) => o.name).join(", ") : t("open.nobody"), a.project_name || a.side_name].filter(Boolean).join(" · ")}
           >
             <div className={styles.pick}>
               <label className="hint" htmlFor={`needs-date-${a.id}`}>
-                {t("open.needs_date.pick", { text: plainTitle(a.text) })}
+                {t("open.needs_date.pick", { text: shortTitle(a.text) })}
               </label>
               <DateField id={`needs-date-${a.id}`} value="" onChange={(e) => setDay(a, e.target.value)} />
             </div>

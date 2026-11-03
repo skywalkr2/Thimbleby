@@ -10,6 +10,8 @@ import { api, type S } from "../lib/api";
 import { monthDay } from "../lib/dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { useAccountNames } from "../lib/account-names";
+import { isHostName } from "../lib/ai-accounts";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
@@ -42,8 +44,10 @@ function Part(props: { id: string; title: string; count: number; children: React
  * 6.32): one plain line in words, with the accounts named in it, so nothing rests on a color. */
 function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
   const { t } = useWords();
+  const nameOf = useAccountNames();
   const { reading } = props;
-  const names = reading.readers.map((r) => r.name).join(", ");
+  // An account is named as the person named it, never by the host and port it is reached at.
+  const names = reading.readers.map((r) => (isHostName(r.name) ? nameOf(r.account) : r.name)).join(", ");
   const summary = reading.state === "none" ? t("knows.reading.none") : t(reading.state === "local" ? "knows.reading.local" : "knows.reading.away", { names });
   return (
     <>
@@ -59,6 +63,7 @@ function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
 /** The accounts that may read an area, one box each, saved as the person ticks them with Undo (design 6.32). Each says in words
  * whether reading sends the area's material away from this computer; one the project above keeps out can't be ticked, and says so. */
 function Readers(props: { project: string; name: string; choices: S["ReaderChoice"][] }) {
+  const nameOf = useAccountNames();
   const { t } = useWords();
   const act = useAct();
   const reading = props.choices.filter((c) => c.reads).map((c) => c.account);
@@ -76,7 +81,7 @@ function Readers(props: { project: string; name: string; choices: S["ReaderChoic
         <div key={c.account}>
           <label className="check-line">
             <input type="checkbox" checked={c.reads} disabled={!!c.locked} onChange={(e) => change(c.account, e.target.checked)} />
-            <span>{t("knows.readers.row", { name: c.name, where: t(c.leaves ? "knows.readers.away" : "knows.readers.local") })}</span>
+            <span>{t("knows.readers.row", { name: isHostName(c.name) ? nameOf(c.account) : c.name, where: t(c.leaves ? "knows.readers.away" : "knows.readers.local") })}</span>
           </label>
           {c.locked && <p className="hint">{t("knows.readers.locked")}</p>}
         </div>

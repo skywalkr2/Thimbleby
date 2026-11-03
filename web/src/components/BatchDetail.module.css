@@ -14,8 +14,10 @@
 .end { display: flex; justify-content: flex-end; }
 /* A narrow pane: the button goes under the words, at full width. */
 @media (max-width: 639.98px) {
-  .item { grid-template-columns: minmax(0, 1fr); }
-  .item > button { width: 100%; }
+  .item, :global([data-narrow]) .item { grid-template-columns: minmax(0, 1fr); }
+  .item > button, :global([data-narrow]) .item > button { width: 100%; }
+  /* One column: the source line is in it, not in a second column that squeezes the words and draws over them. */
+  .item > .meta, :global([data-narrow]) .item > .meta { grid-column: 1 / -1; }
 }
 .meta { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); min-width: 0; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-muted); overflow-wrap: anywhere; }
 .tag { font-size: var(--text-xs); }

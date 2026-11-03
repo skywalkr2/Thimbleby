@@ -11,6 +11,7 @@ import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
 import { useNoneText } from "./Coverage";
+import { useNextSetupStep } from "../lib/setup-next";
 import { AreaFilter } from "./AreaFilter";
 import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
@@ -42,6 +43,8 @@ export function Today(props: {
   const queue = useQueue();
   const count = useTodayCount(filter.picked);
   const none = useNoneText();
+  // With setup unfinished, "nothing needs you" would be untrue: setup is what is next, and the heading says which step.
+  const setupNext = useNextSetupStep();
   const [selected, setSelected] = useState<Selection | null>(null);
 
   // Another part of the screen asks for an answer or a question to be looked at: its line opens, with the cursor on it.
@@ -96,7 +99,7 @@ export function Today(props: {
           title={t("nav.home")}
           subtitle={
             <>
-              {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
+              {[longDay(new Date()), count === null ? "" : count === 0 ? (setupNext ? t("today.needs.setup_next", { step: setupNext.label }) : filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
                 .filter(Boolean)
                 .join(" · ")}
             </>

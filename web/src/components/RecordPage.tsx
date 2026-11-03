@@ -170,6 +170,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const offered = editableFields(fields.data?.fields ?? []).filter((f) => !(hasDaysOff && DAYS_OFF_FIELDS.has(f.name)) && offeredInForm(kind, f.name));
   // The record's name, never its id: the page says it (a person is named by their full name).
   // While what resolves the names is still on its way the page has no name yet, and no detail: an id is never shown.
+  // A record that isn't there (removed, or an address with a wrong id) is said so; trying again can't bring it back.
+  const gone = record.isError && record.error instanceof ApiError && record.error.status === 404;
   const settled = !page.isPending && !people.isPending && !projects.isPending;
   const due = kind === "action" && typeof data?.fields.due === "string" ? data.fields.due : null;
   const name = data && settled ? plainTitle(page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || "", due) : "";
@@ -382,7 +384,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     <section className="panel-section record-page" aria-labelledby="record-title">
       <PageHeader
         id="record-title"
-        title={heading}
+        title={heading || (gone ? t("record.not_found.title") : heading)}
         kind={!isSide && !isSelf ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
         subtitle={isPerson && person && !isSelf ? whoTheyAre(person, personal, sides, t) || undefined : undefined}
         crumb={
@@ -451,7 +453,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
-      {record.isError && (
+      {record.isError && gone && <EmptyState icon="alert" text={t("record.not_found")} />}
+      {record.isError && !gone && (
         <EmptyState icon="alert" text={t("record.load_failed")} action={{ label: t("action.try_again"), onClick: () => void record.refetch() }} />
       )}
       {data && (

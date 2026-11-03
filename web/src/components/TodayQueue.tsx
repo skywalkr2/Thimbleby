@@ -23,7 +23,7 @@ import { onShowNewLines } from "../lib/queue-hold";
 import { useHeldAnswers } from "../lib/held-answers";
 import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/queue-words";
 import { showRow } from "../lib/reveal";
-import type { View } from "../lib/views";
+import { EVENT_PAGE, type View } from "../lib/views";
 import { useActToday } from "../lib/acts";
 import { mixesAreas } from "../lib/area-filter";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
@@ -60,7 +60,7 @@ import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
 import { MadeBy } from "./MadeBy";
 import styles from "./Today.module.css";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 
 import { EmptyState } from "../ui/EmptyState";
 export interface QueueHandlers {
@@ -393,7 +393,7 @@ export function TodayQueue(props: {
               )}
               {count === 0 && (filter.choice === "all" || !((total ?? 0) > 0)) && (
                 <TodayEmpty
-                  onContinueSetup={props.handlers.onOpenGuide ? () => props.handlers.onOpenGuide?.("ai") : undefined}
+                  onContinueSetup={props.handlers.onOpenGuide ? (step) => props.handlers.onOpenGuide?.(step) : undefined}
                   onHandIn={props.handlers.onHandIn}
                 />
               )}
@@ -563,6 +563,20 @@ function reviewParts(line: QueueLine) {
 /** What an intake's results were, in the order a person thinks of them: "3 actions, 2 questions, 4 waiting for you". */
 const INTAKE_KINDS = [...REVIEW_KINDS, "other", "held", "refused"] as const;
 
+/** How many things the look-over lists: what the line's own words count (the to-dos, questions and notes found), so the
+ * title's number and the words under it are the same count. With none of those, what waits for the person or couldn't be
+ * recorded; failing that, the count of inputs the line was made from. */
+function intakeTotal(line: QueueLine): number {
+  const found = (line.outcome ?? {}) as Record<string, number>;
+  const made = [...REVIEW_KINDS, "other"].reduce((n, k) => n + (found[k] ?? 0), 0);
+  return made || (found.held ?? 0) + (found.refused ?? 0) || line.count;
+}
+
+/** A name written into the middle of a sentence: "Your inbox" reads "your inbox" there. */
+function midSentence(name: string): string {
+  return /^Your\s/.test(name) ? `your${name.slice(4)}` : name;
+}
+
 function useIntakeWords(): (line: QueueLine) => string {
   const { tn } = useWords();
   return (line) =>
@@ -595,13 +609,13 @@ export function useLineTitle(): (line: QueueLine) => string {
     const name = line.person_name ?? "";
     switch (line.kind) {
       case "decision":
-        return line.text || t("queue.decision");
+        return shortTitle(line.text ?? "") || t("queue.decision");
       case "question":
-        return line.text || t("queue.question");
+        return shortTitle(line.text ?? "") || t("queue.question");
       case "who_is":
         return t("queue.who_is", { name: line.text ?? "" });
       case "owner":
-        return t("queue.owner", { text: plainTitle(line.text ?? "", line.due) });
+        return t("queue.owner", { text: shortTitle(line.text ?? "", line.due) });
       case "held":
         return line.held ? heldTitle(line.held, t) : t("queue.held");
       case "unfiled":
@@ -632,7 +646,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "failed":
         return t("queue.failed", { what });
       case "overdue":
-        return line.count === 1 && line.subject ? plainTitle(line.subject) : tn("queue.overdue", line.count);
+        return line.count === 1 && line.subject ? shortTitle(line.subject) : tn("queue.overdue", line.count);
       case "review": {
         if (!(line.count === 1 && line.subject && !reviewParts(line).refusedOnly)) return reviewCount(line);
         // What the assistant did is said as done, never as an order: "<name> dropped 'X'". Under Decide it stays a question.
@@ -640,7 +654,7 @@ export function useLineTitle(): (line: QueueLine) => string {
         return did && has(`queue.review.did.${did.op}`) ? t(`queue.review.did.${did.op}`, { item: did.item }) : line.subject;
       }
       case "intake_review":
-        return tn("queue.intake_review.title", line.count, { source: line.subject ?? line.source ?? "" });
+        return tn("queue.intake_review.title", intakeTotal(line), { source: midSentence(line.subject ?? line.source ?? "") });
       case "batches":
         return tn("queue.batches.title", line.count);
       case "send": {
@@ -653,15 +667,15 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "backup":
         return t("queue.backup");
       case "escalate":
-        return t("queue.escalate", { text: plainTitle(line.text ?? "").replace(/[?.!\s]+$/, "") });
+        return t("queue.escalate", { text: shortTitle(line.text ?? "").replace(/[?.!\s]+$/, "") });
       case "answer":
         return t("queue.answer", { text: line.text ?? "" });
       case "stale":
-        return t("queue.stale.one_named", { text: plainTitle(line.subject ?? "") });
+        return t("queue.stale.one_named", { text: shortTitle(line.subject ?? "") });
       case "needs_date":
         return tn("queue.needs_date", line.count);
       case "pattern": {
-        const vars = { text: plainTitle(line.text ?? ""), name };
+        const vars = { text: shortTitle(line.text ?? ""), name };
         return tn(`queue.pattern.${line.state ?? "moved"}`, line.count, vars);
       }
       case "capacity": {
@@ -671,13 +685,13 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "clash":
         return t("queue.clash", { text: line.text ?? "", other: line.other ?? "", when: day(line.due) });
       case "tie":
-        return t("queue.tie", { text: plainTitle(line.text ?? "").replace(/[.!?\s]+$/, ""), other: line.other ?? "", when: day(line.due) });
+        return t("queue.tie", { text: shortTitle(line.text ?? "").replace(/[.!?\s]+$/, ""), other: line.other ?? "", when: day(line.due) });
       case "guests":
         return t("queue.guests", { title: line.text ?? "", names: (line.names ?? []).join(", "), when: day(line.due) });
       case "attention":
         return tn(`queue.attention.${line.state === "stopped" ? "stopped" : "quiet"}`, line.count, { kind: t(`queue.attention.kind.${line.text ?? ""}`) });
       case "promise": {
-        const vars = { name, text: plainTitle(line.text ?? "", line.due).replace(/[.!?\s]+$/, ""), date: line.due ? day(line.due) : "" };
+        const vars = { name, text: shortTitle(line.text ?? "", line.due).replace(/[.!?\s]+$/, ""), date: line.due ? day(line.due) : "" };
         if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
         // Someone the person reports to is waited on, never chased (design 6.34).
         const waiting = line.stance === "report_to";
@@ -711,7 +725,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "meeting_capture":
         return t("queue.meeting_capture", { title: line.text ?? "" });
       case "quiet_promise":
-        return t("queue.quiet_promise", { name, text: plainTitle(line.text ?? "") });
+        return t("queue.quiet_promise", { name, text: shortTitle(line.text ?? "") });
       case "away":
         return tn("queue.away", line.count);
       default:
@@ -1033,7 +1047,7 @@ function QueueRow(props: {
         const days = line.waiting_days ?? 0;
         const dated = line.due_items ?? [];
         const named = dated.slice(0, 2).map((item) =>
-          t(item.overdue ? "queue.nudge.item_late" : "queue.nudge.item_due", { text: plainTitle(item.text, item.due).replace(/[?.!\s]+$/, ""), date: day(item.due) }),
+          t(item.overdue ? "queue.nudge.item_late" : "queue.nudge.item_due", { text: shortTitle(item.text, item.due).replace(/[?.!\s]+$/, ""), date: day(item.due) }),
         );
         const more = Math.max(0, line.count - named.length);
         const words =
@@ -1089,8 +1103,11 @@ function QueueRow(props: {
         // connection that can write, which is not offered here.
         const open = props.handlers.onOpenRecord;
         const ways: MenuAction[] = [];
-        if (line.entry && open) ways.push({ id: "open-first", label: t("queue.clash.open_named", { name: line.text ?? "" }), run: () => open("event", line.entry ?? "") });
-        if (line.other_entry && open) ways.push({ id: "open-second", label: t("queue.clash.open_named", { name: line.other ?? "" }), run: () => open("event", line.other_entry ?? "") });
+        // An event the app keeps no entry for opens the page of what its calendar says.
+        const firstPage = line.entry ? ["event", line.entry] : line.event_page ? [EVENT_PAGE, line.event_page] : null;
+        const secondPage = line.other_entry ? ["event", line.other_entry] : line.other_event_page ? [EVENT_PAGE, line.other_event_page] : null;
+        if (firstPage && open) ways.push({ id: "open-first", label: t("queue.clash.open_named", { name: line.text ?? "" }), run: () => open(firstPage[0], firstPage[1]) });
+        if (secondPage && open) ways.push({ id: "open-second", label: t("queue.clash.open_named", { name: line.other ?? "" }), run: () => open(secondPage[0], secondPage[1]) });
         ways.push({ id: "fine", label: t("queue.clash.fine"), run: () => notNow(line.key, t("queue.clash.fine_done")) });
         const [first, ...rest] = ways;
         // The time between the meetings is what the travel time asked for less what falls short.
@@ -1119,7 +1136,7 @@ function QueueRow(props: {
       case "tie": {
         // A calendar entry on the to-do's day whose title and the to-do's words contain one another: tie it, or not this one.
         const action = (line.actions ?? [])[0] ?? "";
-        const text = plainTitle(line.text ?? "").replace(/[.!?\s]+$/, "");
+        const text = shortTitle(line.text ?? "").replace(/[.!?\s]+$/, "");
         const other = line.other ?? "";
         return {
           pill: t("queue.pill.tie"),

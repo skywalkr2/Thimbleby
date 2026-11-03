@@ -265,3 +265,15 @@ describe("the accounts that may read an area", () => {
     expect(screen.queryByRole("group", { name: "Accounts that may read this area" })).toBeNull();
   });
 });
+
+test("an account whose name is only a host and a port is named as the person knows it, never by the address (X93)", async () => {
+  fakeApi({
+    "GET projects/PRJ-1/knows": () => knows({ reading: { state: "local", levels: [], readers: [{ account: "other", name: "127.0.0.1:9355", leaves: false }] } }),
+    "GET ai/accounts": () => [{ name: "other", kind: "custom", label: "Local model", used_for: [], backup_for: [], models: {} }],
+    "GET ai/endpoints": () => [],
+  });
+  renderApp(<ProjectKnows id="PRJ-1" />);
+  const line = (await screen.findByText("Who reads it:", { exact: false })).closest("p")!;
+  await waitFor(() => expect(line).toHaveTextContent("Read by Local model, which runs on this computer"));
+  expect(line.textContent).not.toMatch(/127\.0\.0\.1/);
+});

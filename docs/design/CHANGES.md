@@ -1027,6 +1027,23 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 309. The re-sweep's Today and work screens (2026-11-03; sweep X86 to X93, X14, X24, X44, X69)
+
+- **7.14 Title rule, 04 (`ui.title_words`):** a row's title is short: the first sentence when it fits the configured words, else the
+  first words cut at a word with an ellipsis; a day the meta says is left out, and no stop stands before a comma. New setting
+  `ui.title_words` (12) with its schema entry, wording and demo values in both workspaces.
+- **7.5 Follow-ups:** the due-soon band holds only what still waits on the person.
+- **7.7 Today, 7.8 setup:** counts come from the rows beside them (the to-dos screen's "n of these m to-dos need you" and "m open ·
+  k overdue", the intake review's number, the setup's seven); the walkthrough's last screen has no number; the first result is not
+  Done while the look back waits for Start (`waits_for_go`); with setup unfinished Today says which step is next; a name to place
+  is one line; the phone shows every word of a line and the opened review in one column.
+- **6.32 the brief:** the evening wrap-up's Moved is a date put off to a later day; what is due today and still open is "Still open
+  from today". A clash of connected events carries the page of each and the calendar's address.
+- **Wording:** `.just_me` variants of the sheet's entries for a person with only their own life; an account named by a host and a
+  port reads as its service's name.
+- **API:** `RuntimeConfig.title_words`, `OpenActionView.needs_you`, the clash fields `event_page`, `other_event_page`,
+  `calendar_link`, `other_calendar_link`, and the setup step reason `waits_for_go`.
+
 ## 308. Several accounts and sides: each connection told from its own account, one row for the same invitation and thread, accounts named, calendars with a color and a legend, every Today line on its side, sides served changeable, long names that hold (2026-11-03; sweep X77 to X85, X45)
 
 | Where | Before | Now |

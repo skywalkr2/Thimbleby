@@ -9,7 +9,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText } from "../lib/dates";
 import { useSides } from "../lib/sides";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
@@ -90,7 +90,7 @@ export function Unfiled() {
             title={
               <label className="check-line">
                 <input type="checkbox" checked={picked.has(key(item))} onChange={() => toggle(item)} aria-label={t("unfiled.select", { text: item.text })} />
-                <SafeText text={plainTitle(item.text)} />
+                <SafeText text={shortTitle(item.text)} />
               </label>
             }
             meta={item.created_at ? t("unfiled.filed_on", { when: whenText(item.created_at) }) : ""}

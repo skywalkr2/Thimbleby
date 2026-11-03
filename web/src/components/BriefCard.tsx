@@ -21,7 +21,7 @@ import { reveal } from "../lib/reveal";
 import { useDraftAct, useSendOptions } from "../lib/acts";
 import { useToasts } from "../lib/toasts";
 import { useQueue, useTodayCount, type QueueLine } from "../lib/today";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { useLineTitle } from "./TodayQueue";
@@ -122,6 +122,8 @@ function heading(key: string, t: T): string {
       return t("brief.section.done");
     case "moved":
       return t("brief.section.moved");
+    case "carried":
+      return t("brief.section.carried");
     case "waiting":
       return t("brief.section.waiting");
     case "yours":
@@ -137,8 +139,14 @@ function heading(key: string, t: T): string {
   }
 }
 
+/** A brief line's words: short, with the day it says beside them left out of the words (a day is said once), and no full stop
+ * left before the words the line puts after them ("Get a quote, due Wed, Nov 4"). */
+function lineText(text: string | null | undefined, due: string | null | undefined): string {
+  return shortTitle(text ?? "", due).replace(/[.!]+$/, "");
+}
+
 function invitation(line: Line, t: T): string {
-  const vars = { name: line.person_name ?? "", text: plainTitle(line.text ?? ""), date: day(line.day), time: clock(line.at), from: [day(line.from_day), clock(line.from_at)].filter(Boolean).join(" "), place: line.detail ?? "" };
+  const vars = { name: line.person_name ?? "", text: lineText(line.text, line.day), date: day(line.day), time: clock(line.at), from: [day(line.from_day), clock(line.from_at)].filter(Boolean).join(" "), place: line.detail ?? "" };
   switch (line.change) {
     case "new":
       return line.person_name ? t(line.at ? "brief.line.invitation.new_at" : "brief.line.invitation.new", vars) : t(line.at ? "brief.line.invitation.new_unnamed_at" : "brief.line.invitation.new_unnamed", vars);
@@ -174,7 +182,7 @@ function useLineWords(): (line: Line, queue: QueueLine | undefined) => string {
 
 function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title: (q: QueueLine) => string): string {
   const name = line.person_name ?? "";
-  const text = plainTitle(line.text ?? "");
+  const text = lineText(line.text, line.day);
   const date = day(line.day);
   switch (line.kind) {
     case "closed":
@@ -204,11 +212,11 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       return days === 0 ? t(`brief.line.dated.${kind}.today`, { text }) : tn(`brief.line.dated.${kind}`, days, { text, date });
     }
     case "meeting_wait": {
-      const vars = { name, text, other: plainTitle(line.other ?? ""), time: clock(line.at) };
+      const vars = { name, text, other: shortTitle(line.other ?? ""), time: clock(line.at) };
       return name ? t("brief.line.meeting_wait", vars) : t("brief.line.meeting_wait_unnamed", vars);
     }
     case "clash":     {
-      const vars = { text, other: plainTitle(line.other ?? ""), date, time: clock(line.at) };
+      const vars = { text, other: shortTitle(line.other ?? ""), date, time: clock(line.at) };
       if (line.state !== "travel") return tn("brief.line.clash", line.minutes ?? 0, vars);
       // The time between the meetings is what the travel asked for less what falls short.
       const needed = line.needed_minutes ?? 0;

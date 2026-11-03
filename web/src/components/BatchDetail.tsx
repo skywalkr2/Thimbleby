@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useAct } from "../lib/act";
 import { api } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import type { QueueLine } from "../lib/today";
 import { titleWords } from "../lib/queue-words";
 import { useWords } from "../lib/wording";
@@ -70,8 +70,8 @@ function Batch(props: { part: QueueLine; named: boolean }) {
             ) : (
               <li key={item.key} className={styles.item} data-batch-item={item.what ?? ""}>
                 <span className={styles.what}>{whatWord(item.what, t)}</span>
-                <span className={styles.text}>{plainTitle(item.text ?? "")}</span>
-                <Button variant="quiet" size="sm" className={styles.notRight} aria-expanded={open === item.key} aria-label={t("queue.batch.not_right_named", { item: plainTitle(item.text ?? "") })} onClick={() => setOpen(open === item.key ? null : item.key)}>
+                <span className={styles.text}>{shortTitle(item.text ?? "")}</span>
+                <Button variant="quiet" size="sm" className={styles.notRight} aria-expanded={open === item.key} aria-label={t("queue.batch.not_right_named", { item: shortTitle(item.text ?? "") })} onClick={() => setOpen(open === item.key ? null : item.key)}>
                   {t("queue.batch.not_right")}
                 </Button>
                 <span className={styles.meta}>
@@ -90,7 +90,7 @@ function Batch(props: { part: QueueLine; named: boolean }) {
                     <SendBackForm
                       cs={item.changeset}
                       op={item.op ?? undefined}
-                      item={plainTitle(item.text ?? "")}
+                      item={shortTitle(item.text ?? "")}
                       estimate={estimate(item.estimate_usd ?? part.estimate_usd)}
                       onDone={(sent) => {
                         setOpen(null);

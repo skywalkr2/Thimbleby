@@ -12,7 +12,7 @@ import { dueState } from "../lib/due-state";
 import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { Button } from "../ui/Button";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
@@ -190,7 +190,7 @@ function ProjectItems(props: { group: Group; soon: Item[]; onOpenPerson: (person
     <Item row key={item.id}>
       <div>
         <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
-        <div className="title">{plainTitle(item.title)}</div>
+        <div className="title">{shortTitle(item.title)}</div>
         <div className="meta">{[item.name, soon ? item.when : "", item.state].filter(Boolean).join(" · ")}</div>
         <OriginLink origin={item.origin} />
       </div>

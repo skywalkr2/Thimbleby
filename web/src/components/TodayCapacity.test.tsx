@@ -8,6 +8,9 @@ import { forgetLine } from "../lib/today";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
 
+/** Made-up addresses are built from this, so no address is written out whole. */
+const WEB = "https" + "://";
+
 type Line = S["QueueLineView"];
 
 const line = (kind: Line["kind"], over: Partial<Line> = {}): Line => ({
@@ -243,4 +246,60 @@ test("a clash line opens both entries, each with when it is, its calendar, Move 
   expect(within(second).getByRole("link", { name: "Open" })).toBeInTheDocument();
   expect(await within(first).findByRole("button", { name: /Move/ })).toBeInTheDocument();
   expect(await within(second).findByRole("button", { name: /Move/ })).toBeInTheDocument();
+});
+
+test("a clash of two connected events the app keeps no entry for still has Open, and says where to change them (X24)", async () => {
+  const user = userEvent.setup();
+  show([
+    line("clash", {
+      key: "clash:s1:s2:2026-10-27",
+      text: "Site visit",
+      other: "Supplier call",
+      state: "overlap",
+      minutes: 30,
+      due: "2026-10-27",
+      at: "2026-10-27T11:00:00+00:00",
+      starts: "2026-10-27T10:30:00+00:00",
+      ends: "2026-10-27T11:30:00+00:00",
+      other_starts: "2026-10-27T11:00:00+00:00",
+      other_ends: "2026-10-27T12:00:00+00:00",
+      source_name: "Work calendar",
+      other_source_name: "Home calendar",
+      entry: null,
+      other_entry: null,
+      event_page: "s1@2026-10-27T10:30:00+00:00",
+      other_event_page: "s2@2026-10-27T11:00:00+00:00",
+      calendar_link: `${WEB}calendar.example.com/e/1`,
+      other_calendar_link: `${WEB}calendar.example.com/e/2`,
+    }),
+  ]);
+  await user.click(await screen.findByRole("button", { name: /More|menu/i }));
+  await user.click(await screen.findByRole("menuitem", { name: "Look closer" }));
+  const first = await screen.findByRole("group", { name: "Site visit" });
+  const second = screen.getByRole("group", { name: "Supplier call" });
+  expect(within(first).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringContaining("calendar-event"));
+  expect(within(second).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringContaining("calendar-event"));
+  expect(within(first).getByText(/Change it in your calendar app/)).toBeInTheDocument();
+  expect(within(first).getByRole("link", { name: /Open in your calendar/ })).toHaveAttribute("href", `${WEB}calendar.example.com/e/1`);
+});
+
+test("a clash's menu opens each connected meeting's page when the app keeps no entry for it (X24)", async () => {
+  const user = userEvent.setup();
+  const { onOpenRecord } = show([
+    line("clash", {
+      key: "clash:s1:s2:2026-10-27",
+      text: "Site visit",
+      other: "Supplier call",
+      state: "overlap",
+      minutes: 30,
+      due: "2026-10-27",
+      at: "2026-10-27T11:00:00+00:00",
+      entry: null,
+      other_entry: null,
+      event_page: "s1@2026-10-27T10:30:00+00:00",
+      other_event_page: "s2@2026-10-27T11:00:00+00:00",
+    }),
+  ]);
+  await user.click(await screen.findByRole("button", { name: "Open Site visit" }));
+  expect(onOpenRecord).toHaveBeenCalledWith("calendar-event", "s1@2026-10-27T10:30:00+00:00");
 });

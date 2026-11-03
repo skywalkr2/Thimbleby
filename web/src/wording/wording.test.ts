@@ -434,3 +434,44 @@ test("the product's name is one entry, and no entry still uses its earlier name"
   const earlier = Object.entries(words).filter(([, text]) => /\bPM Cockpit\b/.test(text));
   expect(earlier.map(([key]) => key)).toEqual([]);
 });
+
+// A person whose workspace holds only their own life is shown the `.just_me` variant of an entry (X44). A variant stands in for
+// an entry that is there, keeps its placeholders, and says nothing of work: no job, business, project, team or meeting.
+describe("the variants for a person with only their own life", () => {
+  const variants = Object.entries(words).filter(([key]) => key.endsWith(".just_me"));
+  const holes = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+
+  test("each stands in for an entry of the sheet and uses no placeholder the entry lacks", () => {
+    expect(variants.length).toBeGreaterThan(20);
+    expect(variants.filter(([key]) => !(key.slice(0, -".just_me".length) in words)).map(([key]) => key)).toEqual([]);
+    expect(
+      variants
+        .filter(([key, text]) => !holes(text).every((hole) => holes(words[key.slice(0, -".just_me".length)] ?? "").includes(hole)))
+        .map(([key]) => key),
+    ).toEqual([]);
+  });
+
+  test("none speaks of work, a job, a business, a project, a team, a contract or a meeting", () => {
+    const work = /\b(work|works|working|job|jobs|business|businesses|project|projects|team|teams|contract|contracts|meeting|meetings|employer|colleague|colleagues)\b/i;
+    // The words that already named the person's own areas and stay: they say "area" for a project.
+    expect(variants.filter(([, text]) => work.test(text)).map(([key, text]) => `${key}: ${text}`)).toEqual([]);
+  });
+
+  test("the entries the re-sweep named have one", () => {
+    for (const key of [
+      "stages.empty",
+      "schedule.timeline.lane_other",
+      "schedule.timeline.legend.off",
+      "schedule.view.work_week",
+      "meeting.title",
+      "handover.intro",
+      "welcome.ai.tier.routine",
+      "welcome.ai.tier.deep",
+      "own_kinds.context",
+      "search.label",
+      "quality.counts.present",
+    ]) {
+      expect(`${key}.just_me` in words, key).toBe(true);
+    }
+  });
+});

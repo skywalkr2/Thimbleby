@@ -60,7 +60,8 @@ const EVENING: Brief = {
   on_today: 0,
   sections: [
     { key: "done", more: 0, lines: [line({ key: "done:ACT-1", kind: "done", text: "the proposal", you: true }), line({ key: "done:ACT-2", kind: "done", text: "two illustrations", person_name: "Dev Example", person: "PER-2" })] },
-    { key: "moved", more: 0, lines: [line({ key: "moved:ACT-3", kind: "moved_ahead", text: "Edit the website", day: "2026-10-21" }), line({ key: "carried:ACT-4", kind: "carried", text: "Print the estimate", day: "2026-10-20" })] },
+    { key: "moved", more: 0, lines: [line({ key: "moved:ACT-3", kind: "moved_ahead", text: "Edit the website", day: "2026-10-21" })] },
+    { key: "carried", more: 0, lines: [line({ key: "carried:ACT-4", kind: "carried", text: "Print the estimate", day: "2026-10-20" })] },
     { key: "waiting", more: 0, lines: [line({ key: "waiting:ACT-5", kind: "waiting", text: "the measurements", person_name: "Dev Example", day: "2026-10-22" })] },
   ],
 };
@@ -273,7 +274,7 @@ test("nothing shows before the brief is due, or when it can't be read", async ()
 test("the evening wrap-up credits the work to whoever did it, and its quiet day is its own line", async () => {
   await show(EVENING);
   expect(await screen.findByRole("heading", { level: 2, name: "Evening wrap-up" })).toBeInTheDocument();
-  expect(headings()).toEqual(["Done today", "Moved to tomorrow", "Still waiting on others"]);
+  expect(headings()).toEqual(["Done today", "Moved to a later day", "Still open from today", "Still waiting on others"]);
   expect(screen.getByText("You finished the proposal")).toBeInTheDocument();
   expect(screen.getByText("Dev Example finished two illustrations")).toBeInTheDocument();
   expect(screen.getByText("Edit the website, now due Wed, Oct 21")).toBeInTheDocument();
@@ -714,4 +715,19 @@ test("a kind the person quieted into the brief has Show on Today again, once per
   expect(await screen.findByText("Okay. to-dos nobody has touched show on Today again.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST attention/stale/quiet")).toBe(true));
+});
+
+test("a brief line says its day once, with no full stop before a comma, and a long title is short (X86)", async () => {
+  await show({
+    ...EVENING,
+    sections: [
+      {
+        key: "moved",
+        more: 0,
+        lines: [line({ key: "moved:ACT-9", kind: "moved_ahead", text: "Get a catering quote by 2026-10-21.", day: "2026-10-21" }), line({ key: "moved:ACT-8", kind: "moved_ahead", text: "Print, sign and mail the signed form to the council office at the address on the letter before the end of next week", day: "2026-10-22" })],
+      },
+    ],
+  });
+  expect(await screen.findByText("Get a catering quote, now due Wed, Oct 21")).toBeInTheDocument();
+  expect(screen.getByText(/^Print, sign and mail the signed form to the council office at…, now due Thu, Oct 22$/)).toBeInTheDocument();
 });

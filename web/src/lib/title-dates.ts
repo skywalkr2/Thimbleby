@@ -23,3 +23,41 @@ export function plainTitle(text: string, due?: string | null): string {
   }
   return `${plainDates(before)}${day(iso)}${plainDates(after)}`;
 }
+
+// How many words a title holds before it is cut (`ui.title_words`); set from the runtime configuration when the app starts.
+let titleWords = 12;
+
+export function setTitleWords(words: number | null | undefined): void {
+  if (words && words > 0) titleWords = Math.floor(words);
+}
+
+/** Punctuation that was doubled where words were joined: a full stop before a comma, or two stops in a row. */
+function tidy(text: string): string {
+  return text
+    .replace(/([.!?])\s*([,;:])/g, "$2")
+    .replace(/\.{2,}(?!\.)/g, (found) => (found.length === 2 ? "." : found))
+    .replace(/([,;:])\1+/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/** A title for a row (design 7.7, "Titles are short"): a to-do's words as `plainTitle` writes them, then the first sentence
+ * when it fits, else the first words cut at a word with an ellipsis, never in the middle of a word. A date the row's own meta
+ * already says (`due`) is left out of the words, so a day is said once. The stored text is never changed. */
+export function shortTitle(text: string, due?: string | null): string {
+  let whole = tidy(plainTitle(text, due));
+  const count = (s: string) => s.split(/\s+/).filter(Boolean).length;
+  // A run of letters with no space in it (an address, a pasted code) counts for its length, not as one word.
+  const maxChars = titleWords * 12;
+  if (whole.length > maxChars && count(whole) <= titleWords) {
+    return `${whole.slice(0, maxChars).replace(/\s+\S*$/, (tail) => (tail.length < 20 ? "" : tail)).replace(/[\s.,;:!?-]+$/, "")}…`;
+  }
+  if (count(whole) <= titleWords) return whole;
+  whole = whole.length > maxChars * 3 ? whole.slice(0, maxChars * 3) : whole;
+  // The first sentence, when it stands on its own within the limit.
+  const first = /^.+?(?<!\b[A-Z])[.!?](?=\s+[A-Z“"'(]|$)/.exec(whole)?.[0];
+  if (first && count(first) <= titleWords && count(first) >= 2) return first;
+  let cut = whole.split(/\s+/).slice(0, titleWords).join(" ");
+  if (cut.length > maxChars) cut = cut.slice(0, maxChars);
+  return `${cut.replace(/[\s.,;:!?-]+$/, "")}…`;
+}

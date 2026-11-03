@@ -293,6 +293,12 @@ class Line:
     other_starts: str | None = None
     other_ends: str | None = None
     other_entry: str | None = None
+    #: For a clash line whose meeting is a connected calendar's event the app keeps no entry for: the page of what its
+    #: calendar says (the event and the date of it), and the calendar's own address to open it there.
+    event_page: str | None = None
+    other_event_page: str | None = None
+    calendar_link: str | None = None
+    other_calendar_link: str | None = None
     #: The side the line is on when its own fields don't say (a clash: the side its meetings are on; design 6.32).
     side: str | None = None
     #: Every side the line is on, for one about entries on more than one (a clash between two calendars that serve
@@ -583,14 +589,19 @@ def _everything(
         lines.append(line)
     lines = move_groups.group(reader, people, zone(cfg), lines, Line)
     # A name asked about in several inputs is one question: answering it releases every item waiting on that name.
-    seen_names: set[str] = set()
+    # The same name asked in another input is not asked again anywhere: the input it came in with leaves the question to
+    # the one line, so no list to look over holds it a second time (`same_name`, op by changeset).
+    seen_names: dict[str, str] = {}
+    same_name: dict[str, dict[int, str]] = {}
     once: list[Line] = []
     for each in lines:
         name = " ".join((each.text or "").split()).casefold()
         if each.kind == "who_is" and name:
             if name in seen_names:
+                if each.changeset and each.op is not None:
+                    same_name.setdefault(each.changeset, {})[each.op] = seen_names[name]
                 continue
-            seen_names.add(name)
+            seen_names[name] = each.key
         once.append(each)
     lines = once
 
@@ -1371,6 +1382,9 @@ def _everything(
     for line in lines:
         if line.kind in ("held", "who_is") and line.changeset and line.op is not None:
             asked.setdefault(line.changeset, {})[line.op] = line.key
+    for cs_id, ops in same_name.items():
+        for index, key in ops.items():
+            asked.setdefault(cs_id, {}).setdefault(index, key)
     # A question put to the person is answered on its own line too, so the change that asked it doesn't count it again.
     on_a_line = {
         line.question: line.key for line in lines if line.question and line.kind in ("question", "decision", "owner")
@@ -1463,7 +1477,8 @@ def _everything(
             cs = changesets.get(req.data.get("changeset") or "")
             if not cs or req.data.get("set_aside") or req.data.get("folded_into"):
                 continue
-            outcome, shown = _outcome_of(cs)
+            # What is asked on a line of its own under Decide (a name to place) is not listed in the look-over again.
+            outcome, shown = _outcome_of(cs, set(asked.get(req.data["changeset"], {})))
             if cs.get("reviewed"):
                 # Reviewed work has nothing more to look at but what still waits for the person's yes.
                 outcome = {"held": outcome["held"]} if outcome.get("held") else {}
@@ -1764,6 +1779,10 @@ def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
                 at=clash.at.isoformat(),
                 entry=link[1] if link else None,
                 other_entry=other_link[1] if other_link else None,
+                event_page=None if link else f"{clash.first.item.snapshot}@{clash.first.item.start}",
+                other_event_page=None if other_link else f"{clash.second.item.snapshot}@{clash.second.item.start}",
+                calendar_link=clash.first.item.link,
+                other_calendar_link=clash.second.item.link,
                 travel_minutes=clash.travel if clash.state == "travel" else None,
                 place=clash.first.item.where if clash.state == "travel" else None,
                 other_place=clash.second.item.where if clash.state == "travel" else None,

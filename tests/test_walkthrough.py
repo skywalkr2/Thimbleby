@@ -663,20 +663,47 @@ def test_your_promises_is_not_ticked_before_its_screen_was_reached_even_when_the
     assert _steps(c)["promises"]["done"], "the first result is on the screen, so its own thing happened"
 
 
-def test_the_look_back_counts_as_set_up_while_it_waits_for_the_go_on_today(tmp_path):
-    """The first-result step only explains the look back; the work starts under Today's Start. So an intake request
-    that still waits for that go is the look back under way, and a failed or dismissed one is not."""
+def test_the_look_back_is_under_way_while_it_waits_for_the_go_but_the_first_result_has_not_happened(tmp_path):
+    """The work starts under Today's Start, so an intake request that still waits for that go is under way but has
+    read nothing: a failed or dismissed one is not under way, and only the one waiting for the go is waiting."""
 
     class Req:
         def __init__(self, **data):
             self.data = data
 
-    waiting = Req(intake="mail", state="needs_you", approval="required")
+    waiting = Req(intake="mail", state="needs_you", approval="required", waiting="Waiting for the go")
     assert setup._looked_back([waiting])
     assert setup._looked_back([Req(intake="mail", state="done")])
     assert not setup._looked_back([Req(intake="mail", state="failed")])
     assert not setup._looked_back([Req(intake="mail", state="done", dismissed=True)])
     assert not setup._looked_back([Req(state="needs_you")])
+    assert setup._look_back_waits([Req(intake="mail", state="needs_you", approval="required", waiting=setup_waiting())])
+    assert not setup._look_back_waits([Req(intake="mail", state="done")])
+    assert not setup._look_back_waits([Req(state="needs_you", approval="required", waiting=setup_waiting())])
+
+
+def setup_waiting() -> str:
+    from engine import source_intake
+
+    return source_intake.WAITING
+
+
+def test_your_promises_is_not_done_while_the_look_back_waits_for_the_go_and_says_when_it_starts(tmp_path, monkeypatch):
+    """The first result's own text says nothing is read until Start on Today, so the step is neither ticked on Continue
+    nor lost: it reads as waiting for that go, and is done once the look back has run and its screen was reached."""
+    _, c = _fresh(tmp_path)
+    monkeypatch.setattr(setup, "_looked_back", lambda requests: True)
+    waiting = {"on": True}
+    monkeypatch.setattr(setup, "_look_back_waits", lambda requests: waiting["on"])
+    c.post("/api/setup/walkthrough", json={"step": "promises"})
+    promises = _steps(c)["promises"]
+    assert not promises["done"] and not promises["skipped"]
+    c.post("/api/setup/walkthrough", json={"step": "backup"})
+    promises = _steps(c)["promises"]
+    assert not promises["done"] and promises["skipped"] and promises["reason"] == "waits_for_go"
+    waiting["on"] = False
+    promises = _steps(c)["promises"]
+    assert promises["done"] and not promises["skipped"] and promises["reason"] is None
 
 
 def test_the_add_ons_step_is_dropped_once_mail_is_connected_and_offered_only_while_something_is_off(

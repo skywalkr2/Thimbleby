@@ -371,3 +371,15 @@ def test_an_open_to_do_carries_its_reminder_on_the_persons_own_clock(api):
     assert done.status_code == 200, done.text
     rows = {a["id"]: a for a in client.get("/api/open-items").json()["actions"]}
     assert rows[action]["remind_at"] is not None and rows[action]["remind_at"].startswith("2030-10-21T10:30")
+
+
+def test_the_rows_flagged_as_needing_the_person_are_the_ones_the_side_menu_counts(api):
+    """The screen's own "n of these need you" is worked out from its rows: it is the number the side menu shows."""
+    client, store, _ = api
+    mine = add_action(store, "Ring the printer")
+    theirs = add_action(store, "Order the sample copies", owners=(OTHER,))
+    found = client.get("/api/open-items").json()
+    flagged = {a["id"] for a in found["actions"] if a["needs_you"]}
+    assert mine in flagged and theirs not in flagged
+    asked = [q for q in found["questions"] if q["state"] == "yours"]
+    assert len(flagged) + len(asked) == client.get("/api/waiting").json()["open"]["total"]

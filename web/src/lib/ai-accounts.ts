@@ -14,9 +14,26 @@ const byTier = (a: string, b: string) => {
   return rank(a) - rank(b) || a.localeCompare(b);
 };
 
+/** A name that is only a web address's host, with or without a port ("127.0.0.1:9355", "localhost:8080", "10.0.0.5"): where an
+ * account lives is never what it is called. */
+const HOST_ONLY = /^(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-f:]+\]|[a-z0-9-]+(?:\.[a-z0-9-]+)*:\d{1,5})(?::\d{1,5})?$/i;
+
+export const isHostName = (name: string): boolean => HOST_ONLY.test(name.trim());
+
+/** A name for an account made from the address the person typed: the service's own name and "account" when the address is
+ * only a host and a port (a service on this computer or a private network), else the domain with no port. */
+export function nameFromAddress(address: string, fallback: string): string {
+  try {
+    const host = new URL(address).hostname;
+    return host && !isHostName(host) && host.includes(".") ? host : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function accountName(account: Account, kind: Kind | undefined, t: T): string {
   const own = (account.label ?? "").trim();
-  if (own) return own;
+  if (own && !isHostName(own)) return own;
   return kind ? t("ai_accounts.default_name", { service: kind.name }) : t("ai_accounts.default_name_plain");
 }
 

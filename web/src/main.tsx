@@ -11,6 +11,8 @@ import { OwnRequestsProvider } from "./components/HandIn";
 import { Button } from "./ui/Button";
 import { initAppearance } from "./lib/theme";
 import { setClockZone } from "./lib/dates";
+import { useSides } from "./lib/sides";
+import { setTitleWords } from "./lib/title-dates";
 
 const client = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 } },
@@ -35,13 +37,17 @@ function Problem(props: { signedOut: boolean }) {
 function LiveWording(props: { rc: S["RuntimeConfig"]; children: ReactNode }) {
   const fresh = useQuery({ queryKey: ["runtime-config"], queryFn: api.runtimeConfig, initialData: props.rc, staleTime: Infinity });
   const rc = fresh.data;
+  // A person with only their own life reads no word of work: the sheet's `.just_me` variants stand in.
+  const { justMe } = useSides();
   // Every moment on every screen is written on the person's own clock, not the computer's.
   setClockZone(rc.timezone);
+  setTitleWords(rc.title_words);
   return (
     <WordingProvider
       overrides={rc.wording}
       base={{ assistant: rc.assistant_name, workspace: rc.workspace_name }}
       unnamed={rc.assistant_named === false}
+      justMe={justMe}
       locale={rc.language}
     >
       {props.children}

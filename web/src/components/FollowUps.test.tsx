@@ -1480,6 +1480,16 @@ test("a to-do that is not sent yet and is due soon is listed while Waiting on th
   expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
 });
 
+test("a sent to-do that is due soon but whose follow-up is not due waits on the other person, so it is not in the band (X89)", async () => {
+  const sentOnly = dueElsewhere();
+  sentOnly[0].actions = sentOnly[0].actions.map((a) => ({ ...a, chase_due: false }));
+  fakeApi({ "GET followups": () => sentOnly, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByRole("button", { name: "Copy message" });
+  expect(screen.queryByRole("heading", { name: /due soon/ })).toBeNull();
+  expect(screen.queryByText("Send the index")).toBeNull();
+});
+
 test("a to-do already listed on the open tab is not repeated in the band, and with nothing due soon there is no band", async () => {
   const user = userEvent.setup();
   const waiting = waitingSections();

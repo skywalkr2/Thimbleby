@@ -13,6 +13,7 @@ import yaml
 from engine import source_intake
 from engine.config import load_config
 from engine.config.schema import Price
+from engine.names import People
 from engine.storage import Store, WriteContext
 from engine.today_queue import queue
 from engine.workspace import init_workspace
@@ -587,3 +588,41 @@ def test_a_quiet_mailbox_keeps_the_whole_window_and_a_capped_read_uses_its_oldes
             assert header == expected and found.available_from in (None, header)
         finally:
             store.close()
+
+
+def _held_who_is(store, cfg, cs_id, index, name):
+    """The question "Who is <name>?" a held op of this changeset asks, as the applier files it."""
+    pm = People(store, cfg).pm
+    with store.transaction() as tx:
+        question = tx.create(
+            "question",
+            {
+                "to": pm,
+                "title": f"Who is “{name}”?",
+                "kind": "routing",
+                "options": [],
+                "resolves": {"kind": "held-op", "changeset": cs_id, "op": index, "name": name},
+            },
+            _TEST,
+        ).id
+        cs = tx.get("changeset", cs_id)
+        ops = [{**o, "question": question} if o["index"] == index else o for o in cs.data["ops"]]
+        tx.update("changeset", cs_id, {"ops": ops}, _TEST, read_version=cs.version)
+
+
+def test_a_name_to_place_is_one_line_however_many_inputs_ask_it_and_is_not_listed_in_the_look_over(env):
+    ws, cfg, store = env
+    read(env)
+    first, second, third = requests_of(store, intake="m")
+    for request in (first, second):
+        cs = with_changeset(store, request.id, [("action.add", "applied"), ("action.add", "held")])
+        _held_who_is(store, cfg, cs, 1, "Unplaced Person")
+    with store.transaction() as tx:
+        cur = tx.get("request", third.id)
+        tx.update("request", third.id, {"state": "done", "waiting": None}, _TEST, read_version=cur.version)
+    asked = lines_of(env, "who_is", "held")
+    assert [x.kind for x in asked] == ["who_is"], "the one name is asked on one line"
+    (review,) = lines_of(env, "intake_review")
+    assert "held" not in review.outcome, review.outcome
+    assert all(row.kind != "held" for row in review.items), "the look-over does not list the question again"
+    assert review.outcome == {"actions_added": 2}

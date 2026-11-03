@@ -15,7 +15,7 @@ import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { OriginLink, hasOrigin } from "./Origin";
-import { plainTitle } from "../lib/title-dates";
+import { shortTitle } from "../lib/title-dates";
 import { useFactLine } from "../lib/fact-line";
 import { RowList } from "../ui/RowList";
 
@@ -99,7 +99,7 @@ export function RecordActivity(props: {
                 <Row
                   key={a.id}
                   pill={<Pill tone="neutral">{t("unfiled.kind.action")}</Pill>}
-                  title={<a href={viewHref(recordView("action", a.id))}>{plainTitle(a.text, a.due)}</a>}
+                  title={<a href={viewHref(recordView("action", a.id))}>{shortTitle(a.text, a.due)}</a>}
                   meta={joined([
                     props.how?.get(a.id),
                     !props.how?.has(a.id) && (a.owners ?? []).join(", "),
@@ -177,7 +177,7 @@ export function RecordActivity(props: {
               <Row
                 key={c.id}
                 pill={<Pill tone="ok">{t("record.done")}</Pill>}
-                title={<a href={viewHref(recordView("action", c.id))}>{plainTitle(c.text)}</a>}
+                title={<a href={viewHref(recordView("action", c.id))}>{shortTitle(c.text)}</a>}
                 meta={joined([
                   (c.done_by ?? []).length ? t("record.done_by", { names: (c.done_by ?? []).join(", ") }) : t("record.closed"),
                   c.reported_by && t("record.reported_by", { name: c.reported_by }),
@@ -213,12 +213,12 @@ export function RecordActivity(props: {
                 <>
                   {e.made === "setup" ? (
                     <>
-                      <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong> <span>{t("record.activity.setup")}</span>
+                      <strong>{shortTitle(e.name) || t("record.activity.a_note")}</strong> <span>{t("record.activity.setup")}</span>
                     </>
                   ) : (
                     <>
                       <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
-                      <strong>{plainTitle(e.name) || t("record.activity.a_note")}</strong>
+                      <strong>{shortTitle(e.name) || t("record.activity.a_note")}</strong>
                     </>
                   )}
                   {movedAgain(e) && <span> · {movedAgain(e)}</span>}

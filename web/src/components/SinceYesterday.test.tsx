@@ -129,8 +129,8 @@ test("rules and sorting say which kind of rule did it and why", async () => {
   open([RULED, SORTED]);
   await screen.findByRole("list", { name: "What changed since yesterday" });
   const [ruled, sorted] = rows();
-  expect(ruled).toHaveTextContent("Closed “Plan”: a rule closed it: only spacing changed");
-  expect(sorted).toHaveTextContent("Set aside “Autumn sale”: a sorting rule set it aside: it is bulk mail");
+  expect(ruled).toHaveTextContent("Closed “Plan”: a rule closed it (only spacing changed)");
+  expect(sorted).toHaveTextContent("Set aside “Autumn sale”: a sorting rule set it aside (it is bulk mail)");
 });
 
 test("Open is the row's one button and Undo is in its menu", async () => {

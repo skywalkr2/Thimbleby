@@ -3,15 +3,29 @@
 // it say that nothing needs them and offer "Missed one".
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { useNextSetupStep } from "../lib/setup-next";
 import { useWords } from "../lib/wording";
 import { EmptyState } from "../ui/EmptyState";
 import { NothingNeedsYou } from "./Coverage";
 import { MissedOneLine } from "./MissedOne";
 
-export function TodayEmpty(props: { className?: string; onContinueSetup?: () => void; onHandIn?: () => void }) {
+export function TodayEmpty(props: { className?: string; onContinueSetup?: (step: string) => void; onHandIn?: () => void }) {
   const { t } = useWords();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const setupNext = useNextSetupStep();
   if (!status.data) return null;
+  // Setup is not finished: "nothing needs you" would be untrue, so the empty state says which step is next.
+  if (setupNext) {
+    return (
+      <EmptyState
+        className={props.className}
+        icon="gear"
+        data-queue-empty="setup"
+        text={t("queue.empty.setup_next", { step: setupNext.label })}
+        action={props.onContinueSetup ? { label: t("queue.empty.continue_setup"), onClick: () => props.onContinueSetup?.(setupNext.id) } : null}
+      />
+    );
+  }
   const noAi = status.data.ai.state === "not_set_up" || status.data.ai.state === "stand_in";
   if (noAi) {
     return (
@@ -20,7 +34,7 @@ export function TodayEmpty(props: { className?: string; onContinueSetup?: () => 
         icon="gear"
         data-queue-empty="connect"
         text={t("queue.empty.connect")}
-        action={props.onContinueSetup ? { label: t("queue.empty.continue_setup"), onClick: props.onContinueSetup } : null}
+        action={props.onContinueSetup ? { label: t("queue.empty.continue_setup"), onClick: () => props.onContinueSetup?.("ai") } : null}
       />
     );
   }
