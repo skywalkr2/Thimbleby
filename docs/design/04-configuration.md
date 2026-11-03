@@ -1163,6 +1163,7 @@ knowledge:
   refusals_to_packet: {share: 0.05, of_last: 50, min_runs: 10, floor: 3, floor_days: 7}   # a check refusing this often puts its full seed lesson in the packet; the floor does it for rare work: this many refusals of a kind of work by one check within these days, whatever the share
   discards_hold_days: 90       # a proposal close to one the person discarded this recently is not shown again
   min_corrections_per_week: 10 # a task kind's week counts in the learning rates only with at least this many corrections
+  quality_min_promises: 1      # the quality page shows figures only once this many promises were found in its window
 ```
 
 `language.date_patterns` (4.x, `config/language.yaml`) lists how a day is written in running text, with `{iso}`, `{day}`,

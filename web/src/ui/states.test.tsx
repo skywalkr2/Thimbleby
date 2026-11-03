@@ -38,6 +38,18 @@ test("the offline banner says the app can't reach its server, when it last heard
   expect(within(banner).getByRole("button", { name: "Try now" })).toBeVisible();
 });
 
+test("a screen can say the offline state in its own words: setup says the answers are kept", () => {
+  renderApp(
+    <ConnectionProvider live={live("offline")}>
+      <OfflineBanner words={{ title: "walkthrough.offline.title", text: "walkthrough.offline.text" }} />
+    </ConnectionProvider>,
+  );
+  const banner = screen.getByRole("status");
+  expect(banner).toHaveTextContent("You're offline.");
+  expect(banner).toHaveTextContent("Your answers are kept");
+  expect(banner).not.toHaveTextContent("stays here to read");
+});
+
 test("Try now asks the connection to look at once", async () => {
   const user = userEvent.setup();
   const retry = vi.fn();

@@ -140,6 +140,7 @@ Counts: basic 32, advanced 156, files only 198.
 | `dispatch.knowledge.quality_window_days` | internal | Technical limit, retry count, timeout or tuning of the AI call path. |
 | `dispatch.knowledge.review_visit_max_seconds` | internal | Technical limit, retry count, timeout or tuning of the AI call path. |
 | `dispatch.knowledge.min_corrections_per_week` | internal | Technical limit, retry count, timeout or tuning of the AI call path. |
+| `dispatch.knowledge.quality_min_promises` | internal | Technical limit, retry count, timeout or tuning of the AI call path. |
 | `checks.version` | internal | Similarity cut-off or word count of a check; developer tuning. |
 | `checks.lints` | internal | Similarity cut-off or word count of a check; developer tuning. |
 | `checks.projects` | internal | Similarity cut-off or word count of a check; developer tuning. |

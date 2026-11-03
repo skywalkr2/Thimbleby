@@ -79,3 +79,5 @@
   .table th, .table td { padding-right: var(--space-1); padding-left: var(--space-1); }
   .table th:first-child { width: 34%; }
 }
+
+.tooEarly { display: grid; gap: var(--space-4); max-width: 680px; }

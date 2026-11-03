@@ -392,7 +392,12 @@ export const ENTRIES: Entry[] = [
       await person("pat")(env);
       await env.page.getByRole("button", { name: "Edit", exact: true }).click();
       await refuseWrites(env, 500, "The app couldn't write to its folder.");
+      // Save stays off while the person is on no side (the sample person is on none), so the first side is ticked.
+      const sides = env.page.getByRole("dialog").getByRole("group", { name: /^Where they belong/ }).getByRole("checkbox");
+      if ((await sides.count()) > 0 && !(await sides.first().isChecked())) await sides.first().check();
       await env.page.getByRole("dialog").getByRole("button", { name: /^Save/ }).click();
+      // The refusal is drawn at the foot of the form, below the fold of the drawer: it is scrolled into view.
+      await env.page.getByRole("dialog").getByText(/^Not saved/).first().scrollIntoViewIfNeeded().catch(() => undefined);
       await env.page.waitForTimeout(900);
     },
   },

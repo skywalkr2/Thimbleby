@@ -3,6 +3,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import type { S } from "../lib/api";
+import { ConnectionProvider } from "../lib/connection";
 import { RestartProvider } from "../lib/restart";
 import { announceSignIn } from "../lib/sign-in-window";
 import { useToasts } from "../lib/toasts";
@@ -243,6 +244,25 @@ function open(props: { at?: { screen: S["WalkthroughView"]["step"]; n: number } 
 }
 
 const screenTitle = () => screen.findByRole("heading", { level: 2 });
+
+describe("offline", () => {
+  // No silent stop: with the connection down the guide says so in its own words, and that the answers are kept.
+  test("the guide shows the offline banner with setup's own words", async () => {
+    fakeApi({ ...routes({}, CORE.map((c) => step(c)), { step: "ai" }), ...WITH_SERVICE });
+    const h = handlers();
+    renderApp(
+      <ConnectionProvider live={{ state: "offline", lastUpdate: new Date("2026-11-03T10:42:00Z"), refresh: () => undefined, reconnect: () => undefined }}>
+        <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
+          <Walkthrough at={null} {...h} />
+        </RestartProvider>
+      </ConnectionProvider>,
+    );
+    await screenTitle();
+    const banner = document.querySelector("[data-offline-banner]") as HTMLElement;
+    expect(banner).toHaveTextContent("You're offline.");
+    expect(banner).toHaveTextContent("Your answers are kept");
+  });
+});
 
 describe("opening", () => {
   beforeEach(() => {
@@ -2008,6 +2028,9 @@ describe("Mail and calendar", () => {
     const mine = await row();
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
     expect(await screen.findByText(/Finish signing in in the window that opened/)).toBeInTheDocument();
+    // While the window is open the banner is the one state: the button is gone, with no "Opening the sign-in page" beside it.
+    expect(screen.queryByText("Opening the sign-in page…")).toBeNull();
+    expect(within(mine).queryByRole("button", { name: /^Sign in/ })).toBeNull();
     act(() => announceSignIn({ outcome: "refused", name: "mail-addon/account", error: "access_denied", detail: "Not on the testers list" }));
     expect(await screen.findByText("The service didn't allow the sign-in (access_denied): Not on the testers list")).toBeInTheDocument();
     expect(assign).not.toHaveBeenCalled();
@@ -2250,12 +2273,17 @@ describe("Mail and calendar", () => {
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
   });
 
-  test("with nothing connected yet there is no result block and the services list is shown", async () => {
+  test("with nothing connected yet it is one first-account card: the services to sign in with, the plain mailbox folded inside it", async () => {
     service("on");
     open();
-    expect(await screen.findByText("Services you can connect")).toBeInTheDocument();
+    expect(await screen.findByText("Connect your first account")).toBeInTheDocument();
+    expect(screen.queryByText("Services you can connect")).toBeNull();
     expect(screen.queryByText(/is connected\./)).toBeNull();
     expect(screen.queryByRole("button", { name: "Connect another account" })).toBeNull();
+    // The mailbox choice is the quieter second one, folded, and the way into the full form is inside it.
+    const fold = document.querySelector("[data-mailbox-choice]") as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+    expect(within(fold).getByText("Use a mailbox with an app password instead")).toBeInTheDocument();
   });
 
   test("the set-aside choice is one line with Change, which shows the switch in place", async () => {
@@ -2538,7 +2566,7 @@ describe("Mail and calendar", () => {
 
   /** Two sign-ins of one service, each with an inbox and a calendar, and a job and a business beside Personal. Ticks save
    * through the settings route, which keeps the list of sources. */
-  function twoAccounts(accounts: string[] = ["sam@example.com", "pat@example.com"]) {
+  function twoAccounts(accounts: string[] = ["sam@example.com", "pat@example.com"], expired?: string) {
     service("on", { signed: true });
     const state = {
       sources: accounts.flatMap((_, i) => [
@@ -2564,8 +2592,8 @@ describe("Mail and calendar", () => {
       ],
       "GET watch": () =>
         accounts.flatMap((address, i) => [
-          source(`i${i}`, "Your inbox", { account: address }),
-          source(`c${i}`, "Your calendar", { reads: ["calendar"], account: address }),
+          source(`i${i}`, "Your inbox", { account: address, ...(address === expired ? { account_state: "expired" } : {}) }),
+          source(`c${i}`, "Your calendar", { reads: ["calendar"], account: address, ...(address === expired ? { account_state: "expired" } : {}) }),
         ]),
       "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
       "GET settings": () => ({
@@ -2632,12 +2660,23 @@ describe("Mail and calendar", () => {
     expect(screen.queryByText(/Helper is reading: /)).toBeNull();
     const [sam, pat] = within(rows).getAllByRole("listitem");
     expect(sam).toHaveTextContent("sam@example.com");
-    expect(sam).toHaveTextContent("Your inbox and Your calendar");
+    expect(sam).toHaveTextContent("Your inbox and your calendar");
     expect(pat).toHaveTextContent("pat@example.com");
     // Each row carries its own question for who the account is for, and the hint under the sides is said once, not per row.
     expect(within(sam).getByRole("group", { name: "Who is mail and calendar at sam@example.com for?" })).toBeInTheDocument();
     expect(within(pat).getByRole("group", { name: "Who is mail and calendar at pat@example.com for?" })).toBeInTheDocument();
     expect(screen.getAllByText("Tick every one it serves. You can leave them all empty if you'd rather not say.")).toHaveLength(1);
+  });
+
+  test("an account that needs signing in again is the shared row with its state and Sign in again, not Connected", async () => {
+    twoAccounts(["sam@example.com", "pat@example.com"], "pat@example.com");
+    open();
+    const rows = await screen.findByRole("list", { name: "The accounts being read" });
+    const [sam, pat] = within(rows).getAllByRole("listitem");
+    expect(sam).toHaveTextContent("Connected");
+    expect(pat).not.toHaveTextContent("Connected");
+    expect(pat).toHaveTextContent(/Needs sign-in/);
+    expect(within(pat).getByRole("button", { name: /Sign in again/ })).toBeInTheDocument();
   });
 
   test("three accounts are three rows, each address cut with the full address on hover, and the sides are ticked in the row", async () => {

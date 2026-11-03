@@ -362,6 +362,17 @@ export function Quality(props: { onBack: () => void }) {
         <Skeleton />
       ) : page.isError || !view ? (
         <LoadFailed message={t("quality.load_failed")} onRetry={() => void page.refetch()} />
+      ) : view.outcome.promises_found < view.min_promises ? (
+        // Too few promises found to say anything: one card says so and what it waits for, in place of a page of zeros.
+        <div className={styles.tooEarly} data-quality-too-early="">
+          <Panel title={t("quality.early.title")}>
+            <p>{tn("quality.early.text", view.min_promises, { found: view.outcome.promises_found })}</p>
+            <p className="hint">{t("quality.window", { from: monthDay(view.since), to: monthDay(view.until) })}</p>
+          </Panel>
+          <Panel title={t("quality.counts.own_title")} actions={<span className={styles.cardHint}>{t("quality.counts.own_hint")}</span>}>
+            <CountForm view={view} />
+          </Panel>
+        </div>
       ) : (
         <>
           <div className={styles.soWhat} data-quality-sowhat="">

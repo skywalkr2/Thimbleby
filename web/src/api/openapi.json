@@ -23988,6 +23988,11 @@
             "title": "Min Corrections Per Week",
             "type": "integer"
           },
+          "min_promises": {
+            "description": "The fewest promises found in the window before the figures show; with fewer, it is too early.",
+            "title": "Min Promises",
+            "type": "integer"
+          },
           "missed": {
             "description": "\"Missed one\" for each person and week, oldest week first; a person with any in the window has a row for every week, so a week with none is zero. It should fall from week to week.",
             "items": {
@@ -24058,6 +24063,7 @@
         "required": [
           "days",
           "min_corrections_per_week",
+          "min_promises",
           "knowledge_used",
           "repeat_corrections",
           "missing",

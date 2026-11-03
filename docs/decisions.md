@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Setup's mail step is one first-account card, the setup guide shows the offline banner, Quality says "Too early to tell" instead of zeros (final review, group f5b; section 321)
+
+**Decided:** (owner: the screens match the reviewer's mockups; design by the main session.) The mail step with no account yet is one card
+with the services to sign in with and the plain mailbox folded inside it as the quieter choice; a service is named as the person knows it,
+never by the add-on's id; the waiting-for-the-window state is the banner alone. An account that needs signing in again shows as the shared
+account row. The setup guide draws the shared offline banner in its own words. The quality page shows one "Too early to tell" card while
+the window holds fewer promises than the new setting `dispatch.knowledge.quality_min_promises` (default 1; a live setting). **Impact:**
+`QualityView.min_promises` (schema regenerated), one config key with demo values in both workspaces, wording keys `walkthrough.mail.*`,
+`walkthrough.offline.*`, `quality.early.*`; the capture's person "A save that failed" drive changes a field first (Save is off until then).
+Change log: section 321.
+
 ## 2026-11-03: States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04; section 319)
 
 **Decided:** (owner: the screens match the reviewer's mockups before the gate week; design by the main session.) *States:* every list

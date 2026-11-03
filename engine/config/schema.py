@@ -1499,6 +1499,13 @@ class KnowledgeSettings(ConfigModel):
         description="The fewest corrections a week needs, for one kind of work, before its repeat-correction rate is "
         "shown. A week with fewer is too small to say anything.",
     )
+    quality_min_promises: int = Field(
+        1,
+        ge=1,
+        le=1000,
+        description="The fewest promises the assistant must have found in the quality window before the quality page "
+        "shows figures. With fewer, the page says it is too early to tell and how many it is waiting for.",
+    )
 
 
 class DispatchFile(FileModel):

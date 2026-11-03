@@ -235,6 +235,7 @@ def test_a_week_has_a_rate_only_with_the_configured_number_of_corrections(env):
     assert [w.week for w in weeks(store)] == [LAST_WEEK, THIS_WEEK]
     assert all(w.rate is None for w in weeks(store, minimum=4)), "a bigger minimum hides a week that is too small"
     assert KnowledgeSettings().min_corrections_per_week == 10
+    assert KnowledgeSettings().quality_min_promises == 1
 
 
 def test_corrections_the_person_took_back_or_that_no_run_made_are_not_counted(env):
@@ -348,6 +349,7 @@ def test_the_quality_route_reports_the_three_measures_and_the_default_gate_hides
         changeset_record(store, run, applied=[entry], missing=[HOLD], at=now)
         body = client.get("/api/quality").json()
     assert body["days"] == 28 and body["min_corrections_per_week"] == 10
+    assert body["min_promises"] == 1
     used = next(k for k in body["knowledge_used"] if k["task"] == "notes")
     assert (used["runs_given"], used["runs_applied"], used["rate"]) == (4, 1, 0.25)
     (week,) = body["repeat_corrections"]

@@ -1,9 +1,10 @@
 /* The wizard (VC12): a header, a rail of steps and one centred column; the footer is fixed to the window's bottom. */
-.root { min-height: 100dvh; background: var(--canvas); color: var(--text); display: grid; grid-template-rows: auto minmax(0, 1fr); align-content: start; }
+.root { min-height: 100dvh; background: var(--canvas); color: var(--text); display: grid; grid-template-rows: auto auto minmax(0, 1fr); align-content: start; }
 .head {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-6);
   padding: var(--space-3) var(--page-pad); background: var(--surface); border-bottom: 1px solid var(--border);
 }
+.banner:not(:empty) { padding: var(--space-3) var(--page-pad) 0; width: 100%; max-width: 1100px; margin: 0 auto; }
 .title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); min-width: 0; flex: 1 1 auto; }
 .title h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-medium); }
 .intro { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }

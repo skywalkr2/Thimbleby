@@ -7348,6 +7348,9 @@ class QualityView(BaseModel):
 
     days: int = Field(description="The window the figures cover, in days.")
     min_corrections_per_week: int = Field(description="The fewest corrections a week needs for its rate to show.")
+    min_promises: int = Field(
+        description="The fewest promises found in the window before the figures show; with fewer, it is too early."
+    )
     knowledge_used: list[QualityKnowledgeUsed]
     repeat_corrections: list[QualityRepeatWeek]
     missing: list[QualityMissingWeek]

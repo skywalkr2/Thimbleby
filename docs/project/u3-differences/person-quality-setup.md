@@ -35,6 +35,13 @@ Change log: section 317. Tracking rows: VS01, VS03, VS13, VS15, VC10, VC11, VC12
 | setup | No service was a sentence and a button | An empty state "Connect your first account" with the same sentence and button |
 | setup | Waiting for the service's window was one hint | A banner "Finish signing in in the window that opened. This page carries on by itself when you're done." with **Cancel** (stops waiting, closes the window) |
 | setup | "Connect another" was a full-width ghost | "Connect another account", a small button with a plus |
+| setup | Mail, no account yet: the add-on's id, a long description and a second form beside Sign in | One first-account card; services by their own names, the mailbox folded inside it (section 321) |
+| setup | Mail, waiting for the window: an "Opening the sign-in page…" button beside the banner | The banner alone (section 321) |
+| setup | Mail, one account needs sign-in: all accounts Connected | The shared account row with "Needs sign-in since <time>" and Sign in again (section 321) |
+| setup | Offline: no banner in the guide | The offline banner in setup's own words (section 321) |
+| setup | Mail rows "Your inbox and Your calendar" | "Your inbox and your calendar" (section 321) |
+| quality | First week: a page of zeros | One "Too early to tell" card; `dispatch.knowledge.quality_min_promises` (section 321) |
+| person | A save that failed was never captured | The drive changes a field first, since Save is off until something changed (section 321) |
 
 ## Left, with the reason
 

@@ -15,6 +15,7 @@ import { after, before, counted, SCREENS, standing, STEP_OF, stepOf, type Screen
 import { ContinueSlotProvider, type ContinueSlot, type ContinueSpec } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { OfflineBanner } from "../ui/OfflineBanner";
 import { Skeleton } from "../ui/Skeleton";
 import { FirstPromises } from "./FirstPromises";
 import { RenameName } from "./RenameName";
@@ -259,6 +260,7 @@ export function Walkthrough(
         titleId="walkthrough-title"
         title={t("walkthrough.title")}
         intro={t("walkthrough.intro")}
+        banner={<OfflineBanner words={{ title: "walkthrough.offline.title", text: "walkthrough.offline.text" }} />}
         headAction={
           <Button variant="quiet" onClick={() => void finishLater()}>
             {t("walkthrough.later")}

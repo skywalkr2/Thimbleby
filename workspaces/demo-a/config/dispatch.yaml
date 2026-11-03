@@ -45,3 +45,4 @@ knowledge:
   sample_consent: false           # whether a sample of messages may be drawn for your own reading
   sample_size: 50                 # how many messages one sample holds
   min_corrections_per_week: 10
+  quality_min_promises: 1         # the fewest promises found in the window before the quality page shows figures

@@ -83,6 +83,7 @@ LIVE_KEYS = (
     "dispatch.knowledge.new_terms_per_day",
     "dispatch.knowledge.quality_window_days",
     "dispatch.knowledge.min_corrections_per_week",
+    "dispatch.knowledge.quality_min_promises",
     "dispatch.knowledge.pack_searches",
 )
 

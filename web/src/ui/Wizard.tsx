@@ -8,7 +8,7 @@ import { GroupLabel } from "./GroupLabel";
 import { Icon } from "./Icon";
 import styles from "./Wizard.module.css";
 
-export function WizardShell(props: { title: ReactNode; titleId?: string; intro?: ReactNode; headAction?: ReactNode; rail?: ReactNode; children: ReactNode; "data-walkthrough"?: string }) {
+export function WizardShell(props: { title: ReactNode; titleId?: string; intro?: ReactNode; headAction?: ReactNode; rail?: ReactNode; banner?: ReactNode; children: ReactNode; "data-walkthrough"?: string }) {
   return (
     <div className={styles.root} data-wizard="" data-walkthrough={props["data-walkthrough"]}>
       <header className={styles.head}>
@@ -18,6 +18,7 @@ export function WizardShell(props: { title: ReactNode; titleId?: string; intro?:
         </div>
         {props.headAction}
       </header>
+      <div className={styles.banner}>{props.banner}</div>
       <div className={styles.layout} data-no-rail={props.rail ? undefined : ""}>
         {props.rail}
         {props.children}

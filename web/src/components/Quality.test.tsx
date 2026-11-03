@@ -14,6 +14,8 @@ type View = S["QualityView"];
 const quality = (over: Partial<View> = {}): View => ({
   days: 28,
   min_corrections_per_week: 10,
+  // Enough is already found, so the figures show; the too-early card has its own test.
+  min_promises: 0,
   knowledge_used: [],
   repeat_corrections: [],
   missing: [],
@@ -582,4 +584,15 @@ test("a measure with nothing in it shows a count of 0 and one line in a single l
   expect(within(summary).getByText("0")).toBeInTheDocument();
   expect(within(summary).getByText("Nothing yet.")).toBeInTheDocument();
   expect(summary.closest("details")!.parentElement).toBe(screen.getByText("Corrections that repeated").closest("details")!.parentElement);
+});
+
+describe("Too early to tell", () => {
+  it("shows one card with what it waits for, and no page of zeros", async () => {
+    fakeApi({ "GET quality": () => quality({ min_promises: 5, outcome: { ...quality().outcome, promises_found: 2 } }) });
+    renderApp(<Quality onBack={() => undefined} />);
+    const card = await screen.findByRole("region", { name: "Too early to tell" });
+    expect(within(card).getByText(/at least 5 promises.*found 2 so far/)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /Week by week/ })).toBeNull();
+    expect(screen.queryByText("Promises found")).toBeNull();
+  });
 });

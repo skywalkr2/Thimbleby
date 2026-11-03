@@ -8,7 +8,8 @@ import { Button } from "./Button";
 import { Icon } from "./Icon";
 import styles from "./OfflineBanner.module.css";
 
-export function OfflineBanner() {
+/** `words` names a screen's own wording for the same state (its title key, and one text key used with or without the time). */
+export function OfflineBanner(props: { words?: { title: string; text: string } }) {
   const { t } = useWords();
   const connection = useConnection();
   if (!connection.offline) return null;
@@ -16,8 +17,8 @@ export function OfflineBanner() {
     <div className={styles.banner} role="status" data-offline-banner="">
       <Icon name="alert" size={16} />
       <p className={styles.text}>
-        <strong>{t("state.offline.title")}</strong>{" "}
-        {connection.since ? t("state.offline.text", { time: time(connection.since) }) : t("state.offline.text_unknown")}
+        <strong>{t(props.words?.title ?? "state.offline.title")}</strong>{" "}
+        {props.words ? t(props.words.text) : connection.since ? t("state.offline.text", { time: time(connection.since) }) : t("state.offline.text_unknown")}
       </p>
       <Button size="sm" icon="refresh" onClick={connection.retry}>
         {t("state.offline.try")}

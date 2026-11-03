@@ -204,6 +204,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
             outcome=_outcome(view, person, now, days, here),
             days=days,
             min_corrections_per_week=settings.min_corrections_per_week,
+            min_promises=settings.quality_min_promises,
             knowledge_used=[
                 QualityKnowledgeUsed(
                     task=k.task, runs_given=k.given, runs_applied=k.applied, dropped=k.dropped, rate=k.rate

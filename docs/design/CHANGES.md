@@ -1027,6 +1027,21 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 321. Setup's mail step as one first-account card, the offline banner in the setup guide, Quality's "Too early to tell" (2026-11-03; final review group f5b)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup mail, no account yet (7.8) | The add-on's id and long description, a second mailbox form and "Add mail, calendar or folder" beside Sign in | One card: the services to sign in with by their own names; the mailbox with an app password folded inside it. **Built** (`Walkthrough.test.tsx`) |
+| Setup mail, waiting for the window (7.8) | The banner plus a disabled "Opening the sign-in page…" button | The banner alone. **Built** (`Walkthrough.test.tsx`) |
+| Setup mail, an account needing sign-in (7.8) | Every account "Connected" | The shared account row: "Needs sign-in since <time>", Sign in again. **Built** (`Walkthrough.test.tsx`) |
+| Setup, offline (7.21) | No banner in the guide | The offline banner under the guide's header, in setup's words. **Built** (`Walkthrough.test.tsx`, `states.test.tsx`) |
+| Quality with nothing found (6.20) | A page of zeros | One "Too early to tell" card, with `dispatch.knowledge.quality_min_promises`. **Built** (`Quality.test.tsx`) |
+
+- **Config:** `dispatch.knowledge.quality_min_promises` (schema entry, default 1, description, demo values in both workspaces; live).
+- **Wording:** `walkthrough.mail.first_account|mailbox_instead`, `walkthrough.offline.*`, `quality.early.*`.
+
+Change log: section 321.
+
 ## 319. States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (2026-11-03; visual review VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04)
 
 | Where | Before | Now |
