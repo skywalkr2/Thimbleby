@@ -181,6 +181,52 @@ time. These rules hold for the main session and every subagent.
 - Check against the code first: a design statement, a review finding or a reported problem is verified in the code before
   it is answered, designed around or fixed, and the reply says what the code does today.
 
+## Tracking and the order of a batch (owner, 2026-11-03: "make sure claude.md knows the process cold so we dont revert")
+Work was dropped and screens went back unfinished when the tracking lived in too many places and CI came before the look.
+These rules hold for the main session and every subagent.
+- **The roadmap is live.**
+  - Its "Where things stand" section is brought to the day with every push.
+  - A batch ticks its roadmap boxes in the same commit that merges it, with the tests that prove them.
+  - A box that was built under another batch is ticked as soon as it is found, never left open.
+- **One item list per round of review fixes,** in the repository (for U3: `docs/project/u3-gate/items.md`, beside its
+  scores, audit and briefs).
+  - Every finding and every open row is a checkbox tagged with its batch.
+  - An item is ticked when its batch is reviewed and merged, with its test.
+  - Work done but not merged is noted on the line ("fixed in G3, awaiting review and merge"), never left silent.
+  - A subagent's report ends with "Items closed": each of its lines, copied exactly, marked fixed (test), left (why) or
+    judged wrong (why).
+- **Nothing is tracked only in a session, a task list or a scratch folder.**
+  - Scores, audits and briefs that drive work are copied into the repository the moment work depends on them.
+  - The tracking places, and what each one holds:
+    - the roadmap: order and open items;
+    - `open-promises.md`: commitments;
+    - the round's item list;
+    - the reviewer's tracking copy: their rows.
+  - Keep them in step.
+- **A screen is done when it scores, not when it matches.**
+  - Every batch that changes what a screen looks like ends with a cold score of the screens it touched, by the reviewer's
+    rubric, by a scorer who sees neither our notes nor another score.
+  - Matching a mockup, or passing a guard, is not the bar.
+  - Screens without a mockup are scored too.
+  - Before anything goes back to an outside reviewer, every screen is captured (`visual:capture --inventory`) and scored by
+    two independent scorers, the lower counting. The owner sees the scores and the side-by-sides and says to send.
+- **The order inside a batch:**
+  1. fix;
+  2. the batch's own tests;
+  3. capture its screens, and check every picture against its issues;
+  4. a cold score of those screens;
+  5. fix what the score finds;
+  6. merge;
+  7. the full suites, once per batch of scope;
+  8. push to the check branch;
+  9. CI.
+  The look is checked before the long CI wait, never after it.
+- **Every message that reports a push ends with one line:**
+  > **Pushed:** `<commit>` to the check branch · working branch at `<commit>` (CI green / running / red)
+  - Work goes to `claude/tender-tesla-16a8ob-check` first.
+  - The working branch moves only to a commit whose CI passed.
+  - Docs that the owner follows (the item list, the roadmap) are linked on the check branch.
+
 ## Before finishing any change
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
   fictional workspaces, the core with no packs enabled, root and nested base paths, deploy checks, web build.
