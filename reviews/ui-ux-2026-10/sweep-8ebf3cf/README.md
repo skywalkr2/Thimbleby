@@ -81,7 +81,7 @@
 | X73 | P1 | Today's Schedule card and Came in show UTC beside "Now" in the person's zone (reopens X16) | S1 P1-2 (confirmed) |
 | X74 | P1 | Sending one item back adds duplicates of the others ("Get a catering quote." twice) | S3 P1-1 |
 | X75 | P1 | Settings writes and reloads: quick edits wait 2.5–3s each with no "Saving" cue; a reload in that window loses the last (X01) | S4 F1 |
-| X76 | P1 | Removing the AI account doesn't confirm, its Undo vanishes on navigation, and Today still offers Start | S4 F9 |
+| X76 | P1 | Removing the AI account doesn't confirm, and Today still offers Start. *(The "Undo vanishes" part was withdrawn: the sweep checked it after a fresh page load, so it was a test artifact.)* | S4 F9 |
 
 ### Several accounts and sides (S5)
 | ID | Sev | Item | Source |

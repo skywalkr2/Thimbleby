@@ -36,3 +36,11 @@
 - The S4 servers had stopped, so the reviewer couldn't re-run it.
 - The sweep's scripts (x01.mjs to x01f.mjs) ran it six ways with timings: with a 12s wait all three edits were kept; a reload 3s after the last edit lost it.
 - **The host should reproduce it in a browser test** that reloads 3s after the third edit.
+
+## S4 F9 / X76: CORRECTED by the reviewer
+- **Withdrawn:** "Undo gone after any navigation". The sweep looked for Undo in a new script, which opens a fresh browser and reloads the page, so no toast could survive. That's a test artifact.
+- **What stands:** there's no confirmation before removing the only AI account, and Today still offers Start with no account.
+
+## X72: source traced for the host
+- **Where it shows:** the What changed pane, and the Notes page.
+- **What the text is:** the body of the note the assistant filed after each due-date edit (S3 persona, fake AI stand-in, to-do ACT-6 edited five times). The stand-in echoes its prompt. The app shows that text unfiltered and files one note per edit.
