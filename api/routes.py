@@ -2691,7 +2691,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 no_end=sides.has_no_end(view, cfg, p.id),
                 **seen.get(p.id, {}),
             )
-            for p in store.read().list("project")
+            for p in view.list("project")
         ]
 
     def _project_fields(changes: dict, prj: str | None = None) -> None:
