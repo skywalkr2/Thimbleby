@@ -5,7 +5,7 @@
 // goes to "Needs a date". What needs more than a title (who does it, how it repeats) is the Add form, reached from the header's
 // button. With several sides and none picked, the to-do cannot be filed from here (the form asks where it belongs), so Enter
 // opens the form with the words already in it. A save that fails keeps the words in the row and says "Not saved", with Try again.
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -42,6 +42,7 @@ export function InlineAddTodo(props: { onDetails: (words: string) => void }) {
   const found = split && read?.status === "ok" && read.day ? read.day : null;
   const title = found && split ? split.title : words;
   const over = title.length - TODO_TEXT_MAX;
+  const queries = useQueryClient();
   const who = (people.data ?? []).find((p) => p.is_pm)?.id ?? "";
   const place = filter.offered && filter.choice !== "all" ? filter.choice : "";
   const add = async () => {
@@ -51,7 +52,13 @@ export function InlineAddTodo(props: { onDetails: (words: string) => void }) {
       setText("");
       return;
     }
-    if (!who) return;
+    // The person is the owner. When the list of people hasn't come back yet (a busy server), it is waited for rather than
+    // the Enter being dropped; with no person of their own at all, the row says it wasn't saved.
+    const owner = who || ((await queries.fetchQuery({ queryKey: ["people"], queryFn: api.people }).catch(() => [])) ?? []).find((p) => p.is_pm)?.id || "";
+    if (!owner) {
+      setFailed(t("state.not_saved.unreachable"));
+      return;
+    }
     setFailed(null);
     setSaving(true);
     // The day is the server's reading of the phrase; asked again here when the preview has not come back yet.
@@ -65,7 +72,7 @@ export function InlineAddTodo(props: { onDetails: (words: string) => void }) {
       }
     }
     const made = await act(
-      () => api.addTodo({ text: sent, owners: [who], ...(when ? { when } : {}), ...(place ? { project: place } : {}) }),
+      () => api.addTodo({ text: sent, owners: [owner], ...(when ? { when } : {}), ...(place ? { project: place } : {}) }),
       (result) => ({
         message: t("addtodo.saved", { text: sent }),
         undo: async () => {

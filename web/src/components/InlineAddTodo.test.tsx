@@ -33,6 +33,21 @@ test("typing a title and pressing Enter adds the to-do as the person's own, with
   await waitFor(() => expect(calls.filter((c) => c.route === "POST todos")).toHaveLength(2));
 });
 
+test("Enter pressed before the list of people has come back waits for it and adds the to-do, never dropping it", async () => {
+  // A busy server answers the people list late; the row used to drop the Enter silently, words left in the box.
+  const user = userEvent.setup();
+  let answer: (value: unknown) => void = () => undefined;
+  const late = new Promise((resolve) => (answer = resolve));
+  const calls = api({ "GET people": () => late });
+  row();
+  const field = await screen.findByRole("textbox", { name: "Add a to-do" });
+  await user.type(field, "Call the printer{Enter}");
+  expect(calls.some((c) => c.route === "POST todos")).toBe(false);
+  answer([{ ...person("P-1", "Quinn Sample"), is_pm: true }]);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST todos")?.body).toEqual({ text: "Call the printer", owners: ["P-1"] }));
+  await waitFor(() => expect(field).toHaveValue(""));
+});
+
 test("nothing is added for an empty title or for words past the limit, which are said in words", async () => {
   const user = userEvent.setup();
   const calls = api();
