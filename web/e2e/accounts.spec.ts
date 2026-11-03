@@ -91,7 +91,7 @@ test.describe.serial("several accounts", () => {
     await expect(review).toHaveCount(1);
     await expect(review.first()).toContainText(`also in Your calendar, ${addresses[1]}`);
     // The legend: a button for each calendar with its name, and pressed while its entries show.
-    const legend = page.getByRole("list", { name: "Calendars" });
+    const legend = page.getByRole("list", { name: "Calendars", exact: true });
     await expect(legend.getByRole("button")).toHaveCount(3);
     for (const address of addresses) await expect(legend.getByRole("button", { name: `Your calendar, ${address}` })).toHaveAttribute("aria-pressed", "true");
     // Each calendar has a color of its own, never two the same, beside its name.
@@ -231,12 +231,14 @@ test.describe.serial("several accounts", () => {
     await expect(dialog.locator("[data-coverage='unread']")).toHaveCount(0);
     await page.keyboard.press("Escape");
     // A failure becomes a line on Today only once it has lasted longer than the connection's read interval since its last good read
-    // (`watch.unread_gap_factor`, never less than one interval of five minutes or more); this one is minutes old, so Today holds none
-    // yet, and never one for each of the account's connections (`tests/test_several_accounts.py` makes it old and counts one).
+    // (`watch.unread_gap_factor`). The test server moves the account's reads back in time, as if they had been made hours ago;
+    // Today then holds one line for the account, never one for each of its connections.
+    const aged = await page.request.post(new URL("/__e2e/age-runs", page.url()).href, { data: { account: failing, minutes: 6 * 60 } });
+    expect(aged.ok(), await aged.text()).toBe(true);
     await go(page, "today");
     await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible(LOADED);
-    await expect(page.locator("main [data-skeleton]")).toHaveCount(0, LOADED);
-    await expect(page.locator('[data-queue-line="source_unread"]')).toHaveCount(0);
+    await expect(page.locator('[data-queue-line="source_unread"]')).toHaveCount(1, LOADED);
+    await expect(page.locator('[data-queue-line="source_unread"]')).toContainText(failing);
   });
 
   test("VC13. with one of three accounts failing the header says 1 account needs you, and its popover is one state row for each account, not a wall of red lines", async ({ page }) => {
@@ -294,7 +296,8 @@ test.describe.serial("several accounts", () => {
       await go(page, "schedule");
       await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible(LOADED);
       await page.locator("body").press("2");
-      const toggles = page.getByRole("list", { name: "Calendars" });
+      // Exact: the list of calendars that need a sign-in is named "Calendars that need you to sign in" and holds a button too.
+      const toggles = page.getByRole("list", { name: "Calendars", exact: true });
       await expect(toggles.getByRole("button")).toHaveCount(3, LOADED);
       if (lanes) await expect(page.locator("main ul[data-day]")).toHaveCount(lanes);
       else await expect(page.locator("main [data-schedule-list]")).toBeVisible();
@@ -304,8 +307,9 @@ test.describe.serial("several accounts", () => {
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await go(page, "schedule");
-    await page.locator("body").press("1");
-    const toggles = page.getByRole("list", { name: "Calendars" });
+    // The month: the third calendar's one entry is an all-day holiday three days ahead, which the day view of today never shows.
+    await page.locator("body").press("4");
+    const toggles = page.getByRole("list", { name: "Calendars", exact: true });
     const third = toggles.getByRole("button", { name: `Your calendar, ${addresses[2]}` });
     const color = await third.locator("[data-color]").getAttribute("data-color");
     const mine = page.locator(`main [data-entry-key][data-color="${color}"]`);
@@ -392,7 +396,8 @@ test.describe.serial("several accounts", () => {
     await page.goto(`?token=${info.token}`);
     await go(page, "work/followups");
     await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible(LOADED);
-    await page.getByRole("button", { name: "Pat Sample" }).first().click();
+    // At this width the first person's card is open beside the list already; the only button named for them is its menu.
+    await expect(page.getByRole("heading", { level: 2, name: "Pat Sample" })).toBeVisible(LOADED);
     const pick = page.getByRole("combobox", { name: "Send to Pat Sample from" });
     await expect(pick).toBeVisible(LOADED);
     expect((await choicesOf(pick)).map((c) => c.label)).toEqual(addresses);

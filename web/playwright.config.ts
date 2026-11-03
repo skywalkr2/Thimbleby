@@ -4,6 +4,7 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { namedProjects, selectServers } from "./playwright.select";
 
 // PW_PORT_OFFSET moves every port the tests use by that much, so two runs (two checkouts) can share a computer.
 const offset = Number(process.env.PW_PORT_OFFSET) || 0;
@@ -99,22 +100,233 @@ process.env.JOURNEY_ACCOUNTS_FAKE_PORT = String(accounts.fakePort);
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
 
-const freshServer = (p: ReturnType<typeof pair>, flags: string) => ({
-  command: `uv run python -m tests.e2e_fresh_server --port ${p.port} --state "${p.state}" --https-port ${p.httpsPort} ${flags}`,
-  cwd: "..",
-  url: `http://127.0.0.1:${p.port}/api/health`,
-  reuseExistingServer: false,
-  timeout: 60_000,
-});
+const on = <T,>(group: number, server: T) => ({ group, server });
+
+const freshServer = (p: ReturnType<typeof pair>, flags: string) =>
+  on(p.port, {
+    command: `uv run python -m tests.e2e_fresh_server --port ${p.port} --state "${p.state}" --https-port ${p.httpsPort} ${flags}`,
+    cwd: "..",
+    url: `http://127.0.0.1:${p.port}/api/health`,
+    reuseExistingServer: false,
+    timeout: 60_000,
+  });
 
 // Started after the app, which clears the state folder first.
-const fakeServices = (p: ReturnType<typeof pair>, flags = "") => ({
-  command: `uv run python -m tests.fake_services --port ${p.fakePort} --https-port ${p.httpsPort} --state "${p.state}" ${flags}`,
-  cwd: "..",
-  url: `http://127.0.0.1:${p.fakePort}/__e2e/info`,
-  reuseExistingServer: false,
-  timeout: 60_000,
-});
+const fakeServices = (p: ReturnType<typeof pair>, flags = "") =>
+  on(p.port, {
+    command: `uv run python -m tests.fake_services --port ${p.fakePort} --https-port ${p.httpsPort} --state "${p.state}" ${flags}`,
+    cwd: "..",
+    url: `http://127.0.0.1:${p.fakePort}/__e2e/info`,
+    reuseExistingServer: false,
+    timeout: 60_000,
+  });
+
+// Every project; a run that names some starts only the servers they reach (see playwright.select.ts).
+export const allProjects = [
+  // The acceptance scenario and the shell checks share a server, so the shell checks wait for the scenario to finish.
+  ...servers.flatMap((s) => {
+    const use = { baseURL: `http://127.0.0.1:${s.port}${s.base === "/" ? "/" : `${s.base}/`}` };
+    return [
+      { name: s.name, testMatch: /acceptance\.spec\.ts/, use },
+      { name: `${s.name}-shell`, testMatch: /(shell|brand)\.spec\.ts/, use, dependencies: [s.name] },
+      // The panes the shell opens (drawer, Ask pane, the stages board, review mode), and every main screen's accessibility
+      // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
+      { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },
+      ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /settings-walk\.spec\.ts/, use, dependencies: [s.name] }] : []),
+      ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
+      // The schedule at a phone, a tablet and a desktop width, and moving through its days (once, at the root).
+      ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /(schedule|timeline)\.spec\.ts/, use, dependencies: [s.name] }] : []),
+      // The tables beside the detail pane at 1440px (once, at the root).
+      ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
+    ];
+  }),
+  { name: "layout", testMatch: /(layout|handled|guards|internals|changed-rows|today-work|shared-rules|today-todos-46|states-phone)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
+  { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
+  { name: "capacity", testMatch: /today-(capacity|review)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
+  { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },
+  { name: "acts", testMatch: /acts-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${acts.port}/` } },
+  { name: "meetings", testMatch: /meetings-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${meetings.port}/` } },
+  { name: "capture", testMatch: /capture-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capture.port}/` } },
+  { name: "just-me", testMatch: /just-me\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${justMe.port}/` } },
+  { name: "sides", testMatch: /side-is-a-group\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sides.port}/` } },
+  { name: "side-filter", testMatch: /side-filter\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sideFilter.port}/` } },
+  { name: "people-records", testMatch: /(people-records|person-quality-setup-46)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${peopleRecords.port}/` } },
+  { name: "first-day", testMatch: /first-day.*\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${firstDay.port}/` } },
+  { name: "quick-edits", testMatch: /quick-edits\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${quickEdits.port}/` } },
+  { name: "data-and-trust", testMatch: /data-and-trust\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${dataTrust.port}/` } },
+  { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
+  {
+    name: "journeys",
+    testMatch: /journeys\.spec\.ts/,
+    // The made-up services' sign-in page is served with the throwaway authority's certificate, which this browser
+    // doesn't know; the app itself is told to trust it (see the start-up script), and the real one is never touched.
+    use: { baseURL: `http://127.0.0.1:${journeys.port}/`, ignoreHTTPSErrors: true },
+  },
+  {
+    name: "journeys-mail",
+    testMatch: /journeys-mail\.spec\.ts/,
+    use: { baseURL: `http://127.0.0.1:${mail.port}/`, ignoreHTTPSErrors: true },
+  },
+  {
+    name: "journeys-new-start",
+    testMatch: /journeys-new-start\.spec\.ts/,
+    use: { baseURL: `http://127.0.0.1:${newStart.port}/`, ignoreHTTPSErrors: true },
+  },
+  { name: "long-names", testMatch: /long-names\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${manySides.port}/` } },
+  {
+    name: "accounts",
+    testMatch: /accounts\.spec\.ts/,
+    use: { baseURL: `http://127.0.0.1:${accounts.port}/`, ignoreHTTPSErrors: true },
+  },
+  {
+    name: "settings-fixes",
+    testMatch: /settings-setup-fixes\.spec\.ts/,
+    use: { baseURL: `http://127.0.0.1:${settingsFixes.port}/`, ignoreHTTPSErrors: true },
+  },
+  {
+    name: "journeys-owner-evening",
+    testMatch: /journeys-owner-evening\.spec\.ts/,
+    use: { baseURL: `http://127.0.0.1:${evening.port}/`, ignoreHTTPSErrors: true },
+  },
+];
+
+// Every web server, tagged with the port of the project group it serves.
+export const allServers = [
+    ...servers.map((s) => on(s.port, {
+      command: `uv run python -m tests.e2e_server --port ${s.port} --base-path ${s.base}`,
+      cwd: "..",
+      url: `http://127.0.0.1:${s.port}${s.base === "/" ? "" : s.base}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    })),
+    on(layout.port, {
+      command: `uv run python -m tests.e2e_server --port ${layout.port} --base-path / --layout-stress`,
+      cwd: "..",
+      url: `http://127.0.0.1:${layout.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(access.port, {
+      command: `uv run python -m tests.e2e_server --port ${access.port} --base-path / --standin-account`,
+      cwd: "..",
+      url: `http://127.0.0.1:${access.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(capacity.port, {
+      command: `uv run python -m tests.e2e_server --port ${capacity.port} --base-path /`,
+      cwd: "..",
+      url: `http://127.0.0.1:${capacity.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(outgoing.port, {
+      command: `uv run python -m tests.e2e_server --port ${outgoing.port} --base-path / --fake-channel`,
+      cwd: "..",
+      url: `http://127.0.0.1:${outgoing.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(acts.port, {
+      command: `uv run python -m tests.e2e_server --port ${acts.port} --base-path / --acts`,
+      cwd: "..",
+      url: `http://127.0.0.1:${acts.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(meetings.port, {
+      command: `uv run python -m tests.e2e_server --port ${meetings.port} --base-path / --meetings`,
+      cwd: "..",
+      url: `http://127.0.0.1:${meetings.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(capture.port, {
+      command: `uv run python -m tests.e2e_server --port ${capture.port} --base-path / --capture --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${capture.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(sides.port, {
+      command: `uv run python -m tests.e2e_server --port ${sides.port} --base-path / --just-me --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${sides.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(sideFilter.port, {
+      command: `uv run python -m tests.e2e_server --port ${sideFilter.port} --base-path / --sides --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${sideFilter.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(peopleRecords.port, {
+      command: `uv run python -m tests.e2e_server --port ${peopleRecords.port} --base-path / --sides --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${peopleRecords.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(quickEdits.port, {
+      command: `uv run python -m tests.e2e_server --port ${quickEdits.port} --base-path /`,
+      cwd: "..",
+      url: `http://127.0.0.1:${quickEdits.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(dataTrust.port, {
+      command: `uv run python -m tests.e2e_server --port ${dataTrust.port} --base-path /`,
+      cwd: "..",
+      url: `http://127.0.0.1:${dataTrust.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(firstDay.port, {
+      command: `uv run python -m tests.e2e_server --port ${firstDay.port} --base-path / --first-day --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${firstDay.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(justMe.port, {
+      command: `uv run python -m tests.e2e_server --port ${justMe.port} --base-path / --just-me`,
+      cwd: "..",
+      url: `http://127.0.0.1:${justMe.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(late.port, {
+      command: `uv run python -m tests.e2e_server --port ${late.port} --base-path / --clock-at ${late.clockAt}`,
+      cwd: "..",
+      url: `http://127.0.0.1:${late.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    on(manySides.port, {
+      command: `uv run python -m tests.e2e_server --port ${manySides.port} --base-path / --many-sides --plain-stages`,
+      cwd: "..",
+      url: `http://127.0.0.1:${manySides.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    }),
+    freshServer(accounts, "--mail --no-sent-mail --test-routes"),
+    fakeServices(accounts, "--accounts 3"),
+    freshServer(journeys, "--add-ons"),
+    fakeServices(journeys),
+    freshServer(mail, "--mail --no-sent-mail"),
+    fakeServices(mail),
+    // The new-start journey changes nothing by hand: the catalog is named through the environment, and what the app
+    // prints is kept so the restarts can be counted.
+    freshServer(newStart, "--add-ons --catalog-by-environment --log"),
+    fakeServices(newStart, "--catalog journey_mail --sent-mail"),
+    // The owner's first evening: the same start as the new-start journey, with the fake services' evening mail and model list.
+    freshServer(settingsFixes, "--add-ons"),
+    fakeServices(settingsFixes),
+    freshServer(evening, "--add-ons --catalog-by-environment --log --no-sent-mail"),
+    fakeServices(evening, "--catalog journey_mail --evening"),
+];
 
 export default defineConfig({
   testDir: "e2e",
@@ -133,207 +345,6 @@ export default defineConfig({
     // No entry animations, so accessibility checks never catch a toast half faded in.
     contextOptions: { reducedMotion: "reduce" },
   },
-  projects: [
-    // The acceptance scenario and the shell checks share a server, so the shell checks wait for the scenario to finish.
-    ...servers.flatMap((s) => {
-      const use = { baseURL: `http://127.0.0.1:${s.port}${s.base === "/" ? "/" : `${s.base}/`}` };
-      return [
-        { name: s.name, testMatch: /acceptance\.spec\.ts/, use },
-        { name: `${s.name}-shell`, testMatch: /(shell|brand)\.spec\.ts/, use, dependencies: [s.name] },
-        // The panes the shell opens (drawer, Ask pane, the stages board, review mode), and every main screen's accessibility
-        // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
-        { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },
-        ...(s.base === "/" ? [{ name: `${s.name}-settings`, testMatch: /settings-walk\.spec\.ts/, use, dependencies: [s.name] }] : []),
-        ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
-        // The schedule at a phone, a tablet and a desktop width, and moving through its days (once, at the root).
-        ...(s.base === "/" ? [{ name: `${s.name}-schedule`, testMatch: /(schedule|timeline)\.spec\.ts/, use, dependencies: [s.name] }] : []),
-        // The tables beside the detail pane at 1440px (once, at the root).
-        ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
-      ];
-    }),
-    { name: "layout", testMatch: /(layout|handled|guards|internals|changed-rows|today-work|shared-rules|today-todos-46|states-phone)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
-    { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
-    { name: "capacity", testMatch: /today-(capacity|review)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
-    { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },
-    { name: "acts", testMatch: /acts-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${acts.port}/` } },
-    { name: "meetings", testMatch: /meetings-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${meetings.port}/` } },
-    { name: "capture", testMatch: /capture-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capture.port}/` } },
-    { name: "just-me", testMatch: /just-me\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${justMe.port}/` } },
-    { name: "sides", testMatch: /side-is-a-group\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sides.port}/` } },
-    { name: "side-filter", testMatch: /side-filter\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${sideFilter.port}/` } },
-    { name: "people-records", testMatch: /(people-records|person-quality-setup-46)\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${peopleRecords.port}/` } },
-    { name: "first-day", testMatch: /first-day.*\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${firstDay.port}/` } },
-    { name: "quick-edits", testMatch: /quick-edits\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${quickEdits.port}/` } },
-    { name: "data-and-trust", testMatch: /data-and-trust\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${dataTrust.port}/` } },
-    { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
-    {
-      name: "journeys",
-      testMatch: /journeys\.spec\.ts/,
-      // The made-up services' sign-in page is served with the throwaway authority's certificate, which this browser
-      // doesn't know; the app itself is told to trust it (see the start-up script), and the real one is never touched.
-      use: { baseURL: `http://127.0.0.1:${journeys.port}/`, ignoreHTTPSErrors: true },
-    },
-    {
-      name: "journeys-mail",
-      testMatch: /journeys-mail\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${mail.port}/`, ignoreHTTPSErrors: true },
-    },
-    {
-      name: "journeys-new-start",
-      testMatch: /journeys-new-start\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${newStart.port}/`, ignoreHTTPSErrors: true },
-    },
-    { name: "long-names", testMatch: /long-names\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${manySides.port}/` } },
-    {
-      name: "accounts",
-      testMatch: /accounts\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${accounts.port}/`, ignoreHTTPSErrors: true },
-    },
-    {
-      name: "settings-fixes",
-      testMatch: /settings-setup-fixes\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${settingsFixes.port}/`, ignoreHTTPSErrors: true },
-    },
-    {
-      name: "journeys-owner-evening",
-      testMatch: /journeys-owner-evening\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${evening.port}/`, ignoreHTTPSErrors: true },
-    },
-  ],
-  webServer: [
-    ...servers.map((s) => ({
-      command: `uv run python -m tests.e2e_server --port ${s.port} --base-path ${s.base}`,
-      cwd: "..",
-      url: `http://127.0.0.1:${s.port}${s.base === "/" ? "" : s.base}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    })),
-    {
-      command: `uv run python -m tests.e2e_server --port ${layout.port} --base-path / --layout-stress`,
-      cwd: "..",
-      url: `http://127.0.0.1:${layout.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${access.port} --base-path / --standin-account`,
-      cwd: "..",
-      url: `http://127.0.0.1:${access.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${capacity.port} --base-path /`,
-      cwd: "..",
-      url: `http://127.0.0.1:${capacity.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${outgoing.port} --base-path / --fake-channel`,
-      cwd: "..",
-      url: `http://127.0.0.1:${outgoing.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${acts.port} --base-path / --acts`,
-      cwd: "..",
-      url: `http://127.0.0.1:${acts.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${meetings.port} --base-path / --meetings`,
-      cwd: "..",
-      url: `http://127.0.0.1:${meetings.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${capture.port} --base-path / --capture --plain-stages`,
-      cwd: "..",
-      url: `http://127.0.0.1:${capture.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${sides.port} --base-path / --just-me --plain-stages`,
-      cwd: "..",
-      url: `http://127.0.0.1:${sides.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${sideFilter.port} --base-path / --sides --plain-stages`,
-      cwd: "..",
-      url: `http://127.0.0.1:${sideFilter.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${peopleRecords.port} --base-path / --sides --plain-stages`,
-      cwd: "..",
-      url: `http://127.0.0.1:${peopleRecords.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${quickEdits.port} --base-path /`,
-      cwd: "..",
-      url: `http://127.0.0.1:${quickEdits.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${dataTrust.port} --base-path /`,
-      cwd: "..",
-      url: `http://127.0.0.1:${dataTrust.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${firstDay.port} --base-path / --first-day --plain-stages`,
-      cwd: "..",
-      url: `http://127.0.0.1:${firstDay.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${justMe.port} --base-path / --just-me`,
-      cwd: "..",
-      url: `http://127.0.0.1:${justMe.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${late.port} --base-path / --clock-at ${late.clockAt}`,
-      cwd: "..",
-      url: `http://127.0.0.1:${late.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.e2e_server --port ${manySides.port} --base-path / --many-sides --plain-stages`,
-      cwd: "..",
-      url: `http://127.0.0.1:${manySides.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    freshServer(accounts, "--mail --no-sent-mail"),
-    fakeServices(accounts, "--accounts 3"),
-    freshServer(journeys, "--add-ons"),
-    fakeServices(journeys),
-    freshServer(mail, "--mail --no-sent-mail"),
-    fakeServices(mail),
-    // The new-start journey changes nothing by hand: the catalog is named through the environment, and what the app
-    // prints is kept so the restarts can be counted.
-    freshServer(newStart, "--add-ons --catalog-by-environment --log"),
-    fakeServices(newStart, "--catalog journey_mail --sent-mail"),
-    // The owner's first evening: the same start as the new-start journey, with the fake services' evening mail and model list.
-    freshServer(settingsFixes, "--add-ons"),
-    fakeServices(settingsFixes),
-    freshServer(evening, "--add-ons --catalog-by-environment --log --no-sent-mail"),
-    fakeServices(evening, "--catalog journey_mail --evening"),
-  ],
+  projects: allProjects,
+  webServer: selectServers(allServers, allProjects, namedProjects(process.argv, process.env)),
 });

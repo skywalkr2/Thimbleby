@@ -19,6 +19,8 @@ standard way, through `SSL_CERT_FILE` in its environment; nothing in the app cha
   throwaway one and never into the project's own.
 - `--catalog-by-environment` (with `--add-ons`) names the fake catalog through the app's environment settings and
   leaves the workspace's settings files exactly as `cockpit init` wrote them.
+- `--test-routes` serves through `tests.e2e_serve`, the same serve command with its one test-only route beside the app
+  (moving the watcher's reads back in time), instead of the command itself.
 - `--log` keeps what the app prints in `app.log` in the state folder (named in `info.json`), so a test can count the
   restarts the app made.
 
@@ -125,6 +127,7 @@ def main() -> None:
     parser.add_argument("--add-ons", action="store_true")
     parser.add_argument("--catalog-by-environment", action="store_true")
     parser.add_argument("--log", action="store_true")
+    parser.add_argument("--test-routes", action="store_true")
     parser.add_argument(
         "--no-sent-mail", action="store_true", help="the mail add-on names no sent mail (it does by default)"
     )
@@ -162,7 +165,8 @@ def main() -> None:
         with open(info["log"], "ab") as log:
             os.dup2(log.fileno(), 1)
             os.dup2(log.fileno(), 2)
-    command = [str(python), "-m", "engine.cli", "serve", "-w", str(ws.root), "--port", str(args.port), "--no-open"]
+    module = "tests.e2e_serve" if args.test_routes else "engine.cli"
+    command = [str(python), "-m", module, "serve", "-w", str(ws.root), "--port", str(args.port), "--no-open"]
     sys.stdout.flush()
     sys.stderr.flush()
     os.execv(command[0], command)  # noqa: S606 - the real serve command takes over this process
