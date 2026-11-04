@@ -67,7 +67,7 @@ test("wide, long names are in one button's sheet, whole and wrapping, never cut 
   expect(screen.queryByRole("combobox")).toBeNull();
 });
 
-test("the menu gives each side a mark of its own, never the same one twice, and the full name on hover", async () => {
+test("the menu gives each side a mark of its own, never the same one twice, and the full name as a tooltip on focus", async () => {
   fakeApi(routes());
   renderApp(<Sidebar current="today" expanded onToggle={() => undefined} />);
   const links = await screen.findAllByRole("link", { name: /Harborview|Harbor Light|Northfield|Lantern|Personal/ });
@@ -77,7 +77,9 @@ test("the menu gives each side a mark of its own, never the same one twice, and 
   // Two sides that begin alike are still told apart, and no icon is the same grid for all.
   expect(links.every((a) => a.querySelector("svg") === null)).toBe(true);
   const harbor = links.find((a) => a.textContent?.includes("Harborview"))!;
-  expect(harbor.querySelector('[class*="label"]')).toHaveAttribute("title", SIDES[0].name);
+  const user = userEvent.setup();
+  while (document.activeElement !== harbor) await user.tab();
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(SIDES[0].name);
 });
 
 test("on the icon rail the marks tell the sides apart too", async () => {

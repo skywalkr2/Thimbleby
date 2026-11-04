@@ -18,3 +18,4 @@
 .word { color: var(--text); font-weight: var(--weight-semibold); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .warn .word { color: var(--warn); }
 .danger .word { color: var(--danger); }
+.chip:active { background: var(--surface-hover); }

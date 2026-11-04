@@ -148,7 +148,7 @@ export function Header(props: {
           <Pill tone="warn">{t("demo.label")}</Pill>
         </span>
       )}
-      {!props.narrow && <SearchBox className={styles.ask} onOpenRecord={props.onOpenRecord} onAsk={props.onAsk} />}
+      {!props.narrow && <SearchBox className={styles.ask} keyHint={props.shortcuts.ask} onOpenRecord={props.onOpenRecord} onAsk={props.onAsk} />}
       <span className={styles.spacer} />
       <div className={styles.status}>
         <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} narrow={inChip} />

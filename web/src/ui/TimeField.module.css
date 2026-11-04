@@ -24,3 +24,6 @@
 .option[data-active] { background: var(--surface-hover); }
 .option[aria-selected="true"] { font-weight: var(--weight-semibold); box-shadow: inset 3px 0 0 var(--accent); }
 .problem { margin: var(--space-1) 0 0; }
+.input:hover:not(:disabled) { border-color: var(--text-subtle); }
+.open:hover:not(:disabled) { color: var(--text); }
+.open:active:not(:disabled) { background: var(--surface-sunk); }

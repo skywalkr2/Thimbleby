@@ -47,3 +47,5 @@
 .cell[data-unavailable], .cell[data-disabled]:not([data-outside-month]) { text-decoration: line-through; }
 .cell[data-focus-visible] { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
 .legend { margin: var(--space-2) 0 0; font-size: var(--text-xs); color: var(--text-muted); }
+.open:active:not(:disabled) { background: var(--surface-sunk); }
+.step:active:not([data-disabled]) { background: var(--surface-sunk); }

@@ -15,7 +15,7 @@
 .entry:hover { background: var(--surface-hover); color: var(--text); }
 .entry[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
 .sub { padding-left: var(--space-3); }
-.glyph { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 var(--space-1); box-sizing: border-box; flex: none; border-radius: var(--radius-sm); background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.glyph { display: inline-grid; place-items: center; width: 22px; min-width: 22px; height: 22px; padding: 0; box-sizing: border-box; flex: none; border-radius: var(--radius-sm); background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
 .entry[aria-current="page"] .glyph { background: var(--surface); color: var(--accent-text); }
 .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .count { margin-left: auto; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }

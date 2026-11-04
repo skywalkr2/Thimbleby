@@ -4,3 +4,11 @@
 .markDay { display: var(--mark-day-display); }
 .markNight { display: var(--mark-night-display); }
 .glyph { color: var(--brand-glyph); font-size: var(--text-lg); line-height: 1; }
+/* The mark's one entrance, on the first and last setup screens: it settles in from a little smaller and the star fades in after it.
+   It runs once each time the screen opens, and not at all when the person has asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .mark { animation: mark-in var(--dur-mark) var(--ease-out) both; }
+  .glyph { animation: glyph-in var(--dur-mark) var(--ease-out) both; animation-delay: calc(var(--dur-mark) * 0.4); }
+  @keyframes mark-in { from { opacity: 0; transform: scale(0.88); } }
+  @keyframes glyph-in { from { opacity: 0; transform: translateY(-4px); } }
+}

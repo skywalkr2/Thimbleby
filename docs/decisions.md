@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: Motion is the mark only; every control answers hover, pressed and focus (batch G6 of the fix round)
+
+**Decided:** (owner's D7; no new choice needed.) Only the brand mark moves for longer than a short state change: once on Welcome and once on Done, 900ms, off under reduced motion. The side menu gets a "Your sides" group of its own when there is a side beside Personal. Change log: section 344.
+
+**Why:** D7, and the gate's lines about the shell's shared parts.
+
+**Impact:** `web/src/theme/tokens.css`, `web/src/components/SetupBrand.module.css`, the shared controls' stylesheets, `web/src/shell/`, the wording sheet (`nav.sides`).
+
 ## 2026-11-04: G6's scope; the keyboard walk, screenshot comparisons and the product file wait (owner; section 343)
 
 **Decided:**

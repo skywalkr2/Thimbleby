@@ -84,6 +84,14 @@ export function Sidebar(props: { current: View; expanded: boolean; onToggle: () 
         )}
         {nav.work.map(entry)}
       </div>
+      {nav.sides.length > 0 && (
+        <div className={styles.group} role="group" aria-labelledby="nav-sides">
+          <GroupLabel as="span" id="nav-sides" className={styles.title}>
+            {t("nav.sides")}
+          </GroupLabel>
+          {nav.sides.map(entry)}
+        </div>
+      )}
       <div className={styles.group} role="group" aria-labelledby="nav-records">
         <GroupLabel as="span" id="nav-records" className={styles.title}>
           {t("nav.records")}

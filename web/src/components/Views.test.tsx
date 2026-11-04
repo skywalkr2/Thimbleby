@@ -89,19 +89,25 @@ const todos: Routes = {
 
 // A choice may carry the count of what the open tab holds ("All, 3 waiting"): it is found by its name first.
 const named = (name: RegExp | string) => (typeof name === "string" ? new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(,|$)`) : name);
-const choose = async (name: RegExp | string) => userEvent.setup().click(await screen.findByRole("radio", { name: named(name) }));
+// More than four choices are one "Side" button with a sheet of them: open it, then read or pick a choice in it.
+const openSheet = async () => {
+  await userEvent.setup().click(await screen.findByRole("button", { name: /^Side: / }));
+  return within(await screen.findByRole("dialog"));
+};
+const choices = (sheet: ReturnType<typeof within>): HTMLElement[] => sheet.getAllByRole("button").filter((b: HTMLElement) => b.hasAttribute("data-side-option"));
+const choose = async (name: RegExp | string) => userEvent.setup().click((await openSheet()).getByRole("button", { name: named(name) }));
 
 test("the filter lists the person's views under their side, each named with its side", async () => {
   fakeApi(routes);
   renderApp(<SideFilter />);
-  await screen.findByRole("radio", { name: `${WORK_NAME}: My projects` });
-  expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual(["All", "Personal", WORK_NAME, `${WORK_NAME}: Manager's portfolio`, `${WORK_NAME}: My projects`]);
+  const sheet = await openSheet();
+  expect(choices(sheet).map((b) => b.textContent)).toEqual(["All", "Personal", WORK_NAME, `${WORK_NAME}: Manager's portfolio`, `${WORK_NAME}: My projects`]);
 });
 
 test("without a side there are no views to choose, whatever the server holds", async () => {
   fakeApi({ ...routes, "GET setup/business": () => ({ business: false, name: null, personal: PERSONAL, sides: [], chosen: "me" }) });
   renderApp(<SideFilter />);
-  await waitFor(() => expect(screen.queryByRole("radio")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("button", { name: /^Side: / })).toBeNull());
 });
 
 test("a view's choice shows what is in its projects, what is on no project and what is on no side, and none disappear on the other view", async () => {
@@ -149,9 +155,9 @@ test("a stored choice that names a view that is gone falls back to All, and one 
   setSideChoice(viewChoice("VIEW-gone"));
   renderApp(<OpenItems />);
   expect(await screen.findByText("Book the dentist")).toBeInTheDocument();
-  expect(await screen.findByRole("radio", { name: named("All"), checked: true })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Side: All" })).toBeInTheDocument();
   await choose("Personal");
-  expect(await screen.findByRole("radio", { name: named("Personal"), checked: true })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Side: Personal" })).toBeInTheDocument();
   expect(screen.queryByText("Draft the shared plan")).toBeNull();
 });
 
@@ -174,14 +180,15 @@ test("what a view's count adds up to is the server's, and a view's choice reads 
     "GET waiting": () => ({ changed: counts, followups: counts, open: counts, handled: counts }),
   });
   renderApp(<SideFilter waiting="open" />);
-  expect(await screen.findByRole("radio", { name: `${WORK_NAME}: Manager's portfolio, 4 waiting` })).toBeInTheDocument();
-  expect(screen.getByRole("radio", { name: `${WORK_NAME}: My projects, 2 waiting` })).toBeInTheDocument();
+  const sheet = await openSheet();
+  expect(sheet.getByRole("button", { name: `${WORK_NAME}: Manager's portfolio, 4 waiting` })).toBeInTheDocument();
+  expect(sheet.getByRole("button", { name: `${WORK_NAME}: My projects, 2 waiting` })).toBeInTheDocument();
 });
 
 test("onSide reads a view's choice by the side the filter last read for it", async () => {
   fakeApi(routes);
   renderApp(<SideFilter />);
-  await screen.findByRole("radio", { name: `${WORK_NAME}: My projects` });
+  await openSheet();
   const choice = viewChoice(OWN);
   expect(onSide(WORK, choice, [OWN], true)).toBe(true);
   expect(onSide(WORK, choice, [PORTFOLIO], true)).toBe(false);

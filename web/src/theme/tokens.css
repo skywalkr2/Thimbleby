@@ -62,6 +62,8 @@
 
   /* Motion */
   --dur-fast: 120ms; --dur-base: 180ms; --dur-slow: 260ms;
+  /* The brand mark's one entrance (first launch, end of setup): the only motion that is more than a short state change. */
+  --dur-mark: 900ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* Layout: the app fills the window at every width. Panes are added as width grows; nothing is centered in a
@@ -258,7 +260,7 @@
     --hit-offset: calc((var(--target-min) - var(--tap-min)) / 2);
   }
 }
-@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } }
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; --dur-mark: 0ms; } }
 
 :focus-visible {
   outline: none;

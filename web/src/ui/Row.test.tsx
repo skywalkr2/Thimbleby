@@ -167,3 +167,17 @@ test("a button among a row's actions says it is drawn as an outline when it is a
   expect(screen.getByRole("button", { name: "Soft" })).toHaveAttribute("data-weight", "tonal");
   expect(screen.getByRole("button", { name: "Plain" })).toHaveAttribute("data-weight", "plain");
 });
+
+test("a row with a menu says so, and the stylesheet keeps that width for the rows in its list that have none, so every row's buttons end on one edge", () => {
+  render(
+    <ul data-row-list="">
+      <Row title="With a menu" primary={<button type="button">Open</button>} menu={<button type="button">More</button>} />
+      <Row title="Without" primary={<button type="button">Open</button>} />
+    </ul>,
+  );
+  const [withMenu, without] = screen.getAllByRole("listitem");
+  expect(withMenu).toHaveAttribute("data-row-menu");
+  expect(without).not.toHaveAttribute("data-row-menu");
+  const css = readFileSync(join(__dirname, "Row.module.css"), "utf8");
+  expect(css).toMatch(/\(:is\(ul, ol\):has\(\[data-row-menu\]\)\)\s*\.row:not\(\.hasMenu\)\s*\.actions\s*\{\s*padding-inline-end:\s*calc\(var\(--hit-icon\) \+ var\(--space-2\)\)/);
+});

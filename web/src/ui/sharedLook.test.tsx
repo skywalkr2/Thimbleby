@@ -116,3 +116,14 @@ test("the Change link that ends the spending sentence has the sentence's weight"
   const styles = readFileSync(join(__dirname, "..", "styles.css"), "utf8");
   expect(styles).toMatch(/\.spend-line \.link-button \{ font-weight: inherit; \}/);
 });
+
+// G6: the shared leftovers.
+test("an inline empty state's button keeps its own width and drops under the words rather than squeezing onto three lines", () => {
+  const rules = css("EmptyState.module.css");
+  expect(rules).toMatch(/\.inline\s*\{\s*flex-wrap:\s*wrap;\s*\}/);
+  expect(rules).toMatch(/\.inline > :global\(\[data-variant\]\)\s*\{[^}]*flex:\s*none;[^}]*white-space:\s*nowrap/);
+});
+
+test("the side menu's marks are one fixed width, so every name starts on the same edge", () => {
+  expect(shell("Sidebar.module.css")).toMatch(/\.glyph\s*\{[^}]*\bwidth:\s*22px;[^}]*min-width:\s*22px/);
+});

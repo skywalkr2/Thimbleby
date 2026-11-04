@@ -38,6 +38,8 @@ export interface NavModel {
   work: NavEntry[];
   /** The projects among `records`: Personal and each side by its own mark, or Projects. */
   projects: NavEntry[];
+  /** Personal and each side, as a group of their own when there is a side beside Personal; empty otherwise (they are then among `records`). */
+  sides: NavEntry[];
   records: NavEntry[];
   bottom: NavEntry[];
 }
@@ -82,8 +84,9 @@ export function useNav(): NavModel {
       ...plugin("work", "work"),
     ],
     projects,
+    sides: justMe || sides.length === 0 ? [] : sideEntries,
     records: [
-      ...projects,
+      ...(justMe || sides.length === 0 ? projects : []),
       { view: "records/people", label: t("nav.people"), icon: "users" },
       { view: "records/files", label: t("nav.files"), icon: "folder" },
       { view: "records/notes", label: t("nav.notes"), icon: "note", sub: true },

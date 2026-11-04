@@ -10,10 +10,12 @@ export interface SearchFieldProps extends Omit<ComponentPropsWithRef<"input">, "
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** The key that puts the cursor here, drawn at the right edge while the box is empty (shown only when the person has one). */
+  keyHint?: string;
 }
 
 export function SearchField(props: SearchFieldProps) {
-  const { id, label, value, onChange, className, placeholder, ...rest } = props;
+  const { id, label, value, onChange, className, placeholder, keyHint, ...rest } = props;
   return (
     <div className={[styles.search, className ?? ""].filter(Boolean).join(" ")} data-field="" data-search="">
       <label htmlFor={id} className="sr">
@@ -23,6 +25,11 @@ export function SearchField(props: SearchFieldProps) {
         <Icon name="search" size={16} />
       </span>
       <input {...rest} id={id} type="search" autoComplete="off" placeholder={placeholder ?? label} value={value} onChange={(e) => onChange(e.target.value)} className={styles.input} />
+      {keyHint && !value && (
+        <kbd className={styles.keyHint} aria-hidden="true" data-key-hint="">
+          {keyHint}
+        </kbd>
+      )}
     </div>
   );
 }

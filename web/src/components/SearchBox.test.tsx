@@ -179,3 +179,12 @@ test("a long result title keeps to two lines and the question to ask stays at th
   expect(css).toMatch(/\.drop \{[^}]*overflow-y: auto/);
   expect(css).toMatch(/\.askItem \{[^}]*position: sticky; bottom:/);
 });
+
+test("the key that reaches the search box shows in it while it is empty, and goes once something is typed", async () => {
+  fakeApi({ "GET search": () => ({ results: [] }) });
+  renderApp(<SearchBox keyHint="/" onOpenRecord={vi.fn()} onAsk={vi.fn()} />);
+  const hint = document.querySelector("[data-key-hint]");
+  expect(hint).toHaveTextContent("/");
+  await userEvent.setup().type(screen.getByRole("searchbox"), "x");
+  expect(document.querySelector("[data-key-hint]")).toBeNull();
+});

@@ -81,6 +81,7 @@ export function Row(props: RowProps) {
       ref={ref as Ref<HTMLDivElement>}
       data-row={loop ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
+      data-row-menu={menu ? "" : undefined}
       data-state={state ?? (rest as Record<string, unknown>)["data-state"] as string | undefined}
       aria-current={isSelected ? "true" : undefined}
       className={[styles.row, menu ? styles.hasMenu : "", isSelected ? styles.selected : "", state ? styles[state] : "", className ?? ""].filter(Boolean).join(" ")}

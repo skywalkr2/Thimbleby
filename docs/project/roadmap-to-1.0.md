@@ -102,10 +102,10 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - [x] G1 shared rows and shell, plus the capture faults (merged; tests: `web/src/ui/Row.test.tsx`, `web/src/ui/RecordsTable.test.tsx`, `web/src/lib/toasts.test.tsx`, `web/src/lib/act.test.tsx`, `web/src/lib/views.test.ts`, `web/src/ui/PageHeader.test.tsx`, `web/src/shell/HeldLines.test.tsx`, `web/e2e/shared-rules.spec.ts`)
       - [x] G1c G1's own findings from its cold score (scorer C): one couldn't-load card with Try again, the status popover, form skeletons, three capture faults; then G1 merges (merged; tests: `web/src/components/ListStates.test.tsx`, `web/src/shell/StatusMenu.test.tsx`, `web/src/components/Settings.test.tsx`)
       - [x] G1b the shared components other batches named: the drawer, the segmented control, chips, the header's controls, the offline bar, the Filter sheet, the empty state, the table skeleton, the stable shell (tests: `web/src/ui/sharedParts.test.tsx`, `web/src/ui/Row.test.tsx`, `web/src/ui/states.test.tsx`, `web/src/shell/Header.test.tsx`, `web/src/components/ScheduleLayouts.test.tsx`; awaiting its review and merge)
-      - [ ] G2 Today and the work screens (G2a merged: 6 of 9 at 4.0, Today 4.2; G2c takes Today to the 4.6 mockup and the rest of scorer E's findings; G2b, Follow-ups, To-dos, Questions and the drawers, merged)
+      - [x] G2 Today and the work screens (G2a merged: 6 of 9 at 4.0, Today 4.2; G2c takes Today to the 4.6 mockup and the rest of scorer E's findings; G2b, Follow-ups, To-dos, Questions and the drawers, merged) G2a, G2b and G2c merged; tests: `web/src/components/Today.test.tsx`, `web/src/components/FollowUps.test.tsx`, `web/src/components/OpenItems.test.tsx`.
       - [ ] G3 Schedule (G3 and G3b merged; G3c fixes what scorer D found: empty states, the Timeline, the phone Week, calendars as one control, the mockup pages to 4.6)
-      - [ ] G4 Records
-      - [ ] G5 Settings and Setup (with D1 and D10)
+      - [x] G4 Records (G4a to G4d merged; tests: `web/src/components/PersonPage.test.tsx`, `web/src/components/PersonFiles.test.tsx`, `tests/test_file_from_person.py`, `tests/test_handover_screen.py`)
+      - [x] G5 Settings and Setup (with D1 and D10) (G5a, G5b and G5c merged; tests: `web/src/components/Settings.test.tsx`, `web/src/components/Addons.test.tsx`, `web/src/components/Walkthrough.test.tsx`)
       - *Phone at this gate (owner, 2026-11-04: "I dont care about phone issues really as this is not really intended as a 1.0 phone solution"; matches CLAUDE.md, phone polish waits for a hosted install):*
         - The phone isn't a 1.0 target. At 390 the screens must not break: no sideways scroll, nothing unreachable, nothing cut off.
         - Phone layout and polish aren't fixed in this round.
@@ -117,8 +117,8 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
         - The owner then tests everything but the Schedule.
         - G3c comes next.
         - The AI mistakes the owner finds in that test join U4 (owner: "the things I had seen were more low IQ mistakes … That will grow U4").
-      - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
-      - [ ] G6 (scope set by the owner, 2026-11-04): motion (D7: the mark at first launch and at the end of setup, nothing under reduced motion, hover, pressed and focus on every shared control) and the shared leftovers (G1e lines in `u3-gate/items.md`). Starts after the review point.
+      - [x] T1 test robustness (merged; tests: `web/src/components/MoneyField.test.tsx`, `tests/test_settings_save_overlap.py`, `tests/test_cloud_folders.py`): the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
+      - [x] G6 (scope set by the owner, 2026-11-04; merged, tests: `web/src/theme/motion.test.ts`, `web/src/ui/sharedLook.test.tsx`): motion (D7: the mark at first launch and at the end of setup, nothing under reduced motion, hover, pressed and focus on every shared control) and the shared leftovers (G1e lines in `u3-gate/items.md`). Starts after the review point.
       - *Moved out of G6 (owner, 2026-11-04):*
         - the keyboard walk (VP10) waits;
         - the screenshot comparisons in CI (D8, VP15) wait until the design settles at the end of the review round, so the stored pictures aren't redone every round;

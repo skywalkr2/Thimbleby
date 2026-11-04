@@ -8,3 +8,7 @@
 .empty > :global([data-variant]), .empty > :global([data-pill]) { margin-top: var(--space-2); }
 .inline { width: auto; min-width: 0; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); text-align: left; justify-items: unset; border: 0; border-radius: 0; }
 .inline .text { flex: 1 1 auto; min-width: 0; max-width: none; }
+/* The button beside the words never squeezes onto two lines: it keeps its own width, and when the words and the button do not fit
+   on one line the button drops under the words. */
+.inline { flex-wrap: wrap; }
+.inline > :global([data-variant]) { flex: none; margin-top: 0; white-space: nowrap; }

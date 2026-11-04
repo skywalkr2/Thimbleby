@@ -220,6 +220,10 @@ test("with sides the menu has Personal and each side by its own name, each a lin
     "Settings",
   ]);
   expect(within(nav()).getByText("Work")).toBeInTheDocument();
+  // Personal and the sides are a group of their own, "Your sides"; the records are another.
+  const sides = within(nav()).getByRole("group", { name: "Your sides" });
+  expect(within(sides).getAllByRole("link").map((a) => a.textContent)).toEqual(["Personal", FIRST.name, SECOND.name].map((n) => expect.stringContaining(n)));
+  expect(within(within(nav()).getByRole("group", { name: "Saved items" })).queryByRole("link", { name: "Personal" })).toBeNull();
   expect(within(nav()).queryByRole("link", { name: "Projects" })).toBeNull();
   expect(screen.getByRole("link", { name: FIRST.name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`#records/project/${FIRST.project}$`)));
   expect(screen.getByRole("link", { name: SECOND.name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`#records/project/${SECOND.project}$`)));

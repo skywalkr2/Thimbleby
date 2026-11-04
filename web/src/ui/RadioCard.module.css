@@ -12,3 +12,4 @@
 .tag { justify-self: start; }
 .title { font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .description { font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); overflow-wrap: anywhere; }
+.card:active:not([data-disabled]) { background: var(--surface-sunk); }

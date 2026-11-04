@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 344. Motion, the pressed state of every control, and the shared leftovers (2026-11-04; gate fix batch G6)
+
+| Where | Before | Now |
+|---|---|---|
+| The brand mark (7.8, 7.12) | Still | Settles in once on Welcome and on Done (`--dur-mark`, 900ms); off under reduced motion; no other motion is longer than 260ms |
+| Shared controls (`web/src/ui/`) | Filter chip, select, time box, tabs, segmented control, radio card, status chip, round check and menu items had no hover or no pressed look | Each has both; focus is the one global ring (`web/src/theme/motion.test.ts`) |
+| The side menu (7.1) | Personal, sides and records in one "Saved items" group; marks of different widths | "Your sides" is its own group when there is a side beside Personal; marks are one fixed width |
+| The header search (7.12) | No hint of the key that reaches it | The configured key shows in the empty box |
+| A row's buttons (7.14) | A row without a menu ended its buttons further right than one with a menu | The menu's width is kept empty, so every row's buttons end on one edge |
+| An inline empty state | Its button could wrap onto three lines | The button keeps its width and drops under the words when they do not fit |
+
+- **No config key, API or op change.** New wording: `nav.sides`.
+
 ## 343. G6's scope (2026-11-04; owner)
 
 | Where | Before | Now |

@@ -102,3 +102,6 @@
 }
 :global([data-narrow]) :where(:not(:has(> .row > .lead:not(:empty)))) > .row { grid-template-columns: minmax(0, 1fr); }
 :global([data-narrow]) :where(:not(:has(> .row > .lead:not(:empty)))) > .row > .actions > .buttons { grid-column: 1; }
+/* Among rows of one list or group where some have a menu ("..."), a row without one keeps the menu's width empty at its right, so the buttons of every
+   row end on the same edge. (Where the rows stack, the actions are not a box, so nothing is reserved.) */
+:global(:is(ul, ol):has([data-row-menu])) .row:not(.hasMenu) .actions { padding-inline-end: calc(var(--hit-icon) + var(--space-2)); }

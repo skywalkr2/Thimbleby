@@ -26,6 +26,8 @@ export function SearchBox(props: {
   opens?: "down" | "up";
   autoFocus?: boolean;
   className?: string;
+  /** The key that reaches the field, drawn in it while it is empty. */
+  keyHint?: string;
 }) {
   const { t, tn } = useWords();
   const justMe = useStableJustMe();
@@ -100,6 +102,7 @@ export function SearchBox(props: {
           setOpen(true);
         }}
         autoFocus={props.autoFocus}
+        keyHint={props.keyHint}
         {...{ [SEARCH_FIELD]: "" }}
         onKeyDown={(e) => {
           if (e.key !== "Enter" || e.nativeEvent.isComposing || !words) return;
