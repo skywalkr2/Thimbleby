@@ -106,7 +106,7 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - [ ] G3 Schedule (G3 and G3b merged; G3c fixes what scorer D found: empty states, the Timeline, the phone Week, calendars as one control, the mockup pages to 4.6)
       - [ ] G4 Records
       - [ ] G5 Settings and Setup (with D1 and D10)
-      - *Held by the owner (2026-11-04: "after the current two batches can you skip G3C and the ones after it"):* after G1d and G2c, G3c (the Schedule to its mockup), G4d (files linked to the person they came from), T1 and G6 wait. The owner tests the merged build first. Held, not dropped: their lines stay open in `u3-gate/items.md`.
+      - *G3c held by the owner (2026-11-04: "skip g3c and DO the small ones after it"):* the Schedule-to-its-mockup batch waits until after the owner's test (its lines stay open in `u3-gate/items.md`). G4d, T1 and G6 go ahead after G1d and G2c.
       - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
       - [ ] G6 motion (D7), the keyboard walk, screenshot comparisons in CI (D8), the product file and the brand moments
       Then the full suites, a fresh inventory and mockup capture, and both cold scorers on every screen.
