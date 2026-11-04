@@ -375,6 +375,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Where things stand" })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe("H2");
     expect((await focusRing(page)).shown).toBe(false);
+    await page.locator("summary", { hasText: "Optional extras" }).click();
     await page.locator('[data-step="first_note"]').getByRole("button", { name: "Hand something in" }).click();
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
     await checkAccessibility(page);
@@ -443,11 +444,13 @@ test.describe.serial("acceptance scenario", () => {
     await screens.getByRole("button", { name: /^Backups/ }).click();
     // A folder is already chosen, so "Choose another folder…" is a choice to make first; the folder list opens from its field.
     await page.getByRole("radio", { name: /^Choose another folder/ }).check();
-    await page.getByRole("button", { name: "Choose…" }).click();
+    await page.getByRole("button", { name: "Choose a folder" }).click();
     await expect(page.getByRole("dialog", { name: "Choose a folder" })).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
     await screens.getByRole("button", { name: /^(Done|Where things stand)/ }).click();
+    // The optional extras are folded under their name until the person opens them.
+    await page.locator("summary", { hasText: "Optional extras" }).click();
     await expect(page.getByRole("region", { name: "Optional extras" })).toBeVisible();
     // The recap is a compact list (a row is one line, not a card) and the extras take the pane's full width.
     const recap = page.getByRole("list", { name: "What was set up" });

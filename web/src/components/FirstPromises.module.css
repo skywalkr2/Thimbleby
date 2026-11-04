@@ -1,0 +1,2 @@
+/* What to do first, said at the size of the step's lead line, with its buttons under it on the same edge. */
+.action { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); max-width: var(--measure); }

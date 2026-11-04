@@ -176,8 +176,8 @@ function SignInSides(props: { sources: Source[]; what: string; account?: string;
       <SourceSides sources={props.sources} group what={props.what} account={props.account} personal={props.personal} sides={props.sides} compact={props.compact} hintId={props.hintId} />
       {props.sources.length > 1 && (
         <div>
-          <Button variant="quiet" onClick={() => setApart(true)}>
-            {t("walkthrough.mail.sides.separately")}
+          <Button variant="quiet" className={styles.link} onClick={() => setApart(true)}>
+            {t("walkthrough.mail.sides.separately")} <Icon name="chevron" size={14} />
           </Button>
         </div>
       )}
@@ -195,7 +195,7 @@ function SetAsideLine() {
     <FormBlock data-set-aside-line="">
       <p className="hint">
         {t(on ? "walkthrough.mail.aside.on" : "walkthrough.mail.aside.off")} <span aria-hidden="true">·</span>{" "}
-        <Button variant="quiet" aria-expanded={open} onClick={() => setOpen((x) => !x)}>
+        <Button variant="quiet" className={styles.link} aria-expanded={open} onClick={() => setOpen((x) => !x)}>
           {t("walkthrough.mail.aside.change")}
         </Button>
       </p>
@@ -291,11 +291,20 @@ export function WalkthroughMail(props: {
             const several = accountsOf(service.id).length > 1;
             const groups = several ? [...new Set(reads.map((s) => s.account ?? ""))] : [null];
             const hintId = `sides-hint-${service.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+            const needing = several ? groups.filter((account) => accountStates(reads.filter((s) => (s.account ?? "") === account)).some((a) => a.need !== null)).length : 0;
+            // With several accounts at one privacy level, the service and the level are said once, above the rows.
+            const levels = new Set(reads.map((s) => s.data_level ?? "internal"));
+            const grouped = several && levels.size === 1 && levels.has("restricted");
             return (
               <FormBlock as="section" key={service.id}  data-reading="" data-connected={service.id}>
                 <p className="what">
-                  <strong>{t("walkthrough.mail.result.connected", { service: title })}</strong>
-                  {reads.length > 0 && <> {several ? t("walkthrough.mail.result.accounts", { n: groups.length }) : t("walkthrough.mail.result.reading", { what })}</>}
+                  {/* Counted from how each account stands, so the headline never says "connected" over a row that needs signing in. */}
+                  {needing === 0 ? (
+                    <strong>{t("walkthrough.mail.result.connected", { service: title })}</strong>
+                  ) : (
+                    <strong>{t("walkthrough.mail.result.some", { service: title, ok: groups.length - needing, n: groups.length })}</strong>
+                  )}
+                  {reads.length > 0 && needing === 0 && <> {several ? t(grouped ? "walkthrough.mail.result.accounts_private" : "walkthrough.mail.result.accounts", { n: groups.length }) : t("walkthrough.mail.result.reading", { what })}</>}
                 </p>
                 {reads.length > 0 && <p className="hint">{t("walkthrough.mail.first_go")}</p>}
                 {reads.length > 0 && hasSides && several && (
@@ -309,7 +318,7 @@ export function WalkthroughMail(props: {
                     {groups.map((account) => {
                       const mine = reads.filter((s) => (s.account ?? "") === account);
                       // An account the service no longer lets in says since when and offers Sign in again, in the same row.
-                      const needing = accountStates(mine).find((a) => a.need !== null);
+                      const need = accountStates(mine).find((a) => a.need !== null);
                       return (
                         <SetupAccountRow
                           key={account ?? ""}
@@ -317,7 +326,8 @@ export function WalkthroughMail(props: {
                           service={title}
                           reads={listOf(mine.map(shortOf).map((n, i) => midSentence(n, i)))}
                           sources={mine}
-                          need={needing}
+                          grouped={grouped}
+                          need={need}
                           sidesEditor={
                             hasSides ? (
                               <SignInSides

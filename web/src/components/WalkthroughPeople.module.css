@@ -10,3 +10,11 @@
 .addRow { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; }
 .addRow [data-field] { margin: 0; min-width: 0; flex: 1 1 12rem; }
 .addButton { flex: 0 0 auto; }
+/* Name and who they are share one field width with the other steps' fields; the button is the fields' height. */
+.addRow [data-field] { flex: 1 1 12rem; max-width: var(--field-name); }
+.pasteLink { background: none; border: 0; padding: 0; min-height: var(--tap-min); font: inherit; font-size: var(--text-sm); color: var(--text); text-decoration: underline; cursor: pointer; }
+/* On a phone the button is the full width of the column, a touch target tall. */
+:global([data-narrow]) .addButton, :global([data-narrow]) .addButton > button { width: 100%; min-height: var(--tap-min); }
+/* A listed person's row: the list that says how they relate (when it is not said) and Remove, side by side on the row's right. */
+.rowActs { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
+.rowActs [data-ui="select"] { width: 11rem; max-width: 100%; flex: 0 0 auto; }

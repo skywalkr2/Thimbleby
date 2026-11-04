@@ -2272,11 +2272,11 @@ to check its internet connection, never to "start it if it runs on this computer
 computer or network from a hosted one; `TRANSPORT_HINTS`, `LIST_PROBLEMS`). It also says which sign-in the account runs
 as when it can be found (the signed-in user of an agent), and says in plain words when it can't (a key). **A new account reads
 only open material until the person says so** (decisions F25 and F46): the step asks once, per account, "{assistant}'s AI
-service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." with nothing
-chosen; Allow lets it read every level, the private one included, Not my private mail leaves it at open, and the three levels
+service read your private mail, notes and calendar? It needs to, to find what you promised." (a plain yes or no, D1) with nothing
+chosen; Yes lets it read every level, the private one included, No leaves it at open, and the three levels
 stay under Advanced. A new account, and a backup in a chain, reads nothing private until that account has its own yes. A drawer in Settings starts a new account at open material too.
 **The yes is never skipped silently** (the UI/UX re-review of B-7, conditions on F25; B-8): it is asked in the step itself, right after
-the key check passes, and Continue stays disabled with its reason ("Choose Allow or Not my private mail above.") until it is answered. Not my private mail is
+the key check passes, and Continue stays disabled with its reason ("Choose Yes or No above.") until it is answered. A No is
 kept with the account (`ai.providers.<name>.work_data: not_now`, sent by the step as `work_data`), and an account in that state with
 no level above open has a Today line, **"Let <account> read your mail, notes and calendar, including private ones"**, with one button, Allow (`work_access`
 in the queue; 7.7). Allow is `POST /api/ai/accounts/{name}/allow-work`: one settings change that gives every level, the private one included (the yes the step asks), and clears the answer, with the read-back and Undo every settings change has. Allow changes what the account may read, not
@@ -4695,9 +4695,8 @@ on its record, through `view.knowledge`) reads them in its facts section, under 
 - **Who they are.** People shows one column with every relation the person has to someone, Personal first ("sister ·
   supplier at Hale Upholstery"); organization and role stay in the details. The shipped list keeps "customer", drops
   "client", and the person may type their own relation.
-- **Private material and the AI account.** Personal mail stays private. The AI step's Allow names what it covers ("may read
-  your mail, notes and calendar, including private ones"), with "Only what could be public" and "Not my private mail" one
-  click away. A new or fallback account reads nothing private until the person says yes for that account (F25).
+- **Private material and the AI account.** Personal mail stays private. The AI step asks it as a plain yes or no ("Can the AI service read your private mail,
+  notes and calendar?"), No leaving it at open material. A new or fallback account reads nothing private until the person says yes for that account (F25).
 
 **As built** (change log 234; the brief and the AI step's wording are other changes):
 - **Filing** (`engine/filing.py`, `engine/sides.py::file_by_people`, `api/records_routes.py`; `tests/test_filing_unsure.py`,

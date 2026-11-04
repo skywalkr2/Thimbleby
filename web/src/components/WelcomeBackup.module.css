@@ -1,0 +1,2 @@
+/* The backup form: its notice, its choices and its field stand a line apart. */
+.form { display: grid; gap: var(--space-4); min-width: 0; }

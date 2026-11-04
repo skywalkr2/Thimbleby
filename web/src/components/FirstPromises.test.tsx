@@ -73,7 +73,7 @@ describe("before the offer", () => {
     show(view({ stage: "no_mail" }), {}, go, handIn);
     expect(await screen.findByText(/hand it something to read/)).toBeInTheDocument();
     expect(screen.queryByText(/Connect your mail first/)).toBeNull();
-    const main = screen.getByRole("button", { name: "Hand something in to see what it does" });
+    const main = screen.getByRole("button", { name: "Hand something in" });
     const mail = screen.getByRole("button", { name: "Go to mail and calendar" });
     expect(main.className).toMatch(/_primary/);
     expect(mail.className).not.toMatch(/_primary/);

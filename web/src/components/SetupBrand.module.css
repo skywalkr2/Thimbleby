@@ -1,0 +1,6 @@
+/* The mark follows the theme; the star is a decoration in the brand's glyph colour, never text. */
+.brand { display: grid; justify-items: center; gap: var(--space-2); }
+.mark { width: 64px; height: 64px; }
+.markDay { display: var(--mark-day-display); }
+.markNight { display: var(--mark-night-display); }
+.glyph { color: var(--brand-glyph); font-size: var(--text-lg); line-height: 1; }

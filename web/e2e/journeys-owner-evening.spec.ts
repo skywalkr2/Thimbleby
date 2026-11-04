@@ -98,7 +98,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     // The model is picked for the person and never shown here; the account that is saved holds a usable one.
     await expect(main.getByLabel("AI model for everyday work")).toHaveCount(0);
     await expect(main.getByText(/no longer offered|has been deprecated/)).toHaveCount(0);
-    await main.getByRole("radio", { name: /^Allow/ }).check();
+    await main.getByRole("radio", { name: /^Yes/ }).check();
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
@@ -160,7 +160,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
     expect(await widerThanWindow(page, "Backups")).toEqual([]);
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
-    await main.getByRole("button", { name: "Back up now and continue" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
 
     // 5. People by relation.
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();

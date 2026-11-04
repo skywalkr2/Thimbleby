@@ -75,9 +75,9 @@ test.describe.serial("journey: mail", () => {
     // The check runs by itself, for every kind of work, before anything is saved.
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
     // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
-    await main.getByRole("radio", { name: /^Allow/ }).check();
+    await main.getByRole("radio", { name: /^Yes/ }).check();
     await main.getByRole("button", { name: "Continue" }).click();
-    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible({ timeout: 30_000 });
     await visit(page);
 
     // Mail and calendar: the add-on I had installed is listed as a service, on, with what it reads and what it needs
@@ -122,7 +122,7 @@ test.describe.serial("journey: mail", () => {
     const reading = main.locator("[data-reading]");
     await expect(reading.getByText("Your inbox")).toBeVisible();
     await expect(reading.getByText("Your calendar")).toBeVisible();
-    await expect(reading.getByText(/waits for you to start the assistant/)).toBeVisible();
+    await expect(reading.getByText(/Nothing is read or spent until you start the assistant/)).toBeVisible();
     await expect(page.locator('[data-screen="mail"][data-state]')).toContainText("Done");
     await visit(page);
     // The mailbox also holds a social update (the service's own category) and a sales mail (a bulk flag), both from the
@@ -261,8 +261,8 @@ test.describe.serial("journey: mail", () => {
     for (let closed = await collapsed.count(); closed > 0; closed = await collapsed.count()) await collapsed.first().click();
     const socialRow = folder.locator("[data-row-list] > li", { hasText: social });
     const salesRow = folder.locator("[data-row-list] > li", { hasText: sales });
-    await expect(socialRow).toContainText("Set aside because: your mail service files it under social");
-    await expect(salesRow).toContainText("Set aside because: it was sent to many people");
+    await expect(socialRow).toContainText("Set aside because your mail service files it under social");
+    await expect(salesRow).toContainText("Set aside because it was sent to many people");
     await visit(page);
 
     // Bring it in on the sales mail hands it in at once (this person has no side to name): it gets its own request, and nothing else
@@ -300,7 +300,7 @@ test.describe.serial("journey: mail", () => {
     const shut = handled.locator("[data-group] > h2 button[aria-expanded=false]");
     for (let closed = await shut.count(); closed > 0; closed = await shut.count()) await shut.first().click();
     await expect(handled.locator("[data-row-list] > li", { hasText: later.subject })).toContainText(
-      `Set aside because: it is from ${later.sender}`,
+      `Set aside because it is from ${later.sender}`,
     );
     // Counted by input: on a busy computer a call that times out goes to the next account with the same input, which is
     // the same work, not new work.

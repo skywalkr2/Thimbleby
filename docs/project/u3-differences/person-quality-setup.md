@@ -91,3 +91,18 @@ The unit tests for each piece are named in change log 317. The browser tests are
 the `people-records` project) and have not been run. Specs changed for the replaced layout: `web/e2e/journeys-new-start.spec.ts`
 ("Connect another account"). Tests changed: `Walkthrough.test.tsx` (the waiting banner's words, "Connect another account"),
 `PersonPage.test.tsx` (the primary, Edit on the card, "Last contact" in the card's head), `RecordPageRecords.test.tsx` (a gone person).
+
+## Setup's guide at the gate (G5c, change log 335): recorded differences and the rest of the comparison
+
+Compared with `setup-ai`, `setup-mail` and `setup-states` of the 4.6 mockups (captured with `visual:capture -- --pages setup-ai,setup-mail,setup-states --with-states`). The sample data differs from the mockups' and is not listed.
+
+| Page | Difference | Why it stays |
+|---|---|---|
+| setup-ai | The mockup's chosen card carries a check disc and a three-step checklist panel sits beside the key; the build's chosen card has the 2px ring and the tint, and the key's steps are four things to do, not to tick | D2 (owner, 2026-11-04): the ring and tint stay, the disc is the mockup's difference (tracking rows VC11, VS01) |
+| setup-mail | The mockup's header shows the mark and the product's name and "of 8" with a last step called Ready; the build's header says "Getting started", counts seven steps and calls the last row "Where things stand" (a star, no number) | The seven counted steps are the setup line's own count (design 7.8, X87); the product's name waits for phase I |
+| setup-mail | The mockup's account card has a "..." menu at its right; the build's card has none, only Sign in again when it needs it | Nothing in the menu is an action the person takes in setup (Settings, Connections has the account's menu) |
+| setup-mail | The mockup's footer keeps "I'll do this later" beside Continue once accounts are connected; the build shows Continue alone | Connected means the step is done, so there is nothing to put off (design 7.8) |
+| setup-mail | The mockup says "Connect each account you use. Then say which sides each one is for"; the build says the sides question only for a person who has a side beside Personal | A person with no business or job is never asked about sides |
+| setup-states | The mockup's states sheet draws each state in its own frame; the build's pictures are whole pages | The tool cuts the mockup's state out of the sheet; the states are the same |
+| People, job banner | The job banner under "A job" and the People rows were seen built and match the mockups' parts (the notice about reading work mail; a row of name, how they relate and Remove) | Compared, no difference to record |
+| setup-ai | The mockup's step title is the question ("Which AI should Reginald use?") with the mark and product name in the header and a "Recommended" tag at the card's right in the accent colour; the build's title is the step's name, the question is the group's heading, and the tag is a neutral outline above the card's title | The rail, the title and the tag follow the guide's own pattern on every step; the tag is neutral so a status colour never promotes a choice (G5c) |

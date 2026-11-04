@@ -86,11 +86,19 @@ async function startServer(servers: Servers, name: ServerName, offset: number): 
     const [app, fake, https] = [PORT_BASE + offset, PORT_BASE + 1 + offset, PORT_BASE + 2 + offset];
     const state = stateFolder(app);
     // The app first (it clears the state folder), then the stand-in services that read what it wrote there.
-    await servers.start("accounts-app", "tests.e2e_fresh_server", ["--port", String(app), "--state", state, "--https-port", String(https), "--mail", "--no-sent-mail"], `http://127.0.0.1:${app}/api/health`);
+    // The computer's home folder is a folder of the capture's own with one cloud drive's folder in it, so the backup step finds a drive
+    // as it does on a person's computer; the other servers keep the real home, where none is found.
+    const home = join(state, "..", `cockpit-visual-home-${app}`);
+    mkdirSync(join(home, "OneDrive"), { recursive: true });
+    await servers.start("accounts-app", "tests.e2e_fresh_server", ["--port", String(app), "--state", state, "--https-port", String(https), "--mail", "--no-sent-mail"], `http://127.0.0.1:${app}/api/health`, 120_000, { HOME: home });
     await servers.start("accounts-fake", "tests.fake_services", ["--port", String(fake), "--https-port", String(https), "--state", state, "--accounts", "3"], `http://127.0.0.1:${fake}/__e2e/info`);
     const fakeBase = `http://127.0.0.1:${fake}`;
     const info = (await (await fetch(`${fakeBase}/__e2e/info`)).json()) as { token: string };
-    return { running: { base: `http://127.0.0.1:${app}/`, token: info.token, fake: fakeBase, seed: {} }, cleanup: () => removeStateFolder(state) };
+    return { running: { base: `http://127.0.0.1:${app}/`, token: info.token, fake: fakeBase, seed: {} }, cleanup: () => {
+        removeStateFolder(state);
+        removeStateFolder(home);
+      },
+    };
   }
   if (name === "demo") {
     const demoPort = PORT_BASE + 5 + offset;

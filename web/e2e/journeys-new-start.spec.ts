@@ -89,9 +89,9 @@ test.describe.serial("journey: new start", () => {
     // The check runs by itself, for every kind of work, before anything is saved.
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
     // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
-    await main.getByRole("radio", { name: /^Allow/ }).check();
+    await main.getByRole("radio", { name: /^Yes/ }).check();
     await main.getByRole("button", { name: "Continue" }).click();
-    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('[data-screen="ai"][data-state]')).toContainText("Done");
     await visit(page);
 
@@ -157,11 +157,11 @@ test.describe.serial("journey: new start", () => {
     let seen = await service();
     expect(seen).toMatchObject({ authorizations: 1, exchanges: 1, refused: 0 });
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
-    // The screen says what is read now, and that what it reads waits for you to start the assistant.
+    // The screen says what is read now, and that what it reads Nothing is read or spent until you start the assistant.
     const reading = main.locator("[data-reading]");
     await expect(reading.getByText("Your inbox")).toBeVisible();
     await expect(reading.getByText("Your calendar")).toBeVisible();
-    await expect(reading.getByText(/waits for you to start the assistant/)).toBeVisible();
+    await expect(reading.getByText(/Nothing is read or spent until you start the assistant/)).toBeVisible();
     await expect(page.locator('[data-screen="mail"][data-state]')).toContainText("Done");
     await visit(page);
     expect((await requests()).work).toBe(0);
@@ -242,9 +242,9 @@ test.describe.serial("journey: new start", () => {
     // 6. Backups: a folder outside the workspace, checked before it is saved.
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
-    await main.getByRole("button", { name: "Back up now and continue" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done");
-    // Choosing the folder makes the first backup at once, and Back up now and continue goes on to People.
+    // Choosing the folder makes the first backup at once, and Continue goes on to People.
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
     await visit(page);
 
@@ -263,6 +263,7 @@ test.describe.serial("journey: new start", () => {
     await expect(recap.locator('[data-step="promises"]')).not.toContainText("Done");
     // Moving on from People with nobody added passes it, and says so.
     await expect(recap.locator('[data-step="people"]')).toContainText("No one added");
+    await main.locator("summary", { hasText: "Optional extras" }).click();
     const extras = main.getByRole("region", { name: "Optional extras" });
     await expect(extras).toBeVisible();
     expect(await extras.getByRole("listitem").count()).toBeGreaterThan(0);

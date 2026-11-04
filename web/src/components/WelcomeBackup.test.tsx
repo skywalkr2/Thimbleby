@@ -49,12 +49,12 @@ test("Check says in words whether the folder will do, and how much room it has",
   });
   open();
   await user.type(await folderBox(user), "/mnt/good");
-  await user.click(screen.getByRole("button", { name: "Check" }));
+  await user.tab();
   expect(await screen.findByText("That folder works. 12.0 GB free.")).toBeInTheDocument();
   await user.clear(screen.getByLabelText("Folder"));
   expect(screen.queryByText(/That folder works/)).toBeNull();
   await user.type(screen.getByLabelText("Folder"), "/mnt/bad");
-  await user.click(screen.getByRole("button", { name: "Check" }));
+  await user.tab();
   expect(await screen.findByText("That folder won't work: It is inside the workspace.")).toBeInTheDocument();
 });
 
@@ -105,7 +105,7 @@ test("an app that is not on this computer has no folder list to choose from", as
   api();
   open(false);
   await folderBox(user);
-  expect(screen.queryByRole("button", { name: "Choose…" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Choose a folder" })).toBeNull();
 });
 
 test("choosing a folder: open folders, go up, use the one shown, and it is checked", async () => {
@@ -124,7 +124,7 @@ test("choosing a folder: open folders, go up, use the one shown, and it is check
   });
   open();
   await folderBox(user);
-  const choose = await screen.findByRole("button", { name: "Choose…" });
+  const choose = await screen.findByRole("button", { name: "Choose a folder" });
   await user.click(choose);
   const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
   // The chooser opens at the home folder, named in words rather than by its address.
@@ -164,7 +164,7 @@ test("a folder that did not check out is not where the list starts", async () =>
   });
   open();
   await user.type(await folderBox(user), "/nowhere");
-  await user.click(screen.getByRole("button", { name: "Choose…" }));
+  await user.click(screen.getByRole("button", { name: "Choose a folder" }));
   // A folder that isn't a good one is not where the list starts.
   expect(await screen.findByText("Your home folder")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Go up one folder" })).toBeDisabled();
@@ -179,9 +179,9 @@ test("when a folder can't be listed the reason shows, and Start from the beginni
   });
   open();
   await user.type(await folderBox(user), "/gone");
-  await user.click(screen.getByRole("button", { name: "Check" }));
+  await user.tab();
   await screen.findByText(/That folder works/);
-  await user.click(screen.getByRole("button", { name: "Choose…" }));
+  await user.click(screen.getByRole("button", { name: "Choose a folder" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("That folder doesn't exist.");
   await user.click(screen.getByRole("button", { name: "Start from the beginning" }));
   expect(await screen.findByText("Your home folder")).toBeInTheDocument();
@@ -245,7 +245,7 @@ describe("the cloud drives found on this computer", () => {
     expect(screen.getByRole("radio", { name: /Choose another folder/ }).closest("label")).toHaveTextContent("a USB drive or a network folder");
     // The raw folder box and its buttons wait behind "Choose another folder".
     expect(screen.queryByLabelText("Folder")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Choose…" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Choose a folder" })).toBeNull();
   });
 
   test("Back up now makes the drive's folder, saves it and says where backups will go", async () => {
@@ -308,7 +308,7 @@ test("New folder makes a folder inside the one shown and goes into it", async ()
   });
   open();
   await folderBox(user);
-  await user.click(await screen.findByRole("button", { name: "Choose…" }));
+  await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
   const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
   await user.click(await within(dialog).findByRole("button", { name: "New folder" }));
   // The form the person opened has the cursor in its first field.
@@ -329,7 +329,7 @@ test("a refused folder (a system one) says why in the dialog", async () => {
   });
   open();
   await folderBox(user);
-  await user.click(await screen.findByRole("button", { name: "Choose…" }));
+  await user.click(await screen.findByRole("button", { name: "Choose a folder" }));
   const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
   await user.click(await within(dialog).findByRole("button", { name: "etc" }));
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("belongs to the computer itself");

@@ -5,12 +5,15 @@
 //    what index.md calls them.
 //  - `main` adds the 390-wide night picture; `widths` restricts an entry to the widths where it exists (the phone's More sheet).
 //  - A screen that can't be reached says why (`undrivable`, or a drive that throws Unreachable): it is listed, never skipped.
+import { tmpdir } from "node:os";
 import {
   api,
   go,
   goOffline,
   holdReads,
   open,
+  refuseReads,
+  refuseWrites,
   settle,
   Unreachable,
   type Env,
@@ -147,6 +150,57 @@ const filteredToNothing = (hash: string) => async (env: Env) => {
     await go(env, hash);
     await settle(env.page);
   }
+};
+
+
+/** The AI step's "Another service" form, filled in with the stand-in service's address and a made-up key. */
+async function fillAnotherService(env: Env): Promise<void> {
+  const main = env.page.locator("main#main, main");
+  await main.getByRole("radio", { name: /Something else/ }).check();
+  await main.getByRole("button", { name: /^Another service/ }).click();
+  await main.getByLabel(/^Another service/).check();
+  await main.locator("#ai-key").fill("a-made-up-key");
+  const address = main.getByRole("textbox", { name: "Service address" });
+  await address.fill(String(env.seed.aiBase));
+  await address.blur();
+}
+
+/** Setup's AI step done through the screen: the stand-in service accepted, the one yes given, then Continue. */
+async function chooseAiAccount(env: Env): Promise<void> {
+  await setupScreen(env, /^Your AI account/);
+  const main = env.page.locator("main#main, main");
+  // The same drive runs once for each size: an account chosen by the first run stays chosen.
+  if ((await env.page.locator('[data-screen="ai"][data-state="done"]').count()) > 0) return;
+  await fillAnotherService(env);
+  await env.page.getByText("Works. Ready to use.").waitFor({ timeout: 60_000 });
+  await main.getByRole("radio", { name: /^Yes/ }).check();
+  await main.getByRole("button", { name: "Continue" }).click();
+  await env.page.waitForTimeout(900);
+}
+
+/** One of the three lines under "Something else" opened: each asks for what it needs (a key and address, an app, a local address). */
+const elseLine = (name: RegExp) => async (env: Env) => {
+  await setupScreen(env, /^Your AI account/);
+  await env.page.locator("main").getByRole("radio", { name: /Something else/ }).check();
+  await env.page.getByRole("button", { name }).first().click();
+  await env.page.waitForTimeout(700);
+};
+
+/** The person's full name typed on the You step. */
+const typedName = (words: string) => async (env: Env) => {
+  await setupScreen(env, /^You/);
+  await env.page.getByLabel("Your full name").fill(words);
+  await env.page.waitForTimeout(500);
+};
+
+/** Backups: a folder typed into the box and left, so the step checks it. */
+const backupFolder = (path: string) => async (env: Env) => {
+  await setupScreen(env, /^Backups/);
+  const other = env.page.getByRole("radio", { name: /Choose another folder/ });
+  if ((await other.count()) > 0) await other.check();
+  await env.page.getByLabel("Folder", { exact: true }).fill(path);
+  await env.page.getByLabel("Folder", { exact: true }).blur();
+  await env.page.waitForTimeout(1200);
 };
 
 /** A step of the setup guide, opened from the list of steps (see pages.ts: the first screen is left through Start). */
@@ -1083,38 +1137,140 @@ function build(): Screen[] {
 
   // ---- Setup
   const step = (id: string, label: string, name: string | RegExp | null, where: Where): Screen => s("Setup", `setup-${id}`, `Setup, ${label}`, where, (env) => setupScreen(env, name), { main: id === "ai" || id === "mail" });
+  /** A name typed into the People step's add row, with the first way of relating chosen, and Add pressed. */
+  const addPerson = async (env: Env, name: string, pick = true) => {
+    const field = env.page.getByRole("textbox", { name: /^Name/ }).first();
+    if (!(await field.isVisible().catch(() => false))) throw new Unreachable("the People step has no Name box");
+    await field.fill(name);
+    const who = env.page.getByRole("combobox", { name: /Who they are/ }).first();
+    if (pick && (await who.count()) > 0) {
+      await who.click();
+      await env.page.getByRole("option").first().click();
+    }
+    await env.page.getByRole("button", { name: /^Add$/ }).first().click();
+    await env.page.waitForTimeout(700);
+  };
+  const inPeople = (more: (env: Env) => Promise<void>) => async (env: Env) => {
+    await setupScreen(env, /^People/);
+    await more(env);
+  };
+  // The key's answer by the stand-in AI service, held, refused or cut off, with the AI step's "Another service" form filled in.
+  const withKeyAnswer = (answer: (env: Env) => Promise<void>) => async (env: Env) => {
+    await setupScreen(env, /^Your AI account/);
+    await answer(env);
+    await fillAnotherService(env);
+    await env.page.waitForTimeout(1500);
+  };
+  const writesOnly = async (env: Env, handler: (route: Route) => Promise<void> | void) => {
+    await env.page.route("**/api/ai/**", (route) => (route.request().method() === "GET" ? route.fallback() : handler(route)));
+    env.undo.push(() => env.page.unroute("**/api/ai/**"));
+  };
+  const otherBase: Screen = { group: "Setup", page: "setup-ai-other", label: "Setup, Your AI account, Something else", ...FRESH, open: async () => undefined };
   add(
     step("welcome", "Welcome", null, FRESH),
-    step("you", "You", /^You/, FRESH),
-    step("work", "What it's for", /^What it's for/, FRESH),
-    step("ai", "Your AI account", /^Your AI account/, FRESH),
-    step("mail", "Mail and calendar", /^Mail and calendar/, SIGNED),
-    step("promises", "Your promises", /^Your promises/, FRESH),
-    // The step with an AI account chosen: the demo-like workspace of the sides server has one, so the step reads its promises.
-    state(step("promises", "Your promises", /^Your promises/, SEEDED), "Promises found", SEEDED, (env) => setupScreen(env, /^Your promises/)),
-    step("backup", "Backups", /^Backups/, FRESH),
-    // Added people shown as rows: the form is filled and sent three times (the empty form is the picture the step opens on).
-    s("Setup", "setup-people", "Setup, People", FRESH, async (env) => {
-      await setupScreen(env, /^People/);
-      for (const name of ["Pat Sample", "Robin Placeholder", "Sam Twin"]) {
-        const field = env.page.getByRole("textbox", { name: /^Name/ }).first();
-        if (!(await field.isVisible().catch(() => false))) throw new Unreachable("the People step has no Name box");
-        await field.fill(name);
-        const who = env.page.getByRole("combobox", { name: /Who they are/ }).first();
-        if ((await who.count()) > 0) {
-          await who.click();
-          await env.page.getByRole("option").first().click();
-        }
-        await env.page.getByRole("button", { name: /^Add$/ }).first().click();
-        await env.page.waitForTimeout(700);
-      }
+    state(step("welcome", "Welcome", null, FRESH), "Couldn't load", FRESH, async (env) => {
+      await open(env, "today");
+      await refuseReads(env, /\/api\/setup(\?.*)?$/, 500, "The setup couldn't be read.");
+      await env.page.goto("about:blank");
+      await env.page.goto(`${env.base}?token=${env.token}#setup`);
+      await env.page.waitForTimeout(1500);
     }),
-    step("done", "Done", /^(Done|Where things stand)/, FRESH),
+    step("you", "You", /^You/, FRESH),
+    state(step("you", "You", /^You/, FRESH), "Name typed", FRESH, typedName("Avery Lane")),
+    state(step("you", "You", /^You/, FRESH), "Needs a first and last name", FRESH, typedName("Avery")),
+    state(step("you", "You", /^You/, FRESH), "Not saved", FRESH, async (env) => {
+      await typedName("Avery Lane")(env);
+      await refuseWrites(env, 500, "The app couldn't write to its folder.");
+      await env.page.getByRole("button", { name: "Continue" }).click();
+      await env.page.waitForTimeout(900);
+    }),
+    step("work", "What it's for", /^What it's for/, FRESH),
+    state(step("work", "What it's for", /^What it's for/, FRESH), "A job ticked", FRESH, async (env) => {
+      await setupScreen(env, /^What it's for/);
+      await env.page.getByRole("checkbox", { name: "A job" }).check();
+      await env.page.waitForTimeout(600);
+    }),
+    state(step("work", "What it's for", /^What it's for/, FRESH), "A business ticked", FRESH, async (env) => {
+      await setupScreen(env, /^What it's for/);
+      await env.page.getByRole("checkbox", { name: "My own business" }).check();
+      await env.page.waitForTimeout(600);
+    }),
+    step("ai", "Your AI account", /^Your AI account/, FRESH),
+    state(step("ai", "Your AI account", /^Your AI account/, FRESH), "Checking the key", FRESH, withKeyAnswer((env) => writesOnly(env, () => new Promise<void>(() => undefined)))),
+    state(step("ai", "Your AI account", /^Your AI account/, FRESH), "Key not recognized", FRESH, withKeyAnswer((env) => writesOnly(env, (route) => route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "The service didn't recognize this key." }) })))),
+    state(step("ai", "Your AI account", /^Your AI account/, FRESH), "Service can't be reached", FRESH, withKeyAnswer((env) => writesOnly(env, (route) => route.abort("connectionrefused")))),
+    state(step("ai", "Your AI account", /^Your AI account/, FRESH), "Key accepted", FRESH, async (env) => {
+      await setupScreen(env, /^Your AI account/);
+      await fillAnotherService(env);
+      await env.page.getByText("Works. Ready to use.").waitFor({ timeout: 60_000 });
+    }),
     s("Setup", "setup-ai-other", "Setup, Your AI account, Something else", FRESH, async (env) => {
       await setupScreen(env, /^Your AI account/);
       await env.page.locator("main").getByRole("radio", { name: /Something else/ }).check();
       await env.page.waitForTimeout(700);
     }),
+    state(otherBase, "Another service", FRESH, elseLine(/^Another service/)),
+    state(otherBase, "An app you're signed in to", FRESH, elseLine(/^An app you're signed in to/)),
+    state(otherBase, "One on this computer", FRESH, elseLine(/^One on this computer/)),
+    step("mail", "Mail and calendar", /^Mail and calendar/, SIGNED),
+    state(step("mail", "Mail and calendar", /^Mail and calendar/, FRESH), "No account yet", FRESH, (env) => setupScreen(env, /^Mail and calendar/)),
+    state(step("mail", "Mail and calendar", /^Mail and calendar/, SIGNED), "A very long address", SIGNED, async (env) => {
+      // The third account's address is made long in what the screen reads, to see it kept to its card.
+      const long = `${"a-very-long-name-".repeat(4)}studio@example.com`;
+      const handler = async (route: Route) => {
+        if (route.request().method() !== "GET") return route.fallback();
+        const response = await route.fetch();
+        const text = (await response.text()).split(/avery\.lane\.studio@example\.com/).join(long);
+        return route.fulfill({ response, body: text });
+      };
+      await env.page.route("**/api/watch", handler);
+      env.undo.push(() => env.page.unroute("**/api/watch", handler));
+      await setupScreen(env, /^Mail and calendar/);
+    }),
+    step("promises", "Your promises", /^Your promises/, FRESH),
+    // The step with an AI account chosen and no mail read: the way on is handing something in or connecting mail.
+    state(step("promises", "Your promises", /^Your promises/, SEEDED), "No mail yet", SEEDED, (env) => setupScreen(env, /^Your promises/)),
+    // The step with both an AI account and mail that is read: the look back is set up, and what it finds waits on Today.
+    state(step("promises", "Your promises", /^Your promises/, SIGNED), "Promises found", SIGNED, async (env) => {
+      await chooseAiAccount(env);
+      // What the AI step kept is saved before the step is left for another; the screen asked for is then opened until it is the one showing.
+      await env.page.waitForTimeout(1500);
+      for (let tries = 0; tries < 3; tries += 1) {
+        await setupScreen(env, /^Your promises/);
+        if (await env.page.getByRole("heading", { level: 2, name: "Your promises" }).isVisible().catch(() => false)) break;
+      }
+    }),
+    step("backup", "Backups", /^Backups/, FRESH),
+    state(step("backup", "Backups", /^Backups/, SEEDED), "No cloud drive found", SEEDED, (env) => setupScreen(env, /^Backups/)),
+    state(step("backup", "Backups", /^Backups/, FRESH), "A folder that works", FRESH, backupFolder(tmpdir())),
+    state(step("backup", "Backups", /^Backups/, FRESH), "A folder that fails the check", FRESH, backupFolder("/this-folder-is-not-there-for-the-capture")),
+    // The first backup is made as the step is left; coming back shows where backups go and how the first one went.
+    state(step("backup", "Backups", /^Backups/, FRESH), "First backup made", FRESH, async (env) => {
+      await setupScreen(env, /^Backups/);
+      await env.page.getByRole("button", { name: "Continue" }).click();
+      await env.page.waitForTimeout(2500);
+      await setupScreen(env, /^Backups/);
+    }),
+    // The empty form is the picture the step opens on; the states after it add to the list in order.
+    step("people", "People", /^People/, FRESH),
+    state(step("people", "People", /^People/, FRESH), "Three people added", FRESH, inPeople(async (env) => {
+      for (const name of ["Pat Sample", "Robin Placeholder", "Sam Twin"]) await addPerson(env, name);
+    })),
+    state(step("people", "People", /^People/, FRESH), "A name already added", FRESH, inPeople((env) => addPerson(env, "Sam Twin"))),
+    state(step("people", "People", /^People/, FRESH), "A very long name", FRESH, inPeople((env) => addPerson(env, "Bartholomew Featherstonehaugh-Winterbottom"))),
+    state(step("people", "People", /^People/, FRESH), "Ten people", FRESH, async (env) => {
+      // The same drive runs once for each size: people made by the first run stay.
+      for (let n = 1; n <= 7; n += 1) await api(env.base, env.token, "people", { method: "POST", body: { full_name: `Person Number${"x".repeat(n)}` } }).catch(() => undefined);
+      await setupScreen(env, /^People/);
+    }),
+    state(step("people", "People", /^People/, FRESH), "A pasted list, to look over", FRESH, inPeople(async (env) => {
+      await env.page.getByRole("button", { name: "Paste a list" }).click();
+      await env.page.getByRole("textbox", { name: /One name per line/ }).fill("Quinn Example, my cousin\nMorgan Placeholder <morgan@example.com>\nnot a person line ???");
+      await env.page.getByRole("button", { name: /^Show/ }).click();
+      await env.page.waitForTimeout(900);
+    })),
+    step("done", "Done", /^(Done|Where things stand)/, FRESH),
+    state(step("done", "Done", /^(Done|Where things stand)/, { server: "clear", stage: "done" }), "Everything set up", { server: "clear", stage: "done" }, (env) => setupScreen(env, /^(Done|Where things stand)/)),
     state(step("mail", "Mail and calendar", /^Mail and calendar/, SIGNED), "One account needs sign-in", { server: "accounts", stage: "failing" }, (env) => setupScreen(env, /^Mail and calendar/)),
   );
 

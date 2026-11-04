@@ -1,5 +1,5 @@
 // The backup step of the setup guide (design 7.8): the cloud drives found on the computer, by name, with the first
-// recommended; "Back up now and continue" makes the folder inside the drive, saves it and makes the first backup. Another
+// recommended; "Continue" makes the folder inside the drive, saves it and makes the first backup. Another
 // folder (a USB drive, a network folder) is a path behind "Choose another folder", checked before it is saved. On the
 // person's own computer that folder can be picked from a list.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 import { folderName } from "../lib/backup";
 import { RadioCard, RadioCards } from "../ui/RadioCard";
+import styles from "./WelcomeBackup.module.css";
 
 /** The choice that is not one of the drives found: a folder of the person's own. */
 const OTHER = "\u0001other";
@@ -165,6 +166,7 @@ export function WelcomeBackup(props: {
         </div>
       )}
       <form
+        className={styles.form}
         onSubmit={(e) => {
           e.preventDefault();
         }}
@@ -173,7 +175,7 @@ export function WelcomeBackup(props: {
           <CheckboxGroup legend={t("welcome.backup.where")}>
             <RadioCards>
             {found.map((drive) => (
-              <RadioCard key={drive.name} name="backup-where" checked={picked === drive.name} onChange={() => setChoice(drive.name)} title={drive.name} description={drives.data?.shown} tag={drive.recommended && <Pill tone="ok" >{t("welcome.ai.recommended")}</Pill>} />
+              <RadioCard key={drive.name} name="backup-where" checked={picked === drive.name} onChange={() => setChoice(drive.name)} title={drive.name} description={drives.data?.shown} tag={drive.recommended && <Pill>{t("welcome.ai.recommended")}</Pill>} />
             ))}
             <RadioCard name="backup-where" checked={ownFolder} onChange={() => setChoice(OTHER)} title={t("welcome.backup.other")} description={t("welcome.backup.other_note")} />
             </RadioCards>
@@ -191,14 +193,21 @@ export function WelcomeBackup(props: {
                   value={path}
                   autoComplete="off"
                   aria-describedby="backup-path-hint"
+                  // The folder is checked as soon as the person leaves the box (or presses Enter), with the result in words under it.
+                  onBlur={() => {
+                    if (path.trim() && !checked) void check(path.trim());
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && path.trim()) {
+                      e.preventDefault();
+                      void check(path.trim());
+                    }
+                  }}
                   onChange={(e) => {
                     setPath(e.target.value);
                     setChecked(null);
                   }}
                 />
-                <Button disabled={!path.trim()} onClick={() => void check(path.trim())}>
-                  {t("welcome.backup.check")}
-                </Button>
                 {props.local && (
                   <Button ref={chooser} onClick={() => setPicking(true)}>
                     {t("welcome.backup.choose")}

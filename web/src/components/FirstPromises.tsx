@@ -12,6 +12,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { FormBlock } from "../ui/FormBlock";
 import { Actions } from "../ui/Actions";
 import { Skeleton } from "../ui/Skeleton";
+import styles from "./FirstPromises.module.css";
 
 type Result = S["FirstPromisesView"];
 
@@ -35,6 +36,7 @@ function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: ()
   const { t } = useWords();
   switch (props.data.stage) {
     case "no_ai":
+      // What to do first is the one filled button here; Continue beside it is the quiet weight.
       return <Needs text={t("walkthrough.promises.no_ai")} label={t("walkthrough.promises.to_ai")} run={() => props.go("ai")} />;
     case "no_mail":
       // With no mail read there is nothing to look back over: handing something in is the way to see what the assistant
@@ -42,12 +44,12 @@ function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: ()
       return (
         <FormBlock data-first-promises="needs">
           <OwnPrimary />
-          <p>{t("walkthrough.promises.no_mail")}</p>
-          <Actions align="end">
-            <Button onClick={() => props.go("mail")}>{t("walkthrough.promises.to_mail")}</Button>
+          <p className={styles.action}>{t("walkthrough.promises.no_mail")}</p>
+          <Actions>
             <Button variant="primary" onClick={props.onHandIn}>
               {t("walkthrough.promises.none_hand_in")}
             </Button>
+            <Button onClick={() => props.go("mail")}>{t("walkthrough.promises.to_mail")}</Button>
           </Actions>
         </FormBlock>
       );
@@ -64,9 +66,12 @@ function Stage(props: { data: Result; go: (screen: Screen) => void; onHandIn: ()
 function Needs(props: { text: string; label: string; run: () => void }) {
   return (
     <FormBlock data-first-promises="needs">
-      <p>{props.text}</p>
-      <Actions align="end">
-        <Button onClick={props.run}>{props.label}</Button>
+      <OwnPrimary />
+      <p className={styles.action}>{props.text}</p>
+      <Actions>
+        <Button variant="primary" onClick={props.run}>
+          {props.label}
+        </Button>
       </Actions>
     </FormBlock>
   );

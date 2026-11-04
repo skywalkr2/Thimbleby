@@ -19,7 +19,7 @@ function SignInAgain(props: { account: AccountState }) {
   const { item, start, busy } = useSignInAgain(props.account);
   if (!item) return null;
   return (
-    <Button size="sm" variant="primary" disabled={busy || !item.ready} aria-label={t("sign_in.sign_in_again_account", { account: props.account.name })} onClick={() => void start()}>
+    <Button size="sm" variant="secondary" disabled={busy || !item.ready} aria-label={t("sign_in.sign_in_again_account", { account: props.account.name })} onClick={() => void start()}>
       {t("account.sign_in_again")}
     </Button>
   );
@@ -37,6 +37,8 @@ export function SetupAccountRow(props: {
   need?: AccountState;
   /** The editor for who it is for; none when the person has no sides to pick from. */
   sidesEditor?: ReactNode;
+  /** The service and how private it is are said once above the rows (several accounts of one service, all at one level), so a row says only its own. */
+  grouped?: boolean;
 }) {
   const { t } = useWords();
   const words = useAccountWords();
@@ -61,7 +63,7 @@ export function SetupAccountRow(props: {
         </span>
         <span className="account-state">
           <span className="meta-line">
-            <span>{props.service}</span>
+            {!props.grouped && <span>{props.service}</span>}
             {props.need ? (
               <StateMark tone={props.need.tone}>{words(props.need)}</StateMark>
             ) : (
@@ -70,7 +72,7 @@ export function SetupAccountRow(props: {
                 <span>{t("walkthrough.mail.account.connected")}</span>
               </span>
             )}
-            {level && (
+            {level && !props.grouped && (
               <span className={styles.privacy} title={first ? privacyFact(first, t) : undefined}>
                 {level === "restricted" ? t("walkthrough.mail.account.private") : t(`sources.level.${level}`)}
               </span>

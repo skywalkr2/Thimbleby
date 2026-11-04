@@ -42,6 +42,12 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Why:** the cold scorers named these on each screen. **Impact:** `api/routes.py`, `api/quality_routes.py`, `engine/handled.py`, `engine/worker.py`, `engine/config/schema.py` (`ui.handled_group` gains `account`), the screens named in section 331, `web/visual/`.
 
+## 2026-11-04: Setup's guide at the gate, batch G5c of the fix round (section 335)
+
+**Decided:** (main session's brief, within the owner's D1, D2 and D7; no new owner choice.) Welcome and the last screen carry the brand (the mark, the star, the display-face heading, "A little more room to think."), with Start under Welcome's numbered needs and no footer there. The wizard frame is one grid (header, rail, column, footer); a waiting primary's reason stands above the buttons; the summary row has a star, not a number. Setup's privacy question is "Can {assistant}'s AI service read your private mail, notes and calendar?" with Yes and No (D1); Hand-in's "Normal" reads Open; no stored value is renamed. The AI step's chosen card keeps the ring and tint (D2); the mockup's disc stays a recorded difference. The Backups step checks a folder when the box is left (no Check button). The last screen folds the optional extras and has one filled button. Not done and why: the three-promises preview on Your promises (the owner's lines are needed), a disabled primary drawn as a faded filled button (the shared rule is G1b's), X101 (a folder list while adding needs a plugin API marker for "this setting is a folder").
+
+**Why:** the cold scores of every setup step were under 4.0. **Impact:** `web/src/components/Walkthrough*.tsx`, `Welcome*.tsx`, `FirstPromises.tsx`, `RenameName.tsx`, `SetupBrand.tsx`, `TickCard.tsx`, `ui/Wizard.*`, the wording sheet, `web/visual/`, design 7.8 and 6.16. Change log: section 335.
+
 ## 2026-11-04: The shared parts at the gate, batch G1b of the fix round (section 334)
 
 **Decided:** (main session's brief, from the gate's cold scores; no owner choice needed.) Each fault named on many screens is fixed once in the shared part:

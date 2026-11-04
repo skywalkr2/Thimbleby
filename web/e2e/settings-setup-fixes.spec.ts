@@ -69,7 +69,7 @@ test.describe.serial("setup and settings fixes", () => {
     await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.getByRole("textbox", { name: "Service address" }).blur();
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
-    await main.getByRole("radio", { name: /^Allow/ }).check();
+    await main.getByRole("radio", { name: /^Yes/ }).check();
     await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
 
@@ -92,9 +92,9 @@ test.describe.serial("setup and settings fixes", () => {
     // folder, and refuses the computer's own folders in words.
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
-    await main.getByRole("button", { name: "Check", exact: true }).click();
+    await main.getByLabel("Folder", { exact: true }).blur();
     await expect(main.getByText(/That folder works/)).toBeVisible();
-    await main.getByRole("button", { name: "Choose…" }).click();
+    await main.getByRole("button", { name: "Choose a folder" }).click();
     const dialog = page.getByRole("dialog", { name: "Choose a folder" });
     await expect(dialog.getByRole("navigation", { name: "Where you are" })).toBeVisible(LOADED);
     await expect(dialog.getByRole("navigation", { name: "Where you are" }).getByRole("listitem").last()).toHaveAttribute("aria-current", "location").catch(() => undefined);
@@ -107,10 +107,10 @@ test.describe.serial("setup and settings fixes", () => {
     await expect(main.getByLabel("Folder", { exact: true })).toHaveValue(/Made in the chooser$/);
     // A folder the computer keeps for itself is refused with a plain reason, in the check and in the chooser's list.
     await main.getByLabel("Folder", { exact: true }).fill("/etc");
-    await main.getByRole("button", { name: "Check", exact: true }).click();
+    await main.getByLabel("Folder", { exact: true }).blur();
     await expect(main.getByText(/belongs to the computer itself/)).toBeVisible();
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
-    await main.getByRole("button", { name: "Back up now and continue" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done");
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
     await main.getByRole("button", { name: "I'll do this later" }).click();
@@ -140,7 +140,7 @@ test.describe.serial("setup and settings fixes", () => {
     expect(made.ok()).toBe(true);
     await where.getByRole("button", { name: /Use this folder for backups/ }).first().click();
     await expect(folders).toHaveCount(1, LOADED);
-    await expect(folders.first()).toContainText("second");
+    await expect(folders.first()).toContainText("second", LOADED);
     // Every copy is listed once.
     const copies = main.getByRole("list", { name: "Copies you can restore from" });
     const paths = await copies.getByRole("listitem").allTextContents();

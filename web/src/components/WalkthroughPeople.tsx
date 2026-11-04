@@ -20,6 +20,9 @@ import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
 import { FormBlock } from "../ui/FormBlock";
 import { Actions } from "../ui/Actions";
+import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
+import { useContinue } from "../lib/walkthrough-continue";
 const RELATIONS = [
   "partner",
   "parent",
@@ -266,7 +269,7 @@ function PasteList(props: { place: Place; sided: boolean }) {
     <FormBlock data-paste-list="">
       {!open && (
         <div>
-          <button type="button" className="link-button" aria-expanded={false} onClick={() => setOpen(true)}>
+          <button type="button" className={styles.pasteLink} aria-expanded={false} onClick={() => setOpen(true)}>
             {t("walkthrough.people.paste.open")}
           </button>
         </div>
@@ -340,20 +343,27 @@ function Listed(props: { whose: Whose; title: string; people: S["PersonView"][] 
   return (
     <section aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`}>{props.title}</h3>
-      <ul>
-        {props.people.map((p) => (
-          <li key={p.id}>
-            {p.name}
-            {(personal ? p.relation : p.role) && <span className="hint"> · {personal ? p.relation : p.role}</span>}
-            {!(personal ? p.relation : p.role) && (
-              <HowSet person={p} group={personal ? "relation" : "role"} options={personal ? RELATIONS : ROLES[props.whose.kind as "job" | "business"]} />
-            )}{" "}
-            <Button size="sm" aria-label={t("walkthrough.people.remove_named", { name: p.name })} onClick={() => remove(p)}>
-              {t("setup.remove")}
-            </Button>
-          </li>
-        ))}
-      </ul>
+      <RowList>
+        {props.people.map((p) => {
+          const how = personal ? p.relation : p.role;
+          return (
+            <Row
+              key={p.id}
+              loop={false}
+              title={p.name}
+              meta={how || undefined}
+              actions={
+                <span className={styles.rowActs}>
+                  {!how && <HowSet person={p} group={personal ? "relation" : "role"} options={personal ? RELATIONS : ROLES[props.whose.kind as "job" | "business"]} />}
+                  <Button variant="quiet" size="sm" aria-label={t("walkthrough.people.remove_named", { name: p.name })} onClick={() => remove(p)}>
+                    {t("setup.remove")}
+                  </Button>
+                </span>
+              }
+            />
+          );
+        })}
+      </RowList>
     </section>
   );
 }
@@ -416,7 +426,12 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
     >
       <div className={styles.addRow}>
         <FormField id={`${id}-name`} label={t("walkthrough.people.name")}>
-          <input id={`${id}-name`} type="text" value={name} autoComplete="off" onChange={(e) => setName(e.target.value)} />
+          <input id={`${id}-name`} type="text" value={name} autoComplete="off" aria-describedby={problem ? `${id}-problem` : undefined} onChange={(e) => setName(e.target.value)} />
+          {problem && (
+            <p className="problem-note" id={`${id}-problem`} role="alert">
+              {problem}
+            </p>
+          )}
         </FormField>
         <FormField id={`${id}-how`} label={t("walkthrough.people.who")}>
           <Select id={`${id}-how`} value={pick} onChange={(e) => setPick(e.target.value)}>
@@ -450,20 +465,18 @@ function AddRow(props: { place: Place; places: Place[]; sided: boolean; onPlace:
           </Button>
         </div>
       </div>
-      {problem && (
-        <p className="problem-note" role="alert">
-          {problem}
-        </p>
-      )}
     </form>
   );
 }
 
-export function WalkthroughPeople() {
+export function WalkthroughPeople(props: { done?: boolean } = {}) {
   const { t } = useWords();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const business = useQuery({ queryKey: ["business"], queryFn: api.business });
   const [where, setWhere] = useState(PERSONAL_KEY);
+  // With no one added, going on says what it does: it passes the step by.
+  const nobody = (people.data ?? []).filter((p) => !p.is_pm && p.status === "active").length === 0;
+  useContinue({ run: async () => true, label: nobody && !props.done ? t("walkthrough.people.skip_for_now") : undefined });
   if (!people.data) return people.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton rows={2} />;
   const others = people.data.filter((p) => !p.is_pm && p.status === "active");
   const listed = business.data?.sides ?? [];
@@ -494,6 +507,7 @@ export function WalkthroughPeople() {
       ))}
       <AddRow place={place} places={places} sided={sided} onPlace={setWhere} />
       <PasteList place={place} sided={sided} />
+      <p className="hint">{t("walkthrough.people.skip_rule")}</p>
     </>
   );
 }

@@ -11,6 +11,8 @@ from engine.config import load_config
 from engine.storage import Store
 from tests.test_sign_in import SIGNING
 from tests.test_sign_in import signing as signing  # noqa: F401 - the fixture
+from tests.test_sign_in_accounts import inboxes, world  # noqa: F401 - the fixture
+from tests.test_sign_in_accounts import sign_in as sign_in_account
 from tests.test_sign_in_sources import _app, _with_sources, sign_in, sources
 
 WORDS = json.loads((Path(__file__).parents[1] / "web" / "src" / "wording" / "en.json").read_text("utf-8"))
@@ -145,3 +147,29 @@ def test_a_folder_with_a_slash_or_spaces_at_the_end_is_the_same_folder(signing):
         again = _add(c, api, ws, spelled, label="Archive once more")
         assert again.status_code == 400 and "Another folder" in again.json()["detail"], spelled
     assert len(sources(ws)) == before
+
+
+def test_with_three_accounts_the_refusal_names_the_account_that_reads_the_folder(world):  # noqa: F811
+    ws, c, api = world
+    addresses = [f"{name}@example.com" for name in ("alice", "bob", "carol")]
+    for name in ("alice", "bob", "carol"):
+        sign_in_account(c, api, name)
+    held = inboxes(ws)
+    assert sorted(held) == sorted(addresses)
+    for address in addresses:
+        refused = c.post(
+            f"{api}/watch/sources",
+            json={
+                "connector": "p18/inbox",
+                "label": "Inbox again",
+                "every_minutes": 15,
+                "account": address,
+                "settings": {"folder": "INBOX"},
+                "fingerprint": c.get(f"{api}/settings").json()["fingerprint"],
+            },
+        )
+        assert refused.status_code == 400, refused.text
+        # The refusal names the source of that account, never another account's.
+        assert refused.json()["detail"] == ADVICE["sources.refuse.same_folder"].format(label=held[address]["label"])
+        assert address in held[address]["label"]
+        assert all(other not in refused.json()["detail"] for other in addresses if other != address)

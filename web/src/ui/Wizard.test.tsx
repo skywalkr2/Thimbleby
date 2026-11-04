@@ -61,3 +61,19 @@ test("the eyebrow says where the step is", () => {
   frame();
   expect(screen.getByText("Step 2 of 4")).toBeInTheDocument();
 });
+
+test("the open step says no status of its own, and the summary row shows a star where the others show their number (G5c)", () => {
+  const rail: RailStep[] = [
+    { id: "a", label: "A step", state: "skipped", stateWords: "Skipped", doneWords: "Done", current: true, hereWords: "You are here" },
+    { id: "b", label: "Another step", state: "skipped", stateWords: "Skipped", doneWords: "Done", current: false, hereWords: "You are here" },
+    { id: "sum", label: "Where things stand", state: null, doneWords: "Done", current: false, hereWords: "You are here", numbered: false },
+  ];
+  render(<WizardRail label="Steps" place="Step 1" stepsLabel="Steps" open onToggle={() => undefined} listId="steps" steps={rail} onGo={() => undefined} toggle={null} />);
+  const buttons = screen.getAllByRole("button");
+  // A skipped step that is open is not called skipped beside its own heading; the one that is not open still is.
+  expect(buttons[0]).not.toHaveTextContent("Skipped");
+  expect(buttons[1]).toHaveTextContent("Skipped");
+  // The summary has no number: a star, so the numbers are the counted steps.
+  expect(buttons[2].textContent).toContain("✳");
+  expect(buttons[2].textContent).not.toMatch(/3/);
+});

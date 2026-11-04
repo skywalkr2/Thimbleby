@@ -168,11 +168,46 @@ test.describe("A person's page, Quality and setup to the 4.6 mockups", () => {
     const column = (await page.locator("main#main").boundingBox())!;
     const footer = page.locator("[data-step-footer]");
     const back = (await footer.getByRole("button", { name: "Back" }).boundingBox())!;
-    // The last thing in the row is the primary button, with its reason beside it when it is disabled (so it is the group, not
-    // the button alone, that stands on the column's right edge).
-    const last = (await footer.locator("> div > div > *").last().boundingBox())!;
+    // The last thing in the row is the primary button; its reason, while it waits, is a line of its own above the buttons (G5c).
+    const last = (await footer.getByRole("button").last().boundingBox())!;
+    const reason = footer.locator("p").first();
+    await expect(reason).toBeVisible();
+    const said = (await reason.boundingBox())!;
+    expect(said.y + said.height).toBeLessThanOrEqual(last.y + 1);
     expect(Math.abs(back.x - column.x)).toBeLessThanOrEqual(2);
     expect(Math.abs(last.x + last.width - (column.x + column.width))).toBeLessThanOrEqual(2);
+  });
+
+  test("the guide's header stands on the rail's and the column's edges, its way out is a link that underlines when pointed at, and the choices under Something else have no rule (G5c)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openAiStep(page);
+    const title = (await page.getByRole("heading", { level: 1, name: "Getting started" }).boundingBox())!;
+    const rail = (await page.getByRole("navigation", { name: /steps/i }).boundingBox())!;
+    const column = (await page.locator("main#main").boundingBox())!;
+    const later = page.getByRole("button", { name: "Finish later" });
+    const out = (await later.boundingBox())!;
+    expect(Math.abs(title.x - rail.x)).toBeLessThanOrEqual(2);
+    // The button has a little padding of its own inside the column's edge.
+    expect(column.x + column.width - (out.x + out.width)).toBeLessThanOrEqual(16);
+    await later.hover();
+    expect(await later.evaluate((el) => getComputedStyle(el).textDecorationLine)).toContain("underline");
+    await page.locator("main").getByRole("radio", { name: /Something else/ }).check();
+    const list = page.locator(".else-list");
+    await expect(list).toBeVisible(LOADED);
+    expect(await list.evaluate((el) => getComputedStyle(el).borderLeftWidth)).toBe("0px");
+  });
+
+  test("on a phone the last choice under Something else is clear of the footer bar, and the bar is two rows (G5c)", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openAiStep(page);
+    await page.locator("main").getByRole("radio", { name: /Something else/ }).check();
+    await page.getByRole("button", { name: /^One on this computer/ }).waitFor(LOADED);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const last = (await page.getByRole("button", { name: /^One on this computer/ }).boundingBox())!;
+    const bar = (await page.locator("[data-step-footer]").boundingBox())!;
+    expect(last.y + last.height).toBeLessThanOrEqual(bar.y);
+    // The reason on a line, then Back, the later choice and the primary in one row: no more than 110px of the window.
+    expect(bar.height).toBeLessThanOrEqual(110);
   });
 
   for (const width of WIDTHS) {

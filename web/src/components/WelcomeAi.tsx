@@ -771,7 +771,7 @@ export function WelcomeAi(props: {
       value={e.id}
       checked={kindId === e.id && !usingFound}
       onChange={() => choose(e.id)}
-      tag={e.recommended ? <Pill tone="ok">{t("welcome.ai.recommended")}</Pill> : undefined}
+      tag={e.recommended && guide ? <Pill>{t("welcome.ai.recommended")}</Pill> : undefined}
       title={e.name}
       description={e.summary || e.note || undefined}
     />
@@ -1096,7 +1096,6 @@ export function WelcomeAi(props: {
           }}
         >
           <CheckboxGroup legend={t("welcome.ai.kind")}>
-            {guide && <p className="hint">{t("welcome.ai.intro", { amount: credit ?? "" })}</p>}
             {gated && (
               <RadioCards ref={firstKind} className="cards-three">
                 {featured.map((e) => kindChoice(e))}
@@ -1105,7 +1104,9 @@ export function WelcomeAi(props: {
             )}
             {elseShown && gated && (
               <div className="else-list">
-                <p className="hint">{t("welcome.ai.else_technical")}</p>
+                <p className="hint" data-technical-note="">
+                  <Icon name="help" size={14} /> <strong>{t("welcome.ai.else_technical_label")}</strong> {t("welcome.ai.else_technical")}
+                </p>
                 {elseGroups.map((g) => (
                   <div key={g.id} className="else-group" data-group={g.id}>
                     <button

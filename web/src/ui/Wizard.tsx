@@ -12,11 +12,14 @@ export function WizardShell(props: { title: ReactNode; titleId?: string; intro?:
   return (
     <div className={styles.root} data-wizard="" data-walkthrough={props["data-walkthrough"]}>
       <header className={styles.head}>
-        <div className={styles.title}>
-          <h1 id={props.titleId}>{props.title}</h1>
-          {props.intro && <p className={styles.intro}>{props.intro}</p>}
+        {/* The header's content stands on the same grid as the rail and the column below it: its title on the rail's edge, the way to finish later on the column's. */}
+        <div className={styles.headInner}>
+          <div className={styles.title}>
+            <h1 id={props.titleId}>{props.title}</h1>
+            {props.intro && <p className={styles.intro}>{props.intro}</p>}
+          </div>
+          <div className={styles.headActions}>{props.headAction}</div>
         </div>
-        <div className={styles.headActions}>{props.headAction}</div>
       </header>
       <div className={styles.banner}>{props.banner}</div>
       <div className={styles.layout} data-no-rail={props.rail ? undefined : ""}>
@@ -38,6 +41,8 @@ export interface RailStep {
   current: boolean;
   /** "You are here", said to a screen reader on the open step. */
   hereWords: string;
+  /** False for the summary row, which is no step: it shows the star instead of a number, so the numbers are the counted steps. */
+  numbered?: boolean;
 }
 
 /** The steps as a rail: a circle for each (a check once done), its name, and the exception in words. */
@@ -53,14 +58,14 @@ export function WizardRail(props: { label: string; place: ReactNode; stepsLabel:
           <li key={step.id}>
             <button type="button" className={styles.stepButton} data-screen={step.id} data-state={step.state ?? undefined} aria-current={step.current ? "step" : undefined} onClick={() => props.onGo(step.id)}>
               <span className={styles.circle} data-state={step.state ?? undefined} aria-hidden="true">
-                {step.state === "done" ? <Icon name="check" size={12} /> : step.state === "skipped" ? <Icon name="minus" size={12} /> : <span className={styles.numeral}>{index + 1}</span>}
+                {step.state === "done" ? <Icon name="check" size={12} /> : step.state === "skipped" ? <Icon name="minus" size={12} /> : step.numbered === false ? <span className={styles.star}>✳</span> : <span className={styles.numeral}>{index + 1}</span>}
               </span>
               <span className={styles.label}>
                 <span>{step.label}</span>
                 {step.current && <span className="sr">{step.hereWords}</span>}
               </span>
               {step.state === "done" && <span className="sr">{step.doneWords}</span>}
-              {step.state === "skipped" && step.stateWords && <span className={styles.exception}>{step.stateWords}</span>}
+              {step.state === "skipped" && step.stateWords && !step.current && <span className={styles.exception}>{step.stateWords}</span>}
             </button>
           </li>
         ))}
@@ -71,17 +76,21 @@ export function WizardRail(props: { label: string; place: ReactNode; stepsLabel:
 
 /** The open step: "Step 3 of 7", its title, its explanation under the title, its body, and the footer. */
 export function WizardStep(props: {
+  /** The brand moment of a first or last screen: the mark, set above a centred heading in the display face. */
+  brand?: ReactNode;
   eyebrow?: ReactNode;
   title: ReactNode;
   titleId: string;
   titleRef?: Ref<HTMLHeadingElement>;
-  explanation: ReactNode;
+  explanation?: ReactNode;
   screen: string;
   children: ReactNode;
-  footer: ReactNode;
+  /** No footer: the screen carries its own one button (Welcome). */
+  footer?: ReactNode;
 }) {
   return (
-    <main id="main" className={styles.step} tabIndex={-1} aria-labelledby={props.titleId} data-screen={props.screen}>
+    <main id="main" className={styles.step} tabIndex={-1} aria-labelledby={props.titleId} data-screen={props.screen} data-brand={props.brand ? "" : undefined}>
+      {props.brand}
       {props.eyebrow && (
         <GroupLabel as="p" className={styles.eyebrow} style={{ padding: 0 }}>
           {props.eyebrow}
@@ -90,7 +99,7 @@ export function WizardStep(props: {
       <h2 id={props.titleId} ref={props.titleRef} tabIndex={-1} className={styles.stepTitle}>
         {props.title}
       </h2>
-      <p className={styles.explanation}>{props.explanation}</p>
+      {props.explanation && <p className={styles.explanation}>{props.explanation}</p>}
       <div className={styles.body}>{props.children}</div>
       {props.footer}
     </main>

@@ -104,7 +104,7 @@ test("the choice can be made from the keyboard", async () => {
 test("how sensitive it is starts at the usual and sends nothing about it", async () => {
   const { user, calls } = await setup();
   expect(screen.getByLabelText("Who may see this?")).toHaveValue("");
-  expect(within(await snapshotOf(screen.getByLabelText("Who may see this?"))).getByRole("option", { name: "Normal" })).toBeTruthy();
+  expect(within(await snapshotOf(screen.getByLabelText("Who may see this?"))).getByRole("option", { name: "Open" })).toBeTruthy();
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "", pasted: "Subject: dates" }));
@@ -115,7 +115,7 @@ test("Confidential and Private are sent as the level the person chose, in plain 
   const { user, calls } = await setup();
   const choice = screen.getByLabelText("Who may see this?");
   expect(within(await snapshotOf(choice)).getAllByRole("option").map((o) => o.textContent)).toEqual([
-    "Normal",
+    "Open",
     "Confidential",
     "Private",
   ]);

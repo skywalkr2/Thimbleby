@@ -10,6 +10,7 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
+import styles from "./RenameName.module.css";
 
 export function RenameName(props: {
   /** The text setting that holds the name. */
@@ -23,6 +24,8 @@ export function RenameName(props: {
   cancel: string;
   /** Said beside a disabled Save when the field is empty. */
   blank: string;
+  /** The sentence already says what the name is, so no label is written above it. */
+  sentenceOnly?: boolean;
 }) {
   const { t } = useWords();
   const client = useQueryClient();
@@ -66,13 +69,16 @@ export function RenameName(props: {
 
   if (!editing) {
     return (
-      <div className="rename-line">
-        <span>{props.sentence(name)}</span>{" "}
-        {!locked && (
-          <Button size="sm" onClick={() => setDraft(name)}>
-            {props.rename}
-          </Button>
-        )}
+      <div className={`rename-line ${styles.line}`}>
+        {!props.sentenceOnly && <p className="what">{props.label}</p>}
+        <p className={styles.said}>
+          <span>{props.sentence(name)}</span>{" "}
+          {!locked && (
+            <Button size="sm" onClick={() => setDraft(name)}>
+              {props.rename}
+            </Button>
+          )}
+        </p>
       </div>
     );
   }

@@ -31,8 +31,10 @@ import { WelcomeBackup } from "./WelcomeBackup";
 import { StepFooter, WizardRail, WizardShell, WizardStep, type RailStep } from "../ui/Wizard";
 import styles from "./Walkthrough.module.css";
 import { Icon } from "../ui/Icon";
+import { StateMark } from "../ui/StateMark";
+import { SetupBrand } from "./SetupBrand";
 
-import { EmptyState } from "../ui/EmptyState";
+import { LoadFailed } from "../ui/LoadFailed";
 export interface Handlers {
   onOpenPeople: () => void;
   onOpenAddons: () => void;
@@ -158,7 +160,7 @@ export function Walkthrough(
   if (!data || !current) {
     return (
       <div className={styles.root}>
-        <div className={styles.layout}>{setup.isError ? <EmptyState text={t("welcome.failed")} /> : <Skeleton />}</div>
+        <div className={styles.layout}>{setup.isError ? <LoadFailed message={t("welcome.failed")} onRetry={() => void setup.refetch()} /> : <Skeleton />}</div>
       </div>
     );
   }
@@ -226,6 +228,9 @@ export function Walkthrough(
   const left = steps.some((s) => s.counted && !s.done);
   const waitingGo = data.first_go_waiting > 0;
   const screenName = (screen: Screen) => t(screen === "done" && left ? "walkthrough.screen.done_left" : `walkthrough.screen.${screen}`);
+  // The last screen's own heading says how it ended: "You're set." when nothing is left (the rail keeps the step's own name).
+  const stepTitle = current === "done" && !left ? t("walkthrough.done.title_all") : screenName(current);
+  const brand = current === "welcome" || current === "done";
   const why = current === "done" ? t(waitingGo ? "walkthrough.why.done" : left ? "walkthrough.why.done_left" : "walkthrough.why.done_all") : t(`walkthrough.why.${current}`);
   const stepData = (id: string) => steps.find((s) => s.id === id);
   const aiDone = !!stepData("ai")?.done;
@@ -248,6 +253,7 @@ export function Walkthrough(
       doneWords: t("walkthrough.state.done"),
       current: screen === current,
       hereWords: t("walkthrough.here"),
+      numbered: screen !== "done",
     };
   });
   // The steps are numbered as Today's setup line counts them (the seven that count); the last row, where things stand, is
@@ -294,13 +300,15 @@ export function Walkthrough(
         }
       >
         <WizardStep
-          eyebrow={position ? t("walkthrough.step_of", position) : undefined}
-          title={screenName(current)}
+          brand={brand ? <SetupBrand /> : undefined}
+          eyebrow={position ? t("walkthrough.step_of", position) : current === "done" && left ? t("walkthrough.done.eyebrow") : undefined}
+          title={stepTitle}
           titleId="walkthrough-screen-title"
           titleRef={heading}
-          explanation={why}
+          explanation={current === "welcome" ? undefined : why}
           screen={current}
           footer={
+            current === "welcome" ? undefined : (
             <StepFooter
               footRef={foot}
               back={previous ? <Button onClick={() => go(previous)}>{t("walkthrough.back")}</Button> : undefined}
@@ -313,7 +321,7 @@ export function Walkthrough(
               }
               primary={
                 current === "done" ? (
-                  <Button variant="primary" onClick={() => void finish()}>
+                  <Button variant={left ? "secondary" : "primary"} onClick={() => void finish()}>
                     {t("walkthrough.finish")}
                   </Button>
                 ) : next && !(current === "mail" && here === "todo" && !slot.current) && !slot.current?.inline ? (
@@ -324,17 +332,18 @@ export function Walkthrough(
                     reason={slot.current?.disabled ? slot.current.why : undefined}
                     onClick={() => void carryOn()}
                   >
-                    {slot.current?.label ?? t(current === "welcome" ? "walkthrough.welcome.start" : "walkthrough.next")}
+                    {slot.current?.label ?? t("walkthrough.next")}
                   </Button>
                 ) : undefined
               }
             />
+            )
           }
         >
           {adding && <AddConnection plugin={adding.plugin} kind={adding.kind} onClose={() => setAdding(null)} />}
           {!adding && (
           <>
-          {current === "welcome" && <WalkthroughWelcome />}
+          {current === "welcome" && <WalkthroughWelcome onStart={() => next && go(next)} />}
           {current === "you" && <WorkspaceStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "work" && <WorkStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "ai" && <WelcomeAi local={data.local} done={aiDone} />}
@@ -349,8 +358,8 @@ export function Walkthrough(
           )}
           {current === "promises" && <FirstPromises go={go} onHandIn={props.onHandIn} />}
           {current === "backup" && <WelcomeBackup local={data.local} />}
-          {current === "people" && <WalkthroughPeople />}
-          {current === "done" && <DoneScreen go={go} {...handlers} />}
+          {current === "people" && <WalkthroughPeople done={here !== "todo"} />}
+          {current === "done" && <DoneScreen go={go} finished={!left} {...handlers} />}
           </>
           )}
           {problem && (
@@ -365,15 +374,22 @@ export function Walkthrough(
 }
 
 /** The last screen: what was set up and what was skipped (each with a way back to it), then the optional extras. */
-function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
+function DoneScreen(props: Handlers & { go: (screen: Screen) => void; finished: boolean }) {
   const { t } = useWords();
   // A person with no side beside Personal is never offered the starting template for work.
   const { justMe } = useSides();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   if (!setup.data) return <Skeleton />;
   const steps = counted(setup.data.steps);
+  // The one filled button of the rows is the first thing still to do; the others are quiet, and a finished step has none.
+  const firstOpen = steps.find((step) => !step.done)?.id;
   return (
     <>
+      {props.finished && (
+        <p className={styles.brandLine} data-brand-line="">
+          {t("walkthrough.welcome.brand_line")}
+        </p>
+      )}
       <ul className={styles.recap} aria-label={t("walkthrough.done.recap")}>
         {steps.map((step) => {
           const screen = step.group;
@@ -382,15 +398,22 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           const said = state === "skipped" && step.reason ? `walkthrough.done.skipped_${step.reason}` : `walkthrough.done.${state}`;
           return (
             <li key={step.id} data-step={step.id} data-state={state}>
-              <span className={`what ${styles.what}`}>
-                <Icon name={state === "done" ? "check" : state === "skipped" ? "minus" : "circle"} size={14} />{" "}
-                {label}
+              <span className={`what ${styles.what}`}>{label}</span>
+              {/* One status pattern: a check for a finished step (said to a screen reader as a word), a dot and the word for the rest. */}
+              <span className={styles.state}>
+                {state === "done" ? (
+                  <>
+                    <Icon name="check" size={16} />
+                    <span className="sr">{t(said)}</span>
+                  </>
+                ) : (
+                  <StateMark tone="neutral">{t(said)}</StateMark>
+                )}
               </span>
-              {/* A done step is marked by its check, and said to a screen reader; the word "Done" is not written down the list. */}
-              <span className={styles.state}>{state === "done" ? <span className="sr">{t(said)}</span> : t(said)}</span>
               <span className={styles.act}>
                 {state !== "done" && (
                   <Button
+                    variant={step.id === firstOpen ? "primary" : "quiet"}
                     aria-label={t("walkthrough.done.set_up_named", { label })}
                     onClick={() => props.go(screen)}
                   >
@@ -410,9 +433,12 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
         save={t("walkthrough.done.name_save")}
         cancel={t("walkthrough.done.name_cancel")}
         blank={t("walkthrough.assistant.blank")}
+        sentenceOnly
       />
+      <details className={styles.fold} data-extras-fold="">
+      <summary>{t("walkthrough.extras.title")}</summary>
       <section className={styles.extras} aria-labelledby="walkthrough-extras">
-        <h3 id="walkthrough-extras">{t("walkthrough.extras.title")}</h3>
+        <h3 id="walkthrough-extras" className="sr">{t("walkthrough.extras.title")}</h3>
         <p className={styles.aside}>{t("walkthrough.extras.why")}</p>
         <StepList
           include={(s) => s.group === "done" && !(justMe && s.id === "template")}
@@ -422,6 +448,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           onChooseSource={props.onChooseSource}
         />
       </section>
+      </details>
       <p className={styles.aside}>{t(setup.data.first_go_waiting > 0 ? "walkthrough.done.next" : steps.some((s) => s.id === "ai" && s.done) ? "walkthrough.done.next_hand_in" : "walkthrough.done.next_no_ai")}</p>
     </>
   );

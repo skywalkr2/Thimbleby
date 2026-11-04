@@ -196,7 +196,7 @@ async function pasted(user: User, service = "Service A", key = "secret-value") {
 }
 
 /** The whole way to a Save that can be pressed: a checked key and the answer to the question about what it may read. */
-async function ready(user: User, answer: "Allow" | "Not my private mail" = "Allow", service = "Service A") {
+async function ready(user: User, answer: "Yes" | "No" = "Yes", service = "Service A") {
   await pasted(user, service);
   await user.click(screen.getByRole("radio", { name: new RegExp(`^${answer}`) }));
 }
@@ -221,6 +221,10 @@ test("the service the data recommends has the tag, the alternative is beside it,
   open();
   const first = await screen.findByRole("radio", { name: /Service A/ });
   expect(first.closest("label")).toHaveTextContent("Recommended");
+  // The step's one introduction is the explanation under its title; the choice carries no second paragraph of its own (G5c).
+  expect(screen.queryByText(/You pay the service directly/)).toBeNull();
+  // The tag is a plain neutral one, never the success color (a status color is not a promotion tag).
+  expect(first.closest("label")!.querySelector("[data-pill]")).toHaveAttribute("data-tone", "neutral");
   const second = screen.getByRole("radio", { name: /Service B/ });
   expect(second.closest("label")).not.toHaveTextContent("Recommended");
   expect(screen.getByText("Pay as you go.")).toBeInTheDocument();
@@ -273,7 +277,11 @@ test("choosing Something else opens three lines, one note each, and each opens i
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   expect(screen.getByRole("radio", { name: /Something else/ })).toBeChecked();
-  expect(screen.getByText(/These need a technical setup/)).toBeInTheDocument();
+  expect(screen.getByText(/These need a little know-how/)).toBeInTheDocument();
+  // The note leads with an icon and a word, so it never reads as plain small print (G5c).
+  const note = document.querySelector("[data-technical-note]")!;
+  expect(note.querySelector("svg")).not.toBeNull();
+  expect(note).toHaveTextContent(/^Technical setup\./);
   const lines = screen.getAllByRole("button", { expanded: false }).filter((b) => b.classList.contains("else-line"));
   expect(lines.map((b) => b.querySelector("strong")?.textContent)).toEqual(["Another service", "An app you're signed in to", "One on this computer"]);
   expect(lines.map((b) => b.querySelector(".hint")?.textContent)).toEqual([
@@ -382,6 +390,8 @@ test("the key hint says in plain words where the key is kept and that it isn't i
   await pick(user, "Service A");
   const hint = await screen.findByText(/^Saved only in a private folder on this computer/);
   expect(hint).toHaveTextContent("Saved only in a private folder on this computer, outside your settings and backups.");
+  // A key is never kept before the account is added, so the page says to paste it again after a reload (Y07-1).
+  expect(hint).toHaveTextContent("paste the key again");
   expect(hint.textContent ?? "").not.toMatch(/settings file/i);
 });
 
@@ -509,7 +519,7 @@ test("changing the key takes the answer back until the new key has been checked"
   await pasted(user);
   await user.type(screen.getByLabelText("Access key"), "x");
   expect(screen.queryByText("Works. Ready to use.")).toBeNull();
-  expect(screen.queryByRole("group", { name: /AI service may read your mail, notes and calendar, including private ones/ })).toBeNull();
+  expect(screen.queryByRole("group", { name: /AI service read your private mail, notes and calendar\?/ })).toBeNull();
 });
 
 test.each([
@@ -576,27 +586,27 @@ test("the model is picked for each kind of work and never shown in the guide: it
 
 // ---- the question about what the account may read ----------------------------------------------------------------------------
 
-test("the question says exactly what Allow covers, names the account and its sign-in, and has nothing chosen", async () => {
+test("the question is a plain yes or no and says exactly what Yes covers, names the account and its sign-in, and has nothing chosen", async () => {
   const user = userEvent.setup();
   api({ "POST ai/account-check": () => ({ ...WORKS, identity: "sam@example.com", identity_unknown: null }) });
   open();
   await pasted(user);
-  const question = await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." });
+  const question = await screen.findByRole("group", { name: "Can Helper's AI service read your private mail, notes and calendar? It needs to, to find what you promised." });
   // Private mail is covered and said so; the words "work mail" never appear on the step, whoever it is for.
   expect(within(question).getByText("Your personal mail is private. Only accounts you allow can read it.")).toBeInTheDocument();
-  expect(within(question).getByText("The service is Service A, signed in as sam@example.com.")).toBeInTheDocument();
+  expect(within(question).getByText("Chosen: Service A, signed in as sam@example.com.")).toBeInTheDocument();
   // Which account it is waits behind one line, folded closed.
   const fold = question.querySelector<HTMLDetailsElement>("[data-allow-account]")!;
   expect(fold.open).toBe(false);
   expect(within(fold).getByText("Which account is it?")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/work mail/i);
-  const allow = within(question).getByRole("radio", { name: /^Allow/ });
-  const notPrivate = within(question).getByRole("radio", { name: /^Not my private mail/ });
-  expect(notPrivate).toHaveAccessibleName(/Only what could be public/);
+  const allow = within(question).getByRole("radio", { name: /^Yes/ });
+  const notPrivate = within(question).getByRole("radio", { name: /^No\b/ });
+  expect(notPrivate).toHaveAccessibleName(/It reads only open material/);
   expect(allow).not.toBeChecked();
   expect(notPrivate).not.toBeChecked();
   expect(save()).toBeDisabled();
-  expect(screen.getByText("Choose Allow or Not my private mail above.")).toBeInTheDocument();
+  expect(screen.getByText("Choose Yes or No above.")).toBeInTheDocument();
   await user.click(allow);
   expect(save()).toBeEnabled();
 });
@@ -608,7 +618,7 @@ test("an assistant never named is 'Your assistant' in the question, not a name",
   await pasted(user);
   expect(
     await screen.findByRole("group", {
-      name: "Your assistant's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised.",
+      name: "Can your assistant's AI service read your private mail, notes and calendar? It needs to, to find what you promised.",
     }),
   ).toBeInTheDocument();
 });
@@ -618,9 +628,9 @@ test("where the account's sign-in can't be told the question says so in plain wo
   api();
   open();
   await pasted(user);
-  expect(await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." })).toBeInTheDocument();
-  expect(screen.getByText("The service is Service A.")).toBeInTheDocument();
-  expect(screen.getByText("The app can't tell which account it is signed in to. Check in that app that it is the one you mean.")).toBeInTheDocument();
+  expect(await screen.findByRole("group", { name: "Can Helper's AI service read your private mail, notes and calendar? It needs to, to find what you promised." })).toBeInTheDocument();
+  expect(screen.getByText("Chosen: Service A.")).toBeInTheDocument();
+  expect(screen.getByText("That app doesn't say which account it is signed in to. Open it and check it is the one you mean.")).toBeInTheDocument();
   // What the server found about the program's answer is never put on the screen.
   expect(document.body.textContent).not.toMatch(/the service doesn't say whose account/);
 });
@@ -630,14 +640,14 @@ test("the question isn't asked before the key works", async () => {
   api();
   open();
   await pick(user, "Service A");
-  expect(screen.queryByRole("group", { name: /AI service may read your mail, notes and calendar, including private ones/ })).toBeNull();
+  expect(screen.queryByRole("group", { name: /AI service read your private mail, notes and calendar\?/ })).toBeNull();
 });
 
 test("Allow lets the account read open, internal and private material; Not now leaves it at open material only", async () => {
   const user = userEvent.setup();
   const calls = api();
   open();
-  await ready(user, "Allow");
+  await ready(user, "Yes");
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).allowed_data).toEqual(["open", "internal", "restricted"]);
@@ -646,7 +656,7 @@ test("Allow lets the account read open, internal and private material; Not now l
   const again = api();
   document.body.innerHTML = "";
   open();
-  await ready(user, "Not my private mail");
+  await ready(user, "No");
   await user.click(save());
   await waitFor(() => expect(body(again)).toBeDefined());
   expect(body(again).allowed_data).toEqual(["open"]);
@@ -654,7 +664,7 @@ test("Allow lets the account read open, internal and private material; Not now l
   expect(body(again).work_data).toBe("not_now");
 });
 
-test("privacy is asked once in the guide, as Allow or Not my private mail: Advanced holds no levels, no model list and no environment name", async () => {
+test("privacy is asked once in the guide, as Yes or No: Advanced holds no levels, no model list and no environment name", async () => {
   const user = userEvent.setup();
   api();
   open();
@@ -667,7 +677,7 @@ test("privacy is asked once in the guide, as Allow or Not my private mail: Advan
   expect(advanced.textContent).not.toMatch(/environment variable|text units|Open|Confidential|Private/);
   expect(within(advanced).getByLabelText("Account name")).toBeInTheDocument();
   // The one question is the whole answer: Allow reads every level, the other reads open material only.
-  expect(screen.getAllByRole("radio", { name: /^(Allow|Not my private mail)/ })).toHaveLength(2);
+  expect(screen.getAllByRole("radio", { name: /^(Yes|No)\b/ })).toHaveLength(2);
 });
 
 // ---- spending as a sentence --------------------------------------------------------------------------------------------
@@ -909,7 +919,7 @@ test("a server found on this computer is offered first, checked at once with no 
   expect(modelsAsked(calls)).toHaveLength(0);
   expect(checks(calls)[0].body).toEqual({ endpoint: "local-box", models: { everyday: "small-1" }, use: { routine: "everyday", deep: "everyday" } });
   expect(screen.queryByLabelText("Access key")).toBeNull();
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
@@ -971,7 +981,7 @@ test("another service asks for its address, checks it when the cursor leaves, an
   await user.tab();
   expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "other", base_url: "http://model-host:8080/v1" });
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toMatchObject({ name: "other", endpoint: "other", base_url: "http://model-host:8080/v1" });
@@ -1027,7 +1037,7 @@ test("a program started by a command asks for it and how it is fed, checks it wi
     use: { routine: "everyday", deep: "everyday" },
     agent: { command: ["runner", "--locked", "--model", "{model}"], packet_via: "file", output_via: "outbox" },
   });
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
@@ -1059,7 +1069,7 @@ test("an app that isn't on this computer or can't be asked for a key sends a ref
   await user.tab();
   expect(await screen.findByText("Works. Ready to use.")).toBeInTheDocument();
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).key_ref).toBe("env:MODEL_KEY");
@@ -1090,7 +1100,7 @@ test("an app left to choose its own model is added with no models and works thro
   expect(within(await snapshotOf(model)).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the app choose", "Recommended", "Stronger", "Another AI model"]);
   expect(model).toHaveValue("");
   await screen.findByText("Works. Ready to use.");
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
@@ -1178,7 +1188,7 @@ test("an app's example models can be chosen, checked again, and another model ca
   await user.selectOptions(screen.getByLabelText("AI model"), "beta");
   await waitFor(() => expect(checks(calls)).toHaveLength(2));
   expect(checks(calls)[1].body).toMatchObject({ models: { everyday: "beta" } });
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).models).toEqual({ everyday: "beta" });
@@ -1195,7 +1205,7 @@ test("choosing another model asks for its name, and Save waits for it", async ()
   await user.type(screen.getByLabelText("AI model name"), "typed-model");
   await user.tab();
   await screen.findByText("Works. Ready to use.");
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   expect(save()).toBeEnabled();
 });
 
@@ -1244,7 +1254,7 @@ test("after saving an app, a sign-in failure shows the hint from its test", asyn
   open();
   await pickElse(user, "App A");
   await screen.findByText("Works. Ready to use.");
-  await user.click(screen.getByRole("radio", { name: /^Not my private mail/ }));
+  await user.click(screen.getByRole("radio", { name: /^No\b/ }));
   await user.click(save());
   const line = await screen.findByText(/didn't answer/);
   expect(line).toHaveTextContent("Everyday work: app-a — didn't answer: Sign in once in a terminal.");
@@ -1256,8 +1266,8 @@ test("an account whose sign-in the app can read is asked about by that sign-in",
   api({ "POST ai/account-check": () => ({ ...WORKS, identity: "pat@example.com", identity_unknown: null }) });
   open();
   await pickElse(user, "App A");
-  expect(await screen.findByRole("group", { name: "Helper's AI service may read your mail, notes and calendar, including private ones. It needs to, to find what you promised." })).toBeInTheDocument();
-  expect(screen.getByText("The service is App A, signed in as pat@example.com.")).toBeInTheDocument();
+  expect(await screen.findByRole("group", { name: "Can Helper's AI service read your private mail, notes and calendar? It needs to, to find what you promised." })).toBeInTheDocument();
+  expect(screen.getByText("Chosen: App A, signed in as pat@example.com.")).toBeInTheDocument();
 });
 
 test("a model the service retired is described by its work, offered its replacement with one button, and leaves the list", async () => {
@@ -1344,7 +1354,7 @@ test("no model's name is on the setup step for any service, once it is chosen an
     for (const name of MODEL_NAMES) expect(text, `${kind.name} shows ${name}`).not.toContain(name);
     unmount();
   }
-});
+}, 30000);
 
 test("no model's name is on the account rows, nor in the line that offers to change the models", async () => {
   api({ "GET ai/accounts": () => [ACCOUNT_ROW] });

@@ -27,6 +27,9 @@ import { FormBlock } from "../ui/FormBlock";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
+import { Icon } from "../ui/Icon";
+import { TickCard } from "./TickCard";
+import styles from "./WalkthroughWork.module.css";
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
 type Group = { name: string; picked: string[] };
@@ -222,29 +225,24 @@ export function WorkStep(props: { onContinue?: () => void; done?: boolean } = {}
         </p>
       )}
       <FormBlock className="work-question" role="group" aria-labelledby="work-question" aria-describedby="work-always">
-        <p className="what" id="work-question">
+        <p className={styles.question} id="work-question">
           {t("walkthrough.work.question")}
         </p>
-        <p className="aside" id="work-always">
-          {t("walkthrough.work.always")}
+        <p className={styles.always} id="work-always">
+          <Icon name="check" size={14} /> {t("walkthrough.work.always")}
         </p>
         <div role="group" aria-labelledby="work-also-title" aria-describedby="work-also-note" data-also="">
           <p className="what" id="work-also-title">
             {t("walkthrough.work.also")}
           </p>
-          <label className="check-line">
-            <input type="checkbox" checked={jobTicked} disabled={savedJobs.length > 0} onChange={(e) => setJobOn(e.target.checked)} />
-            <span>{t("walkthrough.work.choice.job")}</span>
-          </label>
-          <label className="check-line">
-            <input
-              type="checkbox"
-              checked={businessTicked}
-              disabled={savedBusinesses.length > 0}
-              onChange={(e) => toggleBusiness(e.target.checked)}
-            />
-            <span>{t("walkthrough.work.choice.business")}</span>
-          </label>
+          <div className={styles.cards}>
+            <TickCard checked={jobTicked} disabled={savedJobs.length > 0} onChange={(on) => setJobOn(on)}>
+              {t("walkthrough.work.choice.job")}
+            </TickCard>
+            <TickCard checked={businessTicked} disabled={savedBusinesses.length > 0} onChange={(on) => toggleBusiness(on)}>
+              {t("walkthrough.work.choice.business")}
+            </TickCard>
+          </div>
           <p className="hint" id="work-also-note">
             {t("walkthrough.work.also_note")}
           </p>

@@ -311,9 +311,19 @@ describe("opening", () => {
     const need = screen.getByRole("region", { name: "What you'll need" });
     const items = within(need).getAllByRole("listitem");
     expect(items).toHaveLength(3);
-    expect(items[0]).toHaveTextContent("An AI account. Usually a few dollars a month. It never spends more than $2 a day unless you change it.");
+    // With no AI account yet, no limit is quoted: the person is only told they choose it (Y07-12).
+    expect(items[0]).toHaveTextContent("An AI account. You choose how much it may spend each day.");
+    expect(items[0]).not.toHaveTextContent("$");
     expect(items[1]).toHaveTextContent("optional");
     expect(items[2]).toHaveTextContent("backups");
+    // Welcome is a brand moment (G5c): the mark and the star above the heading, the brand's own line, the needs numbered in the display
+    // face, and Start under them in the page, not in a footer.
+    expect(document.querySelector("[data-brand-mark=day]")).not.toBeNull();
+    expect(document.querySelector("[data-brand-glyph]")).not.toBeNull();
+    expect(document.querySelector("[data-brand-line]")).toHaveTextContent("A little more room to think.");
+    expect(need.querySelector("ol")).not.toBeNull();
+    expect(document.querySelector("[data-step-footer]")).toBeNull();
+    expect(screen.getByRole("button", { name: "Start" }).closest("main")).not.toBeNull();
     // Welcome is no step: no list of steps, no place, no Back, one Start; the cursor is on the heading, as there is no field.
     expect(screen.queryByRole("navigation", { name: "Setup steps" })).toBeNull();
     expect(screen.queryByText(/ of [78]$/)).toBeNull();
@@ -879,6 +889,11 @@ describe("each screen", () => {
     const first = await screen.findByRole("checkbox", { name: "A job" });
     await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "What it's for" })).toHaveFocus());
     expect(first).not.toHaveFocus();
+    // The two choices are cards a finger can hit (a check in the corner when ticked), the question a heading and the always-included
+    // line a quiet one with its check (G5c).
+    expect(first.closest("[data-tick-card]")).not.toBeNull();
+    expect(screen.getByRole("checkbox", { name: "My own business" }).closest("[data-tick-card]")).not.toBeNull();
+    expect(document.querySelector("#work-always svg")).not.toBeNull();
     // One control: a line, then two tick boxes. No radio beside a box of tick boxes, no bordered frame with a legend.
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
     const control = screen.getByRole("group", { name: "What will you use it for?" });
@@ -946,6 +961,17 @@ describe("each screen", () => {
     expect(calls.filter((c) => c.route === "POST projects").map((c) => c.body)).toEqual(WORKS_ON.map((name) => ({ name, parent: "PRJ-2" })));
   });
 
+  test("Work: a bare tick, with nothing typed under it, is kept across a reload (Y07-5)", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "work" }));
+    const first = open();
+    await user.click(await screen.findByRole("checkbox", { name: "A job" }));
+    first.unmount();
+    open();
+    expect(await screen.findByRole("checkbox", { name: "A job" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "My own business" })).not.toBeChecked();
+  });
+
   test("Work: a reload keeps what was typed (ticks, employer, business, its projects and a group), says so, and a save forgets it", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
@@ -997,7 +1023,7 @@ describe("each screen", () => {
     await user.click(await screen.findByRole("checkbox", { name: "My own business" }));
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     // A separate, optional box asks what it is, above the list of its projects.
-    const about = await screen.findByLabelText(`What is ${SHOP}?`);
+    const about = await screen.findByLabelText(`What does ${SHOP} do?`);
     const list = screen.getByLabelText(`Which projects does ${SHOP} have?`);
     expect(about.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(about).not.toBeRequired();
@@ -1044,7 +1070,7 @@ describe("each screen", () => {
       ),
     );
     open();
-    const about = await screen.findByLabelText(`What is ${SHOP}?`);
+    const about = await screen.findByLabelText(`What does ${SHOP} do?`);
     expect(about).toHaveValue("An old sentence.");
     const more = screen.getByLabelText(`Add more projects to ${SHOP}`);
     expect(about.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1075,7 +1101,7 @@ describe("each screen", () => {
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
     await user.paste(WORKS_ON.join("\n"));
-    const line = screen.getByText("Do some of these belong together? Give the group a name");
+    const line = screen.getByText("Put some of these under one name (optional)");
     expect(line.closest("details")).not.toHaveAttribute("open");
     expect(document.body.textContent).not.toMatch(/program/i);
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -1101,7 +1127,7 @@ describe("each screen", () => {
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
     await user.paste(WORKS_ON.join("\n"));
-    await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    await user.click(screen.getByText("Put some of these under one name (optional)"));
     // No tick boxes before the group has a name.
     expect(screen.queryAllByRole("checkbox", { name: new RegExp(`, in ${GROUP}$`) })).toHaveLength(0);
     await user.type(screen.getByLabelText("Group name"), GROUP);
@@ -1130,7 +1156,7 @@ describe("each screen", () => {
     await user.click(box);
     await user.paste(WORKS_ON.join("\n"));
     const before = (box as HTMLTextAreaElement).value;
-    await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    await user.click(screen.getByText("Put some of these under one name (optional)"));
     await user.type(screen.getByLabelText("Group name"), "Trade customers");
     for (const name of [WORKS_ON[1], WORKS_ON[0]]) {
       await user.click(screen.getByRole("checkbox", { name: `${name}, in Trade customers` }));
@@ -1157,7 +1183,7 @@ describe("each screen", () => {
     await user.type(screen.getByLabelText("What is your business called?"), SHOP);
     await user.click(await screen.findByLabelText(`Which projects does ${SHOP} have?`));
     await user.paste(WORKS_ON.join("\n"));
-    await user.click(screen.getByText("Do some of these belong together? Give the group a name"));
+    await user.click(screen.getByText("Put some of these under one name (optional)"));
     await user.type(screen.getByLabelText("Group name"), "Trade customers");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     expect(screen.getByText("Tick the projects that are in Trade customers, or clear its name.")).toBeInTheDocument();
@@ -1472,17 +1498,20 @@ describe("each screen", () => {
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/ai/skip")).toBe(true));
   });
 
-  test("Backups: with no drive found the folder form, and the one button says Back up now and continue", async () => {
+  test("Backups: with no drive found the folder form, and the one button says Continue", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id)), { step: "backup" }));
     open();
     expect(await screenTitle()).toHaveTextContent("Backups");
     expect(await screen.findByLabelText("Folder")).toBeInTheDocument();
-    const go = screen.getByRole("button", { name: "Back up now and continue" });
+    const go = screen.getByRole("button", { name: "Continue" });
     expect(go).toBeDisabled();
     expect(screen.getByText("Choose a folder to go on.")).toBeInTheDocument();
+    // The notice leads with what to do, and the one button beside the box is Choose a folder (the folder is checked as the box is left).
+    expect(screen.getByText(/^Choose a folder to keep backups in\. No cloud drive folder was found/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check" })).toBeNull();
   });
 
-  test("Backups: Back up now and continue saves the drive found and moves on", async () => {
+  test("Backups: Continue saves the drive found and moves on", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
@@ -1497,7 +1526,7 @@ describe("each screen", () => {
     open();
     const first = await screen.findByRole("radio", { name: /Drive One/ });
     expect(first).toBeChecked();
-    await user.click(screen.getByRole("button", { name: "Back up now and continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder/cloud")).toBe(true));
     expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
   });
@@ -1521,7 +1550,7 @@ describe("each screen", () => {
     );
     open();
     expect(await screenTitle()).toHaveTextContent("People");
-    expect(screen.getByText(/You can skip this: it will ask about names it doesn't recognize/)).toBeInTheDocument();
+    expect(screen.getByText(/You can skip this: the assistant asks about names it doesn't recognize/)).toBeInTheDocument();
     // There is one add row for the whole step, not a form for each side.
     const row = await screen.findByRole("form", { name: "Add someone" });
     expect(screen.getAllByRole("form")).toHaveLength(1);
@@ -1531,10 +1560,10 @@ describe("each screen", () => {
     await user.type(within(row).getByLabelText("Name"), "Pat Kin");
     await user.selectOptions(within(row).getByLabelText("Who they are"), "sister");
     await user.click(within(row).getByRole("button", { name: "Add" }));
-    expect(await screen.findByRole("region", { name: "The people in your life" })).toHaveTextContent("Pat Kin · my sister");
+    expect(await screen.findByRole("region", { name: "The people in your life" })).toHaveTextContent(/Pat Kin\s*my sister/);
     expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], sides: [PERSONAL], relation: "my sister" });
-    // Paste a list is a link under the row.
-    expect(screen.getByRole("button", { name: "Paste a list" })).toHaveClass("link-button");
+    // Paste a list is a link under the row, in the ink with an underline (the secondary path is not the loudest thing on the page).
+    expect(screen.getByRole("button", { name: "Paste a list" }).className).toMatch(/pasteLink/);
   });
 
   describe("People: the personal side", () => {
@@ -1556,6 +1585,30 @@ describe("each screen", () => {
       await user.click(within(await addRow()).getByRole("button", { name: "Add" }));
       await waitFor(() => expect(calls.some((c) => c.route === "POST people")).toBe(true));
       expect(calls.find((c) => c.route === "POST people")!.body).toEqual({ full_name: "Pat Kin", aliases: [], side: "personal", relation: null });
+    });
+
+    test("a name that is refused says so under the Name box it belongs to, not under the list or the button (G5c)", async () => {
+      const user = userEvent.setup();
+      personalOnly({ "POST people": () => new Refuse(409, "Sam Twin already exists.") });
+      open();
+      const form = await addRow();
+      await user.type(within(form).getByLabelText("Name"), "Sam Twin");
+      await user.click(within(form).getByRole("button", { name: "Add" }));
+      const said = await within(form).findByRole("alert");
+      expect(said).toHaveTextContent("Sam Twin already exists.");
+      // It stands inside the Name field, and the box points to it.
+      expect(said.closest("[data-field]")).toContainElement(within(form).getByLabelText("Name"));
+      expect(within(form).getByLabelText("Name")).toHaveAttribute("aria-describedby", said.id);
+    });
+
+    test("the pasted-list box has a label that says what to type, and the link that opens it is in the ink with an underline (Y07-10)", async () => {
+      const user = userEvent.setup();
+      personalOnly();
+      open();
+      await user.click(await screen.findByRole("button", { name: "Paste a list" }));
+      const box = await screen.findByLabelText(/^One name per line\./);
+      expect(box.tagName).toBe("TEXTAREA");
+      expect(box).toHaveFocus();
     });
 
     test("the list splits sister and brother and adds a landlord, a school and a tradesperson", async () => {
@@ -2257,9 +2310,9 @@ describe("Mail and calendar", () => {
     const step = block.closest(".mail-step") as HTMLElement;
     expect(step.firstElementChild).toBe(block);
     expect(within(block).getByText(/Helper is reading: Your inbox and Your calendar\./)).toBeInTheDocument();
-    expect(within(block).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
+    expect(within(block).getByText(/Nothing is read or spent until you start the assistant on the next screen/)).toBeInTheDocument();
     // That the reading waits for the first Go is said once on the screen, not again in the step's own lead line.
-    expect(screen.getAllByText(/waits for you to start the assistant/)).toHaveLength(1);
+    expect(screen.getAllByText(/Nothing is read or spent until you start the assistant/)).toHaveLength(1);
     // Exactly one Continue, in the footer on the column's edge like every other step's, not in the body; the list is behind
     // "Connect another" and shows when it is pressed.
     expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
@@ -2297,6 +2350,8 @@ describe("Mail and calendar", () => {
     open();
     const line = (await screen.findByText(/Newsletters, sales and mailing lists are set aside/)).closest("[data-set-aside-line]") as HTMLElement;
     expect(screen.queryByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" })).toBeNull();
+    // "Change" is a link in the accent colour, underlined, never plain grey text (Y01, G5c).
+    expect(within(line).getByRole("button", { name: "Change" }).className).toMatch(/link/);
     await user.click(within(line).getByRole("button", { name: "Change" }));
     expect(await within(line).findByRole("checkbox", { name: "Set aside newsletters, sales and mailing lists" })).toBeInTheDocument();
     expect(within(line).getByText(/not the message body/)).toBeInTheDocument();
@@ -2413,6 +2468,8 @@ describe("Mail and calendar", () => {
       }
     });
     open();
+    expect((await screen.findByRole("button", { name: "Set them separately" })).className).toMatch(/link/);
+    expect(screen.getByRole("button", { name: "Set them separately" }).querySelector("svg")).not.toBeNull();
     await user.click(await screen.findByRole("button", { name: "Set them separately" }));
     const inbox = await screen.findByRole("group", { name: "Your inbox: who is it for?" });
     await user.click(within(inbox).getByRole("checkbox", { name: "Personal" }));
@@ -2571,7 +2628,7 @@ describe("Mail and calendar", () => {
 
   /** Two sign-ins of one service, each with an inbox and a calendar, and a job and a business beside Personal. Ticks save
    * through the settings route, which keeps the list of sources. */
-  function twoAccounts(accounts: string[] = ["sam@example.com", "pat@example.com"], expired?: string) {
+  function twoAccounts(accounts: string[] = ["sam@example.com", "pat@example.com"], expired?: string, level?: "restricted") {
     service("on", { signed: true });
     const state = {
       sources: accounts.flatMap((_, i) => [
@@ -2597,8 +2654,8 @@ describe("Mail and calendar", () => {
       ],
       "GET watch": () =>
         accounts.flatMap((address, i) => [
-          source(`i${i}`, "Your inbox", { account: address, ...(address === expired ? { account_state: "expired" } : {}) }),
-          source(`c${i}`, "Your calendar", { reads: ["calendar"], account: address, ...(address === expired ? { account_state: "expired" } : {}) }),
+          source(`i${i}`, "Your inbox", { account: address, ...(level ? { data_level: level } : {}), ...(address === expired ? { account_state: "expired" } : {}) }),
+          source(`c${i}`, "Your calendar", { reads: ["calendar"], account: address, ...(level ? { data_level: level } : {}), ...(address === expired ? { account_state: "expired" } : {}) }),
         ]),
       "GET setup/business": () => stateWith([side("PRJ-2", "job", EMPLOYER), side("PRJ-3", "business", SHOP)]),
       "GET settings": () => ({
@@ -2661,7 +2718,7 @@ describe("Mail and calendar", () => {
     twoAccounts();
     open();
     const rows = await screen.findByRole("list", { name: "The accounts being read" });
-    expect(screen.getByText("Helper is reading 2 accounts, one row each.")).toBeInTheDocument();
+    expect(screen.getByText("Helper is reading 2 accounts.")).toBeInTheDocument();
     expect(screen.queryByText(/Helper is reading: /)).toBeNull();
     const [sam, pat] = within(rows).getAllByRole("listitem");
     expect(sam).toHaveTextContent("sam@example.com");
@@ -2684,6 +2741,22 @@ describe("Mail and calendar", () => {
     expect(within(pat).getByRole("button", { name: /Sign in again/ })).toBeInTheDocument();
     // Its sides are said in the same row, as for the others.
     expect(within(pat).getByText("For")).toBeInTheDocument();
+    // The lead line is counted from how each account stands, so it never says "connected" over a row that needs signing in, and the
+    // fix is the outline weight so Continue stays the one filled button (G5c).
+    expect(screen.getByText(/1 of 2 accounts are connected\./)).toBeInTheDocument();
+    expect(screen.queryByText(/is reading 2 accounts/)).toBeNull();
+    expect(within(pat).getByRole("button", { name: /Sign in again/ })).toHaveAttribute("data-variant", "secondary");
+  });
+
+  test("with every account connected the service is said once above the rows and the rows do not repeat it (G5c)", async () => {
+    twoAccounts(["sam@example.com", "pat@example.com"], undefined, "restricted");
+    open();
+    const rows = await screen.findByRole("list", { name: "The accounts being read" });
+    for (const row of within(rows).getAllByRole("listitem")) {
+      expect(row).toHaveTextContent("Connected");
+      expect(row).not.toHaveTextContent("Private to you");
+    }
+    expect(screen.getByText(/is reading 2 accounts, all private to you\./)).toBeInTheDocument();
   });
 
   test("three accounts are three rows, each address cut with the full address on hover, and the sides are ticked in the row", async () => {
@@ -3006,6 +3079,26 @@ describe("Done", () => {
     expect(within(row("workspace")).queryByRole("button")).toBeNull();
   });
 
+  test("the last screen is the finished state: the mark, one status pattern, the one filled button on the first open step, and the extras folded (G5c)", async () => {
+    fakeApi(routes({}, steps({ workspace: { done: true }, ai: { skipped: true } }), { step: "done" }));
+    open();
+    const recap = await screen.findByRole("list", { name: "What was set up" });
+    expect(document.querySelector("[data-brand-mark=day]")).not.toBeNull();
+    const row = (id: string) => recap.querySelector(`[data-step="${id}"]`) as HTMLElement;
+    // A finished step is a check (its word said to a screen reader); every other state is a dot and its word.
+    expect(row("workspace").querySelector("svg")).not.toBeNull();
+    expect(row("workspace").querySelector("[data-state-mark]")).toBeNull();
+    expect(row("ai").querySelector("[data-state-mark]")).toHaveTextContent("Skipped");
+    expect(row("work").querySelector("[data-state-mark]")).toHaveTextContent("Not set up yet");
+    // The first thing still to do has the one filled button; the others are quiet, and Go to Today is not filled while steps remain.
+    const filled = Array.from(screen.getByRole("main").querySelectorAll("button")).filter((b) => b.getAttribute("data-variant") === "primary");
+    expect(filled.map((b) => b.getAttribute("aria-label"))).toEqual(["Set up: What it's for"]);
+    expect(screen.getByRole("button", { name: "Go to Today" })).toHaveAttribute("data-variant", "secondary");
+    // The optional extras are folded under their name, and the summary row is a star in the rail, not a number.
+    expect(document.querySelector("details[data-extras-fold]")).not.toHaveAttribute("open");
+    expect(document.querySelector('[data-screen="done"] [class*="star"]')).not.toBeNull();
+  });
+
   /** The last screen with the setup as given and `waiting` runs held for the person's first go. */
   const doneWith = (setupSteps: S["SetupStepView"][], waiting: number) =>
     fakeApi(routes({ "GET setup": () => setupView(setupSteps, { first_go_waiting: waiting, walkthrough: { open: true, step: "done" } }) }, setupSteps, { step: "done" }));
@@ -3024,13 +3117,13 @@ describe("Done", () => {
     const done = Object.fromEntries(["workspace", "work", "ai", "mail", "promises", "backup", "people"].map((id) => [id, { done: true }]));
     doneWith(steps(done), 3);
     const first = open();
-    expect(await screen.findByRole("heading", { level: 2, name: "Done" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "You're set." })).toBeInTheDocument();
     expect(screen.getByText(/Today shows one line to start the assistant/)).toBeInTheDocument();
     expect(screen.getByText(/approve the first items/)).toBeInTheDocument();
     first.unmount();
     doneWith(steps(done), 0);
     open();
-    expect(await screen.findByRole("heading", { level: 2, name: "Done" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "You're set." })).toBeInTheDocument();
     expect(screen.queryByText(/Today shows one line to start the assistant/)).toBeNull();
     expect(screen.queryByText(/approve the first items/)).toBeNull();
     expect(screen.getByText(/you can hand in a note or paste something/)).toBeInTheDocument();
@@ -3112,7 +3205,7 @@ describe("the look", { timeout: 20_000 }, () => {
     open();
     await screenTitle();
     const main = screen.getByRole("main");
-    expect(primaries(main).map((b) => b.textContent)).toEqual(["Continue"]);
+    expect(primaries(main).map((b) => b.textContent)).toEqual(["Skip for now"]);
     expect(within(main).getByRole("button", { name: "I'll do this later" })).toBeEnabled();
     expect(await within(main).findByRole("button", { name: "Add" })).toBeDisabled();
   });
@@ -3211,7 +3304,7 @@ describe("the look", { timeout: 20_000 }, () => {
     );
     open();
     await screen.findByRole("radio", { name: /Drive One/ });
-    await user.click(screen.getByRole("button", { name: "Back up now and continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("That drive isn't on this computer.");
     expect(screen.getByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
   });

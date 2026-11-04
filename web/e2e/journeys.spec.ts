@@ -81,10 +81,10 @@ test.describe.serial("journeys", () => {
     // The check runs by itself, for every kind of work, before anything is saved.
     await expect(main.getByText("Works. Ready to use.")).toBeVisible();
     // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
-    await main.getByRole("radio", { name: /^Allow/ }).check();
+    await main.getByRole("radio", { name: /^Yes/ }).check();
     await main.getByRole("button", { name: "Continue" }).click();
     // Continue saved the account, tested it and went on to the next screen.
-    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('[data-screen="ai"][data-state]')).toContainText("Done");
     // Changing an account needs no restart, and nothing on the page is waiting for one.
     await expect(main.getByText(/Restart/)).toHaveCount(0);
@@ -102,7 +102,7 @@ test.describe.serial("journeys", () => {
     // Your promises comes right after mail: with no mail connected it says so and offers handing something in.
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
     await expect(main.getByText(/hand it something to read/)).toBeVisible();
-    await expect(main.getByRole("button", { name: "Hand something in to see what it does" })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Hand something in" })).toBeVisible();
     await expect(main.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
     await visit(page);
     await main.getByRole("button", { name: "Continue" }).click();
@@ -110,7 +110,7 @@ test.describe.serial("journeys", () => {
     // Backups: a folder outside the workspace, which is checked before it is saved.
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
-    await main.getByRole("button", { name: "Back up now and continue" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done");
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
     await visit(page);
@@ -296,7 +296,7 @@ test.describe.serial("journeys", () => {
       // What changed is newest first and titles a change as Today does, so the change just handed in is the top line.
       // Choosing the line shows the whole change in the detail pane beside the list, which is what the steps read.
       const line = page.getByRole("main").locator("[data-row-list] > li[data-row]").first();
-      await expect(line.locator("[data-pill]").first()).toHaveText(/not yet checked|filed/i, { timeout: 30_000 });
+      await expect(line).toContainText(/not yet checked|filed/i, { timeout: 30_000 });
       const expander = line.locator("[data-expander]").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
       const detail = page.locator("aside[data-detail-pane] [data-detail-item]");

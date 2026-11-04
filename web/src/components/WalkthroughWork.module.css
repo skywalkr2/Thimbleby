@@ -1,0 +1,4 @@
+/* The work question: the question as a heading, what is always included as a quiet line with its check, and the two choices as cards. */
+.question { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); }
+.always { margin: 0; display: flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--space-3); margin: var(--space-2) 0; }

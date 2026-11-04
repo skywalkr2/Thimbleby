@@ -76,10 +76,10 @@ export class Servers {
   }
 
   /** Starts `python -m <module> <args>` from the repository's root and returns once `ready` answers. */
-  async start(name: string, module: string, args: string[], ready: string, timeoutMs = 120_000): Promise<void> {
+  async start(name: string, module: string, args: string[], ready: string, timeoutMs = 120_000, extraEnv: Record<string, string> = {}): Promise<void> {
     const log = openSync(join(this.logFolder, `${name}.log`), "w");
     this.logs.push(log);
-    const child = spawn(this.python, ["-m", module, ...args], { cwd: this.root, detached: true, stdio: ["ignore", log, log], env: { ...process.env } });
+    const child = spawn(this.python, ["-m", module, ...args], { cwd: this.root, detached: true, stdio: ["ignore", log, log], env: { ...process.env, ...extraEnv } });
     const record: Started = { name, child, exited: false };
     child.once("exit", () => {
       record.exited = true;
