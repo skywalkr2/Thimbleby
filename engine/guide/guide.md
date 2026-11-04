@@ -16,7 +16,7 @@ People say "panel", "page", "screen", "tab" or "view" for the same thing: a scre
 - What changed: the history of the assistant's work, newest first: what it did with each thing you handed in. It has no buttons for the work: what waits for you is a line on Today, and a held item here links to it. Undo is in each row's menu.
 - Handled for you: mail the app dealt with for you: what it set aside before reading, and what it read and found nothing to do in. Treat one as work or as personal, or set mail like it aside from now on.
 - Follow-ups: To send holds the messages, pages and files that wait for your approval of exactly what will go; Later holds what you put off; Waiting on them holds the replies you are waiting for.
-- To-dos and questions: every open to-do and every open question, with owners and dates.
+- To-dos: every open to-do and every open question, with owners and dates.
 - Stages: work that moves through steps, the checks to pass at each step and where each item stands.
 - Personal: your own life: the to-dos, questions, notes and people that aren't work, grouped into areas such as home or health. With a job or a business, each one has its own entry beside it.
 - Projects: your projects, each with its to-dos, questions, notes and people.

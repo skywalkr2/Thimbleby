@@ -34,8 +34,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   passed none at 4.0, and the audit of the tracking sheet found about 40 rows and 47 P2 items still open. The owner chose
   to fix everything first (section 326). **The one list for this round is `docs/project/u3-gate/items.md`:** about 570
   issues from the scores and 95 audit rows, each tagged with its batch, G1 to G6. Batches tick their items; the re-score
-  confirms them. **Progress (2026-11-04):** G1 and G1c merged (scored 3.6 to 4.1 on their 22 screens; the rest of each screen's
-  findings are with its own batch); G3 in review with G3b finishing; G2, G4, G5, G6, G1b and T1 next. The scores, the audit and the batch briefs sit beside it.
+  confirms them. **Progress (2026-11-04, evening):** the fix round's batches are merged (G1 to G1d, G2a to G2c, G3 and G3b, G4a to G4d, G5a to G5c, T1, G6); one full run is green on Python, the web unit tests and the browser suite (545 passed); the owner tests next. Held: G3c (the Schedule to its mockup, right after the owner's test), the keyboard walk, screenshot comparisons; U4 grows from the owner's test. The scores, the audit and the batch briefs sit beside it.
 - **Next, in order:**
   1. **U3:** finish G1 to G6. Then the full suites, a fresh capture, and both cold scorers on every screen. The owner looks
      at the side-by-sides and the scores, and says when to send.

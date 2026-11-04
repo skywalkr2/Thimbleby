@@ -218,10 +218,12 @@ def test_a_stop_line_shows_at_once_at_night(env):
     assert keys(env, at(MONDAY, 23, 30)) == ["restart"]
 
 
-def test_the_persons_own_setup_lines_are_never_held(env):
+def test_the_persons_own_setup_lines_are_never_held(env, tmp_path):
     from engine.dispatcher import FIRST_GO
 
-    _, _, store = env
+    _, cfg, store = env
+    # The go is asked for only once there is an AI account to do the work, so this workspace gets the demo's account.
+    cfg.ai = init_workspace(tmp_path / "demo", template=DEMO_B, git=False).config(env={}).ai
     with store.transaction() as tx:
         tx.create(
             "request",
