@@ -191,3 +191,37 @@ What this means today: new core code never assumes there is only ever one person
 person running the app is one of them), screens never hard-code "the PM", and a plugin API addition that would need
 changing for roles is designed with roles in mind.
 
+## 11.9 Open question: a low-cost hosted service (not in 1.0)
+
+Ideas recorded for a future hosted service (owner, 2026-11-04). Nothing here is built or decided: it is written down so
+that what is built now doesn't rule it out. Each idea was checked against the code as it stands.
+
+**What already fits:**
+- **One SQLite file per workspace** is already the per-customer model. Workspaces never contend for one write lock. The
+  database runs in WAL mode, and writes are short applier transactions.
+- **The readable export (`data/`)** is written on a schedule by the background worker (`storage.export.every_minutes`),
+  off the request path. It isn't written on every transaction.
+- **The AI cost is never the service's.** Each person brings their own AI account. Every run is estimated first, and
+  spending above the configured amount waits for the person's yes (6.16).
+
+**What doesn't fit:**
+- **Serverless hosting** (functions that stop between requests) can't run this app's background worker, which reads
+  mail and calendars, runs the assistant and makes backups.
+- **Edge databases** (for example Cloudflare D1) only work inside their own platform's workers, not a Python process.
+  Replacing the storage layer for them would cut across the applier and the ledger (5.0).
+- **A free static host** serves only the web front end. The Python process still needs somewhere to run.
+
+**Candidates for later:**
+- **A small virtual server, or micro-VMs that scale to zero when a customer is idle,** running the hosted mode that
+  exists today (11.1, with the deploy checks of 11.5).
+- **Continuous offsite backup of each workspace's SQLite file,** streamed to object storage with no egress fees (a
+  write-ahead-log streamer such as Litestream). This would sit beside the backups 5.0 already makes, and replace none of
+  them.
+- **Hosting platform names** go in `deploy/` and the docs only, as CLAUDE.md requires.
+
+**The real gap:**
+- Today one running process serves one workspace. A service needs either one process per customer, which suits
+  scale-to-zero micro-VMs, or one process that serves many workspaces.
+- The second choice touches the worker, the lease (5.0), settings that apply at once (`LIVE_KEYS`) and restarts (11.7).
+- Decide it together with the organization install (11.8).
+

@@ -4,6 +4,15 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: A low-cost hosted service is an open question in design 11.9 (owner; section 345)
+
+**Decided:** the owner's ideas for a future hosted service are recorded as an open question in design 11.9, each checked
+against the code. Nothing is built, and nothing changes for 1.0.
+
+**Why:** so that what is built now doesn't rule out a cheap hosted version.
+
+**Impact:** design text only. Change log: section 345.
+
 ## 2026-11-04: Motion is the mark only; every control answers hover, pressed and focus (batch G6 of the fix round)
 
 **Decided:** (owner's D7; no new choice needed.) Only the brand mark moves for longer than a short state change: once on Welcome and once on Done, 900ms, off under reduced motion. The side menu gets a "Your sides" group of its own when there is a side beside Personal. Change log: section 344.

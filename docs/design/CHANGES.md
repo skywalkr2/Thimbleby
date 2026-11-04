@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 345. A low-cost hosted service, an open question (2026-11-04; owner)
+
+| Where | Before | Now |
+|---|---|---|
+| Deployment (11.9) | Not written down | An open question: what already fits, what doesn't, candidates (a small server or micro-VMs that scale to zero; continuous offsite backup of each workspace's SQLite file), and the real gap (one process per workspace today) |
+
+- **No config key, API or op change.**
+
 ## 344. Motion, the pressed state of every control, and the shared leftovers (2026-11-04; gate fix batch G6)
 
 | Where | Before | Now |
