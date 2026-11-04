@@ -107,6 +107,7 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - [ ] G4 Records
       - [ ] G5 Settings and Setup (with D1 and D10)
       - *G3c held by the owner (2026-11-04: "skip g3c and DO the small ones after it"):* the Schedule-to-its-mockup batch waits until after the owner's test (its lines stay open in `u3-gate/items.md`). G4d, T1 and G6 go ahead after G1d and G2c.
+      - *Review point (owner, 2026-11-04: "do not do final build after T1 until we review where we are"):* after T1, nothing more starts (no G6, no end-of-round full run, no push) until the owner and the main session review where things stand.
       - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
       - [ ] G6 motion (D7), the keyboard walk, screenshot comparisons in CI (D8), the product file and the brand moments
       Then the full suites, a fresh inventory and mockup capture, and both cold scorers on every screen.
