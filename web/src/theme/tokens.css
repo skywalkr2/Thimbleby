@@ -195,7 +195,7 @@
     --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
     --surface-raised: #25262a; --overlay-edge: 0 0 0 1px var(--border-strong);
     --row-btn-bg: var(--accent-soft); --row-btn-border: transparent; --row-btn-text: var(--accent-text); --row-btn-hover: color-mix(in srgb, var(--accent-soft) 78%, var(--accent));
-    --today-tint: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
+    --today-tint: color-mix(in srgb, var(--accent-soft) 35%, var(--surface));
     --mark-day-display: none; --mark-night-display: block;
     color-scheme: dark;
   }
@@ -232,7 +232,7 @@
   --pill-neutral-bg: var(--surface-sunk); --pill-neutral-edge: none;
   --surface-raised: #25262a; --overlay-edge: 0 0 0 1px var(--border-strong);
   --row-btn-bg: var(--accent-soft); --row-btn-border: transparent; --row-btn-text: var(--accent-text); --row-btn-hover: color-mix(in srgb, var(--accent-soft) 78%, var(--accent));
-  --today-tint: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
+  --today-tint: color-mix(in srgb, var(--accent-soft) 35%, var(--surface));
   --mark-day-display: none; --mark-night-display: block;
   color-scheme: dark;
 }

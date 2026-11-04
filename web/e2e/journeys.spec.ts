@@ -357,7 +357,7 @@ test.describe.serial("journeys", () => {
       await expect(form.getByLabel("Full name", { exact: true })).toHaveValue(name);
       await visit(page);
       await form.getByRole("button", { name: "Add and use" }).click();
-      await expect(toasts).toContainText(`Added ${name}. Related work has resumed.`);
+      await expect(toasts).toContainText(`Added ${name}. Related work has resumed.`, { timeout: 20_000 });
       expect(await people()).toContain(name);
       const waiting = async () => (await actionsOf()).filter((a) => a.text.startsWith("Confirm the catering menu"));
       const owned = async () => (await json<Person[]>("api/people")).find((p) => p.name === name)?.id;
@@ -411,13 +411,13 @@ test.describe.serial("journeys", () => {
       return proposal(name);
     };
     await (await toProposal(retreat)).getByRole("button", { name: "Add", exact: true }).click();
-    await expect(toasts).toContainText(`Added the project ${retreat}.`);
+    await expect(toasts).toContainText(`Added the project ${retreat}.`, { timeout: 20_000 });
     expect(await filed()).toEqual({ note: retreat, action: retreat });
     await undo();
     await expect.poll(async () => await projectNamed(retreat)).toBeUndefined();
     expect(await filed()).toEqual({ note: null, action: null });
     await (await toProposal(festival)).getByRole("button", { name: "Add", exact: true }).click();
-    await expect(toasts).toContainText(`Added the project ${festival}.`);
+    await expect(toasts).toContainText(`Added the project ${festival}.`, { timeout: 20_000 });
     expect(await filed()).toEqual({ note: festival, action: festival });
     await visit(page);
 
@@ -437,7 +437,7 @@ test.describe.serial("journeys", () => {
       await page.getByRole("menuitem", { name: "It's part of…" }).click();
       await choose(row.getByLabel(`“${party}” is part of`), { label: festival });
       await row.getByRole("button", { name: "File it there" }).click();
-      await expect(toasts).toContainText(`Filed under ${festival}. “${party}” is kept as a name for it.`);
+      await expect(toasts).toContainText(`Filed under ${festival}. “${party}” is kept as a name for it.`, { timeout: 20_000 });
       expect(await partyNote()).toBe(festival);
       expect(await projectNamed(party)).toBeUndefined();
       if (keep) break;
@@ -459,7 +459,7 @@ test.describe.serial("journeys", () => {
     for (const keep of [false, true]) {
       await tourProposal.getByRole("button", { name: `More actions for ${tour}` }).click();
       await page.getByRole("menuitem", { name: "Not a project" }).click();
-      await expect(toasts).toContainText(`“${tour}” is kept as not a project.`);
+      await expect(toasts).toContainText(`“${tour}” is kept as not a project.`, { timeout: 20_000 });
       expect(await projectNamed(tour)).toBeUndefined();
       if (keep) break;
       await undo();

@@ -44,7 +44,14 @@ def seed_meetings(store, cfg):
         ).id
     # The promise was made eight days ago: long enough to have gone quiet, short of its own follow-up line.
     before = store.clock
-    store.clock = lambda: (now - timedelta(days=8)).isoformat(timespec="seconds")
+    # Eight days back by the person's own calendar (at noon there), so the count of days does not depend on the hour the
+    # test runs at or on a clock change between the two days.
+    from datetime import time
+
+    from engine.today import zone
+
+    made = datetime.combine(now.astimezone(zone(cfg)).date() - timedelta(days=8), time(12), tzinfo=zone(cfg))
+    store.clock = lambda: made.astimezone(UTC).isoformat(timespec="seconds")
     try:
         with store.transaction() as tx:
             promise = tx.create(

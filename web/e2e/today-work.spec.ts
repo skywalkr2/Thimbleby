@@ -192,8 +192,8 @@ test.describe("Today and the work screens", () => {
     await page.getByRole("menuitem", { name: "Look closer" }).click();
     // (The line's own group is named "Site visit and Supplier call overlap": each event's group is matched by its whole name.)
     const first = page.getByRole("group", { name: "Site visit", exact: true });
-    await expect(first.getByRole("link", { name: "Open", exact: true })).toHaveAttribute("href", /calendar-event/);
+    await expect(first.getByRole("link", { name: "Open the event", exact: true })).toHaveAttribute("href", /calendar-event/);
     await expect(first).toContainText("Change it in your calendar app");
-    await expect(page.getByRole("group", { name: "Supplier call", exact: true }).getByRole("link", { name: "Open", exact: true })).toHaveAttribute("href", /calendar-event/);
+    await expect(page.getByRole("group", { name: "Supplier call", exact: true }).getByRole("link", { name: "Open the event", exact: true })).toHaveAttribute("href", /calendar-event/);
   });
 });

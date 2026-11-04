@@ -245,8 +245,8 @@ test("a clash line opens both entries, each with when it is, its calendar, Move 
   const second = screen.getByRole("group", { name: "Supplier call" });
   expect(within(first).getByText("Work calendar")).toBeInTheDocument();
   expect(within(second).getByText("The app's own calendar")).toBeInTheDocument();
-  expect(within(first).getByRole("link", { name: "Open" })).toBeInTheDocument();
-  expect(within(second).getByRole("link", { name: "Open" })).toBeInTheDocument();
+  expect(within(first).getByRole("link", { name: "Open the event" })).toBeInTheDocument();
+  expect(within(second).getByRole("link", { name: "Open the event" })).toBeInTheDocument();
   expect(await within(first).findByRole("button", { name: /Move/ })).toBeInTheDocument();
   expect(await within(second).findByRole("button", { name: /Move/ })).toBeInTheDocument();
 });
@@ -280,8 +280,8 @@ test("a clash of two connected events the app keeps no entry for still has Open,
   await user.click(await screen.findByRole("menuitem", { name: "Look closer" }));
   const first = await screen.findByRole("group", { name: "Site visit" });
   const second = screen.getByRole("group", { name: "Supplier call" });
-  expect(within(first).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringContaining("calendar-event"));
-  expect(within(second).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringContaining("calendar-event"));
+  expect(within(first).getByRole("link", { name: "Open the event" })).toHaveAttribute("href", expect.stringContaining("calendar-event"));
+  expect(within(second).getByRole("link", { name: "Open the event" })).toHaveAttribute("href", expect.stringContaining("calendar-event"));
   expect(within(first).getByText(/Change it in your calendar app/)).toBeInTheDocument();
   expect(within(first).getByRole("link", { name: /Open in your calendar/ })).toHaveAttribute("href", `${WEB}calendar.example.com/e/1`);
 });

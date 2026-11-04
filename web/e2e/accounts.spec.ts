@@ -7,7 +7,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { choicesOf, choose } from "./choose";
-import { collectProblems, fakeAddress, type Info } from "./journey-helpers";
+import { collectProblems, fakeAddress, pressStart, showSteps, type Info } from "./journey-helpers";
 
 const FAKE = `http://127.0.0.1:${process.env.JOURNEY_ACCOUNTS_FAKE_PORT ?? 8769}`;
 void fakeAddress;
@@ -16,6 +16,9 @@ const LOADED = { timeout: 60_000 };
 let info: Info;
 let addresses: string[];
 const problems: string[] = [];
+
+// The Schedule shortens a calendar's name to the part before the "@" when every calendar shares one domain.
+const onSchedule = (address: string) => `Your calendar, ${address.split("@")[0]}`;
 
 const go = (page: Page, hash: string) =>
   page.evaluate((to) => {
@@ -89,16 +92,16 @@ test.describe.serial("several accounts", () => {
     const review = page.getByRole("button", { name: /Quarterly review/ });
     await expect(review.first()).toBeVisible(LOADED);
     await expect(review).toHaveCount(1);
-    await expect(review.first()).toContainText(`also in Your calendar, ${addresses[1]}`);
+    await expect(review.first()).toContainText(`also in ${onSchedule(addresses[1])}`);
     // The legend: a button for each calendar with its name, and pressed while its entries show.
     const legend = page.getByRole("list", { name: "Calendars", exact: true });
     await expect(legend.getByRole("button")).toHaveCount(3);
-    for (const address of addresses) await expect(legend.getByRole("button", { name: `Your calendar, ${address}` })).toHaveAttribute("aria-pressed", "true");
+    for (const address of addresses) await expect(legend.getByRole("button", { name: onSchedule(address), exact: true })).toHaveAttribute("aria-pressed", "true");
     // Each calendar has a color of its own, never two the same, beside its name.
     const colors = await legend.locator("[data-color]").evaluateAll((els) => els.map((el) => el.getAttribute("data-color")));
     expect(new Set(colors).size).toBe(3);
     // Hiding the third calendar hides its entries and says so in words, not only by the mark.
-    const third = legend.getByRole("button", { name: `Your calendar, ${addresses[2]}` });
+    const third = legend.getByRole("button", { name: onSchedule(addresses[2]) });
     const before = await page.locator("[data-entry-key]").count();
     await third.click();
     await expect(third).toHaveAttribute("aria-pressed", "false");
@@ -120,6 +123,8 @@ test.describe.serial("several accounts", () => {
     const came = page.getByRole("region", { name: /Came in/ });
     await expect(came).toBeVisible(LOADED);
     // The card lists the first rows of what came in (`ui.today.rail_rows`) and folds the rest behind "N more".
+    // The rows are read before the fold is looked for, so a slow read can't be mistaken for "nothing is folded".
+    await expect(came.getByRole("listitem").first()).toBeVisible(LOADED);
     const more = came.getByRole("button", { name: /^\d+ more$/ });
     if (await more.count()) await more.click();
     const thread = came.getByText("Joint lease renewal");
@@ -310,7 +315,7 @@ test.describe.serial("several accounts", () => {
     // The month: the third calendar's one entry is an all-day holiday three days ahead, which the day view of today never shows.
     await page.locator("body").press("4");
     const toggles = page.getByRole("list", { name: "Calendars", exact: true });
-    const third = toggles.getByRole("button", { name: `Your calendar, ${addresses[2]}` });
+    const third = toggles.getByRole("button", { name: onSchedule(addresses[2]) });
     const color = await third.locator("[data-color]").getAttribute("data-color");
     const mine = page.locator(`main [data-entry-key][data-color="${color}"]`);
     await expect(mine.first()).toBeVisible(LOADED);
@@ -372,7 +377,10 @@ test.describe.serial("several accounts", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`?token=${info.token}`);
     await go(page, "setup");
-    await page.getByRole("button", { name: /^Mail and calendar/ }).click();
+    // The walkthrough opens on its welcome the first time; its steps are listed once it is started.
+    await pressStart(page);
+    await showSteps(page);
+    await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Mail and calendar/ }).click();
     const result = page.locator("[data-mail-result]");
     await expect(result).toBeVisible(LOADED);
     const rows = result.getByRole("list", { name: "The accounts being read" }).getByRole("listitem");
