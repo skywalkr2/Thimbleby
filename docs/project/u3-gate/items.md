@@ -965,3 +965,8 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 - [ ] [G5] [C] (C-g1, setup-people) 8 Phone · `setup-people-day-390.png`, y=605-805: the error "Sam Twin already exists." appears below the "Who they are" select and pushes "Paste a list" to y=797, only 28px above the sticky footer's top edge; the Add button is squeezed to 56px beside a 290px select. Fix: put the error under the Name field it belongs to.
 - [ ] [G5] [C] (C-g1, setup-people) 7 Edge · `setup-people-day-1440.png`: no empty list and no 10+ people case; the error appears only in night and 390 pictures. Fix: capture the empty first-run and the error in day.
 - [ ] [G5] [C] (C-g1, setup-people) 4 Type · `setup-people-day-1440.png`: "Paste a list" is an underlined burgundy link set alone below the form, the same link style used for "Change" elsewhere.
+
+## Found while reviewing G3b
+
+- [ ] [G1b] **Filters on a phone live in one "Filter" sheet** (rubric point 8 at 4.6). On the Schedule at 390, the calendars still make a third control row, under the moves and the views. Every screen with filters (Schedule, Follow-ups, To-dos) uses one shared Filter sheet on a phone.
+- [ ] [G1b] **Review two shared values G3b changed:** `--today-tint` in `web/src/theme/tokens.css` and `LABEL_MAX` in `web/src/lib/timeline.ts`. Check them against the other screens that use them.
