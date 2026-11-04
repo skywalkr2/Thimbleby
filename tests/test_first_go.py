@@ -94,6 +94,18 @@ def test_three_held_requests_make_one_today_line_with_the_summed_estimate(env):
     assert line.group == "decide"
 
 
+def test_no_go_is_asked_for_while_no_ai_account_is_set_up(env):
+    _answer()
+    request = _hand_in(env)
+    _process(env, request)
+    assert len(_first_go_lines(env)) == 1
+    ws, cfg, store = env
+    # The accounts are taken away: the go would start nothing, so no line asks for it (the line that says to choose an
+    # account is a line of its own, and stays).
+    cfg.ai.providers.clear()
+    assert "first_go" not in [line.kind for line in queue(ws, store, cfg, NOW)]
+
+
 def test_a_line_with_no_price_says_how_many_and_has_no_total(env):
     _price(env[1], None)
     _answer()

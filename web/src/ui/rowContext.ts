@@ -3,3 +3,7 @@
 import { createContext } from "react";
 
 export const InRowActions = createContext(false);
+
+/** The screen's one filled button is in this row: the row's actions keep the filled weight for a primary button, which an
+ * action in a row is otherwise never drawn with. Set by the screen around the one row that carries it. */
+export const FilledPrimary = createContext(false);

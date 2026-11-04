@@ -2081,7 +2081,7 @@ started (a hash of the config files; the newest modification time of the program
   and shortcuts, the accounts counted as ours, backups, the watched sources), the changed files are validated and taken in
   at once, and open screens are told. A file that does not validate changes nothing and is logged.
 - If any changed key is not live, or the code changed, the settings in use stay as they were, no new job starts, queued AI work
-  is held ("Settings or code changed since the cockpit started; restart it to use them"), and the screens say a restart is
+  is held ("Settings changed since the app started; restart it to use them", in plain words: a held request shows this reason wherever it is listed), and the screens say a restart is
   needed and for which settings. The person chooses **Restart now** or **Later**. **The app never restarts on its own.**
   Old code never quietly runs new settings; nothing is half-reloaded. **Held work is never a silent stop** (built:
   `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`,

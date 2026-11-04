@@ -358,6 +358,23 @@ def test_nothing_unseen_means_no_line_and_a_day_of_changes_is_one_line_with_coun
     assert line.outcome == {"added": 1, "closed": 1, "moved": 1}
 
 
+def test_two_unseen_entries_make_the_line_with_a_count_of_two(env):
+    """The reviewer's two-entry case: two things done on the person's behalf are one line on Today that says two."""
+    ws, cfg, store = env
+    apply_at(env, [add_op()], ADDED_AT, quote_in=f"Hello. {FLOOR_QUOTE}. Thanks.", key="added")
+    apply_at(
+        env,
+        [move_op()],
+        MOVED_AT,
+        quote_in=f"Moving to {MOVE_QUOTE}.",
+        author=ME["full_name"],
+        by_you=True,
+        key="moved",
+    )
+    line = line_of(env)
+    assert (line.kind, line.count) == ("since_yesterday", 2)
+
+
 def test_a_to_do_the_review_lines_already_hold_is_not_counted_again_and_the_line_goes_when_that_was_all(env):
     """What a batch on Today holds to look over is not repeated in a second list (the reviewer's H1): while the batch
     waits, its new to-dos are left out of the line's count; once the person confirms it, the line counts them again."""

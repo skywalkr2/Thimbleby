@@ -2,10 +2,11 @@
 // Nothing here is answered: what waits for the person is a line on Today, and a held item links to it.
 import { useReviewTime } from "../lib/review-time";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { dayAndTime, day } from "../lib/dates";
+import { dayAndTime, day, dayLong, todayOn } from "../lib/dates";
+import { drawn, groupChanges, RUNS_SHOWN, shownRuns, type ChangeGroup } from "../lib/change-groups";
 import { useRowKeys } from "../lib/keys";
 import { useFieldLabel } from "../lib/records";
 import { useHeldAnswers } from "../lib/held-answers";
@@ -44,6 +45,8 @@ import { FilteredEmpty } from "../ui/FilteredEmpty";
 import { ListState } from "../ui/ListState";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill, type PillTone } from "../ui/Pill";
+import { StateMark, toneOfPill, withStatus } from "../ui/StateMark";
+import { GroupLabel } from "../ui/GroupLabel";
 
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
@@ -51,7 +54,7 @@ import { TabStrip } from "../ui/TabStrip";
 import { Actions } from "../ui/Actions";
 import { RowList, DetailItem } from "../ui/RowList";
 import { ItemList, Item } from "../ui/ItemList";
-import { ExpandableRow } from "../ui/Row";
+import { ExpandableRow, RowItem } from "../ui/Row";
 import { RowBody } from "../ui/RowBody";
 import { DetailTop } from "../ui/DetailTop";
 /** The width the list needs beside the pane: a state, a title with one line under it, the primary and the menu. */
@@ -87,6 +90,18 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   latest.current = changes.data;
   const [picked, setPicked] = useState<{ id: string; n: number } | null>(null);
   const [wanted, setWanted] = useState<string | null>(null);
+  // A row that stands in a run, or past the first few of its group, is drawn when something asks for it.
+  const [openRuns, setOpenRuns] = useState<ReadonlySet<string>>(new Set());
+  const [allOf, setAllOf] = useState<ReadonlySet<string>>(new Set());
+  const groupsRef = useRef<ChangeGroup[]>([]);
+  const drawItem = (id: string) => {
+    for (const g of groupsRef.current) {
+      for (const r of g.runs) {
+        if (r.same.some((c) => c.id === id)) setOpenRuns((prev) => new Set([...prev, r.head.id]));
+        if (r.head.id === id || r.same.some((c) => c.id === id)) setAllOf((prev) => new Set([...prev, g.id]));
+      }
+    }
+  };
   // A Today line for what a newly added source's intake found: the list narrows to that source's intake until it is cleared.
   const [intake, setIntake] = useState<string | null>(null);
   const watched = useQuery({ queryKey: ["watch"], queryFn: api.watchSources, enabled: intake !== null });
@@ -100,6 +115,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
     const item = all?.find((c) => c.changeset?.id === changeset || (c.edits ?? []).some((e) => e.changeset?.id === changeset));
     if (!all || !item) return false;
     setFilter("all");
+    drawItem(item.id);
     setShown((prev) => new Set([...(prev ?? all.map((c) => c.id)), item.id]));
     setRevealed({ id: item.id, n: Date.now() });
     // The change is chosen, so its detail shows it in full (once the list shows it).
@@ -168,12 +184,37 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   // The list | detail choice (design 7.13): beside the list the newest change is chosen as the list opens; below 1024px the
   // detail is a drawer that opens when a change is chosen.
   const beside = useMediaQuery("(min-width: 1024px)") && !props.compact;
-  const choice = useListChoice({ keys: rows.map((c) => c.id), beside, first: null, reset: `${filter}|${intake ?? ""}` });
+  // What needs the person first, then what is with the assistant, then the rest under the day it was handed in; rows that read the
+  // same are one run, whose other rows come out on "Show more like this".
+  const groups = useMemo(
+    () => groupChanges(rows, (c) => changeTitle(c, t, has), (c) => stateWord(c, waitsForGo(c))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(rows), t, has],
+  );
+  groupsRef.current = groups;
+  // The row the person is on stays drawn when a change to it moves it into a run or past the first rows of a group.
+  const kept = useRef<string | null>(null);
+  const runsDrawn = new Set(openRuns);
+  const groupsDrawn = new Set(allOf);
+  for (const g of groups) {
+    g.runs.forEach((r, at) => {
+      if (kept.current && r.same.some((c) => c.id === kept.current)) runsDrawn.add(r.head.id);
+      if (kept.current && at >= RUNS_SHOWN && (r.head.id === kept.current || r.same.some((c) => c.id === kept.current))) groupsDrawn.add(g.id);
+    });
+  }
+  const ordered = drawn(groups, runsDrawn, groupsDrawn);
+  // A row asked for that the groups hold back (inside a run, or past the first few) is drawn once the groups are known.
+  useEffect(() => {
+    if (picked && !ordered.some((c) => c.id === picked.id)) drawItem(picked.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, groups]);
+  const choice = useListChoice({ keys: ordered.map((c) => c.id), beside, first: null, reset: `${filter}|${intake ?? ""}` });
   useEffect(() => {
     if (picked) choice.choose(picked.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
-  const selected = rows.find((c) => c.id === choice.chosen) ?? null;
+  kept.current = choice.chosen;
+  const selected = ordered.find((c) => c.id === choice.chosen) ?? null;
   const [want, setWant] = useState<(ChangeWant & { id: string }) | null>(null);
   useEffect(() => setWant(null), [choice.chosen]);
   const asked = (id: string) => (what: ChangeWant["what"]) => {
@@ -194,14 +235,19 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       <p className="sr" aria-live="polite">
         {announce}
       </p>
-      {waitingOnToday !== null && waitingOnToday > 0 && (
-        <p className="hint" data-waiting-on-today="">
-          {tn("changes.waiting_on_today", waitingOnToday)} · <a href={viewHref("today")}>{t("changes.open_today")}</a>
-        </p>
-      )}
-      {handledCount > 0 && (
-        <p className="hint" data-handled-count="">
-          <a href={viewHref("work/handled")}>{t("changes.handled", { n: handledCount })}</a>
+      {((waitingOnToday !== null && waitingOnToday > 0) || handledCount > 0) && (
+        <p className="hint" data-changes-summary="">
+          {waitingOnToday !== null && waitingOnToday > 0 && (
+            <span data-waiting-on-today="">
+              {tn("changes.waiting_on_today", waitingOnToday)} · <ButtonLink variant="quiet" size="sm" href={viewHref("today")}>{t("changes.open_today")}</ButtonLink>
+            </span>
+          )}
+          {waitingOnToday !== null && waitingOnToday > 0 && handledCount > 0 && " · "}
+          {handledCount > 0 && (
+            <span data-handled-count="">
+              <ButtonLink variant="quiet" size="sm" href={viewHref("work/handled")}>{t("changes.handled", { n: handledCount })}</ButtonLink>
+            </span>
+          )}
         </p>
       )}
       {intake !== null && (
@@ -254,14 +300,27 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           }
         >
           <RowList as="ol">
-            {rows.map((item) => (
-              <ChangeListRow
-                key={item.id}
-                item={item}
-                choice={choice}
-                reveal={revealed?.id === item.id ? revealed.n : 0}
-                onWant={asked(item.id)}
-                onOpenGuide={props.onOpenGuide}
+            {groups.map((group) => (
+              <ChangeGroupRows
+                key={group.id}
+                group={group}
+                openRuns={runsDrawn}
+                all={groupsDrawn.has(group.id)}
+                onAll={() => setAllOf((prev) => new Set([...prev, group.id]))}
+                onToggleRun={(id) => setOpenRuns((prev) => (prev.has(id) ? new Set([...prev].filter((x) => x !== id)) : new Set([...prev, id])))}
+                row={(item, count) => (
+                  <ChangeListRow
+                    key={item.id}
+                    item={item}
+                    choice={choice}
+                    count={count}
+                    inNeeds={group.kind === "needs"}
+                    inWith={group.kind === "with"}
+                    reveal={revealed?.id === item.id ? revealed.n : 0}
+                    onWant={asked(item.id)}
+                    onOpenGuide={props.onOpenGuide}
+                  />
+                )}
               />
             ))}
           </RowList>
@@ -271,6 +330,71 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       </ListState>
     </section>
   );
+}
+
+/** One group of the list: its label with the count, then its rows; a run of rows that read the same is its first row with the
+ * number ("×5") and a button that draws the others. */
+function ChangeGroupRows(props: {
+  group: ChangeGroup;
+  openRuns: ReadonlySet<string>;
+  /** The group draws every run, not the first few. */
+  all: boolean;
+  onAll: () => void;
+  onToggleRun: (id: string) => void;
+  row: (item: S["ChangeItem"], count: number) => React.ReactNode;
+}) {
+  const { t, tn } = useWords();
+  const { group } = props;
+  const label =
+    group.kind === "needs"
+      ? t("changes.group.needs")
+      : group.kind === "with"
+        ? t("changes.group.with")
+        : group.day === todayOn(new Date())
+          ? t("changes.group.today")
+          : group.day === yesterdayOn()
+            ? t("changes.group.yesterday")
+            : dayLong(group.day ?? "");
+  const total = group.runs.reduce((n, r) => n + 1 + r.same.length, 0);
+  return (
+    <>
+      <li>
+        <GroupLabel as="h3" count={total} tone={group.kind === "needs" ? "danger" : "plain"} data-changes-group={group.kind}>
+          {label}
+        </GroupLabel>
+      </li>
+      {shownRuns(group, props.all ? new Set([group.id]) : new Set()).map((run) => {
+        const open = props.openRuns.has(run.head.id);
+        return (
+          <Fragment key={run.head.id}>
+            {props.row(run.head, run.same.length + 1)}
+            {open && run.same.map((item) => props.row(item, 1))}
+            {run.same.length > 0 && (
+              <RowItem>
+                <Button variant="quiet" size="sm" aria-expanded={open} onClick={() => props.onToggleRun(run.head.id)}>
+                  {open ? t("changes.run.fewer") : tn("changes.run.more", run.same.length)}
+                </Button>
+              </RowItem>
+            )}
+          </Fragment>
+        );
+      })}
+      {!props.all && group.runs.length > shownRuns(group, new Set()).length && (
+        <RowItem>
+          <Button variant="quiet" size="sm" onClick={props.onAll}>
+            {tn("changes.group.more", group.runs.length - shownRuns(group, new Set()).length)}
+          </Button>
+        </RowItem>
+      )}
+    </>
+  );
+}
+
+/** The day before today, on the person's clock, as yyyy-mm-dd. */
+function yesterdayOn(): string {
+  const back = new Date();
+  back.setDate(back.getDate() - 1);
+  return todayOn(back);
 }
 
 const TONE: Record<S["ChangeItem"]["state"], PillTone> = {
@@ -451,7 +575,6 @@ function FoldedListRow(props: { item: S["ChangeItem"]; choice: ListChoice; revea
       ref={ref}
       aria-labelledby={`t-${item.id}`}
       {...choice.rowProps(item.id)}
-      pill={<Pill tone="neutral">{t("changes.state.done")}</Pill>}
       title={title}
       titleId={`t-${item.id}`}
       meta={t("changes.edits_sub", { edits: tn("changes.edits", (item.edits ?? []).length), when: dayAndTime(item.created_at) })}
@@ -476,11 +599,32 @@ function FoldedEditsPane(props: { item: S["ChangeItem"] }) {
   );
 }
 
-function ChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; reveal: number; onWant: (what: ChangeWant["what"]) => void; onOpenGuide?: (step: string) => void }) {
+interface ChangeListRowProps {
+  item: S["ChangeItem"];
+  choice: ListChoice;
+  reveal: number;
+  /** How many rows read the same as this one (this one included): more than one draws "×N". */
+  count: number;
+  /** The group the row is in says it needs the person, or is with the assistant, so the row does not say it again. */
+  inNeeds: boolean;
+  inWith: boolean;
+  onWant: (what: ChangeWant["what"]) => void;
+  onOpenGuide?: (step: string) => void;
+}
+
+function ChangeListRow(props: ChangeListRowProps) {
   return folded(props.item) ? <FoldedListRow item={props.item} choice={props.choice} reveal={props.reveal} /> : <SingleChangeListRow {...props} />;
 }
 
-function SingleChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice; reveal: number; onWant: (what: ChangeWant["what"]) => void; onOpenGuide?: (step: string) => void }) {
+/** What a row says about its state: only what is not ordinary. Being with the assistant, done, or waiting for the person is said
+ * by the group the row is in; what is left (not yet checked, stopped, undone, dismissed) is a dot and a word. */
+const ROUTINE = new Set(["changes.state.queued", "changes.state.running", "changes.state.done", "changes.state.needs_you"]);
+function statusOf(item: S["ChangeItem"], gated: boolean, t: T): { tone: PillTone; word: string } | null {
+  const key = stateWord(item, gated);
+  return ROUTINE.has(key) ? null : { tone: TONE[item.state], word: t(key) };
+}
+
+function SingleChangeListRow(props: ChangeListRowProps) {
   const { t } = useWords();
   const { item, choice } = props;
   const ref = useRef<HTMLLIElement>(null);
@@ -503,10 +647,18 @@ function SingleChangeListRow(props: { item: S["ChangeItem"]; choice: ListChoice;
       aria-labelledby={`t-${item.id}`}
       data-changeset={cs?.id}
       {...choice.rowProps(item.id)}
-      pill={<Pill tone={TONE[item.state]}>{t(stateWord(item, gated))}</Pill>}
       title={title}
       titleId={`t-${item.id}`}
-      meta={sub}
+      meta={withStatus(
+        statusOf(item, gated, t),
+        props.count > 1 ? (
+          <>
+            <strong>×{props.count}</strong> · {sub}
+          </>
+        ) : (
+          sub
+        ),
+      )}
       expand={{ expanded: choice.chosen === item.id, inert: choice.chosen === item.id, onToggle: () => choice.choose(item.id) }}
       menu={
         <>
@@ -607,21 +759,18 @@ export function ChangeRow(props: {
       {undoAllDialog}
     </Actions>
   );
-  const pill = (
-    <Pill tone={TONE[item.state]}>
-      {t(props.history || item.changeset?.status === "undone" || item.changeset?.status === "partly_undone" ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
-    </Pill>
-  );
+  const statusWord = t(props.history || item.changeset?.status === "undone" || item.changeset?.status === "partly_undone" ? stateWord(item, gated) : item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`);
+  const status = { tone: TONE[item.state], word: statusWord };
   const secondOpinion = cs?.second_opinion ? <span className="second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span> : null;
   const opened = (
     <>
+          {item.waiting && item.state !== "review" && <p data-waiting-reason="">{item.waiting}</p>}
           {item.note && (
             <div className="your-note">
               <span className="what">{item.title?.kind === "answer" ? t("queue.title.answer") : t("changes.your_note")}</span>
               <p>{item.note}</p>
             </div>
           )}
-          {item.waiting && item.state !== "review" && <p className="hint">{item.waiting}</p>}
           {(item.state === "review" || item.state === "done") && spentLine(item.spent_usd, item.range_usd) && (
             <p className="hint">{spentLine(item.spent_usd, item.range_usd)}</p>
           )}
@@ -654,7 +803,9 @@ export function ChangeRow(props: {
         <DetailTop
           state={
             <>
-              {pill}
+              <StateMark tone={toneOfPill(status.tone)} quiet>
+                {status.word}
+              </StateMark>
               <span>{sub}</span>
             </>
           }
@@ -670,10 +821,9 @@ export function ChangeRow(props: {
       ref={ref}
       aria-labelledby={`t-${item.id}`}
       data-changeset={cs?.id}
-      pill={pill}
       title={title}
       titleId={`t-${item.id}`}
-      metaLines={[sub, secondOpinion]}
+      metaLines={[withStatus(status, sub), secondOpinion]}
       expand={{ expanded: open, controls: `b-${item.id}`, onToggle: () => setOpen(!open) }}
       primary={
         primary && !props.history ? (
@@ -761,7 +911,7 @@ function subLine(item: S["ChangeItem"], t: T, tn: TN): string {
   const when = dayAndTime(item.created_at);
   if (item.state === "queued" || item.state === "running") return t("changes.sub.waiting", { when });
   if (item.dismissed) return t("changes.sub.dismissed", { when });
-  if (item.state === "needs_you" || item.state === "failed") return t("changes.sub.stopped", { when });
+  if (item.state === "needs_you" || item.state === "failed") return item.waiting ? t("changes.sub.stopped_why", { when, why: firstLine(item.waiting) }) : t("changes.sub.stopped", { when });
   const ops = item.changeset?.ops ?? [];
   const held = ops.filter((o) => o.status === "held" || o.ask?.status === "open").length;
   const did = ops.length ? didText(ops, t, tn) : t("changes.did_nothing");

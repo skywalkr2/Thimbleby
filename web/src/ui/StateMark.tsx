@@ -22,3 +22,25 @@ export function StateMark(props: { tone: StateTone; children: ReactNode; classNa
     </span>
   );
 }
+
+/** The tone of a pill, as the state it says: only a warning, a danger or an ok is drawn in a color; the rest is a plain dot. */
+export const toneOfPill = (tone: "neutral" | "need" | "warn" | "danger" | "ok" | undefined): StateTone => (tone === "warn" || tone === "danger" || tone === "ok" ? tone : "neutral");
+
+/** A line's status and its own meta as one meta line: the dot and the word, then the rest after a dot-separator. A line with no
+ * status keeps its meta as it is. The word is the line's one status mark, the same in every list. */
+export function withStatus(status: { tone?: "neutral" | "need" | "warn" | "danger" | "ok"; word: ReactNode } | null, meta: ReactNode): ReactNode {
+  if (!status) return meta;
+  const mark = (
+    <StateMark tone={toneOfPill(status.tone)} quiet>
+      {status.word}
+    </StateMark>
+  );
+  if (meta === undefined || meta === null || meta === false || meta === "") return mark;
+  return (
+    <>
+      {mark}
+      <span aria-hidden="true"> · </span>
+      {meta}
+    </>
+  );
+}

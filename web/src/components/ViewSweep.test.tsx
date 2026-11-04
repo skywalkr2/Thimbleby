@@ -268,6 +268,8 @@ test("What changed, with its first change chosen and the others one line, says n
     "GET status": () => statusFixture(),
   });
   const view = renderApp(<WhatChanged />);
+  // What stopped is listed first and chosen first; the change with the most in it is chosen for the sweep.
+  await userEvent.setup().click(await screen.findByRole("listitem", { name: /spine options/ }));
   await screen.findByText("Send two spine options");
   await waitFor(() => expect(view.container.querySelectorAll("[data-row]").length).toBeGreaterThan(5));
   sweep(view.container);
@@ -550,7 +552,7 @@ test("Since yesterday, with every kind of act and reason, says names, dates and 
     "POST since-yesterday/seen": () => ({ ok: "seen" }),
     "GET today/queue": () => [],
   });
-  const view = renderApp(<SinceYesterday onOpenRecord={vi.fn()} />);
+  const view = renderApp(<SinceYesterday onOpenRecord={vi.fn()} onBack={() => undefined} />);
   await screen.findByRole("list", { name: "What changed since yesterday" });
   expect(screen.getAllByRole("listitem").length).toBeGreaterThanOrEqual(entries.length);
   sweep(view.container);
@@ -650,7 +652,7 @@ test("Handled for you, a rule's closes on the set-aside tab and the assistant's 
   await screen.findByRole("button", { name: "only spacing changed · 1", expanded: true });
   await screen.findByText("Spacing change in the style sheet");
   sweep(view.container);
-  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 0" }));
+  await user.click(screen.getByRole("button", { name: "Read 0" }));
   await screen.findByText("Send the proof");
   sweep(view.container);
 });

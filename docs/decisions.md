@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review, batch G2a of the gate's fix round (section 329)
+
+**Decided:** (the gate's fix round, batch G2a; design by the main session.)
+- **Restart in plain words:** the reason a held request shows, wherever it is listed, is "Settings changed since the app started; restart it to use them." (no "code", no "cockpit"). A request that still carries the older wording is held for the same reason.
+- **No go before an account:** Today asks for the first go only once an AI account is set up; until then the one line is the one that says to choose an account.
+- **One status pattern:** a row's status is a dot and a word at the start of its meta line, never a chip after the title. A group that says the state (Needs you, With the assistant) does not repeat it on its rows.
+- **What changed:** Needs you first, then With the assistant, then the days (newest first); rows that read the same are one run ("x5") with the rest behind "Show more like this"; the first rows of a group, the rest behind a button; what waits on Today and what was handled is one line of links.
+- **Since yesterday:** the title is the subject, the reason is the first meta line, the row's one action is Undo (Open is in its menu), and the way back is a back link.
+- **Handled for you:** the two views are tabs with their counts, the two help paragraphs are the subtitle, and the reason is in bold.
+- **Search:** one panel with a glyph and a kind tag for each result, a rule above Ask, the note inside the panel, a scrim on a phone. Mail and notes stay unsearched (D9) and the empty result says so.
+- **Stages and the rules review:** an empty Stages page is one line and a link to add-ons; the rules review shows its size line only above 80% of the limit, and its intro only when there is something to look over.
+- **Event page:** the page of an event the calendar holds is one column with "Open in your calendar" as its action; the sidebar keeps the screen it was opened from.
+
+**Why:** the cold scorers named these on these screens. **Impact:** `engine/today_queue.py`, `engine/worker.py`, the screens named above, the wording sheet, `web/visual/inventory.ts` (states for each screen). Change log: section 329.
+
 ## 2026-11-03: The Schedule at the gate (batch g3; section 328)
 
 **Decided:** (main session, by the gate's cold scores of the Schedule; no owner choice needed.) The time grid scrolls inside its own

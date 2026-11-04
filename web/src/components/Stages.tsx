@@ -31,6 +31,7 @@ import { Row } from "../ui/Row";
 import { Pill } from "../ui/Pill";
 import { RowBody } from "../ui/RowBody";
 import { LoadFailed } from "../ui/LoadFailed";
+import { settingsView, viewHref } from "../lib/views";
 type Shown = "board" | "list";
 const KEPT = "stages.view";
 
@@ -94,7 +95,7 @@ export function Stages() {
         </section>
       ) : groups.size === 0 ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <EmptyState text={t("stages.empty")} />
+          <EmptyState icon="layers" title={t("stages.empty.title")} text={t("stages.empty")} action={{ label: t("stages.empty.action"), href: viewHref(settingsView("addons")) }} />
         </section>
       ) : (
         [...groups].map(([kind, views]) => (

@@ -13,9 +13,11 @@ export function FilteredEmpty(
     onClear: () => void;
     /** The button's words when they are not "Clear filter" (the filter's own word: "Show all sides"). */
     label?: string;
+    /** One line with no icon, for a place where other lines still follow it. */
+    inline?: boolean;
   },
 ) {
   const { t } = useWords();
-  const { text, onClear, label, ...rest } = props;
-  return <EmptyState {...rest} icon="search" text={text} action={{ label: label ?? t("state.filtered.clear"), onClick: onClear }} data-filtered-empty="" />;
+  const { text, onClear, label, inline, ...rest } = props;
+  return <EmptyState {...rest} inline={inline} icon="search" text={text} action={{ label: label ?? t("state.filtered.clear"), onClick: onClear }} data-filtered-empty="" />;
 }

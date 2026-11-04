@@ -856,12 +856,12 @@ def _everything(
         # Background work that stopped checking in is never a silent stop; the line asks for a restart, the person's.
         lines.append(Line(key="stuck", group="decide", kind="stuck", waiting_since=stuck, since=stuck))
 
-    from engine.worker import RESTART_NEEDED
+    from engine.worker import RESTART_NEEDED, held_for_restart
 
     held = [
         r
         for r in requests.values()
-        if r.data.get("state") == "queued" and not r.data.get("dismissed") and r.data.get("waiting") == RESTART_NEEDED
+        if r.data.get("state") == "queued" and not r.data.get("dismissed") and held_for_restart(r.data.get("waiting"))
     ]
     if held:
         # Work held until a restart is never a silent stop: the first line of the day, with the count. It only asks;
@@ -877,7 +877,15 @@ def _everything(
             )
         )
 
-    if first_go:
+    # The go is for starting work, so it is asked for only once there is an AI account to do the work: until then
+    # the one line is the one that says to choose an account (below, `no_account`), and nothing asks for a go that
+    # could not start anything.
+    ai_set_up = any(
+        tier.use and tier.use.partition("/")[0] in cfg.ai.providers
+        for name, tier in cfg.ai.tiers.items()
+        if "/" not in name
+    )
+    if first_go and ai_set_up:
         from engine.watch import first_go_sorting
 
         priced = [r.data["estimate_usd"] for r in first_go if r.data.get("estimate_usd") is not None]

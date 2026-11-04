@@ -7,7 +7,7 @@
 // as design 7.6 allows for held lines). The lines come from the queue; a line is gone once its cause is, and only the
 // person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { isValidElement, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useAccountNames } from "../lib/account-names";
@@ -22,8 +22,8 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { MenuButton } from "../ui/MenuButton";
-import { Pill } from "../ui/Pill";
-import { StateMark } from "../ui/StateMark";
+import { Pill, type PillTone } from "../ui/Pill";
+import { StateMark, withStatus } from "../ui/StateMark";
 import { Icon, type IconName } from "../ui/Icon";
 import { Row, type RowProps } from "../ui/Row";
 import { AccountMoveLine, ModelMovedLine, ModelWatchLine } from "./ModelLines";
@@ -57,7 +57,10 @@ const HELD_ICON: Record<string, IconName> = {
 /** A held line's row: the shared row with the icon of its kind in the leading slot. */
 function HeldRow(props: RowProps & { "data-queue-line": string }) {
   const icon = HELD_ICON[props["data-queue-line"]] ?? "alert";
-  return <Row lead={<Icon name={icon} />} {...props} />;
+  // The kind's mark is the line's status: a dot and a word at the start of its meta, never a chip after the title.
+  const { pill, meta, ...rest } = props;
+  const status = isValidElement<{ tone?: PillTone; children: ReactNode }>(pill) && pill.type === Pill ? { tone: pill.props.tone, word: pill.props.children } : null;
+  return <Row lead={<Icon name={icon} />} {...rest} pill={status ? undefined : pill} meta={withStatus(status, meta)} />;
 }
 
 type Line = S["QueueLineView"];
@@ -600,7 +603,7 @@ function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
       data-queue-line="sent_folder"
       pill={<Pill tone="neutral">{t("queue.sent_folder.label")}</Pill>}
       title={many ? tn("queue.sent_folder.many", sources.length) : t("queue.sent_folder", { account })}
-      meta={many ? t("queue.sent_folder.many_sub", { list: names.join(", ") }) : t("queue.sent_folder.sub")}
+      meta={many ? <span title={names.join(", ")}>{t("queue.sent_folder.many_sub")}</span> : t("queue.sent_folder.sub")}
       primary={
         props.onOpen && (
           <Button size="sm" variant="primary" data-key="primary" aria-label={t("queue.sent_folder.open_named", { account })} onClick={props.onOpen}>

@@ -56,7 +56,8 @@ test("the page says what the calendar says: title, when, where, who is coming an
 test("it is read-only: it says so and offers nothing to change", async () => {
   open(() => view());
   await screen.findByRole("heading", { level: 1, name: "Proof review" });
-  expect(screen.getByText(/The app keeps no entry of its own for it, so nothing here can be changed\./)).toBeInTheDocument();
+  // One line says where it comes from and where to change it; nothing here is edited.
+  expect(screen.getByText("From your calendar. Change it there.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   expect(screen.queryByRole("textbox")).toBeNull();
 });
@@ -66,7 +67,9 @@ test("the link opens the event in its calendar and shows the address' real domai
   const link = await screen.findByRole("link", { name: "Open in your calendar" });
   expect(link).toHaveAttribute("href", `${WEB}calendar.example.com/event/1`);
   expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
-  expect(link.closest("p")).toHaveTextContent("calendar.example.com");
+  expect(link.parentElement).toHaveTextContent("calendar.example.com");
+  // It is the page's one action, drawn filled.
+  expect(link).toHaveAttribute("data-weight", "filled");
 });
 
 test("an event with no address has no link, and a called-off one says so", async () => {

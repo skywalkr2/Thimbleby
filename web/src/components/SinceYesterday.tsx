@@ -8,12 +8,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day, dayAndTime } from "../lib/dates";
-import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { Button, ButtonLink } from "../ui/Button";
+import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
+import { StateMark } from "../ui/StateMark";
 import { Skeleton } from "../ui/Skeleton";
 import { filedWords, movesToPick, useMoveFiled } from "./Filed";
 import { shortTitle } from "../lib/title-dates";
@@ -56,9 +56,20 @@ export function sentence(e: Entry, t: T): string {
   return t(key, { title: shortTitle(e.title), why: whyWords(e, t), day: e.day ? day(e.day) : "" });
 }
 
+/** What was done, with its subject and nothing else: the reason goes on the meta line. */
+export function subject(e: Entry, t: T): string {
+  const key = e.act === "moved" && !e.day ? "since.subject.moved_undated" : `since.subject.${e.act}`;
+  return t(key, { title: shortTitle(e.title), day: e.day ? day(e.day) : "" });
+}
+
+/** The reason as the start of a line: its first letter is a capital. */
+function asLine(words: string): string {
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 type Drawn = { status: "loading" } | { status: "failed" } | { status: "ready"; asOf: string; entries: Entry[] };
 
-export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string) => void }) {
+export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string) => void; onBack: () => void }) {
   const { t } = useWords();
   useReviewTime("since");
   const client = useQueryClient();
@@ -92,9 +103,9 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
         headingRef={heading}
         focusable
         title={t("since.title")}
-        actions={<ButtonLink href={viewHref("work/changed")}>{t("since.back")}</ButtonLink>}
+        subtitle={t("since.intro")}
+        back={{ label: t("since.back"), onClick: props.onBack }}
       />
-      <p className="hint">{t("since.intro")}</p>
       {drawn.status === "loading" ? (
         <div aria-busy="true" aria-label={t("since.loading")}>
           <Skeleton />
@@ -173,12 +184,21 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
       ]
     : [];
   const record = e.record;
+  const open = record ? () => props.onOpenRecord(record.kind, record.id) : undefined;
+  // What the person most likely wants here is to take it back, so that is the row's one action; opening the record is in its menu.
+  // A row with nothing to undo keeps Open.
+  const undo = menu.find((m) => m.id === "undo" || m.id === "closer-look" || m.id === "is-work");
+  const rest = menu.filter((m) => m !== undo);
+  if (undo && open) rest.unshift({ id: "open", label: t("since.open"), run: open });
+  const primary = undo ? { label: undo.label, run: undo.run } : open ? { label: t("since.open"), run: open } : null;
   return (
     <Row
       as="li"
       lead={<Icon name="archive" size={18} />}
-      title={text}
-      meta={
+      title={subject(e, t)}
+      aria-label={text}
+      metaLines={[
+        asLine(whyWords(e, t)),
         <>
           {dayAndTime(e.when)}
           {e.detail ? ` · ${e.detail}` : ""}
@@ -186,21 +206,21 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
           {unseen && (
             <>
               {" · "}
-              <strong>{t("since.unseen_close")}</strong>
+              <StateMark tone="neutral">{t("since.unseen_close")}</StateMark>
             </>
           )}
-        </>
-      }
+        </>,
+      ]}
       data-since-entry={e.ref}
       data-unseen={unseen ? "" : undefined}
       primary={
-        record ? (
-          <Button size="sm" variant="primary" data-key="primary" aria-label={t("since.open_named", { title: shortTitle(e.title) })} onClick={() => props.onOpenRecord(record.kind, record.id)}>
-            {t("since.open")}
+        primary ? (
+          <Button size="sm" variant="primary" data-key="primary" aria-label={`${primary.label}: ${shortTitle(e.title)}`} onClick={primary.run}>
+            {primary.label}
           </Button>
         ) : undefined
       }
-      menu={menu.length > 0 || groups.length > 0 ? <RowMenu label={shortTitle(e.title)} actions={menu} groups={groups} /> : undefined}
+      menu={rest.length > 0 || groups.length > 0 ? <RowMenu label={shortTitle(e.title)} actions={rest} groups={groups} /> : undefined}
     />
   );
 }

@@ -7,12 +7,17 @@ import { api } from "../lib/api";
 import { plain } from "../lib/read";
 import { useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
+import { Icon, type IconName } from "../ui/Icon";
+import { Pill } from "../ui/Pill";
 import { RowList } from "../ui/RowList";
 import { SearchField } from "../ui/SearchField";
 import styles from "./SearchBox.module.css";
 
 /** Marks the field, so the search key and the bar can find the one that is showing. */
 export const SEARCH_FIELD = "data-search-field";
+
+/** The glyph of a kind of result, so a row says what it is before it is read. */
+const KIND_ICON: Record<string, IconName> = { person: "users", project: "grid", action: "check", file: "folder", lesson: "book", glossary_entry: "book", routing_entry: "chat", style_note: "book" };
 
 export function SearchBox(props: {
   onOpenRecord: (kind: string, id: string) => void;
@@ -100,28 +105,35 @@ export function SearchBox(props: {
           else ask();
         }}
       />
+      {open && words && <div className={styles.scrim} aria-hidden="true" />}
       {open && (
         <div className={styles.drop} ref={list}>
           {words && found.isError && <p className="hint">{t("search.load_failed")}</p>}
-          {words && !found.isError && !found.isFetching && rows.length === 0 && <p className="hint">{t("search.none", { query: words })}</p>}
-          <RowList aria-label={t("search.results")}>
+          {words && !found.isError && !found.isFetching && rows.length === 0 && <p className={styles.none}>{t("search.none", { query: words })}</p>}
+          <RowList aria-label={t("search.results")} detail className={styles.results}>
             {rows.map((r) => (
               <li key={`${r.kind}/${r.id}`}>
                 <button type="button" className={styles.row} onClick={() => pick(r.kind, r.id)}>
+                  <span className={styles.lead} aria-hidden="true">
+                    <Icon name={KIND_ICON[r.kind] ?? "search"} size={16} />
+                  </span>
                   <span className={styles.main}>{plain(r.title)}</span>
-                  <span className={styles.kind}>{kindLabel(r)}</span>
+                  <Pill>{kindLabel(r)}</Pill>
                   {r.detail && <span className={styles.detail}>{plain(r.detail)}</span>}
                 </button>
               </li>
             ))}
-            <li>
+            <li className={styles.askItem}>
               <button type="button" className={styles.row} aria-describedby={words ? `${base}-hint` : undefined} onClick={ask}>
+                <span className={styles.lead} aria-hidden="true">
+                  <Icon name="chat" size={16} />
+                </span>
                 <span className={styles.main}>{words ? t("search.ask", { query: words }) : t("search.ask_empty")}</span>
               </button>
             </li>
           </RowList>
           {words && (
-            <span id={`${base}-hint`} className="hint">
+            <span id={`${base}-hint`} className={styles.note}>
               {t("search.ask.hint")}
             </span>
           )}

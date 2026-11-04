@@ -303,7 +303,7 @@ test.describe("no screen is wider than the window", () => {
       await expect(page.locator("ol[data-row-list]:not([data-detail]) > li [data-expander]").first()).toBeVisible(LOADED);
       // Each row is as tall as its title and what is under it: no line is cut by a row that keeps one height.
       const rows = await page.evaluate(() =>
-        Array.from(document.querySelectorAll("ol[data-row-list]:not([data-detail]) > li")).map((li) => {
+        Array.from(document.querySelectorAll("ol[data-row-list]:not([data-detail]) > li:has([data-expander])")).map((li) => {
           const title = li.querySelector("[data-expander]") as HTMLElement;
           return { line: li.getBoundingClientRect().height, title: title.getBoundingClientRect().height, scroll: li.scrollHeight, shown: li.clientHeight };
         }),
@@ -321,7 +321,7 @@ test.describe("no screen is wider than the window", () => {
       await expect
         .poll(async () =>
           pane.evaluate((el) => {
-            const state = el.querySelector("[data-detail-top] [data-pill]")?.getBoundingClientRect();
+            const state = el.querySelector("[data-detail-top] [data-state-mark]")?.getBoundingClientRect();
             const menu = el.querySelector("[data-detail-top] [data-actions] button")?.getBoundingClientRect();
             return state && menu ? Math.abs(menu.y - state.y) : null;
           }),

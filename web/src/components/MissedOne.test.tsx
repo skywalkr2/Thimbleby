@@ -108,7 +108,7 @@ test("the empty list of what changed offers it too", async () => {
   });
   renderApp(
     <MissedOneProvider>
-      <SinceYesterday onOpenRecord={noop} />
+      <SinceYesterday onOpenRecord={noop} onBack={() => undefined} />
     </MissedOneProvider>,
   );
   expect(await screen.findByText("Nothing new since yesterday, or since you last looked.")).toBeInTheDocument();

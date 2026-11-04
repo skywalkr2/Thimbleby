@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 329. Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review (2026-11-04; gate fix batch G2a)
+
+| Where | Before | Now |
+|---|---|---|
+| Held for a restart (6.14, 4.22) | "Settings or code changed since the cockpit started; restart it to use them." shown as an item's body | "Settings changed since the app started; restart it to use them."; an older request is held for the same reason |
+| First go (6.32) | A go was asked for with no AI account | No go line until an account is set up |
+| Row status (7.14) | A chip after the title, in three styles | A dot and a word at the start of the meta line |
+| What changed (7.13) | One flat list, a chip and the same hand-in line on every row | Needs you, With the assistant, then days; runs with "x N"; a button for the rest of a group |
+| Since yesterday (7.13) | The reason in the title, Undo hidden in the menu | The subject as the title, the reason as meta, Undo as the row's action, a back link |
+| Handled for you (7.13) | A pill toggle, two help paragraphs | Tabs with counts, one subtitle, the reason in bold |
+| Search (7.12) | Plain rows, a note outside the panel | One panel, glyph and tag per result, a rule above Ask, the note inside, a scrim on a phone |
+| Stages, rules review, event page | A four-line empty paragraph; a size line always; details in a far column | One line and a link; the size line near the limit; one column with Open in your calendar |
+
 ## 328. The Schedule at the gate: the grid in its own frame, titles on the Timeline, a mark on a clash day (2026-11-03; batch g3)
 
 | Where | Before | Now |

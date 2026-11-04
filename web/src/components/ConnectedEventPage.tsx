@@ -7,7 +7,8 @@ import { day, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Attendees } from "./Attendees";
-import { SafeLink } from "./SafeText";
+import { domainOf } from "./SafeText";
+import { ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
@@ -58,40 +59,38 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
         id="record-title"
         title={event?.title ?? t("schedule.event.kind")}
         kind={<Pill tone="neutral">{t("schedule.event.kind")}</Pill>}
+        subtitle={event ? t("schedule.event.note") : undefined}
         back={{ label: t("record.back"), onClick: props.onBack }}
+        primary={
+          event?.link && domainOf(event.link) ? (
+            <span className="link">
+              <ButtonLink variant="primary" href={event.link} target="_blank" rel="noopener noreferrer">
+                {t("schedule.open_calendar")}
+              </ButtonLink>{" "}
+              <span className="domain">{t("link.domain", { domain: domainOf(event.link) ?? "" })}</span>
+            </span>
+          ) : undefined
+        }
       />
       {found.isPending && <Skeleton />}
       {found.isError && <EmptyState text={t("schedule.event.gone")} />}
       {event && (
-        <>
-          <p className="hint">{t("schedule.event.note")}</p>
-          <p className="hint">{t("acts.event.why.app_only")}</p>
-          <div className="record-grid">
-            <div className="record-main">
-              <Attendees fields={{ organizer: event.organizer, attendees: event.attendees, invitation: false }} names={new Map()} />
+        <div className="record-main">
+          <section aria-labelledby="record-details">
+            <div className="heading">
+              <h2 id="record-details">{t("record.details")}</h2>
             </div>
-            <aside className="record-side">
-              <section aria-labelledby="record-details">
-                <div className="heading">
-                  <h3 id="record-details">{t("record.details")}</h3>
-                </div>
-                <DefinitionList>
-                  {rows.map((row) => (
-                    <Definition key={row.name} data-detail={row.name}>
-                      <dt>{row.label}</dt>
-                      <dd>{row.value}</dd>
-                    </Definition>
-                  ))}
-                </DefinitionList>
-                {event.link && (
-                  <p>
-                    <SafeLink label={t("schedule.open_calendar")} url={event.link} />
-                  </p>
-                )}
-              </section>
-            </aside>
-          </div>
-        </>
+            <DefinitionList>
+              {rows.map((row) => (
+                <Definition key={row.name} data-detail={row.name}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </Definition>
+              ))}
+            </DefinitionList>
+          </section>
+          <Attendees fields={{ organizer: event.organizer, attendees: event.attendees, invitation: false }} names={new Map()} />
+        </div>
       )}
     </section>
   );

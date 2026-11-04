@@ -1091,7 +1091,7 @@ from the screens…" and "The app restarts only when it must, and only when the 
 - **Every other key needs a restart:** `server.*`, the rest of `storage.*`, `workspace.language`, `workspace.plugins.*`
   (including turning an add-on on or off), `dispatch.*`, `checks.*`, `language.*` except the word lists and the never-asked words, `stages.*`, `rules.*` and every plugin's
   own settings. A change to the program's own code counts too. The app then says a restart is needed and why, holds new AI
-  work ("Settings or code changed; restart to use them"), and waits for the person to choose **Restart now** or **Later**. It
+  work ("Settings changed since the app started; restart it to use them"), and waits for the person to choose **Restart now** or **Later**. It
   never restarts on its own (6.14). A copy that can't start itself again says to close and start it.
 
 ## 4.23 Value lists

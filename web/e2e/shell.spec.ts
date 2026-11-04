@@ -325,13 +325,13 @@ test.describe("screen use and the shell", () => {
         // Measured until the row has laid out at the new width: under load the first frame after a resize can show the pill not yet sized. A layout that never settles right still fails when the retries run out.
         await expect(async () => {
           const m = await line.evaluate((row) => {
-            const pill = row.querySelector("[data-pill]")!.getBoundingClientRect();
+            const pill = row.querySelector("[data-state-mark]")!.getBoundingClientRect();
             // The title's words: the mark follows them (design 7.14), on the same line or the one under; no word is drawn under it.
             const words = row.querySelector('[id$="-title"]')!;
             let overlap = 0;
             const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
             for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-              if (!(node.textContent ?? "").trim() || (node.parentElement as HTMLElement).closest("[data-pill]")) continue;
+              if (!(node.textContent ?? "").trim() || (node.parentElement as HTMLElement).closest("[data-state-mark]")) continue;
               const range = document.createRange();
               range.selectNodeContents(node);
               for (const rect of Array.from(range.getClientRects())) {

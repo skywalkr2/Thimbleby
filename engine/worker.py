@@ -23,7 +23,17 @@ from engine.workspace import Workspace
 
 CODE_ROOTS = (Path(__file__).resolve().parent, Path(__file__).resolve().parents[1] / "api")
 log = logging.getLogger(__name__)
-RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it to use them."
+RESTART_NEEDED = "Settings changed since the app started; restart it to use them."
+# The wording a request held for a restart carried before the words were made plain: one that still has it is held
+# for the same reason.
+_RESTART_WORDS_BEFORE = "Settings or code changed since the cockpit started; restart it to use them."
+
+
+def held_for_restart(waiting: object) -> bool:
+    """Whether a request's waiting reason says it is held until the restart."""
+    return waiting in (RESTART_NEEDED, _RESTART_WORDS_BEFORE)
+
+
 INTERRUPTED = "The app closed while this ran; it runs again now."
 INTERRUPTED_TWICE = "Stopped twice when the app closed during it"
 _REQUEUE_OP = "worker.requeue"
@@ -646,7 +656,7 @@ class Worker:
             ctx = WriteContext(actor="engine", trust="trusted", op="worker.release")
             with self.store.transaction() as tx:
                 for r in tx.list("request"):
-                    if r.data["state"] == "queued" and r.data.get("waiting") == RESTART_NEEDED:
+                    if r.data["state"] == "queued" and held_for_restart(r.data.get("waiting")):
                         tx.update("request", r.id, {"waiting": None}, ctx, read_version=r.version)
             self.poke()
         self.events.changed()

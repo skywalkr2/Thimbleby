@@ -18,6 +18,9 @@ import styles from "./Knowledge.module.css";
 
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
+/** The share of the budget from which the size of what every task is sent is shown. */
+const SIZE_SHOWN_FROM = 0.8;
+
 export function RuleReview(props: { onBack: () => void }) {
   const words = useWords();
   const { t, tn } = words;
@@ -47,13 +50,16 @@ export function RuleReview(props: { onBack: () => void }) {
         <Skeleton />
       ) : (
         <>
-          <p className={styles.intro}>{t("rules_review.intro", { days: found.days })}</p>
-          <div className={styles.sizes}>
-            <p>{t("rules_review.size", { size: found.stable_chars, budget: found.stable_budget })}</p>
-            {found.moved > 0 && <p>{tn("rules_review.moved", found.moved)}</p>}
-          </div>
+          {found.flagged.length > 0 && <p className={styles.intro}>{t("rules_review.intro", { days: found.days })}</p>}
+          {/* The size of what every task is sent is a number to act on only when it is near its limit. */}
+          {(found.stable_chars >= found.stable_budget * SIZE_SHOWN_FROM || found.moved > 0) && (
+            <div className={styles.sizes}>
+              {found.stable_chars >= found.stable_budget * SIZE_SHOWN_FROM && <p>{t("rules_review.size", { size: found.stable_chars, budget: found.stable_budget })}</p>}
+              {found.moved > 0 && <p>{tn("rules_review.moved", found.moved)}</p>}
+            </div>
+          )}
           {found.flagged.length === 0 ? (
-            <EmptyState text={t("rules_review.empty")} />
+            <EmptyState icon="check" text={t("rules_review.empty")} />
           ) : (
             <ul ref={list} className={styles.list} aria-label={t("rules_review.list_label")}>
               {found.flagged.map((rule) => (

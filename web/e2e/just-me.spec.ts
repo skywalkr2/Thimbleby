@@ -45,6 +45,8 @@ const SCREENS: Array<{ name: string; hash: () => string; ready: (page: Page) => 
   },
   { name: "What changed", hash: () => "work/changed", ready: (page) => heading(page, "What changed") },
   { name: "Handled for you", hash: () => "work/handled", ready: (page) => heading(page, "Handled for you") },
+  { name: "Since yesterday", hash: () => "work/since", ready: (page) => heading(page, "Since yesterday") },
+  { name: "Rules to look over", hash: () => "records/rules-review", ready: (page) => heading(page, "Rules to look over") },
   { name: "Follow-ups", hash: () => "work/followups", ready: (page) => heading(page, "Follow-ups") },
   {
     name: "To-dos and questions",
@@ -175,7 +177,7 @@ test.describe('"Just me" sees no work words', () => {
   });
 
   test("no main screen shows Work, Project, Stage, Organization, Owner or Template", async ({ page }) => {
-    // Fifteen screens, each waited for until it has loaded: a busy computer needs more than a minute.
+    // Seventeen screens, each waited for until it has loaded: a busy computer needs more than a minute.
     test.setTimeout(180_000);
     const found: string[] = [];
     for (const screen of SCREENS) {

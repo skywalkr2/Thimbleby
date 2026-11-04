@@ -1393,12 +1393,36 @@ test("a clash line names both meetings in its title and both calendars in its me
   expect(Array.from(marks).map((m) => m.getAttribute("data-color"))).toEqual(["purple", "teal"]);
   const named = Array.from(clash.querySelectorAll("[data-mark=calendar] + [title]")).map((el) => el.getAttribute("title"));
   expect(named).toEqual(["Studio calendar", "Clinic calendar"]);
-  expect(clash).toHaveTextContent("Studio calendarandClinic calendar");
+  // No word joins them: each is a part of the meta line of its own.
+  expect(clash).toHaveTextContent("Studio calendarClinic calendar");
+  expect(clash.querySelector("p")).not.toHaveTextContent(/\band\b/);
   expect(clash).toHaveTextContent("They overlap by 30 minutes");
   // The meta of a clash may wrap, so the second calendar is never the part that is cut off.
   expect(clash.querySelector("p")?.className).not.toMatch(/oneLine/);
   await user.click(within(clash).getByRole("button", { name: /More|menu/i }));
   expect(await screen.findByRole("menuitem", { name: "Open Budget check-in" })).toBeInTheDocument();
+});
+
+test("a clash between two meetings of one calendar names that calendar once", async () => {
+  show([{ ...clashLine, source_name: "Studio calendar", other_source_name: "Studio calendar" }], { "GET watch": () => [calendarSource("c1", "Studio calendar", "purple")] });
+  await screen.findByText("Venue walk-through and Budget check-in overlap");
+  const clash = row("clash");
+  expect(clash.querySelectorAll("[data-mark=calendar]")).toHaveLength(1);
+  expect(clash.textContent?.match(/Studio calendar/g)).toHaveLength(1);
+});
+
+test("a line a person has no decision on carries the screen's one filled button when it is the first thing to act on", async () => {
+  show([{ ...clashLine, group: "risk" }]);
+  await screen.findByText("Venue walk-through and Budget check-in overlap");
+  expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(1);
+  expect(within(row("clash")).getByRole("button", { name: /Open Venue walk-through/ })).toHaveAttribute("data-weight", "filled");
+});
+
+test("a line's kind and state is a dot and a word at the start of its meta, never a chip after its title", async () => {
+  show([decision]);
+  await screen.findByText("Matte or soft-touch?");
+  expect(row("decision").querySelector("[data-pill]")).toBeNull();
+  expect(row("decision").querySelector("[data-state-mark]")).not.toBeNull();
 });
 
 test("a line on one of the person's sides names it in its meta after a mark in the side's color, by the side's place in their list", async () => {
@@ -1435,4 +1459,11 @@ test("while a review is open its Keep all is the one filled button, and the firs
   expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(1);
   // The review is an inset card under its row.
   expect(open.querySelector("[data-inset]")).not.toBeNull();
+});
+
+test("while the lines load the Decide heading and five skeleton rows are drawn, as the loaded list will be, so nothing shifts", async () => {
+  show([], { "GET today/queue": () => new Promise<Line[]>(() => undefined) });
+  expect(await screen.findByRole("heading", { name: "Decide" })).toBeInTheDocument();
+  const skeleton = document.querySelector('[data-skeleton=""]')!;
+  expect(skeleton.children).toHaveLength(5);
 });

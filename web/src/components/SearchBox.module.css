@@ -5,11 +5,24 @@
 }
 .box[data-opens="down"] .drop { top: 100%; margin-top: var(--space-1); }
 .box[data-opens="up"] .drop { bottom: 100%; margin-bottom: var(--space-1); }
+/* One panel: the results are rows in it, not a card of their own, and the note is its last line. */
+.results { gap: 0; }
+/* A result is a glyph, its words and its kind; its detail is a second line under the words. Every result row has the same height
+   whatever it holds: the detail line is the only thing that adds to it. */
 .row {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--space-3); align-items: baseline; width: 100%; text-align: left;
-  padding: var(--space-3); border: 0; background: transparent; color: var(--text); cursor: pointer; font: inherit;
+  display: grid; grid-template-columns: var(--space-6) minmax(0, 1fr) auto; gap: 0 var(--space-2); align-items: center; width: 100%; text-align: left;
+  min-height: var(--target-min, 2.75rem); padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); cursor: pointer; font: inherit;
 }
-.row:hover, .row:focus-visible { background: var(--surface-hover); }
+.row:hover { background: var(--surface-hover); }
+/* The row the keyboard is on: a fill and a bar at its leading edge, so it is seen without the color. */
+.row:focus-visible { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--accent); outline: none; }
+.lead { display: grid; place-items: center; color: var(--text-muted); }
 .main { min-width: 0; overflow-wrap: anywhere; }
-.kind { color: var(--text-subtle); font-size: var(--text-sm); }
-.detail { grid-column: 1 / -1; color: var(--text-subtle); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.detail { grid-column: 2 / -1; color: var(--text-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
+/* Asking is not a result: a rule above it sets it apart. */
+.askItem { margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--border); }
+.none { margin: 0; padding: var(--space-2) var(--space-3); color: var(--text-muted); font-size: var(--text-sm); }
+.note { display: block; padding: var(--space-2) var(--space-3) var(--space-1); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-sm); }
+/* On a phone the page behind the panel is dimmed, so the panel is the one thing to read. */
+.scrim { display: none; }
+@media (max-width: 639.98px) { .scrim { display: block; position: fixed; inset: 0; z-index: 39; background: var(--overlay); } }

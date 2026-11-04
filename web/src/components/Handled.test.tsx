@@ -147,7 +147,7 @@ test("the time this screen is open and in view is counted as time spent looking 
   const start = Date.now();
   const clock = vi.spyOn(Date, "now").mockReturnValue(start);
   const calls = open({ "POST quality/review-time": () => ({ seconds: 30 }) });
-  await screen.findByRole("radio", { name: "Set aside before reading · 6" });
+  await screen.findByRole("button", { name: "Set aside 6" });
   clock.mockReturnValue(start + 30_000);
   cleanup();
   clock.mockRestore();
@@ -158,15 +158,15 @@ test("two tabs with their counts, each saying in one line what it holds, and the
   const user = userEvent.setup();
   const calls = open();
   expect(await screen.findByRole("heading", { level: 1, name: "Handled for you" })).toBeInTheDocument();
-  expect(await screen.findByRole("radio", { name: "Set aside before reading · 6" })).toBeChecked();
-  expect(screen.getByRole("radio", { name: "Read, nothing to do · 2" })).not.toBeChecked();
+  expect(await screen.findByRole("button", { name: "Set aside 6" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Read 2" })).toHaveAttribute("aria-pressed", "false");
   expect(screen.queryByRole("button", { name: /Closed by a rule/ })).not.toBeInTheDocument();
-  expect(within(screen.getByRole("radiogroup", { name: "Which list" })).getAllByRole("radio")).toHaveLength(2);
-  expect(screen.getByText("Kept for 30 days, then it leaves this list. The originals stay where they came from.")).toBeInTheDocument();
-  expect(screen.getByText("Sorted away before Helper read it: newsletters, sales, codes, alerts and older copies.")).toBeInTheDocument();
+  expect(within(screen.getByRole("group", { name: "Which list" })).getAllByRole("button")).toHaveLength(2);
+  // One line under the title says what the list holds and how long it is kept, not two paragraphs.
+  expect(screen.getByText("Sorted away before Helper read it. Kept for 30 days.")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 1, name: "Handled for you" })).toHaveFocus();
-  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
-  expect(await screen.findByText("Mail Helper read and found nothing for you in.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Read 2" }));
+  expect(await screen.findByText("Mail Helper read with nothing for you to do. Kept for 30 days.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET handled?tab=read&q=")).toBe(true);
   expect(screen.queryByText(/Sorted away before/)).not.toBeInTheDocument();
 });
@@ -182,13 +182,14 @@ test("rows are grouped by kind with a count, collapsed, and a group opens to its
   await user.click(within(sales).getByRole("button", { name: "Sales, promotions and social updates · 2" }));
   const rows = within(sales).getAllByRole("listitem");
   expect(rows).toHaveLength(2);
-  expect(rows[0]).toHaveTextContent("Mail");
+  // Mail, the ordinary kind, is not said on each row.
+  expect(rows[0]).not.toHaveTextContent(/^Mail/);
   expect(rows[0]).toHaveTextContent("Offer a");
   expect(rows[0]).toHaveTextContent("Sender");
   // A sender is shown by name, never as "Name <address>".
   expect(rows[0]).not.toHaveTextContent(`<${addr("a")}>`);
   expect(rows[0]).toHaveTextContent("Inbox");
-  expect(rows[0]).toHaveTextContent("Set aside because: it was sent to many people, as a mailing list or bulk mail");
+  expect(rows[0]).toHaveTextContent("Set aside because it was sent to many people, as a mailing list or bulk mail");
   expect(rows[0]).toHaveTextContent("The message text was never sent to the AI.");
   expect(screen.queryByText("Offer n")).not.toBeInTheDocument();
 });
@@ -207,7 +208,7 @@ test("the Kind, Reason and Sender buttons are shown, Kind first and pressed, and
 test("a row on the read list says it was read with nothing to do", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("button", { name: "Read 2" }));
   const bills = await open_(user, /^Bills and statements · 1$/);
   expect(within(bills).getByRole("listitem")).toHaveTextContent("Read: nothing for you to do.");
   expect(screen.getByRole("button", { name: "Other mail · 1" })).toBeInTheDocument();
@@ -261,7 +262,7 @@ test("each list says so when it is empty", async () => {
   // With nothing to find there is nothing to search or group, so those controls are not drawn.
   expect(screen.queryByRole("searchbox")).toBeNull();
   expect(screen.queryByRole("radio", { name: "Sender" })).toBeNull();
-  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 0" }));
+  await user.click(screen.getByRole("button", { name: "Read 0" }));
   expect(await screen.findByText("Nothing has been read with nothing to do yet. Mail that needed nothing from you is listed here once mail arrives.")).toBeInTheDocument();
 });
 
@@ -283,7 +284,7 @@ test("a set-aside row offers Bring it in, and in its menu Always set aside mail 
 test("a row of the read list has Take a closer look, and in its menu the other choices", async () => {
   const user = userEvent.setup();
   open();
-  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("button", { name: "Read 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   expect(within(other).getByRole("button", { name: "Take a closer look at Lunch q" })).toBeInTheDocument();
   await user.click(within(other).getByRole("button", { name: "More actions for Lunch q" }));
@@ -333,7 +334,7 @@ test("Take a closer look on a mail read with nothing to do offers no sorting rul
     "POST handled/q/work": () => done("q", { section: "notices" }),
     "POST handled/q/undo": () => done("q", { section: "notices", request: null, version: 6 }),
   });
-  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("button", { name: "Read 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   await user.click(within(other).getByRole("button", { name: "Take a closer look at Lunch q" }));
   await waitFor(() => expect(body(calls, "POST handled/q/work")).toEqual({ read_version: 3 }));
@@ -347,7 +348,7 @@ test("Take a closer look on a mail read with nothing to do offers no sorting rul
 test("Always set aside mail like this saves a rule for the sender in the row's section, kept as a correction, and reads it back", async () => {
   const user = userEvent.setup();
   const calls = open({ "POST watch/sorting": () => SAVED });
-  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("button", { name: "Read 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   await user.click(within(other).getByRole("button", { name: "More actions for Lunch q" }));
   await user.click(await screen.findByRole("menuitem", { name: "Always set aside mail like this" }));
@@ -375,7 +376,7 @@ test("a list that can't be loaded says so and tries again", async () => {
 test("an assistant with no name of its own is called your assistant", async () => {
   fakeApi({ "GET handled?tab=set_aside&q=": () => ASIDE, "GET handled?tab=read&q=": () => READ });
   renderApp(<Handled />, {}, { unnamed: true });
-  expect(await screen.findByText("Sorted away before your assistant read it: newsletters, sales, codes, alerts and older copies.")).toBeInTheDocument();
+  expect(await screen.findByText("Sorted away before your assistant read it. Kept for 30 days.")).toBeInTheDocument();
 });
 
 test("a change a rule closed is a row of the set-aside tab: a chip for its kind of item, the rule and the reason, and Take a closer look in one click", async () => {
@@ -393,7 +394,7 @@ test("a change a rule closed is a row of the set-aside tab: a chip for its kind 
   const pages = await open_(user, /^Pages · 1$/);
   expect(within(pages).getByRole("listitem")).toHaveTextContent("Page");
   const sales = await open_(user, SALES);
-  expect(within(sales).getAllByRole("listitem")[0]).toHaveTextContent("Set aside because:");
+  expect(within(sales).getAllByRole("listitem")[0]).toHaveTextContent("Set aside because");
   expect(within(sales).getByRole("button", { name: "Bring it in: Offer a" })).toBeInTheDocument();
   await user.click(within(files).getByRole("button", { name: "Take a closer look at Plan a" }));
   await waitFor(() => expect(body(calls, "POST requests/REQ-a/closer-look")).toEqual({ read_version: 3 }));
@@ -428,7 +429,7 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   });
   await screen.findByRole("button", { name: "Sales, promotions and social updates · 2" });
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(screen.getByRole("button", { name: "Read 2" }));
   const heading = await screen.findByRole("heading", { name: "Closed without you seeing" });
   const section = heading.closest("section") as HTMLElement;
   expect(within(section).getByText("2 of 4 closed without you seeing them")).toBeInTheDocument();
@@ -438,7 +439,7 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   expect(rows[0]).toHaveTextContent("Ask about the venue");
   await user.click(within(rows[0]).getByRole("button", { name: "Looks right: Ask about the venue" }));
   await waitFor(() => expect(body(calls, "POST silent-closes/seen")).toEqual({ ref: "changeset:CS-1:0" }));
-  await user.click(screen.getByRole("radio", { name: "Set aside before reading · 6" }));
+  await user.click(screen.getByRole("button", { name: "Set aside 6" }));
   await screen.findByRole("button", { name: "Sales, promotions and social updates · 2" });
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
 });
@@ -453,7 +454,7 @@ test("closes counted but made by rules say so and never claim everything closed 
       measure: { ...NO_CLOSES.measure, total: 2, silent: 2, rate: 1 },
     }),
   });
-  await user.click(await screen.findByRole("radio", { name: /^Read, nothing to do/ }));
+  await user.click(await screen.findByRole("button", { name: /^Read \d/ }));
   const section = (await screen.findByRole("heading", { name: "Closed without you seeing" })).closest("section") as HTMLElement;
   expect(within(section).getByText("2 of 2 closed without you seeing them")).toBeInTheDocument();
   expect(within(section).queryByText("Everything that was closed, you made or saw.")).toBeNull();
@@ -469,11 +470,11 @@ test("one close that was not seen reads 1 of 3 closed without you seeing it, and
     measure: { ...NO_CLOSES.measure, total: 3, silent, rate: silent / 3 },
   });
   open({ "GET silent-closes": () => closes(1) });
-  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("button", { name: "Read 2" }));
   expect(await screen.findByText("1 of 3 closed without you seeing it")).toBeInTheDocument();
   cleanup();
   open({ "GET silent-closes": () => closes(0) });
-  await user.click(await screen.findByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(await screen.findByRole("button", { name: "Read 2" }));
   expect(await screen.findByText("You saw everything closed in the last 14 days.")).toBeInTheDocument();
 });
 
@@ -506,7 +507,7 @@ test("a group shows a page of rows and Show more adds the next page, newest firs
 
 test("the screen says how long items are kept, in the singular for one day", async () => {
   open({ "GET handled?tab=set_aside&q=": () => ({ ...ASIDE, kept_days: 1 }) });
-  expect(await screen.findByText("Kept for 1 day, then it leaves this list. The original stays where it came from.")).toBeInTheDocument();
+  expect(await screen.findByText("Sorted away before Helper read it. Kept for 1 days.")).toBeInTheDocument();
 });
 
 // ---- Just me has no work words; with sides the button names the side (design 6.32, 7.20) ------------------------------
@@ -596,7 +597,7 @@ test("the menu of a set-aside row does not name the sides, and a mail read with 
   expect(await screen.findByRole("menuitem", { name: "Always set aside mail like this" })).toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: /Treat as/ })).toBeNull();
   await user.keyboard("{Escape}");
-  await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 2" }));
+  await user.click(screen.getByRole("button", { name: "Read 2" }));
   const other = await open_(user, /^Other mail · 1$/);
   expect(within(other).getByRole("button", { name: "Take a closer look at Lunch q" })).toBeInTheDocument();
   await user.click(within(other).getByRole("button", { name: "More actions for Lunch q" }));

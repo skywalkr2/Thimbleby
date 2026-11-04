@@ -24,6 +24,8 @@ export function ListState<T>(props: {
   failed: string;
   /** Skeleton rows while it loads. */
   rows?: number;
+  /** What the loaded list starts with (a group's label), drawn above the skeleton so the page does not shift when it loads. */
+  above?: ReactNode;
   /** What to show once there is data. */
   children: (data: T) => ReactNode;
 }) {
@@ -41,7 +43,12 @@ export function ListState<T>(props: {
   if (query.isError) {
     return <LoadFailed message={connection.offline ? t("state.load_failed.offline", { what: props.failed }) : props.failed} detail={detailOf(query.error)} onRetry={() => void query.refetch()} />;
   }
-  return <Skeleton rows={props.rows} />;
+  return (
+    <>
+      {props.above}
+      <Skeleton rows={props.rows} />
+    </>
+  );
 }
 
 function detailOf(err: unknown): string | null {

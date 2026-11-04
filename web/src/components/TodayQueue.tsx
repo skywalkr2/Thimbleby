@@ -36,9 +36,11 @@ import { useQuietChoices } from "./QuietLine";
 import { Button } from "../ui/Button";
 import { Icon, type IconName } from "../ui/Icon";
 import { MarkDot } from "../ui/MarkDot";
-import { InRowActions } from "../ui/rowContext";
+import { FilledPrimary, InRowActions } from "../ui/rowContext";
+import type { PillTone } from "../ui/Pill";
+import { withStatus } from "../ui/StateMark";
+import { GroupLabel } from "../ui/GroupLabel";
 import { Panel } from "../ui/Panel";
-import { Pill, type PillTone } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { FilteredEmpty } from "../ui/FilteredEmpty";
 import { ListState } from "../ui/ListState";
@@ -318,6 +320,10 @@ export function TodayQueue(props: {
   // A review that is open has the screen's one filled button ("Keep all"), so the first Decide line is drawn as the others are.
   const firstDecision = inGroup(shown, "decide").find((line) => !isHeld(line) && !isRestoreLine(line) && !isLearned(line))?.key;
   const reviewOpen = !!selectedLine && OPEN_REVIEW_KINDS.has(selectedLine.kind);
+  // With no decision of the usual kind (only a stop or a check of the assistant's own work, or only something at risk), the first
+  // line that can be acted on carries the screen's one filled button instead.
+  const actable = (line: QueueLine) => !ghosts.has(line.key) && (isHeld(line) || (!isRestoreLine(line) && !isLearned(line)));
+  const onlyPrimary = reviewOpen || firstDecision ? undefined : (inGroup(shown, "decide").find(actable) ?? inGroup(shown, "risk").find(actable))?.key;
   return (
     <>
       <div
@@ -359,10 +365,10 @@ export function TodayQueue(props: {
               </Button>
             </div>
           )}
-          <ListState query={queue} failed={t("queue.load_failed")}>
+          <ListState query={queue} failed={t("queue.load_failed")} rows={5} above={<GroupLabel>{t("queue.group.decide")}</GroupLabel>}>
             {() => (
             <>
-              {sideBare && <FilteredEmpty data-queue-empty="side" text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />}
+              {sideBare && <FilteredEmpty data-queue-empty="side" inline text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />}
               {GROUPS.map((group) => {
                 const these = inGroup(shown, group);
                 const extra = group === "decide" && stage.count > 0;
@@ -376,6 +382,7 @@ export function TodayQueue(props: {
                         key={line.key}
                         line={line}
                         emphasis={group === "decide" && line.key === firstDecision}
+                        screenPrimary={line.key === onlyPrimary}
                         demote={reviewOpen}
                         ghost={ghosts.has(line.key)}
                         selection={props.selected?.key === line.key ? props.selected : null}
@@ -401,7 +408,7 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && filter.choice !== "all" && (total ?? 0) > 0 && (
-                <FilteredEmpty data-queue-empty="side" text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />
+                <FilteredEmpty data-queue-empty="side" inline text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />
               )}
               {count === 0 && (filter.choice === "all" || !((total ?? 0) > 0)) && (
                 <TodayEmpty
@@ -499,6 +506,8 @@ function LineItem(props: {
   line: QueueLine;
   /** The first line of Decide: the one line of the screen that may carry the filled button, and the tint and edge of a decision. */
   emphasis: boolean;
+  /** No line of Decide is a decision: this line, the first that can be acted on, carries the screen's one filled button. */
+  screenPrimary: boolean;
   /** A review is open and has the filled button: the emphasis keeps its tint, its button is drawn as the others. */
   demote: boolean;
   /** The line was settled somewhere else; it stays, struck through, until the person moves on. */
@@ -515,7 +524,9 @@ function LineItem(props: {
   if (isHeld(line)) {
     return (
       <li className={styles.item}>
+        <FilledPrimary.Provider value={props.screenPrimary}>
         <HeldLine line={line} onOpenAiAccounts={handlers.onOpenAiAccounts} onOpenHandover={handlers.onOpenHandover} onOpenRules={handlers.onOpenRules} onOpenKnowledge={handlers.onOpenKnowledge} onAddAccount={handlers.onAddAccount} onOpenSources={handlers.onOpenSources} />
+        </FilledPrimary.Provider>
       </li>
     );
   }
@@ -776,6 +787,7 @@ export function useLineTitle(): (line: QueueLine) => string {
 function QueueRow(props: {
   line: QueueLine;
   emphasis: boolean;
+  screenPrimary: boolean;
   demote: boolean;
   ghost: boolean;
   selection: Selection | null;
@@ -1173,20 +1185,19 @@ function QueueRow(props: {
           line.place && line.other_place
             ? tn("queue.clash.meta.travel", between, { need: durationWords(needed, tn), from: line.place, to: line.other_place })
             : tn("queue.clash.meta.travel_apart", between, { need: durationWords(needed, tn) });
-        // Which calendars the two are in, so two meetings of different accounts are told apart: each by its name, marked with its color.
-        const names = [line.source_name, line.other_source_name].filter((n): n is string => !!n);
-        const calendars =
-          names.length === 0 ? null : (
-            <span className={styles.mark}>
-              {names.map((name, i) => (
-                <span key={`${name}-${i}`} className={styles.markName}>
-                  <MarkDot kind="calendar" color={calendarColor(name)} />
-                  <span className={styles.markText} title={name}>{name}</span>
-                  {i < names.length - 1 && <span className={styles.markJoin}>{t("queue.clash.calendar_and")}</span>}
-                </span>
-              ))}
+        // Which calendars the two are in, so two meetings of different accounts are told apart: each by its name, marked with its color,
+        // each a part of its own in the meta line (no word between them), and one calendar named once.
+        const names = [...new Set([line.source_name, line.other_source_name].filter((n): n is string => !!n))];
+        const calendars = names.map((name) => (
+          <span key={name} className={styles.mp}>
+            <span className={styles.markName}>
+              <MarkDot kind="calendar" color={calendarColor(name)} />
+              <span className={styles.markText} title={name}>
+                {name}
+              </span>
             </span>
-          );
+          </span>
+        ));
         // When the two meetings overlap: the day and the minutes they share (the day alone when the clock times are not known).
         const startsAt = [line.starts, line.other_starts].filter((x): x is string => !!x).sort().pop();
         const endsAt = [line.ends, line.other_ends].filter((x): x is string => !!x).sort()[0];
@@ -1201,7 +1212,7 @@ function QueueRow(props: {
               <span className={styles.mp}>
                 <strong>{whenWords}</strong>
               </span>
-              {calendars && <span className={styles.mp}>{calendars}</span>}
+              {calendars}
               <span className={styles.mp}>{line.state === "travel" ? how : <strong>{how}</strong>}</span>
             </>
           ),
@@ -1417,7 +1428,7 @@ function QueueRow(props: {
   // (an empty span) so a group of plain lines does not give up the width the next group's icons need.
   const lead: ReactNode = icon ? <Icon name={icon} /> : slot !== null ? <MarkDot kind="side" slot={slot} /> : <span aria-hidden="true" />;
   // The first Decide line carries the screen's one filled button; a review that is open has it instead.
-  const filled = props.emphasis && !props.demote && !!d.primary;
+  const filled = (props.emphasis || props.screenPrimary) && !props.demote && !!d.primary;
   const state = line.group === "risk" ? "danger" : props.emphasis ? "decide" : undefined;
   const onClick = (event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest("button, a, input, textarea, select, [role='menuitem']")) return;
@@ -1455,9 +1466,8 @@ function QueueRow(props: {
         data-ghost=""
         aria-label={t("queue.settled_named", { title })}
         role="group"
-        pill={d.pill ? <Pill tone="neutral">{d.pill}</Pill> : undefined}
         title={<s id={`${detailId}-title`}>{title}</s>}
-        meta={t("queue.settled")}
+        meta={withStatus(d.pill ? { word: d.pill } : null, t("queue.settled"))}
       />
     );
   return (
@@ -1478,7 +1488,6 @@ function QueueRow(props: {
       aria-describedby={line.notes ? `${detailId}-notes` : undefined}
       role="group"
       clamp={title}
-      pill={d.pill ? <Pill tone={d.tone}>{d.pill}</Pill> : undefined}
       title={
         <>
           <span id={`${detailId}-title`} title={line.notes ?? undefined}>
@@ -1494,7 +1503,7 @@ function QueueRow(props: {
           )}
         </>
       }
-      meta={metaNode}
+      meta={withStatus(d.pill ? { tone: d.tone, word: d.pill } : null, metaNode)}
       oneLine={line.kind !== "clash"}
       primary={primary}
       menu={menu.length > 0 || (d.groups?.length ?? 0) > 0 ? <RowMenu label={title} actions={menu} groups={d.groups} /> : undefined}

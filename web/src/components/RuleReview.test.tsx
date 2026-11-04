@@ -99,8 +99,11 @@ test("Narrow and Retire are in each row's menu and act at once with Undo", async
 
 test("with nothing flagged it says so, and Back returns to Knowledge", async () => {
   const user = userEvent.setup();
-  const { onBack } = open({}, { ...REVIEW, flagged: [], moved: 0 });
-  expect(await screen.findByText("No rules to look over right now.")).toBeInTheDocument();
+  const { onBack } = open({}, { ...REVIEW, flagged: [], moved: 0, stable_chars: 100 });
+  expect(await screen.findByText("Nothing to look over. Helper is using everything it was given.")).toBeInTheDocument();
+  // With nothing to choose, there is no paragraph about the choices and no size line.
+  expect(screen.queryByText(/hasn't used them in/)).toBeNull();
+  expect(screen.queryByText(/Instructions sent with every task/)).toBeNull();
   expect(screen.queryByText(/moved out of the part sent every time/)).toBeNull();
   await user.click(screen.getByRole("button", { name: "Back to Knowledge" }));
   expect(onBack).toHaveBeenCalled();
@@ -121,4 +124,10 @@ test("a rule that was given to no run counted shows no count of zero runs", asyn
   open({}, { ...REVIEW, flagged: [flagged("RULE-9", "Never say zero.", { present: 0 })] });
   expect(await screen.findByText("Never say zero.")).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(/\b0 tasks?\b/);
+});
+
+test("the size of what every task is sent is shown only when it is near its limit", async () => {
+  open({}, { ...REVIEW, stable_chars: 3000, stable_budget: 6000, moved: 0 });
+  expect(await screen.findByText(/hasn't used them in 30 days/)).toBeInTheDocument();
+  expect(screen.queryByText(/Instructions sent with every task/)).toBeNull();
 });

@@ -68,7 +68,7 @@ function open(extra: Routes = {}, view: S["HandledView"] = READ) {
 const posts = (calls: ReturnType<typeof fakeApi>, route: string) => calls.filter((c) => c.route === route);
 
 async function tick(user: ReturnType<typeof userEvent.setup>, names: string[]) {
-  await user.click(await screen.findByRole("radio", { name: /Read, nothing to do/ }));
+  await user.click(await screen.findByRole("button", { name: /^Read \d/ }));
   const header = await screen.findByRole("button", { name: /^Other mail · 3/ });
   if (header.getAttribute("aria-expanded") === "false") await user.click(header);
   for (const n of names) await user.click(await screen.findByRole("checkbox", { name: `Select ${n}` }));

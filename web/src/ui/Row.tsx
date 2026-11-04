@@ -10,8 +10,8 @@
 // (`aria-expanded`) and what it controls, and it covers the whole text of the row, so the meta opens it too; the body is the
 // row's `children`, in a RowBody. `meta` is one line, `metaLines` several, each drawn as a
 // line of its own. `titleId` names the title text for the row's `aria-labelledby`.
-import { Children, type HTMLAttributes, type ReactNode, type Ref } from "react";
-import { InRowActions } from "./rowContext";
+import { Children, useContext, type HTMLAttributes, type ReactNode, type Ref } from "react";
+import { FilledPrimary, InRowActions } from "./rowContext";
 import styles from "./Row.module.css";
 
 /** What makes a row's title and meta one button that opens the row's body. */
@@ -69,6 +69,7 @@ function linesOf(meta: ReactNode, more: ReactNode[] | undefined): ReactNode[] {
 export function Row(props: RowProps) {
   const { lead, pill, title, titleId, meta, metaLines, expand, oneLine, clamp, primary, menu, actions, state, selected, loop = true, children, as = "li", className, ref, ...rest } = props;
   const Tag = as as "div";
+  const keepsFilled = useContext(FilledPrimary);
   // The cursor's row: given by `selected`, or by `aria-current` as a list's row attributes set it.
   const isSelected = selected ?? rest["aria-current"] === "true";
   const lines = linesOf(meta, metaLines);
@@ -116,7 +117,7 @@ export function Row(props: RowProps) {
       </div>
       {(primary || menu || actions) && (
         <div className={styles.actions}>
-          <InRowActions.Provider value={true}>
+          <InRowActions.Provider value={!keepsFilled}>
             {(primary || actions) && (
               <div className={styles.buttons}>
                 {primary}

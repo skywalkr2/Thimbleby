@@ -399,6 +399,95 @@ const s = (group: string, page: string, label: string, where: Where, open: Scree
 const state = (base: Screen, title: string, where: Where, open: Screen["open"], more: Partial<Screen> = {}): Screen => ({ group: base.group, page: base.page, label: base.label, title, ...where, open, ...more });
 const reach = (hash: string) => (env: Env) => open(env, hash);
 
+
+/** The screen opened with one read answered by made-up data of the capture's own, for a state the fixture workspace does not reach. */
+const answered = (hash: string, path: RegExp, body: unknown) => async (env: Env) => {
+  const handler = async (route: Route) => {
+    if (route.request().method() !== "GET" || !path.test(new URL(route.request().url()).pathname)) return route.fallback();
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  };
+  await env.page.route("**/api/**", handler);
+  env.undo.push(() => env.page.unroute("**/api/**", handler));
+  await open(env, "today");
+  await go(env, hash);
+  await settle(env.page);
+};
+
+/** The search field with the cursor in it and these words typed, as a person types them; its results are waited for. */
+const searched = (words: string, wait: "results" | "none") => async (env: Env) => {
+  await open(env, "today");
+  const field = env.page.getByRole("banner").getByRole("searchbox");
+  if (!(await field.isVisible().catch(() => false))) await env.page.getByRole("button", { name: "Search", exact: true }).first().click();
+  const box = env.page.getByRole("searchbox").first();
+  await box.click();
+  await box.pressSequentially(words, { delay: 80 });
+  await env.page.getByRole("list", { name: "Results" }).waitFor({ timeout: 12_000 });
+  if (wait === "none") await env.page.getByText(/^Nothing found/).waitFor({ timeout: 12_000 });
+  await env.page.waitForTimeout(600);
+};
+
+/** Rules the review would list, made up for the capture: given to runs and never shown to apply. */
+const RULES_TO_LOOK_OVER = {
+  days: 30,
+  stable_chars: 6150,
+  stable_budget: 8000,
+  moved: 0,
+  due: true,
+  flagged: [
+    { id: "RULE-cap-1", version: 2, name: "short-subjects", text: "Keep every subject line under eight words.", applies_to: { scope: "workspace" }, present: 14, applied: 0 },
+    { id: "RULE-cap-2", version: 1, name: "no-friday-sends", text: "Never send a message on a Friday afternoon.", applies_to: { scope: "workspace" }, present: 9, applied: 0 },
+    { id: "RULE-cap-3", version: 4, name: "name-the-venue", text: "Always say which venue a meeting is at, with the room.", applies_to: { scope: "workspace" }, present: 6, applied: 0 },
+  ],
+};
+
+
+/** What the assistant and the rules did on their own, made up for the capture: one row of each kind of act. */
+const sinceEntry = (n: number, over: Record<string, unknown> = {}) => ({
+  ref: `capture:${n}`,
+  act: "closed",
+  title: `Send the floor plan ${n}`,
+  when: new Date(Date.now() - n * 3_600_000).toISOString(),
+  because: "said",
+  seen: true,
+  undo: "changeset",
+  quote: "it went out this morning",
+  said_by_name: "Ana Cole",
+  by_you: false,
+  record: { kind: "action", id: `ACT-capture-${n}` },
+  changeset: `CS-capture-${n}`,
+  op: 0,
+  ...over,
+});
+const sinceBody = (entries: unknown[]) => ({ as_of: new Date().toISOString(), since: new Date(Date.now() - 86_400_000).toISOString(), unseen: 0, entries });
+const SINCE_SOME = [
+  sinceEntry(1, { act: "set_aside", title: "Spring sale: everything half price", because: "sorting", reason: "it was sent to many people, as a mailing list or bulk mail", quote: null, said_by_name: null, record: null, changeset: null, op: null, snapshot: "SNAP-capture", undo: "set_aside", version: 3, seen: false }),
+  sinceEntry(2),
+  sinceEntry(3, { act: "added", title: "Order the flowers", by_you: true, quote: "I will order the flowers" }),
+];
+const SINCE_MANY = Array.from({ length: 120 }, (_, i) => sinceEntry(i + 1, { title: `Send the floor plan ${i + 1}` }));
+
+/** A stage view of an item in the capture's made-up steps. */
+const stageItem = (n: number, title: string, current: string, ready: boolean) => {
+  const steps = [
+    { id: "idea", label: "Idea" },
+    { id: "draft", label: "Draft" },
+    { id: "done", label: "Done" },
+  ];
+  const at = steps.findIndex((x) => x.id === current);
+  return {
+    record: { kind: "capture-item", id: `ITEM-capture-${n}` },
+    title,
+    version: 1,
+    stages: steps,
+    current,
+    current_label: steps[at].label,
+    next: steps[at + 1] ?? null,
+    ready,
+    checks: ready ? [] : [{ id: "needs-text", passed: false, reason: "It has no text yet." }],
+  };
+};
+const STAGE_ITEMS = [stageItem(1, "Spring flyer", "idea", false), stageItem(2, "Open day poster", "draft", true), stageItem(3, "Shop window sign", "draft", false), stageItem(4, "Thank-you card", "done", true)];
+
 /** The shared states of a screen that reads data: loading, couldn't load and offline. */
 function shared(base: Screen, hash: string, also?: RegExp): Screen[] {
   const where: Where = { server: base.server, stage: base.stage };
@@ -422,12 +511,19 @@ function build(): Screen[] {
       await press(env, /^(Look over|Open )/, "Today has no line to look over or open on this fixture");
     }),
   );
-  const since = s("Work", "since-yesterday", "Since yesterday", SIGNED, reach("work/since"));
-  add(since, ...shared(since, "work/since", LISTS));
+  // The list is the same at every width and in both themes: opening it marks what it holds as seen, so the capture gives it made-up rows.
+  const since = s("Work", "since-yesterday", "Since yesterday", SIGNED, answered("work/since", /\/api\/since-yesterday$/, sinceBody(SINCE_SOME)));
+  add(
+    since,
+    ...shared(since, "work/since", LISTS),
+    state(since, "One row", SIGNED, answered("work/since", /\/api\/since-yesterday$/, sinceBody(SINCE_SOME.slice(0, 1)))),
+    state(since, "Nothing new", SIGNED, answered("work/since", /\/api\/since-yesterday$/, sinceBody([]))),
+    state(since, "Over a hundred", SIGNED, answered("work/since", /\/api\/since-yesterday$/, sinceBody(SINCE_MANY))),
+  );
   const changed = s("Work", "what-changed", "What changed", SIGNED, reach("work/changed"), { main: true });
   add(changed, ...shared(changed, "work/changed", LISTS));
   const handled = s("Work", "handled-for-you", "Handled for you", SIGNED, reach("work/handled"));
-  add(handled, ...shared(handled, "work/handled", LISTS));
+  add(handled, ...shared(handled, "work/handled", LISTS), state(handled, "Read tab", SIGNED, withChoice("work/handled", /^Read/)));
   const followups = s("Work", "followups", "Follow-ups", FILLED, reach("work/followups"), { main: true });
   add(
     followups,
@@ -445,8 +541,9 @@ function build(): Screen[] {
     ...shared(todos, "work/open", LISTS),
     state(todos, "Filtered to nothing", EMPTY, filteredToNothing("work/open")),
     s("Work", "todos-many", "To-dos, over a hundred", { server: "sides", stage: "bulk" }, reach("work/open")),
-    s("Work", "stages", "Stages", SEEDED, reach("work/stages")),
   );
+  const stages = s("Work", "stages", "Stages", SEEDED, reach("work/stages"));
+  add(stages, state(stages, "With items", SEEDED, answered("work/stages", /\/api\/stages\/records$/, STAGE_ITEMS)));
   const schedule = s("Schedule", "schedule-day", "Schedule, Day", SIGNED, withChoice("schedule", /^Day$/), { main: true });
   add(
     schedule,
@@ -573,7 +670,8 @@ function build(): Screen[] {
   const notes = s("Records", "notes", "Notes", SEEDED, reach("records/notes"));
   add(notes, ...shared(notes, "records/notes"));
   const knowledge = s("Records", "knowledge", "Knowledge", SEEDED, reach("records/knowledge"));
-  add(knowledge, ...shared(knowledge, "records/knowledge"), s("Records", "rules-review", "Rules to look over", SEEDED, reach("records/rules-review")));
+  const rules = s("Records", "rules-review", "Rules to look over", SEEDED, reach("records/rules-review"));
+  add(knowledge, ...shared(knowledge, "records/knowledge"), rules, state(rules, "With rules to look over", SEEDED, answered("records/rules-review", /\/api\/knowledge\/rules\/review$/, RULES_TO_LOOK_OVER)));
   const todoPage = s("Records", "todo-page", "A to-do's page", SEEDED, async (env) => open(env, `records/action/${await firstTodo(env)}`));
   add(
     todoPage,
@@ -751,6 +849,12 @@ function build(): Screen[] {
       await env.page.getByRole("list", { name: "Results" }).waitFor({ timeout: 12_000 });
       await env.page.waitForTimeout(600);
     }),
+  );
+  const found = all.find((x) => x.page === "search-results" && !x.title)!;
+  add(
+    state(found, "Nothing found", SEEDED, searched("Zqxj", "none")),
+    state(found, "Many results", SEEDED, searched("a", "results")),
+    state(found, "Long names", SEEDED, searched("Harborview", "results")),
   );
   return all;
 }

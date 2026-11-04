@@ -113,9 +113,9 @@ test("Handled for you stays inside the window at every width, on both tabs and a
     await expect(page.getByRole("heading", { level: 1, name: "Handled for you", exact: true })).toBeVisible(LOADED);
     // The cursor starts on the heading, not in the search box.
     await expect(page.getByRole("heading", { level: 1, name: "Handled for you", exact: true })).toBeFocused(LOADED);
-    for (const tab of [/^Set aside before reading/, /^Read, nothing to do/]) {
+    for (const tab of [/^Set aside/, /^Read/]) {
       for (const group of ["Kind", "Reason", "Sender"]) {
-        await page.getByRole("radio", { name: tab }).click();
+        await page.getByRole("button", { name: tab }).click();
         await page.getByRole("radio", { name: group, exact: true }).click();
         const collapsed = page.locator("[data-group] > h2 button[aria-expanded=false]");
         await expect(collapsed.first()).toBeVisible(LOADED);

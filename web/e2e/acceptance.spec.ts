@@ -136,7 +136,7 @@ async function handIn(page: Page, c: Case) {
   // list, which is what the steps read.
   const rows = page.getByRole("main").locator("[data-row-list] > li[data-row]");
   const line = mine ? rows.and(page.locator(`[data-changeset="${mine}"]`)).first() : rows.first();
-  await expect(line.locator("[data-pill]").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
+  await expect(line.locator("[data-state-mark]").first()).toHaveText(/Review|not yet checked|filed/i, { timeout: 20_000 });
   const expander = line.locator("[data-expander]").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
   const detail = page.locator("aside[data-detail-pane] [data-detail-item]");

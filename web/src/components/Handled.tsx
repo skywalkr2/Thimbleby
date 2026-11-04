@@ -6,7 +6,7 @@
 // which side the mail belongs to, Personal or a business, only when there is more than one; with one it goes there at once.
 // Leaving an item where it is is the confirmation, so there is no choice that keeps it.
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
 import { whenText as when } from "../lib/dates";
@@ -34,7 +34,6 @@ import { FilteredEmpty } from "../ui/FilteredEmpty";
 import { ListState } from "../ui/ListState";
 import { PageHeader } from "../ui/PageHeader";
 import { TabStrip } from "../ui/TabStrip";
-import { Pill } from "../ui/Pill";
 import { Row, RowItem } from "../ui/Row";
 import { RowList } from "../ui/RowList";
 import { Item } from "../ui/ItemList";
@@ -55,7 +54,7 @@ function senderName(sender: string | null | undefined): string {
 const TYPING_MS = 250;
 
 export function Handled() {
-  const { t, tn } = useWords();
+  const { t } = useWords();
   const ids = useId();
   const [tab, setTab] = useState<Tab>("set_aside");
   const [group, setGroup] = useState<Group | null>(null);
@@ -107,24 +106,21 @@ export function Handled() {
         headingRef={heading}
         focusable
         title={t("handled.title")}
-        filters={
-          <>
-            <SegmentedControl
-              label={t("handled.tabs")}
-              options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`, { n: counts ? counts[name] : "…" }) }))}
-              value={tab}
-              onChange={(name) => {
-                setTab(name);
-                setItem(null);
-                picked.clear();
-              }}
-            />
-            <SideFilter waiting="handled" />
-          </>
+        subtitle={list.data ? t(`handled.explain.${tab}`, { days: list.data.kept_days }) : undefined}
+        tabs={
+          <TabStrip
+            label={t("handled.tabs")}
+            options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`), count: counts ? counts[name] : "…" }))}
+            value={tab}
+            onChange={(name) => {
+              setTab(name);
+              setItem(null);
+              picked.clear();
+            }}
+          />
         }
+        filters={<SideFilter waiting="handled" />}
       />
-      <p className="hint">{t(`handled.explain.${tab}`)}</p>
-      {list.data && <p className="hint">{tn("handled.kept", list.data.kept_days)}</p>}
       {/* With nothing in the list (and nothing typed to narrow it) there is nothing to search or group, so the controls wait. */}
       {/* A short list (fewer than the filter bar's minimum) has nothing worth searching or grouping either, unless something is typed or a
           grouping other than the first is on, so the person can always take it off. */}
@@ -291,12 +287,18 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
   }
   menu.push(...versions.entries);
   if (open) menu.push({ id: "open", label: t(closed ? "handled.open_item" : "setaside.open"), run: open.run });
-  const facts = [senderName(item.sender), item.received ? when(item.received) : "", item.source, item.change ? t(`sources.closed.change.${item.change}`) : ""].filter(Boolean);
-  const why = closed
-    ? t("handled.closed_why", { rule: item.rule ?? "", reason: item.reason ?? "" })
-    : item.reason
-      ? t("handled.set_aside_why", { reason: item.reason.replace(/[.\s]+$/, "") })
-      : t("handled.read_why");
+  // What kind of item it is is said only when it is not the ordinary one (mail), after the sender and the rest.
+  const facts = [item.item === "mail" ? "" : t(`handled.item.${item.item}`), senderName(item.sender), item.received ? when(item.received) : "", item.source, item.change ? t(`sources.closed.change.${item.change}`) : ""].filter(Boolean);
+  // The reason is the part of the line that matters, so it is in bold; the rest says where it came from.
+  const why: ReactNode = closed ? (
+    t("handled.closed_why", { rule: item.rule ?? "", reason: item.reason ?? "" })
+  ) : item.reason ? (
+    <>
+      {t("handled.set_aside_why.lead")} <strong>{item.reason.replace(/[.\s]+$/, "")}</strong>. {t("handled.set_aside_why.tail")}
+    </>
+  ) : (
+    t("handled.read_why")
+  );
   // Bring it in on set-aside mail: handed in as the side it belongs to, asked only with more than one side. A mail read with
   // nothing to do, and a change a rule closed, get a closer look.
   const bring = () => {
@@ -315,7 +317,6 @@ function HandledRow(props: { item: Row; picked?: { on: boolean; toggle: () => vo
           <input type="checkbox" checked={props.picked.on} aria-label={t("batch.select_named", { title: item.title })} onChange={props.picked.toggle} />
         )
       }
-      pill={<Pill>{t(`handled.item.${item.item}`)}</Pill>}
       title={item.title}
       titleId={titleId}
       metaLines={[facts.join(" · "), why]}

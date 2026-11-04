@@ -127,3 +127,29 @@ test("a result's title and detail never show a day as year-month-day", async () 
   const row = await screen.findByRole("button", { name: /Send the venue list/ });
   expect(row.textContent).not.toMatch(/2026-11-02/);
 });
+
+test("each result has a glyph and its kind as a tag, and Asking is set apart from the results by a rule and its own glyph", async () => {
+  const user = userEvent.setup();
+  open();
+  await user.type(screen.getByRole("searchbox"), "ladder");
+  const person = (await screen.findByRole("button", { name: /Priya Example/ })).closest("li")!;
+  expect(person.querySelector("svg")).not.toBeNull();
+  expect(person.querySelector("[data-pill]")?.textContent).toBe("Person");
+  expect(screen.getByRole("button", { name: /Move the ladder/ }).closest("li")!.querySelector("[data-pill]")?.textContent).toBe("To-do");
+  // The Ask row is not a result: it has no kind tag, its own glyph and a rule above it (its own list item).
+  const ask = screen.getByRole("button", { name: /Ask Helper about/ }).closest("li")!;
+  expect(ask.querySelector("[data-pill]")).toBeNull();
+  expect(ask.querySelector("svg")).not.toBeNull();
+  expect(ask.className).toMatch(/askItem/);
+  // The note about what asking does is inside the same panel as the rows.
+  const panel = screen.getByRole("list", { name: "Results" }).parentElement!;
+  expect(panel.textContent).toContain("Searching is free.");
+});
+
+test("nothing found says which records were searched and that mail and notes are not", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET search": () => ({ results: [] }) });
+  renderApp(<SearchBox onOpenRecord={() => undefined} onAsk={() => undefined} />);
+  await user.type(screen.getByRole("searchbox"), "zzz");
+  expect(await screen.findByText("Nothing found for “zzz” in your people, projects, to-dos and files. Mail and notes are not searched.")).toBeInTheDocument();
+});

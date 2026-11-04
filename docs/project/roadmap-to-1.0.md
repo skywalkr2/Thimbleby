@@ -102,7 +102,7 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - [x] G1 shared rows and shell, plus the capture faults (merged; tests: `web/src/ui/Row.test.tsx`, `web/src/ui/RecordsTable.test.tsx`, `web/src/lib/toasts.test.tsx`, `web/src/lib/act.test.tsx`, `web/src/lib/views.test.ts`, `web/src/ui/PageHeader.test.tsx`, `web/src/shell/HeldLines.test.tsx`, `web/e2e/shared-rules.spec.ts`)
       - [x] G1c G1's own findings from its cold score (scorer C): one couldn't-load card with Try again, the status popover, form skeletons, three capture faults; then G1 merges (merged; tests: `web/src/components/ListStates.test.tsx`, `web/src/shell/StatusMenu.test.tsx`, `web/src/components/Settings.test.tsx`)
       - [ ] G1b the shared components other batches named: the drawer, the segmented control, chips, the header's controls
-      - [ ] G2 Today and the work screens
+      - [ ] G2 Today and the work screens (G2a merged: 6 of 9 at 4.0, Today 4.2; G2c takes Today to the 4.6 mockup and the rest of scorer E's findings; G2b is Follow-ups, To-dos, Questions and the drawers)
       - [ ] G3 Schedule (G3 and G3b merged; G3c fixes what scorer D found: empty states, the Timeline, the phone Week, calendars as one control, the mockup pages to 4.6)
       - [ ] G4 Records
       - [ ] G5 Settings and Setup (with D1 and D10)

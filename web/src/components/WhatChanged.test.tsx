@@ -498,6 +498,7 @@ test("a change asked for before this screen opened is opened once its list has l
   done.changeset!.ops[0].title = "Added the action about the proofs.";
   const third = change("REQ-3", { state: "done" });
   third.changeset!.ops[0].title = "Another summary, not asked for.";
+  // The three read the same, so they are one run: the one asked for is drawn out of it.
   fakeApi({ "GET changes": () => [change("REQ-1", { state: "done" }), done, third] });
   // The person chose "Where it came from" on another screen, which then opened this one.
   expect(revealOrKeep("changeset", "CS-REQ-2")).toBe(false);
@@ -601,10 +602,12 @@ test("rows that arrive while the list shows nothing appear at once, never as N n
   fakeApi({ "GET changes": () => rows, "GET people": () => [] });
   const { client } = renderApp(<WhatChanged />);
   expect(await screen.findByText(/Nothing here yet/i)).toBeInTheDocument();
-  rows = [change("REQ-1"), change("REQ-2"), change("REQ-3")];
+  rows = [change("REQ-1", { source_title: "Email one" }), change("REQ-2", { source_title: "Email two" }), change("REQ-3", { source_title: "Email three" })];
   await client.invalidateQueries();
   // Three rows at once (the first open, the others one line each), never "3 new" over nothing.
-  expect(await screen.findAllByText("Email from the printer")).toHaveLength(3);
+  expect(await screen.findByText("Email one")).toBeInTheDocument();
+  expect(screen.getByText("Email two")).toBeInTheDocument();
+  expect(screen.getByText("Email three")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Show \d+ new items?/ })).toBeNull();
 });
 

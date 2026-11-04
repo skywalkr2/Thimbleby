@@ -992,7 +992,9 @@ test("mailboxes with no sent folder are one line with a count and their names, a
   const rows = await screen.findAllByRole("region", { name: "Sent folder" });
   expect(rows).toHaveLength(1);
   expect(rows[0]).toHaveTextContent("Add the Sent folder for 3 mailboxes so the promises you make are found");
-  expect(rows[0]).toHaveTextContent("First mail, Second mail, Third mail");
+  // The mailboxes are not listed in the line (the title says how many); their names are in the line's tooltip.
+  expect(rows[0]).not.toHaveTextContent("First mail");
+  expect(rows[0].querySelector('[title="First mail, Second mail, Third mail"]')).not.toBeNull();
   await user.click(within(rows[0]).getByRole("button", { name: "Add the Sent folder for First mail" }));
   expect(onOpenSources).toHaveBeenCalledTimes(1);
   await user.click(within(rows[0]).getByRole("button", { name: "More actions for Sent folder" }));
