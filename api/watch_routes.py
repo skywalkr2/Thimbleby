@@ -528,7 +528,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/handled")
     def handled_list(
         tab: Literal["set_aside", "closed", "read"] = "set_aside",
-        group: Literal["kind", "reason", "sender"] | None = None,
+        group: Literal["kind", "reason", "sender", "account"] | None = None,
         q: str = "",
         item: Literal["mail", "calendar", "file", "page", "action", "question", "other"] | None = None,
         side: str | None = None,

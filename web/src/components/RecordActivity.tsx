@@ -91,16 +91,18 @@ export function RecordActivity(props: {
   const earlier = page.earlier_occurrences ?? [];
   const completed = page.completed_actions ?? [];
   const open = page.open_actions.length + page.open_questions.length;
+  // A row says what kind of thing it is only when the list holds more than one kind.
+  const mixed = page.open_actions.length > 0 && page.open_questions.length > 0;
   return (
     <div className="record-activity">
       {showOpen && open > 0 && (!props.self || page.open_actions.length > 0) && (
-        <Section id="record-open" title={props.self ? t("record.open_you") : t("record.open_with", { name: page.name })} count={props.self ? page.open_actions.length : open}>
+        <Section id="record-open" title={props.self ? t("record.open_you") : page.kind === "project" ? t("record.open_project") : t("record.open_with", { name: page.name })} count={props.self ? page.open_actions.length : open}>
           <RowList>
             {[
               ...page.open_actions.map((a) => ({ id: a.id, node: (
                 <Row
                   key={a.id}
-                  pill={<Pill tone="neutral">{t("unfiled.kind.action")}</Pill>}
+                  pill={mixed ? <Pill tone="neutral">{t("unfiled.kind.action")}</Pill> : undefined}
                   title={<a href={viewHref(recordView("action", a.id))}>{shortTitle(a.text, a.due)}</a>}
                   meta={joined([
                     props.how?.get(a.id),
@@ -115,7 +117,7 @@ export function RecordActivity(props: {
               ...(props.self ? [] : page.open_questions.map((q) => ({ id: q.id, node: (
                 <Row
                   key={q.id}
-                  pill={<Pill tone="neutral">{t("unfiled.kind.question")}</Pill>}
+                  pill={mixed ? <Pill tone="neutral">{t("unfiled.kind.question")}</Pill> : undefined}
                   title={<a href={viewHref(recordView("question", q.id))}>{q.title}</a>}
                   meta={joined([
                     q.to_name && t("record.asked_of", { name: q.to_name }),

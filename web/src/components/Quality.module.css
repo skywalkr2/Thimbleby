@@ -80,9 +80,20 @@
   .table th:first-child { width: 34%; }
 }
 
-.tooEarly { display: grid; gap: var(--space-4); max-width: 680px; }
+.tooEarly { display: grid; gap: var(--space-4); }
+.tooEarly h2 { font-size: var(--text-lg); line-height: var(--lh-lg); }
+.windowMeta { margin: var(--space-2) 0 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.next { display: inline-block; margin-top: var(--space-2); color: var(--accent-text); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
 
 /* Their own count is folded closed: one line says what it is for, and the form opens under "Count them yourself". */
 .fold { min-width: 0; margin-top: var(--space-2); }
-.fold summary { min-height: var(--tap-min); display: flex; align-items: center; color: var(--accent-text); font-weight: var(--weight-semibold); cursor: pointer; }
+.fold summary { min-height: var(--tap-min); display: flex; align-items: center; color: var(--accent-text); font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer; }
+.fold summary::after { content: "\00a0→"; }
 .foldBody { display: flex; min-width: 0; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2); }
+
+/* Measures with nothing in them are one count with a way to show them, not a line each. */
+.nothing { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); min-width: 0; padding: var(--space-3); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.nothingToggle { padding: 0; border: 0; background: none; color: var(--accent-text); font: inherit; font-weight: var(--weight-semibold); cursor: pointer; min-height: var(--tap-min); }
+.more:not([data-show-empty]) [data-empty] { display: none; }
+.table tbody tr[data-current] th, .table tbody tr[data-current] td { background: var(--accent-soft, var(--surface-sunk)); font-weight: var(--weight-semibold); }
+.weekItem[data-current] { background: var(--accent-soft, var(--surface-sunk)); }

@@ -299,7 +299,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "records/files":
         return <Files />;
       case "records/notes":
-        return <Notes />;
+        return <Notes onHandIn={() => setHandIn(true)} />;
       case "records/knowledge":
         return <Knowledge onOpenReview={() => setView("records/rules-review")} />;
       case "records/rules-review":

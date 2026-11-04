@@ -730,10 +730,10 @@ test("Files, with a project, a built file, a replaced file and one whose project
 test("Handover, in each state, says names, dates and words", async () => {
   const side = (computer: string, changes: number, latest: string) => ({ computer, changes, latest });
   const states: S["HandoverView"][] = [
-    { state: "diverged", here: side("Desk", 7, at("2026-10-10", 16, 10)), folder: side("Laptop", 1, at("2026-10-09", 9, 5)), computer: "", last_seen: null, minutes_left: 0, chosen: null },
-    { state: "chosen", here: null, folder: null, computer: "", last_seen: null, minutes_left: 0, chosen: "folder" },
-    { state: "elsewhere", here: null, folder: null, computer: "Laptop", last_seen: at("2026-10-10", 16, 10), minutes_left: 6, chosen: null },
-    { state: "clear", here: null, folder: null, computer: "", last_seen: null, minutes_left: 0, chosen: null },
+    { state: "diverged", here: side("Desk", 7, at("2026-10-10", 16, 10)), folder: side("Laptop", 1, at("2026-10-09", 9, 5)), computer: "", last_seen: null, minutes_left: 0, chosen: null, folder_set: false, last_checked: null },
+    { state: "chosen", here: null, folder: null, computer: "", last_seen: null, minutes_left: 0, chosen: "folder", folder_set: false, last_checked: null },
+    { state: "elsewhere", here: null, folder: null, computer: "Laptop", last_seen: at("2026-10-10", 16, 10), minutes_left: 6, chosen: null, folder_set: false, last_checked: null },
+    { state: "clear", here: null, folder: null, computer: "", last_seen: null, minutes_left: 0, chosen: null, folder_set: false, last_checked: null },
   ];
   for (const state of states) {
     fakeApi({

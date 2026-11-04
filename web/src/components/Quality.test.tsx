@@ -145,6 +145,17 @@ test("the four outcome tiles keep the API measures' meanings and compare the lat
   expect(within(review).getByText("5 min more than the week before")).toBeInTheDocument();
 });
 
+test("promises found and false alerts each say what to do next; the other two figures have nothing to do and no link", async () => {
+  show(FULL);
+  await loaded();
+  const tiles = screen.getByRole("region", { name: "Outcome measures" });
+  const next = (name: string) => within(within(tiles).getByRole("article", { name })).queryByRole("link");
+  expect(next("Promises found")).toHaveAttribute("href", expect.stringMatching(/#work\/followups$/));
+  expect(next("False alerts")).toHaveAttribute("href", expect.stringMatching(/#work\/changed$/));
+  expect(next("Promises closed as done")).toBeNull();
+  expect(next("Time spent looking over")).toBeNull();
+});
+
 test("outcome tiles omit comparisons when the API has fewer than two weeks", async () => {
   show(quality({ outcome: { ...FULL.outcome, weeks: [FULL.outcome.weeks[0]] } }));
   await loaded();
@@ -164,7 +175,7 @@ test("the outcome weeks are a table with one row per week and one column per mea
     "Looking over",
   ]);
   expect(within(table).getAllByRole("row")).toHaveLength(3);
-  expect(within(table).getByRole("row", { name: /Oct 19 to Oct 25.*5.*4.*2.*15 min/ })).toBeInTheDocument();
+  expect(within(table).getByRole("row", { name: /Oct 19 to now.*5.*4.*2.*15 min/ })).toBeInTheDocument();
   expect(within(table).getByRole("row", { name: /Oct 12 to Oct 18.*4.*2.*1.*10 min/ })).toBeInTheDocument();
 });
 
@@ -395,7 +406,7 @@ test("the outcome is each measure on its own line, then each week's numbers in w
   show(FULL);
   await loaded();
   const table = screen.getByRole("table", { name: "Week by week" });
-  expect(within(table).getByRole("row", { name: "Oct 19 to Oct 25 5 4 2 15 min" })).toBeInTheDocument();
+  expect(within(table).getByRole("row", { name: "Oct 19 to now 5 4 2 15 min" })).toBeInTheDocument();
   expect(within(table).getByRole("row", { name: "Oct 12 to Oct 18 4 2 1 10 min" })).toBeInTheDocument();
 });
 
@@ -563,7 +574,7 @@ test("the weeks are also a list for a narrow window, each week a block with its 
   const list = document.querySelector<HTMLElement>("[data-week-list]")!;
   const items = within(list).getAllByRole("listitem");
   expect(items).toHaveLength(2);
-  expect(items[1]).toHaveTextContent("Oct 19 to Oct 25");
+  expect(items[1]).toHaveTextContent("Oct 19 to now");
   expect(within(items[1]).getByText("Promises found").nextElementSibling).toHaveTextContent("5");
   expect(within(items[1]).getByText("Looking over").nextElementSibling).toHaveTextContent("15 min");
 });
@@ -592,6 +603,8 @@ describe("Too early to tell", () => {
     renderApp(<Quality onBack={() => undefined} />);
     const card = await screen.findByRole("region", { name: "Too early to tell" });
     expect(within(card).getByText(/at least 5 promises.*found 2 so far/)).toBeInTheDocument();
+    // It names the assistant the way the page title does, not "The assistant".
+    expect(within(card).getByText(/^Helper needs/)).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: /Week by week/ })).toBeNull();
     expect(screen.queryByText("Promises found")).toBeNull();
   });
@@ -603,4 +616,19 @@ test("their own count is folded closed under one line, and the too-early card ho
   const fold = document.querySelector<HTMLDetailsElement>("[data-own-count]")!;
   expect(fold.open).toBe(false);
   expect(within(fold).getByText("Count them yourself")).toBeInTheDocument();
+});
+
+test("the week still under way reads to now and is the current row; the measures with nothing in them are one count with a way to show them", async () => {
+  const user = userEvent.setup();
+  show(FULL);
+  await loaded();
+  const table = screen.getByRole("table", { name: "Week by week" });
+  const rows = within(table).getAllByRole("row");
+  expect(rows[rows.length - 1]).toHaveAttribute("aria-current", "date");
+  expect(rows[rows.length - 1]).toHaveTextContent("to now");
+  const line = document.querySelector("[data-quality-nothing]") as HTMLElement;
+  expect(line).toHaveTextContent(/^Nothing to report yet on \d+ more measures\./);
+  await user.click(within(line).getByRole("button", { name: "Show them" }));
+  expect(document.querySelector("[data-show-empty]")).not.toBeNull();
+  expect(within(line).getByRole("button", { name: "Hide them" })).toHaveAttribute("aria-expanded", "true");
 });

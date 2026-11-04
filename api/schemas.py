@@ -2771,6 +2771,10 @@ class HandoverView(BaseModel):
     last_seen: datetime | None = Field(None, description="When the other computer was last seen (elsewhere).")
     minutes_left: int = Field(0, description="Minutes until the workspace can be opened here (elsewhere).")
     chosen: Literal["here", "folder"] | None = Field(None, description="The copy the person chose to keep.")
+    folder_set: bool = Field(False, description="A synced folder is set up, so there is a copy to be in step with.")
+    last_checked: datetime | None = Field(
+        None, description="When the app last looked over the synced folder without a problem; none before the first."
+    )
 
 
 class HandoverChoice(BaseModel):
@@ -5974,7 +5978,7 @@ class HandledView(BaseModel):
     row."""
 
     tab: Literal["set_aside", "read"]
-    group: Literal["kind", "reason", "sender"] = Field(description="How the groups were made.")
+    group: Literal["kind", "reason", "sender", "account"] = Field(description="How the groups were made.")
     query: str = Field(description="The search the rows match; empty for all.")
     item: ItemKind | None = Field(None, description="The kind of item the rows are narrowed to; empty for all.")
     kept_days: int = Field(description="How many days an item stays listed before it leaves the list.")
@@ -7075,7 +7079,7 @@ class QualityMissedWeek(BaseModel):
     person: str = Field(description="The id of the person.")
     person_name: str = Field(description="The person's name, as shown.")
     week: date = Field(description="The Monday of the week, in the person's time zone.")
-    week_end: date = Field(description="The Sunday of the week.")
+    week_end: date = Field(description="The Sunday of the week, or today when the week is still under way.")
     count: int = Field(description="How many times they said the assistant missed something that week.")
 
 
@@ -7083,7 +7087,7 @@ class QualityApartWeek(BaseModel):
     """Missed, declined and dropped for one week, each counted on its own (design 6.20, 6.22)."""
 
     week: date = Field(description="The Monday of the week, in the person's time zone.")
-    week_end: date = Field(description="The Sunday of the week.")
+    week_end: date = Field(description="The Sunday of the week, or today when the week is still under way.")
     missed: int = Field(description="Times the person said the assistant failed to find something.")
     declined: int = Field(description="Held changes the person declined: not theirs, or not a promise.")
     dropped: int = Field(description="Questions and actions the person dropped as no longer needed.")
@@ -7103,7 +7107,7 @@ class QualityAnswerWeek(BaseModel):
     """Helpful and not helpful answers for one week, each counted on its own (design 6.20)."""
 
     week: date = Field(description="The Monday of the week, in the person's time zone.")
-    week_end: date = Field(description="The Sunday of the week.")
+    week_end: date = Field(description="The Sunday of the week, or today when the week is still under way.")
     helpful: int = Field(description="Answers from Ask the person marked helpful.")
     not_helpful: int = Field(description="Answers from Ask the person marked not helpful.")
 
@@ -7206,7 +7210,7 @@ class QualityOutcomeWeek(BaseModel):
     """What the assistant's work came to in one week (design 6.20, 6.32 "Measured"). Each figure is its own count."""
 
     week: date = Field(description="The Monday of the week, in the person's time zone.")
-    week_end: date = Field(description="The Sunday of the week.")
+    week_end: date = Field(description="The Sunday of the week, or today when the week is still under way.")
     promises_found: int = Field(description="Promises of the person's the assistant found this week.")
     promises_kept: int = Field(
         description="Promises the assistant had found, from any week, that the person closed as done this week."

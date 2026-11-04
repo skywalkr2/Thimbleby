@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
@@ -63,16 +63,17 @@ test("More has the work screens, the saved items and Settings in sections, with 
   const sheet = await screen.findByRole("dialog", { name: "More" });
   expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Handled for you", "Follow-ups", "Stages", "Projects", "People", "Files", "Notes", "Knowledge", "Settings"]);
   expect(within(sheet).getByText("Work")).toBeInTheDocument();
-  expect(within(sheet).getByText("Saved items")).toBeInTheDocument();
+  for (const group of ["Projects", "People and files", "Help"]) expect(within(sheet).getAllByText(group).length).toBeGreaterThan(0);
+  expect(within(sheet).queryByText("Saved items")).toBeNull();
   expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
-  expect(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" })).toBeInTheDocument();
+  // Keyboard shortcuts are for a keyboard: the phone's sheet offers no item for them.
+  expect(within(sheet).queryByRole("button", { name: "Show keyboard shortcuts" })).toBeNull();
   expect(within(sheet).getByRole("button", { name: "Setup guide" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Write feedback" })).toBeInTheDocument();
   expect(within(sheet).getByText("Version 9.8.7")).toBeInTheDocument();
   expect(within(sheet).getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
   expect(within(sheet).getByRole("radiogroup", { name: "Spacing" })).toBeInTheDocument();
-  await user.click(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" }));
-  await waitFor(() => expect(onHelp).toHaveBeenCalledTimes(1));
+  expect(onHelp).not.toHaveBeenCalled();
 });
 
 test("with no side besides Personal the phone's More sheet says Keeping track, not Work, and lists no Stages", async () => {

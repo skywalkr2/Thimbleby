@@ -46,7 +46,6 @@ export function Glossary(props: { entries: Item[]; now: Date; onActed: () => voi
   return (
     <section className={styles.words} aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`}>{t("knowledge.words.title")}</h2>
-      <p className="hint">{t("knowledge.words.intro")}</p>
       {props.entries.length > 0 && (
         <ul className={styles.list} aria-label={t("knowledge.words.list_label")}>
           {props.entries.map((entry) => (
@@ -93,24 +92,31 @@ export function Glossary(props: { entries: Item[]; now: Date; onActed: () => voi
         </>
       )}
       <form
-        className={styles.addword}
+        className={styles.addrow}
         onSubmit={(e) => {
           e.preventDefault();
           void add();
         }}
       >
-        <label htmlFor={`${id}-word`}>{t("knowledge.words.word")}</label>
-        <input id={`${id}-word`} type="text" value={typed} autoComplete="off" onChange={(e) => setTyped(e.target.value)} />
-        <label htmlFor={`${id}-meaning`}>{t("knowledge.words.meaning")}</label>
-        <input id={`${id}-meaning`} type="text" value={meant} autoComplete="off" aria-describedby={`${id}-hint`} onChange={(e) => setMeant(e.target.value)} />
-        <p className="hint" id={`${id}-hint`}>
-          {t("knowledge.words.meaning_hint")}
-        </p>
-        <div>
-          <Button type="submit" disabled={!word || known || cannot}>
-            {t("knowledge.words.add")}
-          </Button>
-        </div>
+        <label className="sr" htmlFor={`${id}-word`}>
+          {t("knowledge.words.word")}
+        </label>
+        <input id={`${id}-word`} type="text" value={typed} autoComplete="off" placeholder={t("knowledge.words.word_placeholder")} onChange={(e) => setTyped(e.target.value)} />
+        <label className="sr" htmlFor={`${id}-meaning`}>
+          {t("knowledge.words.meaning")}
+        </label>
+        <input
+          id={`${id}-meaning`}
+          type="text"
+          value={meant}
+          autoComplete="off"
+          placeholder={t("knowledge.words.meaning_placeholder")}
+          title={t("knowledge.words.meaning_title")}
+          onChange={(e) => setMeant(e.target.value)}
+        />
+        <Button type="submit" disabled={!word || known || cannot} reason={!word ? t("knowledge.words.reason") : undefined}>
+          {t("knowledge.words.add")}
+        </Button>
       </form>
       {known && word && <p className="hint">{t("knowledge.words.known", { word })}</p>}
       {problem && (

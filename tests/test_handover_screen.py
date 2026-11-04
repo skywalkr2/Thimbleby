@@ -222,3 +222,103 @@ def test_a_copy_that_lost_the_workspace_to_the_other_computer_says_so(two, tmp_p
         assert line["state"] == "elsewhere" and line["text"]
         page = client.get("/api/sync/handover").json()
         assert page["state"] == "elsewhere" and page["computer"] and page["minutes_left"] >= 1
+
+
+# ---- checking the folder now --------------------------------------------------------------------------------
+
+
+def test_a_pass_notes_when_it_finished_and_a_failing_pass_leaves_that_unchanged(two, tmp_path):  # noqa: F811
+    import shutil
+
+    from engine.handover import open_workspace
+
+    a, cfg_a, _, _, folder = two
+    open_workspace(a, cfg_a)
+    client, app = app_for(a, cfg_a, tmp_path, held=False)
+    with client:
+        worker = app.state.worker
+        worker.sync_checked_at = None
+        worker.sync_if_changed()
+        first = worker.sync_checked_at
+        assert first is not None and worker.sync_problem is None
+        shutil.rmtree(folder)
+        assert not worker.sync_if_changed()
+        assert worker.sync_problem and worker.sync_checked_at == first
+
+
+def test_checking_now_with_no_folder_changes_nothing_and_returns_the_view(two, tmp_path):  # noqa: F811
+    a, _, _, _, _ = two
+    from engine.config import load_config
+
+    bare = load_config(a.config_dir, env={})
+    bare.storage.sync.folder = ""
+    client, app = app_for(a, bare, tmp_path, held=False)
+    with client:
+        seen = client.post("/api/sync/check")
+        assert seen.status_code == 200
+        assert seen.json()["folder_set"] is False and seen.json()["last_checked"] is None
+        assert app.state.worker.sync_checked_at is None and app.state.worker.sync_problem is None
+
+
+def test_checking_now_never_writes_while_held(two, tmp_path):  # noqa: F811
+    a, cfg_a, _, _, folder = diverge(two)
+    with app_for(a, cfg_a, tmp_path)[0] as client:  # held
+        before = sorted(p.name for p in folder.rglob("*"))
+        done = client.post("/api/sync/check")
+        assert done.status_code == 200 and done.json()["state"] == "diverged" and done.json()["last_checked"] is None
+        assert sorted(p.name for p in folder.rglob("*")) == before
+
+
+def test_checking_now_never_writes_after_the_workspace_was_lost(two, tmp_path):  # noqa: F811
+    from engine.handover import open_workspace, take
+
+    a2, cfg_a2, b2, cfg_b2, folder = two
+    open_workspace(a2, cfg_a2)
+    client, app = app_for(a2, cfg_a2, tmp_path, held=False)
+    with client:
+        take(b2, cfg_b2, ledger=0)
+        app.state.worker.sync_if_changed()  # now lost
+        before = sorted(p.name for p in folder.rglob("*"))
+        done = client.post("/api/sync/check")
+        assert done.json()["state"] == "elsewhere" and sorted(p.name for p in folder.rglob("*")) == before
+
+
+def test_a_successful_check_updates_when_it_was_last_checked_and_a_failing_one_says_why(two, tmp_path):  # noqa: F811
+    import shutil
+
+    from engine.handover import open_workspace
+
+    a, cfg_a, _, _, folder = two
+    open_workspace(a, cfg_a)
+    client, app = app_for(a, cfg_a, tmp_path, held=False)
+    with client:
+        assert client.get("/api/sync/handover").json()["last_checked"] is None
+        done = client.post("/api/sync/check").json()
+        assert done["state"] == "clear" and done["folder_set"] is True and done["last_checked"]
+        shutil.rmtree(folder)
+        client.post("/api/sync/check")
+        assert app.state.worker.sync_problem
+        assert client.get("/api/sync/handover").json()["last_checked"] == done["last_checked"]
+
+
+def test_the_route_and_the_background_pass_never_run_at_once(two, tmp_path):  # noqa: F811
+    import threading
+
+    from engine.handover import open_workspace
+
+    a, cfg_a, _, _, _ = two
+    open_workspace(a, cfg_a)
+    client, app = app_for(a, cfg_a, tmp_path, held=False)
+    with client:
+        worker = app.state.worker
+        seen: list[str] = []
+        worker._sync_lock.acquire()  # a pass is running
+        try:
+            t = threading.Thread(target=lambda: seen.append(str(client.post("/api/sync/check").status_code)))
+            t.start()
+            t.join(0.3)
+            assert t.is_alive() and not seen  # the route waits for the pass in progress
+        finally:
+            worker._sync_lock.release()
+        t.join(10)
+        assert seen == ["200"]

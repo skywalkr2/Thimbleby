@@ -2838,11 +2838,11 @@ class UiFile(FileModel):
         default_factory=lambda: dict(DEFAULT_SHORTCUTS),
         description="Single-key shortcuts by action; they never fire while typing.",
     )
-    handled_group: Literal["kind", "reason", "sender"] = Field(
+    handled_group: Literal["kind", "reason", "sender", "account"] = Field(
         "kind",
         description="How the Handled for you screen groups what it lists to start with: by what the item is (a "
         "mail's kind, such as bills or orders, or the kind of file, page or entry), by the reason it was handled "
-        "(a rule's own words) or by sender. The other groupings are one click away.",
+        "(a rule's own words), by sender or by the account it came in on. The other groupings are one click away.",
     )
     handled_rows_shown: int = Field(
         25,

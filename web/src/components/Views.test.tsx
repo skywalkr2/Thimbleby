@@ -277,3 +277,12 @@ test("removing a view acts at once and Undo brings it back", async () => {
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-4/undo")).toBe(true));
 });
+
+test("with no view yet the section is one quiet line with Add view, not a card with an empty state", async () => {
+  fakeApi({ ...routes, "GET views": () => [] });
+  const { container } = renderApp(<Views />);
+  expect(await screen.findByText(/^No views yet\./)).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Add view" })).toHaveLength(1);
+  expect(container.querySelector("[data-empty]")).toBeNull();
+  expect(screen.queryByRole("list", { name: "Your views" })).toBeNull();
+});

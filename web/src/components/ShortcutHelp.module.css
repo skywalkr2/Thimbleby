@@ -1,6 +1,8 @@
-.title { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
-.list { display: grid; gap: var(--space-2); margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
-.row { display: grid; grid-template-columns: var(--space-12) 1fr; gap: var(--space-4); align-items: baseline; }
-.row dd { margin: 0; }
+/* The shortcuts: a title in the display face, then groups of keys. Every key sits in a cell of one width, so the words start on one edge. */
+.list { display: grid; gap: var(--space-1); margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.row { display: grid; grid-template-columns: calc(var(--space-12) + var(--space-4)) 1fr; gap: var(--space-4); align-items: baseline; }
+.row dt { min-width: 0; }
+.row kbd { display: inline-block; box-sizing: border-box; min-width: var(--space-10); padding: var(--space-1) var(--space-2); text-align: center; white-space: nowrap; }
+.row dd { margin: 0; min-width: 0; }
 .end { display: flex; justify-content: flex-end; }
-.group { margin: var(--space-4) 0 var(--space-2); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
+.group { margin: var(--space-2) 0 var(--space-2); }

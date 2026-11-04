@@ -1,0 +1,4 @@
+/* The empty page is its own drop target: a wide dashed area to drop a file on or choose one, with what a file is for under it. */
+.empty { display: grid; gap: var(--space-2); }
+.empty > span { min-height: calc(var(--space-12) * 2); max-width: none; justify-content: center; }
+.empty p { margin: 0; }

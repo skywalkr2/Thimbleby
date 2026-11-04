@@ -42,7 +42,7 @@ type Group = S["HandledView"]["group"];
 type Row = S["HandledRow"];
 type Item = S["HandledRow"]["item"];
 const TABS: Tab[] = ["set_aside", "read"];
-const GROUPS: Group[] = ["kind", "reason", "sender"];
+const GROUPS: Group[] = ["kind", "reason", "sender", "account"];
 
 /** A sender as a person reads it: the name when there is one, else the address. "Name <address>" is shown as the name. */
 function senderName(sender: string | null | undefined): string {
@@ -163,7 +163,7 @@ export function Handled() {
                   ? t(`handled.kind.${g.key.slice(5) as Row["kind"]}`)
                   : g.key.startsWith("item:")
                     ? t(`handled.item_group.${g.key.slice(5) as Item}`)
-                    : t(shownGroup === "sender" ? "handled.sender_unknown" : "handled.reason_unknown"));
+                    : t(shownGroup === "sender" ? "handled.sender_unknown" : shownGroup === "account" ? "handled.account_unknown" : "handled.reason_unknown"));
               return (
                 <section key={key} className={styles.group} data-group={g.key}>
                   <h2>

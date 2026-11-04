@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
@@ -51,4 +52,13 @@ test("a note the assistant wrote from a data dump reads as words: no id, no code
   expect(rows[0]).toHaveTextContent("The headcount moved to Mon, Nov 9 for a to-do.");
   expect(rows[1]).toHaveTextContent("A note with no words of its own");
   expect(list.textContent).not.toMatch(/PER-1|ACT-6|2026-11-09|ask_whether|[{}[\]"]/);
+});
+
+test("an empty page offers Write a note as its primary action, which opens the hand-in box", async () => {
+  const user = userEvent.setup();
+  const onHandIn = vi.fn();
+  served([]);
+  renderApp(<Notes onHandIn={onHandIn} />);
+  await user.click(await screen.findByRole("button", { name: "Write a note" }));
+  expect(onHandIn).toHaveBeenCalledTimes(1);
 });

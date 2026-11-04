@@ -506,6 +506,7 @@ export const api = {
 
   sync: () => call<S["SyncView"]>("GET", "sync"),
   handover: () => call<S["HandoverView"]>("GET", "sync/handover"),
+  checkSyncNow: () => call<S["HandoverView"]>("POST", "sync/check"),
   chooseCopy: (which: S["HandoverChoice"]["which"]) => call<S["HandoverView"]>("POST", "sync/handover", { which }),
   changeMindAboutCopy: () => call<S["HandoverView"]>("DELETE", "sync/handover"),
   jobs: () => call<S["JobView"][]>("GET", "jobs"),

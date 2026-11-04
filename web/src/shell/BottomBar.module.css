@@ -28,3 +28,9 @@
 /* A sheet's section label is the shared group label (ui/GroupLabel); here it only takes the sheet's own margins. */
 .section { margin: var(--space-3) 0 0; padding: var(--space-1) var(--space-2); color: var(--text-subtle); }
 .choices { padding: 0 var(--space-2); }
+/* A project's mark (its initials) stands where an icon would, so every row's words start on one edge. */
+.glyph { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 var(--space-1); box-sizing: border-box; flex: none; border-radius: var(--radius-sm); background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.link[aria-current="page"] .glyph { background: var(--surface); color: var(--accent-text); }
+.spacer { width: 18px; flex: none; }
+/* The sheet scrolls: a fade at its bottom edge shows there is more, and is empty space once the end is reached. */
+.fade { position: sticky; bottom: 0; height: var(--space-8); pointer-events: none; background: linear-gradient(to bottom, transparent, var(--surface)); }

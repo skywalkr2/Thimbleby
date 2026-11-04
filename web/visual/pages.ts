@@ -12,6 +12,7 @@ import {
   holdReads,
   open,
   refuseReads,
+  populatedQuality,
   refuseWrites,
   Unreachable,
   type Env,
@@ -112,6 +113,7 @@ async function waitingSignIn(env: Env, button: RegExp): Promise<void> {
 }
 
 const LOADING = (hash: string, alsoHold?: RegExp) => (env: Env) => holdReads(env, NEUTRAL, hash, alsoHold);
+const POPULATED_QUALITY = (env: Env) => populatedQuality(env, [9, 12, 11, 15], [7, 10, 10, 14]);
 const OFFLINE = (hash: string) => async (env: Env) => {
   await open(env, hash);
   await goOffline(env);
@@ -419,16 +421,18 @@ export const ENTRIES: Entry[] = [
   },
 
   // ---- How Reginald is doing
-  { page: "quality", server: "sides", stage: "seeded", open: (env) => open(env, "quality") },
+  // The fixtures hold no weeks of history, so the populated page is the app's own answer with its weekly figures set.
+  { page: "quality", server: "sides", stage: "seeded", open: POPULATED_QUALITY },
   { page: "quality-states", title: "First week, not enough to measure", server: "sides", stage: "empty", open: (env) => open(env, "quality") },
   { page: "quality-states", title: "Loading", server: "sides", stage: "seeded", open: LOADING("quality") },
   { page: "quality-states", title: "Nothing to look at", server: "sides", stage: "empty", open: (env) => open(env, "quality") },
+  { page: "quality-states", title: "Four weeks of figures", server: "sides", stage: "seeded", open: POPULATED_QUALITY },
   {
     page: "quality-states",
     title: "A worse period, said plainly",
     server: "sides",
     stage: "seeded",
-    undrivable: "the fixtures hold no four weeks of history to compare, and a made-up answer would need the page's whole answer shape",
+    open: (env) => populatedQuality(env, [12, 11, 9, 8], [9, 9, 7, 3]),
   },
   {
     page: "quality-states",

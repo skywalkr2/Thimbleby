@@ -271,7 +271,10 @@ def test_the_quality_view_carries_every_measure_for_the_window_and_each_week_and
     assert (view["dismissed"], view["corrected"], view["follow_ups_completed"]) == (0, 0, 0)
     assert sum(w["review_seconds"] for w in view["weeks"]) == 45 and len(view["weeks"]) >= 4
     this_week = view["weeks"][-1]
-    assert this_week["week_end"] == (date.fromisoformat(this_week["week"]) + timedelta(days=6)).isoformat()
+    assert (
+        this_week["week_end"]
+        == min(date.fromisoformat(this_week["week"]) + timedelta(days=6), clock_now.date()).isoformat()
+    )
     assert this_week["week"] <= clock_now.date().isoformat()
 
 

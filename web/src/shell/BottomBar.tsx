@@ -21,7 +21,7 @@ function Links(props: { entries: NavEntry[]; current: View; onPick: () => void }
     <div className={styles.list}>
       {props.entries.map((e) => (
         <Link key={e.view} href={viewHref(e.view)} className={styles.link} aria-current={props.current === e.view ? "page" : undefined} aria-label={e.count ? navName(e) : undefined} onPress={props.onPick}>
-          {e.icon ? <Icon name={e.icon} /> : null}
+          {e.icon ? <Icon name={e.icon} /> : <span className={styles.glyph} aria-hidden="true">{e.glyph}</span>}
           <span>{e.label}</span>
           <NavCount entry={e} className={styles.count} />
         </Link>
@@ -37,7 +37,8 @@ export function BottomBar(props: {
   /** Search lives in the header on a phone; these two stay for the callers that pass them. */
   onOpenRecord?: (kind: string, id: string) => void;
   onAsk?: (question: string) => void;
-  onHelp: () => void;
+  /** The keyboard list: a phone has no keyboard to speak of, so the sheet does not offer it. */
+  onHelp?: () => void;
   onFeedback: () => void;
   onOpenGuide: () => void;
 }) {
@@ -56,6 +57,8 @@ export function BottomBar(props: {
   const todos = nav.work.find((e) => e.view === "work/open");
   // The work screens other than To-dos, which has its own tab.
   const moreWork = nav.work.filter((e) => e.view !== "work/open");
+  // The saved items in the groups the person thinks in: their projects (every side and project), then the people and files.
+  const kept = nav.records.filter((e) => !nav.projects.includes(e));
   const tabViews: View[] = ["today", "work/open", "schedule"];
   const onMore = !tabViews.includes(props.current);
   return (
@@ -92,32 +95,12 @@ export function BottomBar(props: {
         <Sheet title={t("nav.more")} onClose={close}>
           <GroupLabel as="p" className={styles.section}>{nav.workTitle}</GroupLabel>
           <Links entries={moreWork} current={props.current} onPick={close} />
-          <GroupLabel as="p" className={styles.section}>{t("nav.more.saved")}</GroupLabel>
-          <Links entries={[...nav.records, ...nav.bottom]} current={props.current} onPick={close} />
-          <GroupLabel as="p" className={styles.section}>{t("header.help")}</GroupLabel>
-          <div className={styles.list}>
-            {anythingMissed && (
-              <button type="button" className={styles.link} {...{ [MISSED_BUTTON]: "" }} onClick={later(missed)}>
-                <Icon name="alert" />
-                {t("missed.open")}
-              </button>
-            )}
-            <button type="button" className={styles.link} onClick={later(props.onHelp)}>
-              <Icon name="help" />
-              {t("help.open")}
-            </button>
-            <button type="button" className={styles.link} onClick={later(props.onOpenGuide)}>
-              <Icon name="check" />
-              {t("header.help_guide")}
-            </button>
-            <button type="button" className={styles.link} onClick={later(props.onFeedback)}>
-              <Icon name="chat" />
-              {t("feedback.open")}
-            </button>
-            <button type="button" className={styles.link} disabled>
-              {t("app.version", { version: props.version })}
-            </button>
-          </div>
+          <GroupLabel as="p" className={styles.section}>{t("nav.more.projects")}</GroupLabel>
+          <Links entries={nav.projects} current={props.current} onPick={close} />
+          <GroupLabel as="p" className={styles.section}>{t("nav.more.people_files")}</GroupLabel>
+          <Links entries={kept} current={props.current} onPick={close} />
+          <GroupLabel as="p" className={styles.section}>{t("nav.more.settings")}</GroupLabel>
+          <Links entries={nav.bottom} current={props.current} onPick={close} />
           <GroupLabel as="p" className={styles.section}>{t("user.theme")}</GroupLabel>
           <div className={styles.choices}>
             <SegmentedControl<Theme>
@@ -136,6 +119,29 @@ export function BottomBar(props: {
               options={(["comfortable", "compact"] as Density[]).map((id) => ({ value: id, label: t(`user.density.${id}`) }))}
             />
           </div>
+          <GroupLabel as="p" className={styles.section}>{t("header.help")}</GroupLabel>
+          <div className={styles.list}>
+            {anythingMissed && (
+              <button type="button" className={styles.link} {...{ [MISSED_BUTTON]: "" }} onClick={later(missed)}>
+                <Icon name="search" />
+                {t("missed.menu")}
+              </button>
+            )}
+            <button type="button" className={styles.link} onClick={later(props.onOpenGuide)}>
+              <Icon name="book" />
+              {t("header.help_guide")}
+            </button>
+            <button type="button" className={styles.link} onClick={later(props.onFeedback)}>
+              <Icon name="chat" />
+              {t("feedback.open")}
+            </button>
+            <button type="button" className={styles.link} disabled>
+              <span className={styles.spacer} aria-hidden="true" />
+              {t("app.version", { version: props.version })}
+            </button>
+          </div>
+          {/* Scrolling shows where the list goes on: a fade at the sheet's bottom edge until its end. */}
+          <div className={styles.fade} aria-hidden="true" />
         </Sheet>
       )}
     </>

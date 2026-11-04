@@ -20,7 +20,6 @@ import { FactSource } from "./FactSource";
 import { useFactLine } from "../lib/fact-line";
 import { OriginLink } from "./Origin";
 
-import { EmptyState } from "../ui/EmptyState";
 import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { RowList } from "../ui/RowList";
 /** The ways an input arrives that the sheet has a word for; any other is "another input". */
@@ -52,8 +51,9 @@ function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
   return (
     <>
       {props.area && <p className="hint">{t("knows.area")}</p>}
-      <p data-reading={reading.state}>
-        <strong>{t("knows.reading")}:</strong> {summary}
+      <p className="hint" data-reading={reading.state}>
+        <span className="sr">{t("knows.reading")}: </span>
+        {summary}
         {reading.levels.length > 0 && ` ${t("knows.reading.levels", { levels: reading.levels.join(", ") })}`}
       </p>
     </>
@@ -202,7 +202,7 @@ export function ProjectKnows(props: { id: string; plain?: boolean }) {
         <>
           <Reading reading={data.reading} area={data.area} />
           {data.area && (data.reading.choices ?? []).length > 0 && <Readers project={props.id} name={data.name} choices={data.reading.choices ?? []} />}
-          {nothing && <EmptyState text={t("knows.nothing_yet")} />}
+          {nothing && <p className="hint">{t("knows.nothing_yet")}</p>}
           <Sources rows={data.sources} />
           <Facts rows={data.facts} />
           {!props.plain && (

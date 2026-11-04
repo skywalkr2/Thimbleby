@@ -10,8 +10,9 @@ and the choices a row offers.
 
 An item is in one list at most: a set-aside mail never has a read request closed that way, and a mail handed in again
 leaves the second list as soon as its new request exists. Rows are grouped by kind (a mail by its kind, any other item
-by its kind of item), by reason (the rule's own words) or by sender, newest first, filtered by the kind of item, and
-searched by sender, subject, kind and reason. The tab `closed` of an earlier version reads as `set_aside`.
+by its kind of item), by reason (the rule's own words), by sender or by account (the source they came
+from), newest first, filtered by the kind of item, and searched by sender, subject, kind and reason. The tab
+`closed` of an earlier version reads as `set_aside`.
 
 An item stays listed for `watch.handled_keep_days` after it was handled, then leaves the list. That is a filter made
 when the list is read: no record is changed or deleted, so the ledger and Undo are whole, and the original stays
@@ -37,7 +38,7 @@ ITEM_KINDS = ("mail", "calendar", "file", "page", "action", "question", "other")
 #: What a connector with no declaration of what it reads is, by its name.
 _FILE_CONNECTORS = frozenset({"folder", "capture"})
 _PAGE_CONNECTORS = frozenset({"feed"})
-Grouping = Literal["kind", "reason", "sender"]
+Grouping = Literal["kind", "reason", "sender", "account"]
 #: The two lists; `closed` is accepted as the first.
 TABS: tuple[Literal["set_aside", "read"], ...] = ("set_aside", "read")
 #: The kind a set-aside section is listed under, and the kind of mail the rules track. Personal stays for rows an
@@ -268,6 +269,13 @@ def sender_key(row: dict[str, Any]) -> tuple[str, str | None]:
     return (address or sender.lower() or "", name)
 
 
+def account_key(row: dict[str, Any]) -> tuple[str, str | None]:
+    """The key rows are grouped under by the account (the source they came from), and its name: the source's own
+    label, else one group of rows with no known source (no name)."""
+    name = str(row.get("source") or "").strip()
+    return (name.lower(), name or None)
+
+
 def matches(row: dict[str, Any], query: str) -> bool:
     """Every word of the search is in the row's sender, address, subject, kind or reason, in any case."""
     words = query.lower().split()
@@ -360,7 +368,15 @@ def listing(
     shown = [r for r in all_rows[tab] if matches(r, query) and (not item or r["item"] == item)]
     groups: dict[str, dict[str, Any]] = {}
     for row in shown:
-        key, label = kind_group(row) if group == "kind" else reason_group(row) if group == "reason" else sender_key(row)
+        key, label = (
+            kind_group(row)
+            if group == "kind"
+            else reason_group(row)
+            if group == "reason"
+            else account_key(row)
+            if group == "account"
+            else sender_key(row)
+        )
         found = groups.setdefault(key, {"key": key, "label": label, "items": []})
         found["items"].append(row)
     ordered = [{**g, "count": len(g["items"])} for g in groups.values()]

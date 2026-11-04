@@ -194,11 +194,11 @@ test("rows are grouped by kind with a count, collapsed, and a group opens to its
   expect(screen.queryByText("Offer n")).not.toBeInTheDocument();
 });
 
-test("the Kind, Reason and Sender buttons are shown, Kind first and pressed, and the group keys of one view are all different", async () => {
+test("the Kind, Reason, Sender and Account buttons are shown, Kind first and pressed, and the group keys of one view are all different", async () => {
   open();
   await screen.findByRole("button", { name: "Sales, promotions and social updates · 2" });
   const buttons = within(screen.getByRole("radiogroup", { name: "Group by" })).getAllByRole("radio");
-  expect(buttons.map((b) => b.textContent)).toEqual(["Kind", "Reason", "Sender"]);
+  expect(buttons.map((b) => b.textContent)).toEqual(["Kind", "Reason", "Sender", "Account"]);
   expect(buttons[0]).toBeChecked();
   const keys = Array.from(document.querySelectorAll("[data-group]")).map((e) => e.getAttribute("data-group"));
   expect(keys).toEqual(["kind:sales", "kind:notices", "item:file", "item:page"]);
@@ -234,6 +234,20 @@ test("the other groupings, by reason and by sender, are one click away and group
   expect(screen.getByRole("radio", { name: "Sender" })).toBeChecked();
   expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&group=sender")).toBe(true);
   expect(calls.some((c) => c.route === "GET handled?tab=set_aside&q=&group=reason")).toBe(true);
+});
+
+test("a fourth grouping is by account, with a name for rows from no known account", async () => {
+  const user = userEvent.setup();
+  const byAccount: S["HandledView"] = {
+    ...ASIDE,
+    group: "account",
+    groups: [group("work account", [row("a"), row("b")], "Work account"), group("", [row("z")], null)],
+  };
+  open({ "GET handled?tab=set_aside&q=&group=account": () => byAccount });
+  await screen.findByRole("button", { name: "Sales, promotions and social updates · 2" });
+  await user.click(screen.getByRole("radio", { name: "Account" }));
+  expect(await screen.findByRole("button", { name: "Work account · 2" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "No known account · 1" })).toBeInTheDocument();
 });
 
 test("a search asks for the words, opens the groups it found, and says when nothing matches", async () => {

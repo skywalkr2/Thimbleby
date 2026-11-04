@@ -14,6 +14,7 @@ import {
   settle,
   Unreachable,
   type Env,
+  populatedQuality,
 } from "./drive.ts";
 import type { Entry } from "./pages.ts";
 import type { Route } from "playwright-core";
@@ -698,13 +699,23 @@ function build(): Screen[] {
     }),
   );
   const files = s("Records", "files", "Files", SEEDED, reach("records/files"));
+  const fileAdd = s("Records", "files-add", "Add a file", SEEDED, async (env) => {
+    await open(env, "records/files");
+    await press(env, /^Add a file/, "Files has no Add a file button");
+  });
+  // A file chosen in the form, as a person picks one; the bytes are the capture's own and never leave the page.
+  const fileChosen = (name: string, mimeType: string) => async (env: Env) => {
+    await open(env, "records/files");
+    await press(env, /^Add a file/, "Files has no Add a file button");
+    await env.page.getByRole("dialog").locator('input[type="file"]').setInputFiles({ name, mimeType, buffer: Buffer.from("a few words") });
+    await env.page.waitForTimeout(500);
+  };
   add(
     files,
     ...shared(files, "records/files"),
-    s("Records", "files-add", "Add a file", SEEDED, async (env) => {
-      await open(env, "records/files");
-      await press(env, /^Add a file/, "Files has no Add a file button");
-    }),
+    fileAdd,
+    state(fileAdd, "A file chosen", SEEDED, fileChosen("quarterly-plan.pdf", "application/pdf")),
+    state(fileAdd, "A file of the wrong type", SEEDED, fileChosen("installer.exe", "application/x-msdownload")),
   );
   const notes = s("Records", "notes", "Notes", SEEDED, reach("records/notes"));
   add(notes, ...shared(notes, "records/notes"));
@@ -736,9 +747,25 @@ function build(): Screen[] {
       await env.page.waitForTimeout(500);
     }),
   );
+  const quality = s("Records", "quality", "How the assistant is doing", SEEDED, reach("quality"), { main: true });
+  const handover = s("Records", "handover", "Handover", SEEDED, reach("handover"));
+  // The copies on this computer and in the folder differ: a state the fixture workspace does not reach on its own.
+  const DIVERGED = {
+    state: "diverged",
+    here: { computer: "This computer", changes: 14, latest: "2026-11-03T16:20:00+00:00" },
+    folder: { computer: "Other computer", changes: 6, latest: "2026-11-03T09:05:00+00:00" },
+    computer: "Other computer",
+    last_seen: null,
+    minutes_left: 0,
+    chosen: null,
+    folder_set: true,
+    last_checked: "2026-11-03T16:25:00+00:00",
+  };
   add(
-    s("Records", "handover", "Handover", SEEDED, reach("handover")),
-    s("Records", "quality", "How the assistant is doing", SEEDED, reach("quality"), { main: true }),
+    handover,
+    state(handover, "The copies differ", SEEDED, answered("handover", /\/api\/sync\/handover$/, DIVERGED)),
+    quality,
+    state(quality, "Four weeks of figures", SEEDED, (env) => populatedQuality(env, [9, 12, 11, 15], [7, 10, 10, 14])),
   );
 
   // ---- Settings
@@ -877,7 +904,7 @@ function build(): Screen[] {
     s("Header and menus", "shortcuts", "Keyboard shortcuts", SIGNED, async (env) => {
       await open(env, "today");
       await openHelpItem(env, /^Show keyboard shortcuts/);
-    }),
+    }, { widths: [1440, 1024] }), // a phone has no keyboard: its More sheet offers no shortcuts item
     s("Header and menus", "feedback", "Write feedback", SIGNED, async (env) => {
       await open(env, "today");
       await openHelpItem(env, /^Write feedback/);

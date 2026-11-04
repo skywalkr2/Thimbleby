@@ -6,3 +6,5 @@
   margin: var(--space-1) calc(var(--overlay-pad-x, var(--space-5)) * -1) calc(var(--overlay-pad-y, var(--space-4)) * -1);
   padding: var(--space-3) var(--overlay-pad-x, var(--space-5)); border-top: 1px solid var(--border); background: var(--surface-raised);
 }
+/* A dialog's title steps up from its field labels: the display face at the section size, the same as an empty state's title. */
+.dialog :global([slot="title"]) { margin: 0; font-family: var(--font-display); font-size: var(--text-section); line-height: var(--lh-section); font-weight: var(--weight-medium); letter-spacing: -0.01em; }

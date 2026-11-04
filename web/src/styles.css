@@ -623,3 +623,6 @@ pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pr
 /* The options a form folds away (hand in, add a to-do): even gaps between its fields once opened, and room around the file button. */
 [data-handin-options] > :not(summary), [data-add-more] > :not(summary) { margin-top: var(--space-4); }
 .file-pick { margin: var(--space-3) 0 var(--space-4); }
+/* A record page whose card has nothing to say draws no card, and its column goes to the page. */
+.record-side[data-bare] { display: none; }
+@media (min-width: 1100px) { .record-grid:has(> .record-side[data-bare]) { grid-template-columns: minmax(0, 64rem); } }

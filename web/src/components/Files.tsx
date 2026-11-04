@@ -23,10 +23,11 @@ import { useFileEdits } from "./FileEdit";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SideFilter } from "./SideFilter";
+import { FileDrop } from "../ui/FileDrop";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
 import { Button, ButtonLink } from "../ui/Button";
-import { EmptyState } from "../ui/EmptyState";
+import styles from "./Files.module.css";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row, ExpandableRow } from "../ui/Row";
@@ -46,6 +47,8 @@ export function Files() {
   const workspace = usePluginActions();
   const { start, review } = useActionReview();
   const [adding, setAdding] = useState(false);
+  // A file dropped on, or chosen in, the empty page is the one the Add form opens with.
+  const [dropped, setDropped] = useState<File | null>(null);
   const addButton = useRef<HTMLButtonElement>(null);
   const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
   // A file filed on a side and in none of its projects is "in <side>, not in a project", never in a project.
@@ -66,7 +69,7 @@ export function Files() {
       <PageHeader
         id="files-title"
         title={t("files.title")}
-        filters={<SideFilter />}
+        filters={<SideFilter holds={everything.length} />}
         actionsLabel={t("files.actions_label")}
         actions={(workspace.data ?? []).map((action) => (
           <Button
@@ -94,7 +97,18 @@ export function Files() {
         <ListState query={files} failed={t("files.load_failed")}>
           {() =>
             everything.length === 0 ? (
-              <EmptyState text={t("files.empty")} />
+              <div className={styles.empty} data-empty="">
+                <FileDrop
+                  id="files-drop"
+                  aria-label={t("files.drop_label")}
+                  onChange={(e) => {
+                    const chosen = e.target.files?.[0] ?? null;
+                    setDropped(chosen);
+                    if (chosen) setAdding(true);
+                  }}
+                />
+                <p className="hint">{t("files.empty")}</p>
+              </div>
             ) : shown.length === 0 ? (
               <FilteredEmpty text={t("sides.empty.files", { side: side.named })} onClear={() => side.set("all")} />
             ) : (
@@ -109,8 +123,10 @@ export function Files() {
       </ListDetail>
       {adding && (
         <AddFile
+          initial={dropped}
           onClose={() => {
             setAdding(false);
+            setDropped(null);
             restoreFocus(() => addButton.current);
           }}
         />

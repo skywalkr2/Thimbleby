@@ -42,7 +42,6 @@ export function useAppearanceGroups(): MenuGroup[] {
       entries: (["system", "light", "dark"] as Theme[]).map((id) => ({
         id,
         label: t(`user.theme.${id}`),
-        icon: id === "system" ? "monitor" : id === "light" ? "sun" : "moon",
         run: () => setTheme(id),
       })),
     },
@@ -64,9 +63,9 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
     {
       id: "help",
       entries: [
-        { id: "shortcuts", label: t("help.open"), icon: "help", run: handlers.onHelp },
-        { id: "guide", label: t("header.help_guide"), icon: "check", run: () => afterClose(handlers.onOpenGuide) },
-        ...(anythingMissed ? [{ id: "missed", label: t("missed.open"), icon: "chat" as const, run: missed }] : []),
+        { id: "shortcuts", label: t("help.open"), icon: "grid", run: handlers.onHelp },
+        { id: "guide", label: t("header.help_guide"), icon: "book", run: () => afterClose(handlers.onOpenGuide) },
+        ...(anythingMissed ? [{ id: "missed", label: t("missed.menu"), icon: "search" as const, run: missed }] : []),
         { id: "feedback", label: t("feedback.open"), icon: "chat", run: handlers.onFeedback },
       ],
     },
@@ -82,7 +81,8 @@ export function useUserMenuGroups(person: string, handlers: { onOpenSettings: ()
   const appearance = useAppearanceGroups();
   // The heading names the person and the workspace they are in; a person with no name of their own is shown the workspace's.
   const heading = workspace && workspace !== person ? t("user.heading", { person, workspace }) : person;
-  const me: MenuGroup = { id: "me", title: heading, entries: [{ id: "settings", label: t("nav.settings"), icon: "gear", run: handlers.onOpenSettings }] };
+  // No row of this menu has an icon, so every label starts on one edge (the theme's sun and moon are said by their words).
+  const me: MenuGroup = { id: "me", title: heading, entries: [{ id: "settings", label: t("nav.settings"), run: handlers.onOpenSettings }] };
   const doing: MenuGroup = { id: "doing", label: t("quality.open"), entries: [{ id: "quality", label: t("quality.open"), run: handlers.onOpenQuality }] };
   return [me, ...(pages ? [pages] : []), doing, ...appearance];
 }

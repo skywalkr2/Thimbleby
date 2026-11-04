@@ -4,7 +4,7 @@
 // action per row; the rest is in the row's menu. Every act is at once, with an undo toast.
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { api, type S } from "../lib/api";
+import { ApiError, api, type S } from "../lib/api";
 import { useReviewTime } from "../lib/review-time";
 import { useKnowledgeActs } from "../lib/knowledge-acts";
 import { changesOf, itemsOf, reachWords, sectionsOf, usedWords, type Item } from "../lib/knowledge";
@@ -22,7 +22,6 @@ import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./Knowledge.module.css";
 
-import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 export function Knowledge(props: { onOpenReview: () => void }) {
   const words = useWords();
@@ -67,6 +66,8 @@ export function Knowledge(props: { onOpenReview: () => void }) {
     <section ref={page} className="panel-section" aria-labelledby="knowledge-title">
       <PageHeader id="knowledge-title" headingRef={heading} focusable title={t("knowledge.title")} />
       <p className={styles.intro}>{t("knowledge.intro")}</p>
+      {/* With nothing learned yet, the one thing a person can do here comes first. */}
+      {!failed && !loading && empty && <Glossary entries={sections.words} now={now} onActed={() => setActed((n) => n + 1)} />}
       {(flagged > 0 || moved > 0) && (
         <div className={styles.review}>
           <p>{flagged > 0 ? tn("knowledge.review", flagged) : t("knowledge.review.moved")}</p>
@@ -78,6 +79,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
       {failed ? (
         <LoadFailed
           message={t("knowledge.load_failed")}
+          detail={[entries.error, rules.error].map((err) => (err instanceof ApiError && err.detail ? err.detail : null)).find(Boolean) ?? null}
           onRetry={() => {
             void entries.refetch();
             void rules.refetch();
@@ -86,7 +88,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
       ) : loading ? (
         <Skeleton />
       ) : empty ? (
-        <EmptyState text={t("knowledge.nothing_yet")} />
+        <p className={styles.quiet}>{t("knowledge.nothing_yet")}</p>
       ) : (
         <>
           {sections.waiting.length > 0 && (
@@ -100,7 +102,7 @@ export function Knowledge(props: { onOpenReview: () => void }) {
             <section className={styles.part} aria-labelledby="knowledge-follows">
               <h2 id="knowledge-follows">{t("knowledge.follows.title")}</h2>
               {sections.follows.length === 0 ? (
-                <EmptyState text={t("knowledge.follows.none_waiting")} />
+                <p className={styles.quiet}>{t("knowledge.follows.none_waiting")}</p>
               ) : (
                 sections.follows.map(({ group, items }) => (
                   <div key={group} className={styles.group}>
@@ -113,7 +115,8 @@ export function Knowledge(props: { onOpenReview: () => void }) {
           )}
         </>
       )}
-      {!failed && !loading && <Glossary entries={sections.words} now={now} onActed={() => setActed((n) => n + 1)} />}
+      {/* A learned-items list that could not be read does not stop a word being added. */}
+      {!loading && (failed || !empty) && <Glossary entries={sections.words} now={now} onActed={() => setActed((n) => n + 1)} />}
       {!failed && !loading && (sections.idle.length > 0 || sections.retired.length > 0) && (
         <details className="more-options">
           <summary>{t("knowledge.past.title")}</summary>

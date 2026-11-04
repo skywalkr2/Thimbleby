@@ -174,7 +174,7 @@ test("Help is a menu: shortcuts, the setup guide, Missed one, feedback and the v
   const onOpenGuide = vi.fn();
   show({ handlers: { onHelp, onFeedback, onOpenGuide } });
   await user.click(screen.getByRole("button", { name: "Help" }));
-  expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Show keyboard shortcuts", "Setup guide", "Missed something?", "Write feedback", "Version 9.8.7"]);
+  expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Show keyboard shortcuts", "Setup guide", "Report something Helper missed", "Write feedback", "Version 9.8.7"]);
   expect(screen.getByRole("menuitem", { name: "Version 9.8.7" })).toHaveAttribute("aria-disabled", "true");
   await user.click(screen.getByRole("menuitem", { name: "Show keyboard shortcuts" }));
   expect(onHelp).toHaveBeenCalledTimes(1);
@@ -327,11 +327,11 @@ test("the person's menu has How the assistant is doing, which opens the figures,
   expect(onOpenQuality).toHaveBeenCalledTimes(1);
 });
 
-test("Missed something? is in the Help menu, with its words, and not a button of the header", async () => {
+test("The missed-something item is in the Help menu, with its words, and not a button of the header", async () => {
   const user = userEvent.setup();
   show();
   await user.click(await screen.findByRole("button", { name: "Help" }));
-  expect(await screen.findByRole("menuitem", { name: "Missed something?" })).toBeInTheDocument();
+  expect(await screen.findByRole("menuitem", { name: "Report something Helper missed" })).toBeInTheDocument();
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("button", { name: "Missed something?" })).toBeNull();
 });
@@ -341,14 +341,14 @@ test("a new workspace offers no Missed one until something has been read or hand
   const user = userEvent.setup();
   await screen.findByRole("button", { name: "Hand something in" });
   await user.click(screen.getByRole("button", { name: "Help" }));
-  await waitFor(() => expect(screen.queryByRole("menuitem", { name: "Missed something?" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("menuitem", { name: "Report something Helper missed" })).toBeNull());
 });
 
 test("Missed one shows once the assistant has been given anything it could have missed", async () => {
   const user = userEvent.setup();
   show({ changes: [{ id: "REQ-1" }] });
   await user.click(await screen.findByRole("button", { name: "Help" }));
-  expect(await screen.findByRole("menuitem", { name: "Missed something?" })).toBeInTheDocument();
+  expect(await screen.findByRole("menuitem", { name: "Report something Helper missed" })).toBeInTheDocument();
 });
 
 test("the header clips what is wider than the window but lets the search results drop below it", () => {

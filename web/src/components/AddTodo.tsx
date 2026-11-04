@@ -21,7 +21,7 @@ import { ProjectPicker } from "./ProjectPicker";
 import { FormField } from "../ui/FormField";
 import styles from "./AddTodo.module.css";
 
-function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string }) {
+function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string; project?: string }) {
   const { t } = useWords();
   const act = useAct();
   const id = useId();
@@ -34,7 +34,7 @@ function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string
   // the person's own life it belongs to that, and is not asked.
   const filter = useSideFilter();
   const asks = filter.offered;
-  const [project, setProject] = useState(asks && filter.choice !== "all" ? filter.choice : "");
+  const [project, setProject] = useState(props.project ?? (asks && filter.choice !== "all" ? filter.choice : ""));
   const [repeat, setRepeat] = useState("");
   const [effort, setEffort] = useState<number | null>(null);
   const active = (people.data ?? []).filter((p) => p.status !== "left");
@@ -137,11 +137,12 @@ function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string
 }
 
 /** Opens the add-a-to-do form: `open` for the button that starts it (with the words already typed, when it has some, and the
- * person who does it, when the page it starts from is about someone), `form` to render once beside it. */
-export function useAddTodo(): { open: (words?: string, owner?: string) => void; form: ReactNode } {
-  const [shown, setShown] = useState<{ text: string; owner?: string } | null>(null);
+ * person who does it, when the page it starts from is about someone, and the project, when it is about one), `form` to render once beside it. */
+export function useAddTodo(): { open: (words?: string, owner?: string, project?: string) => void; form: ReactNode } {
+  const [shown, setShown] = useState<{ text: string; owner?: string; project?: string } | null>(null);
   return {
-    open: (words, owner) => setShown({ text: typeof words === "string" ? words : "", owner: typeof owner === "string" ? owner : undefined }),
-    form: shown ? <AddTodoForm text={shown.text} owner={shown.owner} onClose={() => setShown(null)} /> : null,
+    open: (words, owner, project) =>
+      setShown({ text: typeof words === "string" ? words : "", owner: typeof owner === "string" ? owner : undefined, project: typeof project === "string" ? project : undefined }),
+    form: shown ? <AddTodoForm text={shown.text} owner={shown.owner} project={shown.project} onClose={() => setShown(null)} /> : null,
   };
 }

@@ -618,8 +618,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         here = zone(cfg)
         state = worker.handover_state()
+        folder_set = bool(cfg.storage.sync.folder.strip())
+        checked = worker.sync_checked_at.astimezone(here) if worker.sync_checked_at else None
         if state is None:
-            return HandoverView(state="clear")
+            return HandoverView(state="clear", folder_set=folder_set, last_checked=checked)
         found = handover.situation(ws, cfg)
 
         def side(entry: Any) -> HandoverSideView | None:
@@ -628,7 +630,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             latest = datetime.fromisoformat(entry.latest).astimezone(here) if entry.latest else None
             return HandoverSideView(computer=entry.computer, changes=entry.changes, latest=latest)
 
-        view = HandoverView(state=state[0], computer=state[1], chosen=handover.chosen(ws))  # type: ignore[arg-type]
+        view = HandoverView(
+            state=state[0],  # type: ignore[arg-type]
+            computer=state[1],
+            chosen=handover.chosen(ws),
+            folder_set=folder_set,
+            last_checked=checked,
+        )
         if found is not None and found.kind == "diverged":
             view.here, view.folder = side(found.here), side(found.folder)
         elif found is not None and found.kind == "elsewhere":
@@ -639,6 +647,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/sync/handover")
     def sync_handover() -> HandoverView:
+        return handover_view()
+
+    @r.post("/sync/check")
+    def sync_check_now() -> HandoverView:
+        """Look over the synced folder now instead of at the next pass: write what changed and say what was found."""
+        if cfg.storage.sync.folder.strip() and not worker.sync_held and not worker.sync_lost:
+            worker.sync_if_changed()  # a folder that can't be written is set as the page's problem line by the pass
+            changed()
         return handover_view()
 
     @r.post("/sync/handover")

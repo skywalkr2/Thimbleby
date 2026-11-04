@@ -172,6 +172,16 @@ def test_the_other_grouping_is_by_sender(app):
     assert [i["title"] for i in by_sender[SHOP_LIST]["items"]] == ["Sale sale-a", "Sale sale-b"]
 
 
+def test_the_account_grouping_is_by_the_source_a_row_came_in_on(app):
+    ws, cfg, store, client, base = app
+    view = get(client, base, tab="set_aside", group="account")
+    assert view["group"] == "account"
+    shown = [i["source"] for g in view["groups"] for i in g["items"]]
+    assert shown and all(g["label"] == (g["items"][0]["source"] or None) for g in view["groups"])
+    assert sum(g["count"] for g in view["groups"]) == len(shown)
+    assert len({g["key"] for g in view["groups"]}) == len({s.lower() for s in shown})
+
+
 def test_the_settings_grouping_applies_when_none_is_asked_for(tmp_path):
     ws, cfg, store, client, base = start(tmp_path, [promo("one", SHOP_LIST, 1)])
     try:

@@ -331,7 +331,7 @@ def test_the_quality_route_gives_missed_declined_and_dropped_apart(tmp_path):
     assert (apart["missed"], apart["declined"], apart["dropped"]) == (2, 1, 7)
     assert sum(w["dropped"] for w in apart["weeks"]) == 7 and sum(w["missed"] for w in apart["weeks"]) == 2
     last = apart["weeks"][-1]
-    assert date.fromisoformat(last["week_end"]) - date.fromisoformat(last["week"]) == timedelta(days=6)
+    assert date.fromisoformat(last["week_end"]) == min(date.fromisoformat(last["week"]) + timedelta(days=6), now.date())
     assert body["repeat_corrections"] == [], "drops and misses with no run are no repeat-correction week"
 
 
@@ -569,3 +569,15 @@ def test_a_command_line_agent_account_takes_the_learning_round_trip_too(env, tmp
     agent_cfg = ws.config(env={})
     found = learning_results(account_test(agent_cfg, {}, "agent", store=store))
     assert [(r.ref, r.ok) for r in found] == [("agent/default", True)], [r.detail for r in found]
+
+
+def test_the_week_still_under_way_ends_today_and_an_earlier_week_on_its_sunday():
+    from zoneinfo import ZoneInfo
+
+    from api.quality_routes import window_week_end
+
+    here = ZoneInfo("UTC")
+    wednesday = datetime(2026, 11, 4, 12, tzinfo=UTC)
+    assert window_week_end(date(2026, 11, 2), wednesday, here) == date(2026, 11, 4)
+    assert window_week_end(date(2026, 10, 26), wednesday, here) == date(2026, 11, 1)
+    assert window_week_end(date(2026, 11, 2), datetime(2026, 11, 8, 23, tzinfo=UTC), here) == date(2026, 11, 8)

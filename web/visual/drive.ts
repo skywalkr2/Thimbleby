@@ -82,6 +82,22 @@ export async function refuseWrites(env: Env, status: 500 | 409, detail: string):
   env.undo.push(() => env.page.unroute("**/api/**", handler));
 }
 
+/**
+ * Answers every read of one address pattern with what the app really answered, changed by `patch`: for a screen whose
+ * populated look needs history the fixtures do not hold. The shape stays the app's own; only the figures are set.
+ */
+export async function reshapeReads(env: Env, pattern: string | RegExp, patch: (body: any) => void): Promise<void> {
+  const handler = async (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = await response.json();
+    patch(body);
+    return route.fulfill({ response, json: body });
+  };
+  await env.page.route(pattern, handler);
+  env.undo.push(() => env.page.unroute(pattern, handler));
+}
+
 /** Answers every read of one address pattern with this status and text, for "couldn't load". */
 export async function refuseReads(env: Env, pattern: string | RegExp, status: number, detail: string): Promise<void> {
   const handler = async (route: Route) => {
@@ -141,4 +157,36 @@ export async function api<T = any>(base: string, token: string, path: string, in
   if (!answer.ok) throw new Error(`${init?.method ?? "GET"} api/${path} answered ${answer.status}: ${(await answer.text()).slice(0, 200)}`);
   const text = await answer.text();
   return (text ? JSON.parse(text) : null) as T;
+}
+
+/** Quality with figures in it: the last weeks get these found and kept counts, a few false alerts and minutes looking over. */
+export async function populatedQuality(env: Env, found: number[], kept: number[]): Promise<void> {
+  await open(env, "settings/appearance"); // a screen that reads no figures, so the page asks for them once the answer is changed
+  await reshapeReads(env, /\/api\/quality$/, (body) => {
+    const weeks = body.outcome.weeks as any[];
+    const alerts = [0, 1, 0, 1];
+    const minutes = [12, 11, 9, 8];
+    weeks.forEach((week, index) => {
+      const from = index - (weeks.length - found.length);
+      const at = from >= 0 ? from : -1;
+      week.promises_found = at >= 0 ? found[at] : 0;
+      week.promises_kept = at >= 0 ? kept[at] : 0;
+      week.dismissed = at >= 0 ? alerts[at] : 0;
+      week.corrected = 0;
+      week.review_seconds = at >= 0 ? minutes[at] * 60 : 0;
+      week.review_visits = at >= 0 ? 4 : 0;
+    });
+    const sum = (key: string) => weeks.reduce((n, week) => n + week[key], 0);
+    Object.assign(body.outcome, {
+      promises_found: sum("promises_found"),
+      promises_kept: sum("promises_kept"),
+      dismissed: sum("dismissed"),
+      corrected: 0,
+      review_seconds: sum("review_seconds"),
+      review_visits: sum("review_visits"),
+    });
+    body.review.median_seconds = 10 * 60;
+  });
+  await go(env, "quality");
+  await env.page.waitForTimeout(1500);
 }

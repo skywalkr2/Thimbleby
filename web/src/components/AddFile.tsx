@@ -22,7 +22,8 @@ import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { FileDrop } from "../ui/FileDrop";
 const DEFAULT_KIND = "attachment";
 
-export function AddFile(props: { onClose: () => void }) {
+/** `initial`: a file already chosen (dropped on the empty Files page), so the form opens with it. */
+export function AddFile(props: { onClose: () => void; initial?: File | null }) {
   const { t } = useWords();
   const client = useQueryClient();
   const { push } = useToasts();
@@ -30,7 +31,7 @@ export function AddFile(props: { onClose: () => void }) {
   const base = useId();
   const kinds = useQuery({ queryKey: ["file-kinds"], queryFn: api.fileKinds });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(props.initial ?? null);
   const [kindName, setKindName] = useState("");
   const [project, setProject] = useState("");
   const { justMe } = useSides();
@@ -114,18 +115,27 @@ export function AddFile(props: { onClose: () => void }) {
             </FormField>
           )}
           <FormField id={`${base}-file`} label={t("addfile.file")} hint={acceptWords(kind.accept, kind.max_mb)}>
-            <FileDrop
-              id={`${base}-file`}
-              aria-describedby={`${base}-file-hint`}
-              accept={kind.accept.join(",")}
-              onChange={(e) => {
-                setFile(e.target.files?.[0] ?? null);
-                setProblem("");
-              }}
-            />
+            {props.initial && file === props.initial ? (
+              <p className="chosen-file">
+                <span>{file.name}</span>{" "}
+                <Button variant="quiet" size="sm" onClick={() => setFile(null)}>
+                  {t("addfile.change")}
+                </Button>
+              </p>
+            ) : (
+              <FileDrop
+                id={`${base}-file`}
+                aria-describedby={`${base}-file-hint`}
+                accept={kind.accept.join(",")}
+                onChange={(e) => {
+                  setFile(e.target.files?.[0] ?? null);
+                  setProblem("");
+                }}
+              />
+            )}
           </FormField>
           {!justMe && (
-          <FormField id={`${base}-project`} label={t("addfile.project")} optional>
+          <FormField id={`${base}-project`} label={t("addfile.project")}>
             <Select id={`${base}-project`} value={project} onChange={(e) => setProject(e.target.value)}>
               <option value="">{t("addfile.no_project")}</option>
               {placeOptions(projects.data ?? [], t)}
@@ -135,22 +145,23 @@ export function AddFile(props: { onClose: () => void }) {
           {fields === null ? (
             <p className="hint">{t("addfile.unsupported")}</p>
           ) : (
-            fields.length > 0 && (
-              <CheckboxGroup legend={t("addfile.details")}>
-                {fields.map((f) => (
-                  <DetailInput
-                    key={`${kind.name}/${f.key}`}
-                    field={f}
-                    id={`${base}-d-${f.key}`}
-                    value={values[f.key] ?? initialValue(f)}
-                    onChange={(v) => {
-                      setValues((all) => ({ ...all, [f.key]: v }));
-                      setProblem("");
-                    }}
-                  />
-                ))}
-              </CheckboxGroup>
-            )
+            // One detail asks for no heading of its own; several are a group with one.
+            fields.length > 0 &&
+            (() => {
+              const inputs = fields.map((f) => (
+                <DetailInput
+                  key={`${kind.name}/${f.key}`}
+                  field={f}
+                  id={`${base}-d-${f.key}`}
+                  value={values[f.key] ?? initialValue(f)}
+                  onChange={(v) => {
+                    setValues((all) => ({ ...all, [f.key]: v }));
+                    setProblem("");
+                  }}
+                />
+              ));
+              return fields.length === 1 ? inputs : <CheckboxGroup legend={t("addfile.details")}>{inputs}</CheckboxGroup>;
+            })()
           )}
           {shown && (
             <p className="problem-note" role="alert">
@@ -161,7 +172,7 @@ export function AddFile(props: { onClose: () => void }) {
             <Button variant="quiet" onClick={props.onClose}>
               {t("action.cancel")}
             </Button>
-            <Button variant="primary" type="submit" disabled={!ready}>
+            <Button variant="primary" type="submit" disabled={!ready} reason={!file ? t("addfile.reason.choose") : undefined}>
               {t(add.isPending ? "addfile.adding" : "addfile.go")}
             </Button>
           </DialogFooter>
@@ -193,7 +204,7 @@ function DetailInput(props: { field: DetailField; id: string; value: string | bo
   }
   if (f.type === "choice") {
     return (
-      <FormField id={id} label={f.label} optional={!f.required}>
+      <FormField id={id} label={f.label}>
         <Select id={id} value={String(value)} aria-describedby={help} required={f.required} onChange={(e) => props.onChange(e.target.value)}>
           {!f.required && <option value="">{t("addfile.not_chosen")}</option>}
           {f.choices.map((c) => (
@@ -207,11 +218,12 @@ function DetailInput(props: { field: DetailField; id: string; value: string | bo
     );
   }
   return (
-    <FormField id={id} label={f.label} optional={!f.required}>
+    <FormField id={id} label={f.label}>
       {f.type === "text" ? (
         <input
           id={id}
           type="text"
+          placeholder={f.required ? undefined : t("addfile.optional")}
           value={String(value)}
           maxLength={f.maxLength}
           minLength={f.minLength}
@@ -223,6 +235,7 @@ function DetailInput(props: { field: DetailField; id: string; value: string | bo
         <input
           id={id}
           type="number"
+          placeholder={f.required ? undefined : t("addfile.optional")}
           step={f.type === "integer" ? 1 : "any"}
           min={f.min}
           max={f.max}

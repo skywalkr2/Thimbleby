@@ -1338,7 +1338,7 @@ test.describe.serial("acceptance scenario", () => {
     const first = "A line to make a note from";
     const body = `\n${first}\nand a second line\n`;
     const words = body.split(/\s+/).filter(Boolean).length;
-    const opener = page.getByRole("button", { name: "Add a file" });
+    const opener = page.getByRole("button", { name: "Add a file", exact: true });
     await opener.click();
     const dialog = page.getByRole("dialog", { name: "Add a file" });
     await expect(dialog).toBeVisible();

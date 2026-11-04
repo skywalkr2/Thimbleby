@@ -385,6 +385,8 @@ test("a failed load says so, and Try again asks again", async () => {
   const { calls } = open({ "GET knowledge": () => answer });
   expect(await screen.findByText("What Helper knows couldn't be loaded.")).toBeInTheDocument();
   expect(screen.queryByText(/When you correct Helper/)).toBeNull();
+  // What couldn't load doesn't stop a word being added.
+  expect(screen.getByLabelText("A word")).toBeInTheDocument();
   const before = calls.filter((c) => c.route === "GET knowledge").length;
   answer = ENTRIES;
   await user.click(screen.getByRole("button", { name: "Try again" }));

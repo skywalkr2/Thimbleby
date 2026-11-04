@@ -13080,7 +13080,8 @@
             "enum": [
               "kind",
               "reason",
-              "sender"
+              "sender",
+              "account"
             ],
             "title": "Group",
             "type": "string"
@@ -13246,6 +13247,12 @@
             ],
             "description": "The synced folder's side (diverged, chosen)."
           },
+          "folder_set": {
+            "default": false,
+            "description": "A synced folder is set up, so there is a copy to be in step with.",
+            "title": "Folder Set",
+            "type": "boolean"
+          },
           "here": {
             "anyOf": [
               {
@@ -13256,6 +13263,19 @@
               }
             ],
             "description": "This computer's side (diverged, chosen)."
+          },
+          "last_checked": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the app last looked over the synced folder without a problem; none before the first.",
+            "title": "Last Checked"
           },
           "last_seen": {
             "anyOf": [
@@ -22767,7 +22787,7 @@
             "type": "string"
           },
           "week_end": {
-            "description": "The Sunday of the week.",
+            "description": "The Sunday of the week, or today when the week is still under way.",
             "format": "date",
             "title": "Week End",
             "type": "string"
@@ -22873,7 +22893,7 @@
             "type": "string"
           },
           "week_end": {
-            "description": "The Sunday of the week.",
+            "description": "The Sunday of the week, or today when the week is still under way.",
             "format": "date",
             "title": "Week End",
             "type": "string"
@@ -23388,7 +23408,7 @@
             "type": "string"
           },
           "week_end": {
-            "description": "The Sunday of the week.",
+            "description": "The Sunday of the week, or today when the week is still under way.",
             "format": "date",
             "title": "Week End",
             "type": "string"
@@ -23578,7 +23598,7 @@
             "type": "string"
           },
           "week_end": {
-            "description": "The Sunday of the week.",
+            "description": "The Sunday of the week, or today when the week is still under way.",
             "format": "date",
             "title": "Week End",
             "type": "string"
@@ -41382,7 +41402,8 @@
                   "enum": [
                     "kind",
                     "reason",
-                    "sender"
+                    "sender",
+                    "account"
                   ],
                   "type": "string"
                 },
@@ -49221,6 +49242,25 @@
           }
         },
         "summary": "Sync Status"
+      }
+    },
+    "/api/sync/check": {
+      "post": {
+        "description": "Look over the synced folder now instead of at the next pass: write what changed and say what was found.",
+        "operationId": "sync_check_now_api_sync_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync Check Now"
       }
     },
     "/api/sync/handover": {

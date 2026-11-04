@@ -172,7 +172,7 @@ def test_the_quality_route_shows_missed_one_per_person_and_week_with_the_dates(a
     assert sum(r["count"] for r in rows) == 2
     last = rows[-1]
     assert last["count"] == 1 and last["person_name"]
-    assert date.fromisoformat(last["week_end"]) - date.fromisoformat(last["week"]) == timedelta(days=6)
+    assert date.fromisoformat(last["week_end"]) == min(date.fromisoformat(last["week"]) + timedelta(days=6), now.date())
     assert [r["week"] for r in rows] == sorted(r["week"] for r in rows)
 
 

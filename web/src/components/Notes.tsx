@@ -22,7 +22,8 @@ import { SideFilter } from "./SideFilter";
 const firstLine = (text: string, readable: (text: string) => string) =>
   text.split("\n").map((line) => readable(line.trim())).find(Boolean) ?? "";
 
-export function Notes() {
+/** `onHandIn` opens the box a note is handed in through: an empty page offers it, since it is how a note is made. */
+export function Notes(props: { onHandIn?: () => void }) {
   const { t, tn } = useWords();
   const notes = useQuery({ queryKey: ["notes"], queryFn: api.notes });
   const place = usePlaceText();
@@ -32,11 +33,11 @@ export function Notes() {
   const shown = everything.filter((n) => onSide(sideOf(n.project), side.choice));
   return (
     <section className="panel-section" aria-labelledby="notes-title">
-      <PageHeader id="notes-title" title={t("notes.title")} subtitle={everything.length > 0 ? t("notes.sub") : undefined} filters={<SideFilter />} />
+      <PageHeader id="notes-title" title={t("notes.title")} subtitle={everything.length > 0 ? t("notes.sub") : undefined} filters={<SideFilter holds={everything.length} />} />
       <ListState query={notes} failed={t("notes.load_failed")}>
         {() =>
           everything.length === 0 ? (
-            <EmptyState text={t("notes.empty")} />
+            <EmptyState text={t("notes.empty")} action={props.onHandIn ? { label: t("notes.write"), onClick: props.onHandIn, primary: true } : null} />
           ) : shown.length === 0 ? (
             <FilteredEmpty text={t("sides.empty.notes", { side: side.named })} onClear={() => side.set("all")} />
           ) : (

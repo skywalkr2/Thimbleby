@@ -8,7 +8,7 @@ title_words: 12   # how many words a row's title holds before it is cut at a wor
 afternoon_from_hour: 13   # the hour of your day from which the opening brief is called the afternoon brief
 links: [{name: Planning board, address: "https://planning-board.example.com/spring"}, {name: Shared schedule, address: "https://shared-schedule.example.com/team"}]   # links to your own pages, shown in the header
 feedback_to: feedback@example.com   # where the feedback button writes
-handled_group: kind   # how Handled for you groups what it lists to start with: kind, reason or sender
+handled_group: kind   # how Handled for you groups what it lists to start with: kind, reason, sender or account
 handled_rows_shown: 25   # how many rows a group shows before Show more
 open_rows_shown: 15   # how many to-dos a group on the To-dos screen shows before Show more
 feedback_problem_days: 3   # how far back Send feedback offers to add failed work

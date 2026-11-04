@@ -3,3 +3,7 @@
   display: block;
   padding-inline-start: calc(var(--depth, 0) * var(--space-4));
 }
+/* A project's name is in the text colour, underlined only under the pointer or the cursor: a list of names is not a list of loud links,
+   and the one primary button stays the loudest thing on the page. */
+.name { color: var(--text); text-decoration: none; font-weight: var(--weight-semibold); }
+.name:hover, .name:focus-visible { color: var(--accent-text); text-decoration: underline; }

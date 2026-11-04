@@ -14,6 +14,8 @@ const view = (over: Partial<S["HandoverView"]> = {}): S["HandoverView"] => ({
   last_seen: null,
   minutes_left: 0,
   chosen: null,
+  folder_set: false,
+  last_checked: null,
   ...over,
 });
 
@@ -109,8 +111,8 @@ test("a workspace open on another computer shows who, since when and the wait, a
 });
 
 test("with nothing to settle it says so", async () => {
-  show(view({ state: "clear", here: null, folder: null }));
-  expect(await screen.findByText(/Both copies match/)).toBeInTheDocument();
+  show(view({ state: "clear", here: null, folder: null, folder_set: true }));
+  expect(await screen.findByRole("heading", { name: "Both copies match" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Keep/ })).toBeNull();
 });
 
@@ -134,9 +136,28 @@ test("a side with no changes of its own says nothing about a count, never \"0 ch
 test("the page says in one line what it is for, and has a way back, also when both copies match", async () => {
   const user = userEvent.setup();
   const back = vi.fn();
-  show(view({ state: "clear", here: null, folder: null }), () => ({}), true, back);
-  expect(await screen.findByText("Both copies match.")).toBeInTheDocument();
+  show(view({ state: "clear", here: null, folder: null, folder_set: true }), () => ({}), true, back);
+  expect(await screen.findByText("Both copies match")).toBeInTheDocument();
   expect(screen.getByText(/Your work is kept on this computer and in the folder it syncs to/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Back to Today" }));
   expect(back).toHaveBeenCalledTimes(1);
+});
+
+test("when the copies match it says In sync, when it last looked, and offers Check now", async () => {
+  const user = userEvent.setup();
+  const clear = view({ state: "clear", here: null, folder: null, folder_set: true, last_checked: null });
+  const checked = { ...clear, last_checked: "2026-10-12T16:10:00-05:00" };
+  const calls = show(clear, (set) => ({ "POST sync/check": () => set(checked) }));
+  expect(await screen.findByText("In sync")).toBeInTheDocument();
+  expect(screen.getByText("Not checked yet since the app started.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Check now" }));
+  expect(await screen.findByText(/^Last checked /)).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST sync/check")).toBe(true);
+});
+
+test("with no folder it says the work is saved on this computer only, with no pill and no Check now", async () => {
+  show(view({ state: "clear", here: null, folder: null, folder_set: false }));
+  expect(await screen.findByRole("heading", { name: "Your work is saved on this computer only" })).toBeInTheDocument();
+  expect(screen.queryByText("In sync")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
 });

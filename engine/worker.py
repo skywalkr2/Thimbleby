@@ -330,6 +330,9 @@ class Worker:
         self.sync_held = False
         self.sync_result: Any = None
         self.sync_problem: str | None = None
+        #: When a pass over the synced folder last finished without a problem (the app's clock); none before the first.
+        self.sync_checked_at: datetime | None = None
+        self._sync_lock = threading.Lock()
         self._started_with = (config_fingerprint(ws), code_fingerprint())
         self._config_seen = self._started_with[0]
         #: The config files as the last `apply_live` read them; a save landing after that read is judged next time.
@@ -985,7 +988,12 @@ class Worker:
 
     def sync_if_changed(self) -> bool:
         """Write the synced folder when anything changed since it was last written, and keep this install's lease
-        fresh. Stops for good if another computer has taken the workspace over. Returns whether it wrote."""
+        fresh. Stops for good if another computer has taken the workspace over. Returns whether it wrote. One pass
+        at a time, whether the background loop or the person asked for it."""
+        with self._sync_lock:
+            return self._sync_pass()
+
+    def _sync_pass(self) -> bool:
         from engine import handover
         from engine.sync import folder_problem, write_folder
 
@@ -995,6 +1003,7 @@ class Worker:
         if problem:
             self.sync_problem = problem
             return False
+        self.sync_problem = None  # the folder is usable again; a write that fails below sets its own line
         other = handover.held_elsewhere(self.ws, self.cfg)
         if other is not None:
             self.sync_lost = True
@@ -1029,6 +1038,7 @@ class Worker:
         if wrote or time.monotonic() - self._beat >= self.HEARTBEAT_SECONDS:
             handover.take(self.ws, self.cfg, ledger=count)
             self._beat = time.monotonic()
+        self.sync_checked_at = self.now()
         return wrote
 
     def hold_sync(self) -> None:

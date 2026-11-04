@@ -36,6 +36,8 @@ export interface NavModel {
   /** What the first group is called: the work group, or, with no work, a plain "your things". */
   workTitle: string;
   work: NavEntry[];
+  /** The projects among `records`: Personal and each side by its own mark, or Projects. */
+  projects: NavEntry[];
   records: NavEntry[];
   bottom: NavEntry[];
 }
@@ -79,6 +81,7 @@ export function useNav(): NavModel {
       ...wait,
       ...plugin("work", "work"),
     ],
+    projects,
     records: [
       ...projects,
       { view: "records/people", label: t("nav.people"), icon: "users" },

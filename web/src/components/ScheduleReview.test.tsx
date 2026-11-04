@@ -45,3 +45,14 @@ test("the shortcuts list holds the Schedule's keys", () => {
   expect(within(dialog).getByText(/Pick Day, Work week, Week, Month or Timeline/)).toBeInTheDocument();
   expect(within(dialog).getByText(/Move to the previous or next day, week, month or range/)).toBeInTheDocument();
 });
+
+test("the shortcuts list is three labeled groups with the most-used keys first, and no touch gesture in it", () => {
+  render(<ShortcutHelp open onClose={() => undefined} keys={{ next: "j", previous: "k", undo: "u", primary: "a", hand_in: "h" }} />);
+  const dialog = screen.getByRole("dialog");
+  const labels = ["Move around", "Act on an item", "Go to"].map((name) => within(dialog).getByText(name));
+  expect(labels).toHaveLength(3);
+  const keys = Array.from(dialog.querySelectorAll("kbd")).map((k) => k.textContent);
+  expect(keys.indexOf("j")).toBeLessThan(keys.indexOf("u"));
+  expect(keys.indexOf("u")).toBeLessThan(keys.indexOf("h"));
+  expect(within(dialog).queryByText(/swipe/i)).toBeNull();
+});

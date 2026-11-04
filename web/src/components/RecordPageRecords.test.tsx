@@ -59,7 +59,7 @@ test("a project's page shows what is open with it, what was finished and by whom
     }),
   );
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
-  const open = await screen.findByRole("region", { name: "Open with Harbor" });
+  const open = await screen.findByRole("region", { name: "Open items" });
   expect(within(open).getByRole("link", { name: "Send the proof" })).toBeInTheDocument();
   expect(within(open).getAllByText(/Robin Sample/).length).toBeGreaterThan(0);
   expect(within(open).getByRole("link", { name: "Which trim size?" })).toBeInTheDocument();
@@ -158,7 +158,7 @@ test("a meta line joins only the parts it has: no dot beside nothing, no lone do
     }),
   );
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
-  const open = await screen.findByRole("region", { name: "Open with Harbor" });
+  const open = await screen.findByRole("region", { name: "Open items" });
   const rows = within(open).getAllByRole("listitem");
   expect(rows).toHaveLength(4);
   expect(rows[0]).toHaveTextContent(`Robin Sample · due ${day("2026-10-20")}`);
@@ -507,7 +507,7 @@ test("a page opens with what is open, then what finished, the facts and the hist
     { "GET records/project/PRJ-1/conversation": () => ({ kind: "project", id: "PRJ-1", turns: [] }) },
   );
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
-  const open = await screen.findByRole("region", { name: "Open with Harbor" });
+  const open = await screen.findByRole("region", { name: "Open items" });
   const talk = await screen.findByRole("region", { name: /^Talk to/ });
   const done = await screen.findByRole("region", { name: "Completed" });
   const activity = await screen.findByRole("region", { name: "Activity" });
@@ -663,7 +663,7 @@ test("a page for a record that isn't there says so with a title, and offers no T
   expect(screen.getByRole("link", { name: "Back to People" })).toHaveAttribute("data-variant", "primary");
   expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
   expect(screen.getByRole("link", { name: "Back to People" })).toHaveAttribute("href", expect.stringMatching(/#records\/people$/));
-  expect(screen.getByRole("heading", { name: "Not here" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "This page has gone missing" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   expect(screen.queryByText("This page didn't load.")).toBeNull();
 });
@@ -681,7 +681,7 @@ test("a project page that is gone says so and offers the list it belongs to as i
   });
   renderApp(<RecordPage kind="project" id="PRJ-9" onBack={() => {}} />);
   expect(await screen.findByText(/This page isn't here any more/)).toBeInTheDocument();
-  const heading = screen.getByRole("heading", { name: "Not here" });
+  const heading = screen.getByRole("heading", { name: "This page has gone missing" });
   expect(heading.closest("[data-page-header]")?.querySelector("[data-pill]")).toBeNull();
   expect(screen.getByRole("link", { name: "Go to Projects" })).toHaveAttribute("href", expect.stringMatching(/#records\/projects$/));
 });
@@ -752,4 +752,11 @@ test("a side's page lists a to-do that is open in it once, never twice (the side
   await screen.findByRole("heading", { level: 1, name: "Shop" });
   await screen.findAllByText("Pay the deposit");
   expect(screen.getAllByText("Pay the deposit")).toHaveLength(1);
+});
+
+test("a project's page has Add a to-do as its one primary action, and a page with nothing to show has no empty details card", async () => {
+  api("project", "PRJ-1", { name: "Harbor" }, page());
+  const { container } = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  expect(await screen.findByRole("button", { name: "Add a to-do" })).toBeInTheDocument();
+  await waitFor(() => expect(container.querySelector("[data-bare]")).not.toBeNull());
 });

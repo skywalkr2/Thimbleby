@@ -9,11 +9,13 @@ import { day, wallTime } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
 import { useWords } from "../lib/wording";
+import markDay from "../assets/brand/mark-day.svg";
+import markNight from "../assets/brand/mark-night.svg";
 import { Button } from "../ui/Button";
+import { Pill } from "../ui/Pill";
 import { Skeleton } from "../ui/Skeleton";
 import styles from "./Handover.module.css";
 
-import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Actions } from "../ui/Actions";
 import { LoadFailed } from "../ui/LoadFailed";
@@ -28,6 +30,7 @@ export function Handover(props: { onBack?: () => void }) {
   const client = useQueryClient();
   const page = useQuery({ queryKey: ["sync", "handover"], queryFn: api.handover });
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const sync = useQuery({ queryKey: ["sync"], queryFn: api.sync });
   const restart = useRestart();
   const refresh = (view: S["HandoverView"]) => {
     client.setQueryData(["sync", "handover"], view);
@@ -42,7 +45,8 @@ export function Handover(props: { onBack?: () => void }) {
   useEffect(() => {
     if (view?.state === "diverged") first.current?.focus();
   }, [view?.state]);
-  const failure = choose.error ?? changeMind.error;
+  const check = useMutation({ mutationFn: () => api.checkSyncNow(), onSuccess: refresh });
+  const failure = choose.error ?? changeMind.error ?? check.error;
   const busy = choose.isPending || changeMind.isPending;
   return (
     <section className="panel-section" aria-labelledby="handover-title">
@@ -57,7 +61,26 @@ export function Handover(props: { onBack?: () => void }) {
       ) : page.isError || !view ? (
         <LoadFailed message={t("handover.failed")} onRetry={() => void page.refetch()} />
       ) : view.state === "clear" ? (
-        <EmptyState text={t("handover.clear")} />
+        <div className={styles.clear} data-handover-clear="">
+          <img className={`${styles.mark} ${styles.markDay}`} src={markDay} alt="" data-brand-mark="day" />
+          <img className={`${styles.mark} ${styles.markNight}`} src={markNight} alt="" data-brand-mark="night" />
+          <div className={styles.clearBody}>
+            <div className={styles.clearHead}>
+              <h2 className={styles.clearTitle}>{view.folder_set ? (sync.data?.problem ? t("handover.not_in_step") : t("handover.clear")) : t("handover.local_only")}</h2>
+              {view.folder_set && <Pill tone={sync.data?.problem ? "warn" : "ok"}>{sync.data?.problem ? t("handover.pill_waiting") : t("handover.in_sync")}</Pill>}
+            </div>
+            {view.folder_set && (
+              <p className="hint">
+                {sync.data?.problem ? sync.data.problem : view.last_checked ? t("handover.checked", { when: when(view.last_checked) }) : t("handover.not_checked")}
+              </p>
+            )}
+          </div>
+          {view.folder_set && (
+            <Button disabled={check.isPending} onClick={() => check.mutate()}>
+              {t(check.isPending ? "handover.checking" : "handover.check_now")}
+            </Button>
+          )}
+        </div>
       ) : view.state === "elsewhere" ? (
         <Elsewhere view={view} />
       ) : (

@@ -34,7 +34,7 @@ function Section(props: { id: string; title: string; hint?: string; children: Re
   const { t } = useWords();
   if (props.collapsed) {
     return (
-      <details className={`${styles.section} ${styles.collapsed}`} data-quality-section={props.id}>
+      <details className={`${styles.section} ${styles.collapsed}`} data-quality-section={props.id} data-empty={props.empty ? "" : undefined}>
         <summary>
           <span>{props.title}</span>
           {props.empty && <span className={styles.emptyCount}>0</span>}
@@ -78,7 +78,7 @@ function Days(props: { label: string; rows: string[] }) {
  * what was found is neither (finding more may only mean there was more to find). */
 type Better = "more" | "fewer" | null;
 
-function StatTile(props: { title: string; value: string; change?: string; delta?: number; better?: Better; trend?: { values: number[]; label: string } }) {
+function StatTile(props: { title: string; value: string; change?: string; delta?: number; better?: Better; trend?: { values: number[]; label: string }; next?: { label: string; href: string } }) {
   const id = useId();
   const { t } = useWords();
   const dir = props.delta === undefined || props.delta === 0 ? null : props.delta > 0 ? "up" : "down";
@@ -103,6 +103,12 @@ function StatTile(props: { title: string; value: string; change?: string; delta?
         </p>
       )}
       {props.trend && <QualityTrend values={props.trend.values} label={props.trend.label} />}
+      {props.next && (
+        <a className={styles.next} href={props.next.href}>
+          {props.next.label}
+          <span aria-hidden="true"> →</span>
+        </a>
+      )}
     </article>
   );
 }
@@ -364,6 +370,30 @@ export function Quality(props: { onBack: () => void }) {
   const latestAlerts = latest ? latest.dismissed + latest.corrected : undefined;
   const previousAlerts = previous ? previous.dismissed + previous.corrected : undefined;
   const missedItems = view?.missed ?? [];
+  // The week still under way ends today: it reads "to now" and is marked as the current one.
+  const underWay = (week: { week_end: string }) => !!view && week.week_end >= view.until;
+  const weekLabel = (week: { week: string; week_end: string }) =>
+    underWay(week) ? t("quality.weeks.range_now", { from: monthDay(week.week) }) : t("quality.weeks.range", { from: monthDay(week.week), to: monthDay(week.week_end) });
+  // The measures with nothing in them: said once as a count, and kept out of the way until asked for.
+  const none = view
+    ? {
+    closes: view.closes.total === 0,
+    endings: view.endings.made === 0,
+    lost: view.lost.existed === 0,
+    sources: view.sources.checked === 0,
+    review: view.review.days_reviewed === 0 || view.review.median_seconds == null,
+    sample: !view.sample && view.sample_allowed,
+    total: view.missed_total.present === 0,
+    apart: view.apart.missed + view.apart.declined + view.apart.dropped === 0,
+    answers: view.answers.helpful + view.answers.not_helpful === 0,
+    replays: view.replays.count === 0,
+    knowledge: view.knowledge_used.length === 0,
+    repeats: view.repeat_corrections.length === 0,
+    lacking: view.missing.length === 0,
+      }
+    : ({} as Record<string, boolean>);
+  const nothing = Object.values(none).filter(Boolean).length;
+  const [showNothing, setShowNothing] = useState(false);
   // The screen opens with the cursor on its heading.
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus({ preventScroll: true }), []);
@@ -386,7 +416,7 @@ export function Quality(props: { onBack: () => void }) {
         <div className={styles.tooEarly} data-quality-too-early="">
           <Panel title={t("quality.early.title")}>
             <p>{tn("quality.early.text", view.min_promises, { found: view.outcome.promises_found })}</p>
-            <p className="hint">{t("quality.window", { from: monthDay(view.since), to: monthDay(view.until) })}</p>
+            <p className={styles.windowMeta}>{t("quality.window", { from: monthDay(view.since), to: monthDay(view.until) })}</p>
             {/* Their own count is one fold inside this card, not a second panel under it. */}
             <OwnCount view={view} />
           </Panel>
@@ -409,6 +439,7 @@ export function Quality(props: { onBack: () => void }) {
               change={delta(latest?.promises_found, previous?.promises_found)}
               delta={change(latest?.promises_found, previous?.promises_found)}
               trend={trendOf(t("quality.stat.found"), weeks.map((w) => w.promises_found))}
+              next={{ label: t("quality.stat.found.next"), href: viewHref("work/followups") }}
             />
             <StatTile
               title={t("quality.stat.kept")}
@@ -425,6 +456,7 @@ export function Quality(props: { onBack: () => void }) {
               delta={change(latestAlerts, previousAlerts)}
               better="fewer"
               trend={trendOf(t("quality.stat.alerts"), weeks.map((w) => w.dismissed + w.corrected))}
+              next={alertCount > 0 ? { label: t("quality.stat.alerts.next"), href: viewHref("work/changed") } : undefined}
             />
             <StatTile
               title={t("quality.stat.review")}
@@ -450,8 +482,8 @@ export function Quality(props: { onBack: () => void }) {
                   </thead>
                   <tbody>
                     {weeks.map((week) => (
-                      <tr key={week.week}>
-                        <th scope="row">{t("quality.weeks.range", { from: monthDay(week.week), to: monthDay(week.week_end) })}</th>
+                      <tr key={week.week} aria-current={underWay(week) ? "date" : undefined} data-current={underWay(week) ? "" : undefined}>
+                        <th scope="row">{weekLabel(week)}</th>
                         <td>{week.promises_found}</td>
                         <td>{week.promises_kept}</td>
                         <td>{week.dismissed + week.corrected}</td>
@@ -469,8 +501,8 @@ export function Quality(props: { onBack: () => void }) {
               {/* On a phone the same weeks are a list, each week a block with its numbers beside their names. */}
               <ul className={styles.weekList} aria-label={t("quality.weeks.title")} data-week-list="">
                 {weeks.map((week) => (
-                  <li key={week.week} className={styles.weekItem}>
-                    <strong>{t("quality.weeks.range", { from: monthDay(week.week), to: monthDay(week.week_end) })}</strong>
+                  <li key={week.week} className={styles.weekItem} data-current={underWay(week) ? "" : undefined}>
+                    <strong>{weekLabel(week)}</strong>
                     <dl>
                       <div>
                         <dt>{t("quality.stat.found")}</dt>
@@ -531,8 +563,16 @@ export function Quality(props: { onBack: () => void }) {
               </div>
             </div>
 
-            <div className={styles.more}>
-              <Section id="quality-closes" title={t("quality.closes.title")} hint={t("quality.closes.hint")} collapsed empty={view.closes.total === 0}>
+            <div className={styles.more} data-show-empty={showNothing ? "" : undefined}>
+              {nothing > 0 && (
+                <div className={styles.nothing} data-quality-nothing="">
+                  <span>{tn("quality.nothing", nothing)}</span>
+                  <button type="button" className={styles.nothingToggle} aria-expanded={showNothing} onClick={() => setShowNothing((v) => !v)}>
+                    {t(showNothing ? "quality.nothing.hide" : "quality.nothing.show")}
+                  </button>
+                </div>
+              )}
+              <Section id="quality-closes" title={t("quality.closes.title")} hint={t("quality.closes.hint")} collapsed empty={none.closes}>
                 {view.closes.total === 0 ? (
                   <Empty text={t("quality.closes.empty")} />
                 ) : (
@@ -551,7 +591,7 @@ export function Quality(props: { onBack: () => void }) {
                 )}
               </Section>
 
-              <Section id="quality-endings" title={t("quality.endings.title")} hint={t("quality.endings.hint")} collapsed empty={view.endings.made === 0}>
+              <Section id="quality-endings" title={t("quality.endings.title")} hint={t("quality.endings.hint")} collapsed empty={none.endings}>
                 {view.endings.made === 0 ? (
                   <Empty text={t("quality.endings.empty")} />
                 ) : (
@@ -571,7 +611,7 @@ export function Quality(props: { onBack: () => void }) {
                 )}
               </Section>
 
-              <Section id="quality-lost" title={t("quality.lost.title")} hint={t("quality.lost.hint")} collapsed empty={view.lost.existed === 0}>
+              <Section id="quality-lost" title={t("quality.lost.title")} hint={t("quality.lost.hint")} collapsed empty={none.lost}>
                 {view.lost.existed === 0 ? (
                   <Empty text={t("quality.lost.empty")} />
                 ) : (
@@ -583,7 +623,7 @@ export function Quality(props: { onBack: () => void }) {
                 )}
               </Section>
 
-            <Section id="quality-sources" title={t("quality.sources.title")} hint={t("quality.sources.hint")} collapsed empty={view.sources.checked === 0}>
+            <Section id="quality-sources" title={t("quality.sources.title")} hint={t("quality.sources.hint")} collapsed empty={none.sources}>
               {view.sources.checked === 0 ? (
                 <Empty text={t("quality.sources.empty")} />
               ) : (
@@ -597,7 +637,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-review" title={t("quality.review.title")} hint={t("quality.review.hint")} collapsed empty={view.review.days_reviewed === 0 || view.review.median_seconds == null}>
+            <Section id="quality-review" title={t("quality.review.title")} hint={t("quality.review.hint")} collapsed empty={none.review}>
               {view.review.days_reviewed === 0 || view.review.median_seconds == null ? (
                 <Empty text={t("quality.review.empty")} />
               ) : (
@@ -611,11 +651,11 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")} collapsed empty={!view.sample && view.sample_allowed}>
+            <Section id="quality-sample" title={t("quality.sample.title")} hint={t("quality.sample.hint")} collapsed empty={none.sample}>
               <Sample view={view} />
             </Section>
 
-            <Section id="quality-total" title={t("quality.total.title")} hint={t("quality.total.hint")} collapsed empty={view.missed_total.present === 0}>
+            <Section id="quality-total" title={t("quality.total.title")} hint={t("quality.total.hint")} collapsed empty={none.total}>
               {view.missed_total.present === 0 ? (
                 <Empty text={t("quality.total.empty")} />
               ) : (
@@ -625,7 +665,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-apart" title={t("quality.apart.title")} hint={t("quality.apart.hint")} collapsed empty={view.apart.missed + view.apart.declined + view.apart.dropped === 0}>
+            <Section id="quality-apart" title={t("quality.apart.title")} hint={t("quality.apart.hint")} collapsed empty={none.apart}>
               {view.apart.missed + view.apart.declined + view.apart.dropped === 0 ? (
                 <Empty text={t("quality.apart.empty")} />
               ) : (
@@ -648,7 +688,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-answers" title={t("quality.answers.title")} hint={t("quality.answers.hint")} collapsed empty={view.answers.helpful + view.answers.not_helpful === 0}>
+            <Section id="quality-answers" title={t("quality.answers.title")} hint={t("quality.answers.hint")} collapsed empty={none.answers}>
               {view.answers.helpful + view.answers.not_helpful === 0 ? (
                 <Empty text={t("quality.answers.empty")} />
               ) : (
@@ -667,7 +707,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-replays" title={t("quality.replays.title")} hint={t("quality.replays.hint")} collapsed empty={view.replays.count === 0}>
+            <Section id="quality-replays" title={t("quality.replays.title")} hint={t("quality.replays.hint")} collapsed empty={none.replays}>
               {view.replays.count === 0 ? (
                 <Empty text={t("quality.replays.empty")} />
               ) : (
@@ -678,7 +718,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-knowledge" title={t("quality.knowledge.title")} hint={t("quality.knowledge.hint")} collapsed empty={view.knowledge_used.length === 0}>
+            <Section id="quality-knowledge" title={t("quality.knowledge.title")} hint={t("quality.knowledge.hint")} collapsed empty={none.knowledge}>
               {view.knowledge_used.length === 0 ? (
                 <Empty text={t("quality.knowledge.empty")} />
               ) : (
@@ -689,7 +729,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-repeats" title={t("quality.repeats.title")} hint={t("quality.repeats.hint")} collapsed empty={view.repeat_corrections.length === 0}>
+            <Section id="quality-repeats" title={t("quality.repeats.title")} hint={t("quality.repeats.hint")} collapsed empty={none.repeats}>
               {view.repeat_corrections.length === 0 ? (
                 <Empty text={t("quality.repeats.empty")} />
               ) : (
@@ -704,7 +744,7 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
-            <Section id="quality-lacking" title={t("quality.lacking.title")} hint={t("quality.lacking.hint")} collapsed empty={view.missing.length === 0}>
+            <Section id="quality-lacking" title={t("quality.lacking.title")} hint={t("quality.lacking.hint")} collapsed empty={none.lacking}>
               {view.missing.length === 0 ? (
                 <Empty text={t("quality.lacking.empty")} />
               ) : (

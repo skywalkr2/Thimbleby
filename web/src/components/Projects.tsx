@@ -178,7 +178,7 @@ export function Projects() {
                   title: (p) => p.name,
                   cell: (p, open) => (
                     <span className={styles.inside} data-depth={depth(p)} style={{ "--depth": depth(p) } as React.CSSProperties}>
-                      <a href={viewHref(recordView("project", p.id))} onClick={open}>
+                      <a className={styles.name} href={viewHref(recordView("project", p.id))} onClick={open}>
                         {p.name}
                       </a>
                       {p.completed && p.group && <div className="hint">{t("projects.was_in", { group: p.group })}</div>}
@@ -196,7 +196,7 @@ export function Projects() {
                   const side = g.id.startsWith("side:") ? sides.get(g.id.slice(5)) : undefined;
                   // A name too long for the cell ends in an ellipsis, with the whole name as the title.
                   return side ? (
-                    <a href={viewHref(recordView("project", side.id))} title={side.name}>
+                    <a className={styles.name} href={viewHref(recordView("project", side.id))} title={side.name}>
                       {side.name}
                     </a>
                   ) : undefined;

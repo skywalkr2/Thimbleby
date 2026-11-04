@@ -10,9 +10,9 @@ import { useWords } from "../lib/wording";
 import { Row } from "../ui/Row";
 import { Button, ButtonLink } from "../ui/Button";
 import { Actions } from "../ui/Actions";
-import { EmptyState } from "../ui/EmptyState";
 import { RowList } from "../ui/RowList";
 import { ProjectDrawer } from "./ProjectForm";
+import styles from "./SideInside.module.css";
 export function SideInside(props: { id: string }) {
   const { t, tn } = useWords();
   const { personal, sides } = useSides();
@@ -29,7 +29,15 @@ export function SideInside(props: { id: string }) {
         {inside.length > 0 && <span className="hint">{inside.length}</span>}
       </div>
       {inside.length === 0 ? (
-        <EmptyState text={t(`side.${part}.empty`)} />
+        // Nothing yet is one quiet line with the way to add, not a card.
+        <div className={styles.quiet}>
+          <p className="hint">{t(`side.${part}.empty`)}</p>
+          {!isPersonal && (
+            <Button size="sm" onClick={() => setAdding(true)}>
+              {t("project.add_title")}
+            </Button>
+          )}
+        </div>
       ) : (
         <RowList>
           {inside.map((p) => (
@@ -45,7 +53,7 @@ export function SideInside(props: { id: string }) {
           ))}
         </RowList>
       )}
-      {!isPersonal && (
+      {!isPersonal && inside.length > 0 && (
         <Actions>
           <Button onClick={() => setAdding(true)}>{t("project.add_title")}</Button>
           <ButtonLink href={viewHref("records/projects")}>{t("side.projects.all")}</ButtonLink>

@@ -682,8 +682,8 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   page of Settings. `today.rail_rows` (3; 1 to 10): how many rows each card of Today's side column (what came in, the schedule) shows
   before its line for the rest; on the Today page of Settings (7.21; change log 319).
 - `handled_group` (`kind`): how Handled for you groups what it lists to start with, `kind` (what the item is: bills,
-  orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled) or
-  `sender`; the others are one button away on the screen (7.20). Advanced.
+  orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled),
+  `sender` or `account` (the source it came in on); the others are one button away on the screen (7.20). Advanced.
 - `handled_rows_shown` (25): how many rows a group on Handled for you draws before "Show more" (7.20). Advanced.
 - `open_rows_shown` (15): how many to-dos a group on the To-dos screen (Overdue, Today, Coming up) draws before "Show more" (7.5). Advanced.
 - `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add

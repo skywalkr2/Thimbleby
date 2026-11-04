@@ -20,7 +20,8 @@ import { FactSource } from "./FactSource";
 import { FiledLine } from "./Filed";
 import { TieLine } from "./TieLine";
 import { LearnedLines } from "./Learned";
-import { OriginLink } from "./Origin";
+import { OriginLink, hasOrigin } from "./Origin";
+import { useIsNarrow } from "../lib/media";
 import { PersonDrawer, heldReach, kindLabel, useContactKinds } from "./PersonForm";
 import { PersonReach } from "./PersonReach";
 import { PersonAvatar } from "./PersonAvatar";
@@ -75,7 +76,6 @@ import { DefinitionList, Definition } from "../ui/DefinitionList";
 import { TabStrip } from "../ui/TabStrip";
 import styles from "./RecordPage.module.css";
 import { whoTheyAre } from "../lib/people-who";
-import { useIsNarrow } from "../lib/media";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
 /** How an entry repeats, in words: "Every week, until Dec 31". */
@@ -316,7 +316,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     if (data.fields.status === "left") personRows.push({ name: "status", label: labelOf("status"), lines: [t("setup.left")] });
   }
   // Bookkeeping about where a value came from, and the app's own flags, are one fold below the facts, never among them.
-  const rows = kind === "person" ? personRows : generic.filter((row) => !FOLDED.has(row.name));
+  // A project's people are said under its name on a phone, where the card would be the last thing on a long page.
+  const peopleUnderName = narrow && kind === "project" && !isSide ? generic.find((row) => row.name === "owner") : undefined;
+  const peopleLine = peopleUnderName?.lines.filter((l): l is string => typeof l === "string").join(", ");
+  const rows = kind === "person" ? personRows : generic.filter((row) => !FOLDED.has(row.name) && !(peopleLine && row === peopleUnderName));
   const folded = kind === "person" ? [] : generic.filter((row) => FOLDED.has(row.name));
   // How each open item relates to the person whose page this is, in a few words.
   const how = new Map<string, string>();
@@ -348,8 +351,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const firstName = person?.first_name || name.split(" ")[0] || name;
   const cardSlot = person ? slotOf((person.sides ?? [])[0]) : null;
   const nothingToList = kind === "organization" && rows.length === 0 && folded.length === 0;
+  // A page with nothing to put in its card draws none, and the column goes to the page.
+  const bare = !asCard && !editing && settled && rows.length === 0 && folded.length === 0 && !hasOrigin(data?.origin) && !hasDaysOff && kind !== "action" && !isPerson;
   const detailsPanel = data && !nothingToList && (
-    <div className={asCard ? "record-side" : "record-side record-sticky"} data-contact-card={asCard ? "" : undefined}>
+    <div className={asCard ? "record-side" : "record-side record-sticky"} data-contact-card={asCard ? "" : undefined} data-bare={bare ? "" : undefined}>
       {asCard && !editing && (
         <div className="contact-head">
           <PersonAvatar name={name} slot={cardSlot} />
@@ -450,7 +455,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               {String(data.fields.notes ?? "").trim() && <br />}
               <span>{[tn("orgs.people", staff.length), tn("orgs.open_items", openCount)].join(" \u00b7 ")}</span>
             </>
-          ) : undefined
+          ) : peopleLine || undefined
         }
         crumb={
           isPerson ? (
@@ -460,7 +465,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             </>
           ) : undefined
         }
-        back={isPerson ? undefined : { label: t("record.back"), onClick: props.onBack }}
+        back={isPerson || (gone && !isPerson) ? undefined : { label: t("record.back"), onClick: props.onBack }}
         primary={
           data && message.options ? (
             <Button variant="primary" onClick={() => message.ask("reply")}>
@@ -473,6 +478,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           ) : asCard && data && person ? (
             <Button variant="primary" icon="plus" onClick={() => addTodo.open("", id)}>
               {t("person.add_todo")}
+            </Button>
+          ) : kind === "project" && data && !editing ? (
+            <Button variant="primary" icon="plus" onClick={() => addTodo.open("", undefined, id)}>
+              {t("addtodo.open")}
             </Button>
           ) : isPerson && !asCard && data && (drawer || offered.length > 0) && !editing ? (
             <Button ref={editButton} onClick={() => setEditing(true)}>
@@ -534,7 +543,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {record.isError && gone && isPerson && removal.data?.state !== "removed" && !removal.isPending && (
         <EmptyState icon="inbox" text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people"), primary: true }} />
       )}
-      {record.isError && gone && !isPerson && <EmptyState icon="inbox" text={t("record.not_found")} action={{ label: t("record.not_found.back", { list: t(GONE_BACK[kind]?.[1] ?? "nav.home") }), href: viewHref(GONE_BACK[kind]?.[0] ?? "today"), primary: true }} />}
+      {record.isError && gone && !isPerson && <EmptyState icon="search" text={t("record.not_found")} action={{ label: t("record.not_found.back", { list: t(GONE_BACK[kind]?.[1] ?? "nav.home") }), href: viewHref(GONE_BACK[kind]?.[0] ?? "today"), primary: true }} />}
       {record.isError && !gone && <LoadFailed message={t("record.load_failed")} detail={record.error instanceof ApiError && record.error.detail ? record.error.detail : null} onRetry={() => void record.refetch()} />}
       {data && tabbed && (
         <div data-slot="tabs">

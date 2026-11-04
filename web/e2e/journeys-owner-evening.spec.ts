@@ -194,7 +194,7 @@ test.describe.serial("journey: the owner's first evening", () => {
     await page.keyboard.press("Escape");
     // Missed something? is an entry of the Help menu (it is no longer a button in the header).
     await header.getByRole("button", { name: "Help" }).click();
-    await expect(page.getByRole("menuitem", { name: "Missed something?" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: /^Report something .* missed$/ })).toBeVisible();
     await page.keyboard.press("Escape");
     // Nothing reaches past the right edge of a 1280 wide window.
     const past = await page.evaluate(() =>

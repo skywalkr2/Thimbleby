@@ -57,6 +57,11 @@ from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
 
+def window_week_end(week: date, now: datetime, here: Any) -> date:
+    """The last day of a week as far as the window goes: its Sunday, or today for the week still under way."""
+    return min(week + timedelta(days=6), now.astimezone(here).date())
+
+
 def _outcome(view: Any, person: str | None, now: datetime, days: int, here: Any) -> QualityOutcome:
     weeks = outcome.per_week(view, person, now, days, here)
     return QualityOutcome(
@@ -70,7 +75,7 @@ def _outcome(view: Any, person: str | None, now: datetime, days: int, here: Any)
         weeks=[
             QualityOutcomeWeek(
                 week=w.week,
-                week_end=w.week + timedelta(days=6),
+                week_end=window_week_end(w.week, now, here),
                 promises_found=w.found,
                 promises_kept=w.kept,
                 dismissed=w.dismissed,
@@ -141,7 +146,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                 weeks=[
                     QualityAnswerWeek(
                         week=w.week,
-                        week_end=w.week + timedelta(days=6),
+                        week_end=window_week_end(w.week, now, here),
                         helpful=w.helpful,
                         not_helpful=w.not_helpful,
                     )
@@ -231,7 +236,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                 weeks=[
                     QualityApartWeek(
                         week=w.week,
-                        week_end=w.week + timedelta(days=6),
+                        week_end=window_week_end(w.week, now, here),
                         missed=w.missed,
                         declined=w.declined,
                         dropped=w.dropped,
@@ -260,7 +265,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                     person=w.person,
                     person_name=people.name(w.person),
                     week=w.week,
-                    week_end=w.week + timedelta(days=6),
+                    week_end=window_week_end(w.week, now, here),
                     count=w.count,
                 )
                 for w in quality.missed_per_week(view, now, days, here)

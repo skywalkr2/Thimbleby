@@ -114,8 +114,8 @@ test("one row per file, with its facts in words and Open as the one primary acti
 test("with no files it says so, and offers adding one", async () => {
   fakeApi({ "GET files": () => [], "GET projects": () => [], "GET plugin-actions": () => [] });
   renderApp(<Files />);
-  expect(await screen.findByText(/^No files yet\./)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Add a file" })).toBeInTheDocument();
+  expect(await screen.findByText(/^Keep a document, picture or sound file here/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Add a file: choose one or drop it here")).toBeInTheDocument();
 });
 
 test("when the files don't load it says so and Try again asks again", async () => {

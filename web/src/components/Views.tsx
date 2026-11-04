@@ -13,13 +13,13 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Drawer } from "../ui/Drawer";
-import { EmptyState } from "../ui/EmptyState";
 import { FormField } from "../ui/FormField";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
 import { Select } from "../ui/Select";
 import { Field } from "./PersonForm";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import styles from "./Views.module.css";
 
 type View = S["WorkViewView"];
 type Part = "all" | "name" | "projects";
@@ -49,24 +49,36 @@ export function Views() {
   ];
   return (
     <section className="panel-section" aria-labelledby="views-title" data-views="">
-      <div className="heading">
-        <h2 id="views-title">{t("views.title")}</h2>
-        <Button onClick={() => setEditing({ part: "all" })}>{t("views.add")}</Button>
-      </div>
-      <p className="hint">{t("views.intro")}</p>
       {rows.length === 0 ? (
-        !views.isPending && <EmptyState text={t("views.empty")} />
+        // Until a first view exists the section is one quiet line: what a view is for, and the way to make one.
+        !views.isPending && (
+          <div className={styles.quiet}>
+            <h2 id="views-title" className="sr">
+              {t("views.title")}
+            </h2>
+            <p className="hint">{t("views.empty")}</p>
+            <Button size="sm" onClick={() => setEditing({ part: "all" })}>
+              {t("views.add")}
+            </Button>
+          </div>
+        )
       ) : (
-        <RowList aria-label={t("views.list")}>
-          {rows.map((v) => (
-            <Row
-              key={v.id}
-              title={v.name}
-              meta={[v.side_name, v.label, v.projects.length > 0 ? tn("views.count", v.projects.length) : t("views.no_projects")].filter(Boolean).join(" · ")}
-              menu={<RowMenu label={v.name} actions={menu(v)} />}
-            />
-          ))}
-        </RowList>
+        <>
+          <div className="heading">
+            <h2 id="views-title">{t("views.title")}</h2>
+            <Button onClick={() => setEditing({ part: "all" })}>{t("views.add")}</Button>
+          </div>
+          <RowList aria-label={t("views.list")}>
+            {rows.map((v) => (
+              <Row
+                key={v.id}
+                title={v.name}
+                meta={[v.side_name, v.label, v.projects.length > 0 ? tn("views.count", v.projects.length) : t("views.no_projects")].filter(Boolean).join(" · ")}
+                menu={<RowMenu label={v.name} actions={menu(v)} />}
+              />
+            ))}
+          </RowList>
+        </>
       )}
       {editing && <ViewDrawer view={editing.view} part={editing.part} undoOf={undoOf} onClose={() => setEditing(null)} />}
     </section>

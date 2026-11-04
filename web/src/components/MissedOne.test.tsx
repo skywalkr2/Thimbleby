@@ -18,7 +18,7 @@ const noop = () => undefined;
 /** Missed one is an item of the Help menu. */
 async function openFromHelp(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("button", { name: "Help" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Missed something?" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Report something Helper missed" }));
 }
 const WORDS = "Dana said she would send the notes by Friday";
 
@@ -124,6 +124,6 @@ test("on a phone it is in the More sheet", async () => {
     </MissedOneProvider>,
   );
   await user.click(screen.getByRole("button", { name: "More" }));
-  await user.click(await screen.findByRole("button", { name: "Missed something?" }));
+  await user.click(await screen.findByRole("button", { name: "Report something Helper missed" }));
   expect(await screen.findByRole("dialog", { name: "Report something missed" })).toBeInTheDocument();
 });
