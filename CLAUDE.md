@@ -300,7 +300,9 @@ These rules hold for the main session and every subagent.
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
   fictional workspaces, the core with no packs enabled, root and nested base paths, deploy checks, web build.
 - A change to `web/` or `api/` also runs the browser tests (`npm --prefix web run e2e`) before it is pushed: CI runs them on
-  every push, and a red run notifies the owner. Push at verified points, not after every small commit.
+  every push that changes code, and a red run notifies the owner. A push that changes only `docs/`, `reviews/`,
+  `CLAUDE.md` or `AGENTS.md` runs only the self-check and the tests that read the docs (`.github/workflows/docs.yml`;
+  owner, 2026-11-04). Push at verified points, not after every small commit.
 - New config keys have a schema entry, a default, a description and demo values in both workspaces.
 - No new specific in code; if a scan flags one, move it to config or data, never add it to an allowlist to pass.
 

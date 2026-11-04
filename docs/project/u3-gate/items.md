@@ -1267,3 +1267,8 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 ## Found while merging T1
 
 - [x] [G6] `Views.test.tsx` (5 tests) and `SideNames.test.tsx` (1 test) still expect side radios or a title. G1d and G2c made a side filter with more than four choices, or a long name, into one button with a sheet. Follow the new control. → fixed: web/src/components/Views.test.tsx and web/src/components/SideNames.test.tsx follow the Side button and its sheet (choices are buttons in the sheet; the full name is a tooltip on focus)
+
+## Found by CI on 7d83e85 (a docs-only push)
+
+- [ ] [U4] A search typed on Connections or Add-ons can lose the cursor. The box hands what was typed to Settings and the page changes to You, but You draws a new search box (`Settings.tsx` `SettingsFrame`, one per page), so the cursor is put back only by one effect that waits for the section to load (`Settings.tsx:362-379`). On a slow load something else takes the cursor first, and a person typing quickly loses the rest of what they type. CI showed it: `settings-walk.spec.ts:219` found the box holding "time zone" but not focused (passed on f410e11 and in the local full run). Fix: keep one search box across every page of Settings so the cursor never leaves it, or type it with a slowed load in the test first and show it failing.
+

@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: A docs-only push runs only the docs checks (owner)
+
+**Decided:** a push or pull request that changes only `docs/`, `reviews/`, `CLAUDE.md` or `AGENTS.md` no longer runs the
+full checks (three Pythons, the 40-days-ahead run and the browser tests). It runs `.github/workflows/docs.yml`: the
+self-check and the Python tests that open a file under `docs/`. The nightly run still runs everything.
+
+**Why:** the owner: running the whole suite for a document push is a waste of GitHub Actions. A docs-only push on
+2026-11-04 spent about 20 minutes of browser tests and went red on a test the docs could not affect.
+
+**Impact:** the working branch still moves forward only on a green run; for a docs-only push that run is `docs`.
+Change log: none.
+
 ## 2026-11-04: Thimbleby Corp, a company edition, recorded as an idea (owner; section 346)
 
 **Decided:** the owner's idea is recorded as roadmap phase E and design 11.10. Thimbleby Corp is the same core, locked by

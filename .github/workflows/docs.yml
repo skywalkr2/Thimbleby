@@ -1,0 +1,37 @@
+name: docs
+
+# A push that changes the docs runs only what reads them: the self-check (decisions cite their change-log section, a
+# "built" claim cites a test that exists, the plugin guide matches the code) and the Python tests that open a file under
+# docs/. A push that also changes code runs checks (ci.yml) as well. A newer push to the same branch cancels this run.
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "reviews/**"
+      - "CLAUDE.md"
+      - "AGENTS.md"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "reviews/**"
+      - "CLAUDE.md"
+      - "AGENTS.md"
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync
+      - name: Self-check
+        run: uv run python -m engine.selfcheck
+      - name: The tests that read the docs
+        run: uv run pytest $(grep -lE '"docs"|docs/' tests/test_*.py)

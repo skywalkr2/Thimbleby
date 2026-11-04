@@ -1,10 +1,21 @@
 name: checks
 
-# Every push runs everything: both Pythons and the browser tests (a public repository's runs cost nothing). A newer push
-# to the same branch cancels the run it supersedes.
+# A push that changes code runs everything: every Python and the browser tests. A push that changes only the docs runs
+# docs.yml instead (the self-check and the tests that read the docs); the nightly run still covers everything. A newer
+# push to the same branch cancels the run it supersedes.
 on:
   push:
+    paths-ignore:
+      - "docs/**"
+      - "reviews/**"
+      - "CLAUDE.md"
+      - "AGENTS.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "reviews/**"
+      - "CLAUDE.md"
+      - "AGENTS.md"
   workflow_dispatch:
   # Nightly, so a test that only passes near the day it was written fails here first (runs from the default branch).
   schedule:
