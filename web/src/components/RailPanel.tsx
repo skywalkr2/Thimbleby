@@ -6,6 +6,7 @@ import { useIsNarrow } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { Panel } from "../ui/Panel";
 import styles from "./Today.module.css";
+import { useConnection } from "../lib/connection";
 import { EmptyState } from "../ui/EmptyState";
 type Folds = { open: ReadonlySet<string>; toggle: (id: string) => void };
 const FoldContext = createContext<Folds | null>(null);
@@ -107,9 +108,10 @@ export function Empty(props: { text: string; inline?: boolean; button?: { label:
   );
 }
 
+/** A card that couldn't load: one line. While the app is offline the offline bar holds the one Try now, so the card draws no button
+ * of its own (one cause, one retry). */
 export function Failed(props: { text: string; retry: () => void }) {
   const { t } = useWords();
-  return (
-    <EmptyState icon="alert" text={props.text} action={{ label: t("action.try_again"), onClick: props.retry }} />
-  );
+  const offline = useConnection().offline;
+  return <EmptyState inline icon="alert" text={props.text} action={offline ? null : { label: t("action.try_again"), onClick: props.retry }} />;
 }

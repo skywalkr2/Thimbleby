@@ -9,7 +9,6 @@ import { useReachNames } from "../lib/reach";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { LoadFailed } from "../ui/LoadFailed";
-import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { NarrowForm } from "./NarrowForm";
@@ -49,7 +48,7 @@ export function RuleReview(props: { onBack: () => void }) {
       ) : !found ? (
         <Skeleton />
       ) : (
-        <>
+        <div className={styles.review}>
           {found.flagged.length > 0 && <p className={styles.intro}>{t("rules_review.intro", { days: found.days })}</p>}
           {/* The size of what every task is sent is a number to act on only when it is near its limit. */}
           {(found.stable_chars >= found.stable_budget * SIZE_SHOWN_FROM || found.moved > 0) && (
@@ -74,7 +73,7 @@ export function RuleReview(props: { onBack: () => void }) {
               ))}
             </ul>
           )}
-        </>
+        </div>
       )}
     </section>
   );
@@ -98,7 +97,6 @@ function ReviewRow(props: {
   };
   return (
     <Row
-      pill={<Pill>{t("knowledge.kind.rule")}</Pill>}
       title={text}
       meta={[rule.present > 0 ? tn("rules_review.counts", rule.present) : "", props.reach].filter(Boolean).join(" · ")}
       oneLine

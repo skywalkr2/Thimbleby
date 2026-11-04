@@ -33,8 +33,8 @@ test.describe("Long names of sides", () => {
       await page.goto("?token=e2e-token");
       for (const view of ["today", "schedule", "work/changed", "work/handled"]) {
         await go(page, view);
-        // Up to 1100px of window the filter is one button that opens a sheet; wider, a strip of choices.
-        const filter = width <= 1100 ? page.getByRole("button", { name: /^Side: / }) : page.getByRole("radiogroup", { name: "Show" });
+        // Names this long are never a row of cut chips: at every width the filter is one button that opens a sheet.
+        const filter = page.getByRole("button", { name: /^Side: / });
         await expect(filter.first()).toBeVisible(LOADED);
         expect(await overflow(page), `${view} at ${width}px scrolls sideways`).toBeLessThanOrEqual(0);
         const box = await filter.first().boundingBox();
@@ -63,19 +63,20 @@ test.describe("Long names of sides", () => {
     expect(await overflow(page)).toBeLessThanOrEqual(0);
   });
 
-  test("on a desktop each chip is cut at a width, has its full name on hover, and the control stays inside the window", async ({ page }) => {
+  test("on a desktop long names are the one button's sheet, whole, and the control stays inside the window", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("?token=e2e-token");
     await go(page, "today");
-    const group = page.getByRole("radiogroup", { name: "Show" }).first();
-    await expect(group).toBeVisible(LOADED);
+    const button = page.getByRole("button", { name: /^Side: / });
+    await expect(button).toBeVisible(LOADED);
+    await expect(page.getByRole("radiogroup", { name: "Show" })).toHaveCount(0);
+    const box = (await button.boundingBox())!;
+    expect(box.x + box.width, "the button ends inside the window").toBeLessThanOrEqual(1280);
+    await button.click();
+    const sheet = page.getByRole("dialog", { name: "Show one side" });
     const long = names.find((n) => n.length > 40)!;
-    const chip = group.getByRole("radio", { name: long });
-    await expect(chip.locator("[title]").first()).toHaveAttribute("title", long);
-    const width = (await chip.boundingBox())!.width;
-    expect(width, "a chip is cut to about two dozen characters").toBeLessThan(330);
-    const cut = await chip.locator("[title]").first().evaluate((el) => getComputedStyle(el).textOverflow);
-    expect(cut).toBe("ellipsis");
+    await expect(sheet.getByRole("button", { name: long })).toBeVisible();
+    expect(await overflow(page)).toBeLessThanOrEqual(0);
   });
 
   test("the menu cuts a long name with an ellipsis, gives its full name on hover and never scrolls sideways", async ({ page }) => {

@@ -5783,6 +5783,7 @@ class SinceYesterdayView(BaseModel):
     since: datetime
     unseen: int
     entries: list[SinceEntryView]
+    rows_shown: int = Field(25, description="How many rows a day shows before Show more (`ui.since_rows_shown`).")
 
 
 class SideCount(BaseModel):

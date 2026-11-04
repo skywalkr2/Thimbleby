@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { RestartProvider } from "../lib/restart";
@@ -110,9 +111,10 @@ test("under Personal, both clashes between Personal and another side show, and t
   expect(screen.queryByText(clashTitle("Supplier call", "Fitting"))).toBeNull();
 });
 
-test("under All every clash shows", async () => {
+test("under All every clash shows: the first, and the rest once the fold under it is opened", async () => {
   show(CLASHES, []);
   expect(await screen.findByText(clashTitle("Supplier call", "Fitting"))).toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("button", { name: /^Show \d more clash/ }));
   expect(screen.getByText(clashTitle("Review", "Planning"))).toBeInTheDocument();
   expect(screen.getByText(clashTitle("Dentist", "School run"))).toBeInTheDocument();
 });

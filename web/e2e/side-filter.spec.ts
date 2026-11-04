@@ -3,6 +3,7 @@
 // choice. The server (`--sides`) holds a to-do, a question and another person's promise on each side, one to-do on none, a calendar
 // for the job and one for the business, and two meetings of the business calendar that clash; /__e2e/sides says what they are called.
 import { expect, test, type Page } from "@playwright/test";
+import { sideFilter } from "./side-pick";
 
 const LOADED = { timeout: 20_000 };
 
@@ -92,7 +93,7 @@ test.describe("The side filter changes what the screens show", () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto("?token=e2e-token");
-    await expect(page.getByRole("radiogroup").first()).toBeVisible(LOADED);
+    await expect(sideFilter(page)).toBeVisible(LOADED);
   });
 
   test("Today: a clash of one calendar, that calendar's meetings and the promises owed show only under their side; a line on no side shows under every choice", async ({ page }) => {

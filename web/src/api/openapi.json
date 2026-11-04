@@ -30228,6 +30228,12 @@
             "title": "Entries",
             "type": "array"
           },
+          "rows_shown": {
+            "default": 25,
+            "description": "How many rows a day shows before Show more (`ui.since_rows_shown`).",
+            "title": "Rows Shown",
+            "type": "integer"
+          },
           "since": {
             "format": "date-time",
             "title": "Since",

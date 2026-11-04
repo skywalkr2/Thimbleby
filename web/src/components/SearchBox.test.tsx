@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fakeApi, renderApp } from "../test-utils";
 import { SearchBox } from "./SearchBox";
 
@@ -50,13 +52,14 @@ test("with nothing typed there is nothing to ask or find, and nothing found says
   expect(screen.getByRole("button", { name: /Ask Helper about “zzz”/ })).toBeInTheDocument();
 });
 
-test("a file and a piece of what was learned are rows with their own labels", async () => {
+test("a file and a piece of what was learned are rows under their own headings", async () => {
   const user = userEvent.setup();
   open();
   await user.type(screen.getByRole("searchbox"), "ladder");
   const file = await screen.findByRole("button", { name: /ladder-safety\.pdf/ });
-  expect(file).toHaveTextContent("File");
-  expect(screen.getByRole("button", { name: /Check the ladder/ })).toHaveTextContent("Learned");
+  expect(file).toBeInTheDocument();
+  expect(screen.getByText("Files")).toBeInTheDocument();
+  expect(screen.getByText("Learned")).toBeInTheDocument();
 });
 
 test("the field is named for the assistant, and with nothing typed the one row is Ask", async () => {
@@ -107,15 +110,17 @@ test("for a person with only their own life the field uses no work words and the
   await waitFor(() => expect(screen.getByRole("searchbox")).toHaveAttribute("placeholder", "A person or a to-do"));
   await user.type(screen.getByRole("searchbox"), "life");
   const row = await screen.findByRole("button", { name: /My life/ });
-  expect(row).not.toHaveTextContent("Project");
   expect(row).toHaveTextContent("My life");
+  expect(screen.getByText("Areas")).toBeInTheDocument();
+  expect(screen.queryByText("Projects")).toBeNull();
 });
 
 test("a work workspace keeps the usual placeholder and the Project label", async () => {
   const user = userEvent.setup();
   alone(false);
   await user.type(screen.getByRole("searchbox"), "life");
-  expect(await screen.findByRole("button", { name: /My life/ })).toHaveTextContent("Project");
+  await screen.findByRole("button", { name: /My life/ });
+  expect(screen.getByText("Projects")).toBeInTheDocument();
   expect(screen.getByRole("searchbox")).toHaveAttribute("placeholder", "Search or ask Helper");
 });
 
@@ -128,14 +133,14 @@ test("a result's title and detail never show a day as year-month-day", async () 
   expect(row.textContent).not.toMatch(/2026-11-02/);
 });
 
-test("each result has a glyph and its kind as a tag, and Asking is set apart from the results by a rule and its own glyph", async () => {
+test("each result has a glyph and no square tag, and Asking is set apart from the results by a rule and its own glyph", async () => {
   const user = userEvent.setup();
   open();
   await user.type(screen.getByRole("searchbox"), "ladder");
   const person = (await screen.findByRole("button", { name: /Priya Example/ })).closest("li")!;
   expect(person.querySelector("svg")).not.toBeNull();
-  expect(person.querySelector("[data-pill]")?.textContent).toBe("Person");
-  expect(screen.getByRole("button", { name: /Move the ladder/ }).closest("li")!.querySelector("[data-pill]")?.textContent).toBe("To-do");
+  expect(person.querySelector("[data-pill]")).toBeNull();
+  expect(screen.getByRole("button", { name: /Move the ladder/ }).closest("li")!.querySelector("[data-pill]")).toBeNull();
   // The Ask row is not a result: it has no kind tag, its own glyph and a rule above it (its own list item).
   const ask = screen.getByRole("button", { name: /Ask Helper about/ }).closest("li")!;
   expect(ask.querySelector("[data-pill]")).toBeNull();
@@ -152,4 +157,25 @@ test("nothing found says which records were searched and that mail and notes are
   renderApp(<SearchBox onOpenRecord={() => undefined} onAsk={() => undefined} />);
   await user.type(screen.getByRole("searchbox"), "zzz");
   expect(await screen.findByText("Nothing found for “zzz” in your people, projects, to-dos and files. Mail and notes are not searched.")).toBeInTheDocument();
+});
+
+test("results are grouped under what they are and counted, and the question to ask is the last of the same list", async () => {
+  const user = userEvent.setup();
+  open();
+  await user.type(screen.getByRole("searchbox"), "ladder");
+  await screen.findByRole("button", { name: /Priya Example/ });
+  for (const heading of ["People", "To-dos", "Files", "Learned"]) expect(screen.getByText(heading)).toBeInTheDocument();
+  expect(screen.getByText("4 matches")).toBeInTheDocument();
+  const list = screen.getByRole("list", { name: "Results" });
+  const items = within(list).getAllByRole("listitem");
+  expect(items[items.length - 1]).toContainElement(screen.getByRole("button", { name: /Ask Helper about/ }));
+  // A row says no kind of its own: the glyph and the group's heading do.
+  expect(screen.getByRole("button", { name: /Priya Example/ })).not.toHaveTextContent("Person");
+});
+
+test("a long result title keeps to two lines and the question to ask stays at the foot of the scrolling panel", () => {
+  const css = readFileSync(join(__dirname, "SearchBox.module.css"), "utf8");
+  expect(css).toMatch(/\.main \{[^}]*-webkit-line-clamp: 2/);
+  expect(css).toMatch(/\.drop \{[^}]*overflow-y: auto/);
+  expect(css).toMatch(/\.askItem \{[^}]*position: sticky; bottom:/);
 });

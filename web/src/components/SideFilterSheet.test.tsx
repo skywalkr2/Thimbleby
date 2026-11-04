@@ -78,3 +78,9 @@ test("Escape closes the sheet and leaves the pick as it was", async () => {
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.getByRole("button", { name: "Side: All" })).toBeInTheDocument();
 });
+
+test("wide, a name too long for a chip puts the choices in the one button and its sheet, so no name is cut in a row", async () => {
+  show({});
+  expect(await screen.findByRole("button", { name: "Side: All" })).toBeInTheDocument();
+  expect(screen.queryByRole("radiogroup", { name: "Show" })).toBeNull();
+});

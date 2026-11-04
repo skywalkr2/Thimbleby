@@ -127,6 +127,8 @@ export function TodayQueue(props: {
   const known = useRef(new Map<string, QueueLine>());
   for (const line of lines) known.current.set(line.key, line);
   const [frozen, setFrozen] = useState<string[] | null>(null);
+  // Several clashes at risk are one row and a fold: the rest open when the person asks (folding one would save no room).
+  const [clashesOpen, setClashesOpen] = useState(false);
   const heldNow = () => {
     const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const here = !!pane.current?.contains(active) || !!active?.closest("[data-queue-inspector]");
@@ -271,7 +273,8 @@ export function TodayQueue(props: {
 
   // From 1680px the inspector shows one line from the moment Today opens: the line that has the cursor, or the one last
   // clicked, the remembered one when there is one. The lines it can show are the queue's own rows, in the order on screen.
-  const ordered = GROUPS.flatMap((group) => inGroup(display.map((d) => d.line), group)).filter((line) => !isHeld(line) && !isRestoreLine(line) && !isLearned(line));
+  const folded = clashesOpen ? new Set<string>() : foldedClashes(display.map((d) => d.line));
+  const ordered = GROUPS.flatMap((group) => inGroup(display.map((d) => d.line), group)).filter((line) => !isHeld(line) && !isRestoreLine(line) && !isLearned(line) && !folded.has(line.key));
   const selectedAt = props.selected ? ordered.findIndex((line) => line.key === props.selected!.key) : -1;
   useEffect(() => {
     if (!props.beside || !queue.data) return;
@@ -368,7 +371,7 @@ export function TodayQueue(props: {
           <ListState query={queue} failed={t("queue.load_failed")} rows={5} above={<GroupLabel>{t("queue.group.decide")}</GroupLabel>}>
             {() => (
             <>
-              {sideBare && <FilteredEmpty data-queue-empty="side" inline text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />}
+              {sideBare && <FilteredEmpty data-queue-empty="side" inline text={t("sides.empty.today", { side: filter.named })} label={t("sides.empty.show_all")} onClear={() => filter.set("all")} />}
               {GROUPS.map((group) => {
                 const these = inGroup(shown, group);
                 const extra = group === "decide" && stage.count > 0;
@@ -377,7 +380,7 @@ export function TodayQueue(props: {
                 if (these.length === 0 && !extra && added.length === 0 && sending.length === 0 && !(group === "decide" && (staleReminders || readingOff))) return null;
                 return (
                   <QueueGroup key={group} id={`queue-group-${group}`} title={t(`queue.group.${group}`)} tone={group === "risk" ? "danger" : "plain"} count={these.length + (extra ? stage.count : 0) + added.length + sending.length}>
-                    {these.map((line) => (
+                    {these.filter((line) => !folded.has(line.key)).map((line) => (
                       <LineItem
                         key={line.key}
                         line={line}
@@ -393,6 +396,13 @@ export function TodayQueue(props: {
                         handlers={props.handlers}
                       />
                     ))}
+                    {group === "risk" && folded.size > 0 && (
+                      <li className={styles.item}>
+                        <Button variant="quiet" aria-expanded="false" data-clashes-fold="" onClick={() => setClashesOpen(true)}>
+                          {tn("queue.clash.more", folded.size)}
+                        </Button>
+                      </li>
+                    )}
                     {extra && <StageTodayRows today={stage} />}
                     <ActTodayRows lines={sending} onView={props.handlers.onOpenView} />
                     {group === "decide" && <ReminderWhereRow onView={props.handlers.onOpenView} />}
@@ -408,7 +418,12 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && filter.choice !== "all" && (total ?? 0) > 0 && (
-                <FilteredEmpty data-queue-empty="side" inline text={t("sides.empty.today", { side: filter.named })} onClear={() => filter.set("all")} />
+                <FilteredEmpty
+                  data-queue-empty="side"
+                  text={`${t("sides.empty.today", { side: filter.named })} ${tn("sides.empty.today_others", total ?? 0)}`}
+                  label={t("sides.empty.show_all")}
+                  onClear={() => filter.set("all")}
+                />
               )}
               {count === 0 && (filter.choice === "all" || !((total ?? 0) > 0)) && (
                 <TodayEmpty
@@ -434,6 +449,15 @@ export function TodayQueue(props: {
       )}
     </>
   );
+}
+
+/** From this many clashes at risk, the first stays a row of its own and the others fold under it. */
+const CLASH_FOLD_FROM = 3;
+
+/** The keys of the clash lines that fold: all but the first once there are enough of them to be worth folding. */
+function foldedClashes(lines: QueueLine[]): Set<string> {
+  const clashes = lines.filter((line) => line.kind === "clash" && line.group === "risk");
+  return clashes.length >= CLASH_FOLD_FROM ? new Set(clashes.slice(1).map((line) => line.key)) : new Set();
 }
 
 /** The kinds of line whose opened list ends in "Keep all": while one is open it has the screen's one filled button. */
@@ -1207,13 +1231,17 @@ function QueueRow(props: {
         return {
           pill: "",
           tone: "warn",
+          // The facts (when, and how far they overlap or fall short) are one line; the calendars the two meetings are in are a second.
+          // Each part is its own item of its line, so a narrow window moves a whole part down and never leaves a separator stranded.
           meta: (
             <>
-              <span className={styles.mp}>
-                <strong>{whenWords}</strong>
+              <span className={styles.metaLine}>
+                <span className={styles.mp}>
+                  <strong>{whenWords}</strong>
+                </span>
+                <span className={styles.mp}>{line.state === "travel" ? how : <strong>{how}</strong>}</span>
               </span>
-              {calendars}
-              <span className={styles.mp}>{line.state === "travel" ? how : <strong>{how}</strong>}</span>
+              <span className={styles.metaLine}>{calendars}</span>
             </>
           ),
           primary: { label: first.label, run: first.run },

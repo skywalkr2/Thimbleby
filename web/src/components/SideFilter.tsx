@@ -27,6 +27,9 @@ export const SIDE_STRIP_BELOW = "(max-width: 1100px)";
 export const SIDE_STRIP_MAX_CHOICES = 4;
 export const SIDE_STRIP_MAX_NAME = 18;
 
+/** A strip of choices is for a few short names; with more than this many sides (Personal counts as one), or a side's name longer than this, the one button and its sheet
+ * stand in for it at every width (a name is never cut short in a row of choices). */
+
 export function SideFilter(props: {
   waiting?: WaitingScreen;
   /** How many rows the tab on screen holds under a choice. It replaces the screen-wide count of what waits, so a count never

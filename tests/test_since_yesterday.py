@@ -591,3 +591,7 @@ def test_an_empty_day_serves_an_empty_list(api):
     body = api.get("/api/since-yesterday").json()
     assert body["entries"] == [] and body["unseen"] == 0
     assert api.post("/api/since-yesterday/seen", json={"until": body["as_of"]}).status_code == 200
+
+
+def test_the_list_names_how_many_rows_a_day_shows_before_show_more(api):
+    assert api.get("/api/since-yesterday").json()["rows_shown"] == api.cfg.ui.since_rows_shown == 25

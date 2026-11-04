@@ -9,7 +9,6 @@ import { whenText as when } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
-import { EmptyState } from "../ui/EmptyState";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
 import { Pill } from "../ui/Pill";
@@ -20,6 +19,10 @@ export function AssistantCloses() {
   const { t, tn } = useWords();
   const found = useQuery({ queryKey: ["silent-closes"], queryFn: api.silentCloses });
   const mine = found.data?.closes.filter((c) => c.kind === "assistant") ?? [];
+  // With nothing of the assistant's own to list there is no section: the tab's own empty state is the one that says so, and a
+  // heading that tells the person to choose something that is not on the screen would only contradict it.
+  // The one thing worth saying then is that everything that was closed was seen.
+  if (found.isSuccess && mine.length === 0 && !(found.data.measure.total > 0 && found.data.measure.silent === 0)) return null;
   return (
     <section className="panel-section" aria-labelledby="silent-closes-title">
       <div className="heading">
@@ -42,15 +45,11 @@ export function AssistantCloses() {
                   })}
             </p>
           ) : null}
-          {mine.length === 0 ? (
-            <EmptyState text={t(found.data.measure.silent > 0 ? "sources.silent.empty_others" : "sources.silent.empty")} />
-          ) : (
-            <RowList>
-              {mine.map((item) => (
-                <AssistantCloseRow key={item.ref} item={item} />
-              ))}
-            </RowList>
-          )}
+          <RowList>
+            {mine.map((item) => (
+              <AssistantCloseRow key={item.ref} item={item} />
+            ))}
+          </RowList>
         </>
       )}
     </section>

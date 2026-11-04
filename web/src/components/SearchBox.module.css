@@ -1,28 +1,32 @@
 .box { position: relative; min-width: 0; }
 .drop {
-  position: absolute; left: 0; right: 0; z-index: 40; display: grid; gap: var(--space-2); max-height: 70vh; overflow-y: auto;
+  position: absolute; left: 0; right: 0; z-index: 40; display: grid; gap: var(--space-2); max-height: 80vh; overflow-y: auto; overscroll-behavior: contain;
   padding: var(--space-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--elev-2);
 }
 .box[data-opens="down"] .drop { top: 100%; margin-top: var(--space-1); }
 .box[data-opens="up"] .drop { bottom: 100%; margin-bottom: var(--space-1); }
 /* One panel: the results are rows in it, not a card of their own, and the note is its last line. */
 .results { gap: 0; }
+.count { margin: 0; padding: var(--space-1) var(--space-3) 0; color: var(--text-muted); font-size: var(--text-sm); }
+.groupItem { padding: var(--space-2) var(--space-3) 0; }
 /* A result is a glyph, its words and its kind; its detail is a second line under the words. Every result row has the same height
    whatever it holds: the detail line is the only thing that adds to it. */
 .row {
-  display: grid; grid-template-columns: var(--space-6) minmax(0, 1fr) auto; gap: 0 var(--space-2); align-items: center; width: 100%; text-align: left;
+  display: grid; grid-template-columns: var(--space-6) minmax(0, 1fr); gap: 0 var(--space-2); align-items: center; width: 100%; text-align: left;
   min-height: var(--target-min, 2.75rem); padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); cursor: pointer; font: inherit;
 }
 .row:hover { background: var(--surface-hover); }
 /* The row the keyboard is on: a fill and a bar at its leading edge, so it is seen without the color. */
 .row:focus-visible { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--accent); outline: none; }
 .lead { display: grid; place-items: center; color: var(--text-muted); }
-.main { min-width: 0; overflow-wrap: anywhere; }
+/* A long title keeps to two lines, so one result never makes its row several times the height of the others. */
+.main { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .detail { grid-column: 2 / -1; color: var(--text-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
 /* Asking is not a result: a rule above it sets it apart. */
-.askItem { margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--border); }
+/* The question to ask is the last of the list and sticks to the foot of the scrolling panel, with its note under it. */
+.askItem { position: sticky; bottom: calc(-1 * var(--space-2)); z-index: 1; margin-top: var(--space-1); padding-top: var(--space-1); padding-bottom: var(--space-2); border-top: 1px solid var(--border); background: var(--surface); }
 .none { margin: 0; padding: var(--space-2) var(--space-3); color: var(--text-muted); font-size: var(--text-sm); }
-.note { display: block; padding: var(--space-2) var(--space-3) var(--space-1); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-sm); }
+.note { display: block; padding: var(--space-1) var(--space-3) 0; color: var(--text-muted); font-size: var(--text-sm); }
 /* On a phone the page behind the panel is dimmed, so the panel is the one thing to read. */
 .scrim { display: none; }
 @media (max-width: 639.98px) { .scrim { display: block; position: fixed; inset: 0; z-index: 39; background: var(--overlay); } }

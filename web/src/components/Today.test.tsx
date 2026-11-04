@@ -1,5 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
@@ -1466,4 +1468,51 @@ test("while the lines load the Decide heading and five skeleton rows are drawn, 
   expect(await screen.findByRole("heading", { name: "Decide" })).toBeInTheDocument();
   const skeleton = document.querySelector('[data-skeleton=""]')!;
   expect(skeleton.children).toHaveLength(5);
+});
+
+test("a clash's meta is two lines: the facts, then the calendars, each part whole so a wrap never strands a separator", async () => {
+  show([{ ...clashLine, group: "risk" }], { "GET watch": () => [calendarSource("c1", "Studio calendar", "purple"), calendarSource("c2", "Clinic calendar", "teal")] });
+  await screen.findByText("Venue walk-through and Budget check-in overlap");
+  const lines = row("clash").querySelectorAll("[data-row-title] ~ p > span");
+  expect(lines).toHaveLength(2);
+  expect(lines[0]).toHaveTextContent("They overlap by 30 minutes");
+  expect(lines[0]).not.toHaveTextContent("Studio calendar");
+  expect(lines[1]).toHaveTextContent("Studio calendarClinic calendar");
+  expect(row("clash").textContent).not.toMatch(/·\s*$/);
+});
+
+test("with three or more clashes at risk the first is a row and the rest fold under it until the person shows them", async () => {
+  const user = userEvent.setup();
+  const more = (n: number): Line => ({ ...clashLine, key: `clash:x:${n}`, group: "risk", text: `Meeting ${n}`, other: `Other ${n}`, entry: `EVT-a${n}`, other_entry: `EVT-b${n}` });
+  show([{ ...clashLine, group: "risk" }, more(1), more(2)]);
+  await screen.findByText("Venue walk-through and Budget check-in overlap");
+  expect(document.querySelectorAll('[data-queue-line="clash"]')).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Show 2 more clashes" }));
+  expect(document.querySelectorAll('[data-queue-line="clash"]')).toHaveLength(3);
+  expect(screen.queryByRole("button", { name: /more clashes/ })).toBeNull();
+});
+
+test("two clashes are two rows: folding one would save no room", async () => {
+  show([{ ...clashLine, group: "risk" }, { ...clashLine, key: "clash:x:1", group: "risk", text: "Meeting 1", other: "Other 1" }]);
+  await screen.findByText("Venue walk-through and Budget check-in overlap");
+  expect(document.querySelectorAll('[data-queue-line="clash"]')).toHaveLength(2);
+  expect(screen.queryByRole("button", { name: /more clash/ })).toBeNull();
+});
+
+test("the setup line is under the work, never a row of controls above the one decision, and the queue and rail end at their own last row", async () => {
+  const steps = ["workspace", "work", "ai"].map((id) => setupStep(id, id === "workspace" ? { done: true } : {}));
+  show([decision], { "GET setup": () => setupView(steps) });
+  const line = await waitFor(() => {
+    const found = document.querySelector("[data-setup-line]");
+    expect(found).not.toBeNull();
+    return found as HTMLElement;
+  });
+  const queue = document.querySelector("[data-queue-line]") as HTMLElement;
+  // In the page's order the queue's line comes first, then the rail, then the setup line.
+  expect(queue.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const css = readFileSync(join(__dirname, "Today.module.css"), "utf8");
+  expect(css).not.toMatch(/align-items:\s*stretch/);
+  expect(css).toMatch(/\.metaLine \{[^}]*flex-wrap: wrap/);
+  // The rail's card titles are plain ink, underlined only under the pointer or the keyboard, never always.
+  expect(css).not.toMatch(/:is\(p, :global\(\.tb-title\)\)/);
 });

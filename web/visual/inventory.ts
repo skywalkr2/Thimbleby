@@ -640,8 +640,8 @@ const searched = (words: string, wait: "results" | "none") => async (env: Env) =
   const box = env.page.getByRole("searchbox").first();
   await box.click();
   await box.pressSequentially(words, { delay: 80 });
-  await env.page.getByRole("list", { name: "Results" }).waitFor({ timeout: 12_000 });
   if (wait === "none") await env.page.getByText(/^Nothing found/).waitFor({ timeout: 12_000 });
+  else await env.page.getByRole("list", { name: "Results" }).waitFor({ timeout: 12_000 });
   await env.page.waitForTimeout(600);
 };
 
@@ -677,7 +677,7 @@ const sinceEntry = (n: number, over: Record<string, unknown> = {}) => ({
   op: 0,
   ...over,
 });
-const sinceBody = (entries: unknown[]) => ({ as_of: new Date().toISOString(), since: new Date(Date.now() - 86_400_000).toISOString(), unseen: 0, entries });
+const sinceBody = (entries: unknown[]) => ({ as_of: new Date().toISOString(), since: new Date(Date.now() - 86_400_000).toISOString(), unseen: 0, rows_shown: 25, entries });
 const SINCE_SOME = [
   sinceEntry(1, { act: "set_aside", title: "Spring sale: everything half price", because: "sorting", reason: "it was sent to many people, as a mailing list or bulk mail", quote: null, said_by_name: null, record: null, changeset: null, op: null, snapshot: "SNAP-capture", undo: "set_aside", version: 3, seen: false }),
   sinceEntry(2),
@@ -721,14 +721,42 @@ function build(): Screen[] {
 
   // ---- Today and the work screens
   const today = s("Today", "today", "Today", SIGNED, reach("today"), { main: true });
+  // The "Look over" line opens Since yesterday's list; opening it marks it seen and the line goes, so the same list is opened with the
+  // capture's own made-up rows, as the screen's own picture is.
+  const review = s("Today", "today-review", "Today, a line opened for review", SIGNED, answered("work/since", /\/api\/since-yesterday$/, sinceBody(SINCE_SOME)));
   add(
     today,
     ...shared(today, "today", /\/api\/(today|changes|followups|stages|watch)/),
     state(today, "Filtered to nothing", EMPTY, filteredToNothing("today")),
-    s("Today", "today-review", "Today, a line opened for review", SIGNED, async (env) => {
+    // A line opened for review is the review line's own button (the mockup page does the same); a clash is a state of its own.
+    review,
+    // The page a clash's button opens, when its meeting has gone from the calendar since.
+    state(review, "A meeting that is gone", SIGNED, async (env) => {
       await open(env, "today");
-      await press(env, /^(Look over|Open )/, "Today has no line to look over or open on this fixture");
+      await refuseReads(env, /\/api\/schedule\/events\//, 404, "That event is not there.");
+      await press(env, /^Open /, "Today has no clash to open on this fixture");
     }),
+    // The clash opened where it is (the person pressed its words, not its button): both meetings, how to open each, and the ways out.
+    state(today, "A clash opened", SIGNED, async (env) => {
+      await open(env, "today");
+      const line = env.page.locator('[data-queue-line="clash"]').first();
+      if ((await line.count()) === 0) throw new Unreachable("Today has no clash on this fixture");
+      await line.getByText(/overlap|too close together/).first().click();
+      await env.page.waitForTimeout(900);
+    }),
+    // What the mockup's states sheet lists beyond the shared three: the failed save, the merge, an account that needs the person, and a long list.
+    state(today, "A save that failed", SEEDED, async (env) => {
+      await open(env, "today");
+      await refuseWrites(env, 500, "The app couldn't write to its folder.");
+      await press(env, /^(Back up now|Give them dates|Continue setup)$/, "Today has no row whose button saves something on this fixture");
+    }),
+    state(today, "Changed somewhere else", SEEDED, async (env) => {
+      await open(env, "today");
+      await refuseWrites(env, 409, "This changed since you opened it.");
+      await press(env, /^(Back up now|Give them dates|Continue setup)$/, "Today has no row whose button saves something on this fixture");
+    }),
+    state(today, "One account needs you", { server: "accounts", stage: "failing" }, reach("today")),
+    state(today, "Over a hundred", { server: "sides", stage: "bulk" }, reach("today")),
   );
   // The list is the same at every width and in both themes: opening it marks what it holds as seen, so the capture gives it made-up rows.
   const since = s("Work", "since-yesterday", "Since yesterday", SIGNED, answered("work/since", /\/api\/since-yesterday$/, sinceBody(SINCE_SOME)));
@@ -742,7 +770,13 @@ function build(): Screen[] {
   const changed = s("Work", "what-changed", "What changed", SIGNED, reach("work/changed"), { main: true });
   add(changed, ...shared(changed, "work/changed", LISTS));
   const handled = s("Work", "handled-for-you", "Handled for you", SIGNED, reach("work/handled"));
-  add(handled, ...shared(handled, "work/handled", LISTS), state(handled, "Read tab", SIGNED, withChoice("work/handled", /^Read/)));
+  add(
+    handled,
+    ...shared(handled, "work/handled", LISTS),
+    state(handled, "Read tab", SIGNED, withChoice("work/handled", /^Read/)),
+    state(handled, "Nothing set aside", EMPTY, reach("work/handled")),
+    state(handled, "Filtered to nothing", SEEDED, filteredToNothing("work/handled")),
+  );
   const followups = s("Work", "followups", "Follow-ups", FILLED, reach("work/followups"), { main: true });
   add(
     followups,
@@ -779,7 +813,8 @@ function build(): Screen[] {
     s("Work", "todos-many", "To-dos, over a hundred", { server: "sides", stage: "bulk" }, reach("work/open")),
   );
   const stages = s("Work", "stages", "Stages", SEEDED, reach("work/stages"));
-  add(stages, state(stages, "With items", SEEDED, answered("work/stages", /\/api\/stages\/records$/, STAGE_ITEMS)));
+  // The nav reads the stage records too, so the screen is loaded afresh with the made-up answer in place (a read the app already made is kept).
+  add(stages, state(stages, "With items", SEEDED, answeredMany("work/stages", [[/\/api\/stages\/records$/, STAGE_ITEMS]])));
   const schedule = s("Schedule", "schedule-day", "Schedule, Day", SIGNED, withChoice("schedule", /^Day$/), { main: true });
   add(
     schedule,
@@ -1355,6 +1390,16 @@ function build(): Screen[] {
   add(
     s("Header and menus", "status-popover", "The header's status popover", SIGNED, async (env) => {
       await open(env, "today");
+      await press(env, /^App status: /, "the header has no status button");
+    }),
+    // The popover when everything is fine (the workspace whose setup is done and has nothing waiting), and when a connection is lost.
+    state({ group: "Header and menus", page: "status-popover", label: "The header's status popover" } as Screen, "All good", { server: "clear", stage: "done" }, async (env) => {
+      await open(env, "today");
+      await press(env, /^App status: /, "the header has no status button");
+    }),
+    state({ group: "Header and menus", page: "status-popover", label: "The header's status popover" } as Screen, "Offline", SIGNED, async (env) => {
+      await open(env, "today");
+      await goOffline(env);
       await press(env, /^App status: /, "the header has no status button");
     }),
     s("Header and menus", "user-menu", "The user menu", SIGNED, async (env) => {

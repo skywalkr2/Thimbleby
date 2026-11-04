@@ -1144,7 +1144,9 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     const titles = await page.locator('[data-row] [id^="t-"]').allTextContents();
     expect(titles.length).toBeGreaterThan(0);
     for (const text of titles) expect(text).not.toMatch(/^From:/);
-    // The demo's mail-borne changes read as Today's lines do.
-    expect(titles.some((text) => /^Email from .+ · /.test(text))).toBe(true);
+    // The demo's mail-borne changes read as Today's lines do: the subject leads, and the kind and the sender are the first of its meta.
+    const rows = await page.locator("[data-row]").allTextContents();
+    expect(rows.some((text) => /Email from .+ · /.test(text))).toBe(true);
+    expect(titles.some((text) => /^Email from /.test(text))).toBe(false);
   });
 });

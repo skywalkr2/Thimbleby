@@ -553,7 +553,7 @@ test("Since yesterday, with every kind of act and reason, says names, dates and 
     "GET today/queue": () => [],
   });
   const view = renderApp(<SinceYesterday onOpenRecord={vi.fn()} onBack={() => undefined} />);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   expect(screen.getAllByRole("listitem").length).toBeGreaterThanOrEqual(entries.length);
   sweep(view.container);
 });

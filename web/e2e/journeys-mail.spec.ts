@@ -329,8 +329,8 @@ test.describe.serial("journey: mail", () => {
     const openMessage = async () => {
       await openView(page, "What changed");
       const title = new RegExp(`^Email from .+ · ${message.subject}$`);
-      // The line's button is its title (the click area is the whole line); the detail's title is a link of the same name.
-      await page.getByRole("list").getByRole("button", { name: title }).click();
+      // The line's button is its subject (the click area is the whole line; the kind and the sender are in its meta); the detail's title is the link, in full.
+      await page.getByRole("list").getByRole("button", { name: message.subject, exact: true }).click();
       await page.getByRole("link", { name: title }).click();
       await expect(page.getByRole("heading", { level: 1, name: message.subject })).toBeVisible();
     };

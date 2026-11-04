@@ -162,8 +162,8 @@ test("a task waiting for the go shows under its item, and Go sends the version r
 test("with nothing in stages, it says so", async () => {
   fakeApi({ "GET stages/records": () => [], "GET stages/requests": () => [] });
   renderApp(<Stages />);
-  expect(await screen.findByText("Nothing is tracked in stages yet")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "See add-ons" })).toHaveAttribute("href", expect.stringContaining("settings/addons"));
+  expect(await screen.findByText("Nothing is moving through steps yet")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Find an add-on for it" })).toHaveAttribute("href", expect.stringContaining("settings/addons"));
   // One sentence, not a definition.
   expect(screen.queryByText(/A stage is where/)).toBeNull();
 });

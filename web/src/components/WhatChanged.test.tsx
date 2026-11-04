@@ -844,6 +844,24 @@ test("a change from an email is titled by Today's rule, never by the first line 
   expect(screen.queryByText("From: Casey Moor")).toBeNull();
 });
 
+test("a list row leads with what is distinct, the subject, and puts the kind and the sender in its meta", async () => {
+  const item = change("REQ-7", { source_title: null, title: { kind: "email", person: "PER-2", person_name: "Casey Moor", sender: null, topic: "proof copies" } });
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  await findPane();
+  const title = document.querySelector<HTMLElement>("#t-REQ-7")!;
+  expect(title).toHaveTextContent(/^proof copies$/);
+  expect(title.closest("[data-row]")).toHaveTextContent("Email from Casey Moor");
+});
+
+test("a change that waits for the person links from its pane to the line that decides it on Today", async () => {
+  const waiting = change("REQ-9", { state: "needs_you", waiting: "Say who you are first", source_title: "Order" });
+  fakeApi({ "GET changes": () => [waiting], "GET today/queue": () => [todayLine({ key: "held:1", changeset: "CS-REQ-9" })] });
+  renderApp(<WhatChanged />);
+  const pane = await findPane();
+  expect(await within(pane).findByRole("link", { name: "Answer on Today" })).toBeInTheDocument();
+});
+
 test("a change from a note with a topic is titled Your note and the topic, as on Today", async () => {
   const item = change("REQ-8", { source: null, source_title: null, note: "Put on the agenda", title: { kind: "note", person: null, person_name: null, sender: null, topic: "Put on the agenda" } });
   fakeApi({ "GET changes": () => [item] });
@@ -892,7 +910,7 @@ test("one line at the top counts what waits on Today and opens it, and is left o
   fakeApi({ "GET changes": () => [change("REQ-1")], "GET today/queue": () => lines, ...QUIET });
   const view = renderApp(<WhatChanged />);
   const line = await screen.findByText(/2 things wait for you on Today/);
-  expect(line.closest("p")).toHaveTextContent("2 things wait for you on Today · Open Today");
+  expect(line.closest("p")).toHaveTextContent("2 things wait for you on Today Open Today");
   expect(within(line.closest("p") as HTMLElement).getByRole("link", { name: "Open Today" }).getAttribute("href")).toMatch(/#today$/);
   view.unmount();
   fakeApi({ "GET changes": () => [change("REQ-1")], "GET today/queue": () => [lines[0]], ...QUIET });
@@ -982,4 +1000,16 @@ test("Undo everything asks first, and only the confirm undoes the change", async
   expect(calls.some((c) => c.route === "POST changesets/CS-REQ-1/undo")).toBe(false);
   await user.click(within(dialog).getByRole("button", { name: "Undo everything" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-1/undo")).toBe(true));
+});
+
+test("an email's row and a calendar entry's row have different glyphs in their leading slot", async () => {
+  const email = change("REQ-10", { source_title: null, title: { kind: "email", person: "PER-2", person_name: "Casey Moor", sender: null, topic: "proof copies" } });
+  const entry = change("REQ-11", { source_title: null, title: { kind: "calendar", person: "PER-2", person_name: "Casey Moor", sender: null, topic: "Budget review" } });
+  fakeApi({ "GET changes": () => [email, entry] });
+  renderApp(<WhatChanged />);
+  await findPane();
+  const glyph = (id: string) => document.querySelector(`#t-${id}`)!.closest("[data-row]")!.querySelector("[data-row-lead] svg")?.innerHTML;
+  expect(glyph("REQ-10")).toBeTruthy();
+  expect(glyph("REQ-11")).toBeTruthy();
+  expect(glyph("REQ-10")).not.toBe(glyph("REQ-11"));
 });

@@ -204,6 +204,10 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .inline-field { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .inline-field input { flex: 1 1 240px; width: auto; min-width: 0; max-width: var(--field-max); }
 .hint.block { display: block; }
+/* Since yesterday: the days run in a reading width, so a row's words and its action are never far apart on a wide window. */
+.since-days { display: grid; gap: var(--space-4); max-width: 56rem; }
+/* A summary line made of parts: each part wraps whole, so a wrap never leaves a separator at a line's end or start. */
+.hint.summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-4); }
 .hint.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .hint-more { font-size: var(--text-meta); line-height: var(--lh-meta); }
 .unfiled-line { margin: var(--space-3) 0 0; }

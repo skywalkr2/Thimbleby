@@ -5,10 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { plain } from "../lib/read";
-import { useSides, useStableJustMe } from "../lib/sides";
+import { useStableJustMe } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Icon, type IconName } from "../ui/Icon";
-import { Pill } from "../ui/Pill";
+import { GroupLabel } from "../ui/GroupLabel";
 import { RowList } from "../ui/RowList";
 import { SearchField } from "../ui/SearchField";
 import styles from "./SearchBox.module.css";
@@ -27,8 +27,7 @@ export function SearchBox(props: {
   autoFocus?: boolean;
   className?: string;
 }) {
-  const { t } = useWords();
-  const { personal } = useSides();
+  const { t, tn } = useWords();
   const justMe = useStableJustMe();
   const base = useId();
   const [text, setText] = useState("");
@@ -44,10 +43,14 @@ export function SearchBox(props: {
   });
   const rows = words ? (found.data?.results ?? []) : [];
   // For a person with only their own life, a project is an area of their life, and their Personal page is named for what it is.
-  const kindLabel = (r: { kind: string; id: string; title: string }) => {
-    if (justMe && r.kind === "project") return r.id === personal ? r.title : t("search.kind.project.just_me");
-    return t(`search.kind.${r.kind}`);
-  };
+  const groupLabel = (kind: string) => (justMe && kind === "project" ? t("search.group.project.just_me") : t(`search.group.${kind}`));
+  // The results are grouped by what they are, in the order the first of each kind came; the heading says the kind, so a row does not.
+  const groups: Array<{ kind: string; rows: typeof rows }> = [];
+  for (const r of rows) {
+    const group = groups.find((g) => g.kind === r.kind);
+    if (group) group.rows.push(r);
+    else groups.push({ kind: r.kind, rows: [r] });
+  }
   const done = () => {
     setOpen(false);
     setText("");
@@ -111,19 +114,32 @@ export function SearchBox(props: {
         <div className={styles.drop} ref={list}>
           {words && found.isError && <p className="hint">{t("search.load_failed")}</p>}
           {words && !found.isError && !found.isFetching && rows.length === 0 && <p className={styles.none}>{t("search.none", { query: words })}</p>}
+          {words && rows.length > 0 && (
+            <p className={styles.count} data-search-count="">
+              {tn("search.count", rows.length)}
+            </p>
+          )}
+          {/* One list: the results, and the question to ask last. The question stays at the foot of the panel while the results scroll, so
+              the one paid choice is always in reach. */}
           <RowList aria-label={t("search.results")} detail className={styles.results}>
-            {rows.map((r) => (
-              <li key={`${r.kind}/${r.id}`}>
-                <button type="button" className={styles.row} onClick={() => pick(r.kind, r.id)}>
-                  <span className={styles.lead} aria-hidden="true">
-                    <Icon name={KIND_ICON[r.kind] ?? "search"} size={16} />
-                  </span>
-                  <span className={styles.main}>{plain(r.title)}</span>
-                  <Pill>{kindLabel(r)}</Pill>
-                  {r.detail && <span className={styles.detail}>{plain(r.detail)}</span>}
-                </button>
-              </li>
-            ))}
+            {groups.flatMap((g) => [
+              <li key={`head-${g.kind}`} className={styles.groupItem}>
+                <GroupLabel as="p" count={g.rows.length}>
+                  {groupLabel(g.kind)}
+                </GroupLabel>
+              </li>,
+              ...g.rows.map((r) => (
+                <li key={`${r.kind}/${r.id}`}>
+                  <button type="button" className={styles.row} onClick={() => pick(r.kind, r.id)}>
+                    <span className={styles.lead} aria-hidden="true">
+                      <Icon name={KIND_ICON[r.kind] ?? "search"} size={16} />
+                    </span>
+                    <span className={styles.main}>{plain(r.title)}</span>
+                    {r.detail && <span className={styles.detail}>{plain(r.detail)}</span>}
+                  </button>
+                </li>
+              )),
+            ])}
             <li className={styles.askItem}>
               <button type="button" className={styles.row} aria-describedby={words ? `${base}-hint` : undefined} onClick={ask}>
                 <span className={styles.lead} aria-hidden="true">
@@ -131,13 +147,13 @@ export function SearchBox(props: {
                 </span>
                 <span className={styles.main}>{words ? t("search.ask", { query: words }) : t("search.ask_empty")}</span>
               </button>
+              {words && (
+                <span id={`${base}-hint`} className={styles.note}>
+                  {t("search.ask.hint")}
+                </span>
+              )}
             </li>
           </RowList>
-          {words && (
-            <span id={`${base}-hint`} className={styles.note}>
-              {t("search.ask.hint")}
-            </span>
-          )}
         </div>
       )}
     </div>

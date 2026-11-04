@@ -836,6 +836,24 @@ test("a meeting stands on an edge in its calendar's color, and one named in a cl
   expect(rows[1].querySelector("[data-clash]")).toHaveTextContent("Clash");
 });
 
+test("a connected calendar's meeting named in a clash line by its page says Clash too", async () => {
+  const first = event({ title: "Walk-through", start: at(TODAY, 13), end: at(TODAY, 14), snapshot: "snap-a" });
+  const second = event({ title: "Budget check-in", start: at(TODAY, 14), end: at(TODAY, 15), snapshot: "snap-b" });
+  open({
+    "GET today/agenda": () => [first, second],
+    "GET watch": () => [calendar("teal")],
+    "GET today/queue": () => [{ key: "clash:a:b", group: "risk", kind: "clash", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, event_page: `snap-a@${first.start}`, other_event_page: `snap-b@${second.start}`, text: "Walk-through", other: "Budget check-in", state: "travel", minutes: 0 }],
+  });
+  const card = await column("Schedule");
+  const rows = await waitFor(() => {
+    const found = card.querySelectorAll<HTMLElement>("[data-event]");
+    expect(found).toHaveLength(2);
+    return found;
+  });
+  await waitFor(() => expect(rows[0].querySelector("[data-clash]")).toHaveTextContent("Clash"));
+  expect(rows[1].querySelector("[data-clash]")).toHaveTextContent("Clash");
+});
+
 test("the Schedule card holds the next three meetings and one line says how many more there are, linking to the schedule", async () => {
   const meetings = [13, 14, 15, 16, 17].map((hour) => event({ title: `Meeting at ${hour}`, start: at(TODAY, hour), end: at(TODAY, hour, 30), snapshot: `s-${hour}` }));
   open({ "GET today/agenda": () => meetings });

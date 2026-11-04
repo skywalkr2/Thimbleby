@@ -154,7 +154,8 @@ test("a side with nothing on it says which side it is", async () => {
   const user = userEvent.setup();
   showToday([personal], hasBusiness);
   await user.click(await screen.findByRole("radio", { name: BUSINESS }));
-  expect(await screen.findByText(`Nothing on the ${BUSINESS} side today.`)).toBeInTheDocument();
+  expect(await screen.findByText(new RegExp(`^Nothing on the ${BUSINESS} side today\\. 1 thing on your other sides needs you\\.$`))).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show all sides" })).toBeInTheDocument();
   expect(screen.getByText(new RegExp(`Nothing on the ${BUSINESS} side needs you`))).toBeInTheDocument();
   expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
 });

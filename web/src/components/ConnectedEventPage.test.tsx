@@ -103,3 +103,41 @@ test("an event that is gone from its calendar says so, and Back goes back", asyn
   await user.click(screen.getByRole("button", { name: "Back" }));
   expect(onBack).toHaveBeenCalledTimes(1);
 });
+
+test("opened from a clash, the page shows the clash it came from: both meetings and how to open each", async () => {
+  fakeApi({
+    [`GET schedule/events/snap-1?start=${encodeURIComponent(START)}`]: () => view(),
+    "GET watch": () => [{ id: "cal-work", label: "Work calendar" }],
+    "GET today/queue": () => [
+      {
+        key: "clash:a:b",
+        group: "risk",
+        kind: "clash",
+        count: 1,
+        untrusted: false,
+        unpriced: 0,
+        actions: [],
+        questions: [],
+        outcome: {},
+        text: "Proof review",
+        other: "Supplier call",
+        event_page: `snap-1@${START}`,
+        other_event_page: "snap-2@2026-10-26T10:00:00+00:00",
+        state: "overlap",
+        minutes: 30,
+      },
+    ],
+  });
+  renderApp(<ConnectedEventPage id={`snap-1@${START}`} onBack={vi.fn()} />);
+  const clash = await screen.findByRole("region", { name: "It clashes with another meeting" });
+  expect(within(clash).getByRole("group", { name: "Proof review" })).toBeInTheDocument();
+  expect(within(clash).getByRole("group", { name: "Supplier call" })).toBeInTheDocument();
+  expect(within(clash).getAllByRole("link", { name: "Open the event" })).toHaveLength(2);
+});
+
+test("the kind of page is said in the line under the title, not as a tag beside it", async () => {
+  open(() => view());
+  await screen.findByRole("heading", { level: 1, name: "Proof review" });
+  expect(screen.getByText("Calendar event").closest("[data-pill]")).toBeNull();
+  expect(screen.getByText("Calendar event")).toHaveTextContent("Calendar event");
+});

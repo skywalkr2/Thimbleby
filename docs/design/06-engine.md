@@ -5214,7 +5214,7 @@ followed its meeting. The last look is one small `look` record for each person t
 `Look over what changed since yesterday`, with the counts in plain words, sits in the review group with the other things to look over (it was in the risk group until change log 296), goes
 when the list is opened (`GET /api/since-yesterday`, then `POST /api/since-yesterday/seen` with the moment it was drawn,
 so a change that arrived meanwhile is not swallowed) and comes back with the next change. The "Since yesterday" screen
-(from the line and from What changed) has Open on each row and Undo in its menu. Built: `tests/test_since_yesterday.py`,
+(from the line and from What changed) has Open on each row and Undo in its menu; it is grouped by the day each thing was done, says how many changes and how many closes are unseen, shows each day's first `ui.since_rows_shown` (25) rows with "Show N more", and gives each kind of act its own glyph (change log 340). Built: `tests/test_since_yesterday.py`,
 `web/src/components/SinceYesterday.test.tsx`, `web/src/components/TodaySince.test.tsx`.
 
 **Work the assistant releases on its own keeps the person's hours (S1-3).** Anything the assistant releases without

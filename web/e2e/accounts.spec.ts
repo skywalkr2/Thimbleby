@@ -8,6 +8,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { choicesOf, choose } from "./choose";
 import { collectProblems, fakeAddress, pressStart, showSteps, type Info } from "./journey-helpers";
+import { pickSide, sideFilter } from "./side-pick";
 
 const FAKE = `http://127.0.0.1:${process.env.JOURNEY_ACCOUNTS_FAKE_PORT ?? 8769}`;
 void fakeAddress;
@@ -195,8 +196,7 @@ test.describe.serial("several accounts", () => {
     test.setTimeout(120_000);
     await page.goto(`?token=${info.token}`);
     await go(page, "today");
-    const filter = page.getByRole("radiogroup", { name: "Show" }).first();
-    await expect(filter).toBeVisible(LOADED);
+    await expect(sideFilter(page)).toBeVisible(LOADED);
     const came = page.getByRole("region", { name: /Came in/ });
     // The card lists the first rows of what came in (`ui.today.rail_rows`) and folds the rest behind "N more": opened before a row is looked for.
     const all = async () => {
@@ -206,17 +206,17 @@ test.describe.serial("several accounts", () => {
     };
     await all();
     await expect(came.getByText("Question for account 1")).toBeVisible(LOADED);
-    await filter.getByRole("radio", { name: /^Harborview/ }).click();
+    await pickSide(page, "Harborview Community Support Partnership Incorporated");
     await all();
     // The first account serves only Personal: its own mail is not shown under the business, the second account's (which serves both) is.
     await expect(came.getByText("Question for account 1")).toHaveCount(0);
     await expect(came.getByText("Question for account 2")).toBeVisible();
     // The clash between the first and the second account's meetings is between Personal and the business: it shows under the business.
     await expect(page.locator('[data-queue-line="clash"]').first()).toBeVisible(LOADED);
-    await filter.getByRole("radio", { name: "Personal" }).click();
+    await pickSide(page, "Personal");
     await all();
     await expect(came.getByText("Question for account 1")).toBeVisible();
-    await filter.getByRole("radio", { name: "All" }).click();
+    await pickSide(page, "All");
   });
 
   test("X77. one account failing is one line naming it with Sign in again; its rows say so, the others still say Read, and the header says a connection failed", async ({ page }) => {

@@ -93,7 +93,9 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
   const events = (agenda.data ?? []).filter((e) => filter.shows(e.side, e.views));
   const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   // The meetings that are named in a clash line on Today say so in their own row.
-  const clashEntries = new Set((useQueue().data ?? []).filter((l) => l.kind === "clash").flatMap((l) => [l.entry, l.other_entry]).filter((x): x is string => !!x));
+  // An entry the app keeps is named by its entry; a connected calendar's meeting, by its page (the snapshot and its start).
+  const clashLines = (useQueue().data ?? []).filter((l) => l.kind === "clash");
+  const clashEntries = new Set(clashLines.flatMap((l) => [l.entry, l.other_entry, l.event_page, l.other_event_page]).filter((x): x is string => !!x));
   const groups = groupByDay(events, today);
   const todayGroups = groups.filter((group) => group.date === today);
   // Deliveries with no date yet are on no day: they are listed under "On its way" at the card's end.
@@ -188,7 +190,7 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
                         when={whenText(row, group.date, t)}
                         past={group.date === today && !row.all_day && !row.own && ended(row)}
                         source={sourceName(row.source)}
-                        clash={!!row.entry && clashEntries.has(row.entry)}
+                        clash={(!!row.entry && clashEntries.has(row.entry)) || clashEntries.has(`${row.snapshot}@${row.start}`)}
                       />
                     ),
                   )}

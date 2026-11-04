@@ -110,7 +110,7 @@ export function Handled() {
         tabs={
           <TabStrip
             label={t("handled.tabs")}
-            options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`), count: counts ? counts[name] : "…" }))}
+            options={TABS.map((name) => ({ value: name, label: t(`handled.tab.${name}`), count: counts ? counts[name] : undefined }))}
             value={tab}
             onChange={(name) => {
               setTab(name);
@@ -124,7 +124,7 @@ export function Handled() {
       {/* With nothing in the list (and nothing typed to narrow it) there is nothing to search or group, so the controls wait. */}
       {/* A short list (fewer than the filter bar's minimum) has nothing worth searching or grouping either, unless something is typed or a
           grouping other than the first is on, so the person can always take it off. */}
-      {!(list.isSuccess && list.data.groups.length === 0 && !query && !typed && !item) && !(list.isSuccess && !filterBarShown(list.data.groups.reduce((n, g) => n + g.count, 0), !!query || !!typed || !!item || shownGroup !== GROUPS[0])) && (
+      {list.data !== undefined && !(list.isSuccess && list.data.groups.length === 0 && !query && !typed && !item) && !(list.isSuccess && !filterBarShown(list.data.groups.reduce((n, g) => n + g.count, 0), !!query || !!typed || !!item || shownGroup !== GROUPS[0])) && (
         <div className={styles.bar}>
           <SearchField id={`${ids}-search`} label={t("handled.search")} className={styles.search} value={typed} onChange={setTyped} />
           <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />

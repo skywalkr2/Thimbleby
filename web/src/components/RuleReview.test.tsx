@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { RuleReview } from "./RuleReview";
@@ -48,13 +50,13 @@ test("it lists the flagged rules with how often each was given, and the size aga
   open();
   expect(await screen.findByRole("heading", { level: 1, name: "Rules to look over" })).toBeInTheDocument();
   expect(await screen.findByText(/hasn't used them in 30 days/)).toBeInTheDocument();
-  expect(screen.getByText("Instructions sent with every task: 5200 of 6000 characters.")).toBeInTheDocument();
+  expect(screen.getByText("The rules read with every task take 5200 of 6000 characters.")).toBeInTheDocument();
   expect(screen.getByText("2 rules are now sent only for relevant tasks.")).toBeInTheDocument();
   const [first, second] = rows();
   expect(first).toHaveTextContent("Every question names its reader.");
-  expect(first).toHaveTextContent("Sent for 7 tasks, never used");
+  expect(first).toHaveTextContent("Offered with 7 tasks, never used");
   expect(first).toHaveTextContent("All projects");
-  expect(second).toHaveTextContent("Sent for 1 task, never used");
+  expect(second).toHaveTextContent("Offered with 1 task, never used");
   expect(second).toHaveTextContent("All projects except Second project");
 });
 
@@ -103,7 +105,7 @@ test("with nothing flagged it says so, and Back returns to Knowledge", async () 
   expect(await screen.findByText("Nothing to look over. Helper is using everything it was given.")).toBeInTheDocument();
   // With nothing to choose, there is no paragraph about the choices and no size line.
   expect(screen.queryByText(/hasn't used them in/)).toBeNull();
-  expect(screen.queryByText(/Instructions sent with every task/)).toBeNull();
+  expect(screen.queryByText(/The rules read with every task take/)).toBeNull();
   expect(screen.queryByText(/moved out of the part sent every time/)).toBeNull();
   await user.click(screen.getByRole("button", { name: "Back to Knowledge" }));
   expect(onBack).toHaveBeenCalled();
@@ -129,5 +131,18 @@ test("a rule that was given to no run counted shows no count of zero runs", asyn
 test("the size of what every task is sent is shown only when it is near its limit", async () => {
   open({}, { ...REVIEW, stable_chars: 3000, stable_budget: 6000, moved: 0 });
   expect(await screen.findByText(/hasn't used them in 30 days/)).toBeInTheDocument();
-  expect(screen.queryByText(/Instructions sent with every task/)).toBeNull();
+  expect(screen.queryByText(/The rules read with every task take/)).toBeNull();
+});
+
+test("a row carries no tag that says the same word on every row, and the intro names where the other choices are", async () => {
+  open();
+  await screen.findByRole("list", { name: "Rules to look over" });
+  const [first] = rows();
+  expect(within(first).queryByText("Rule")).toBeNull();
+  expect(screen.getByText(/open its menu to limit where it applies or stop using it/)).toBeInTheDocument();
+});
+
+test("the intro, the sizes and the rows share one reading width, so their right edges meet", () => {
+  const css = readFileSync(join(__dirname, "Knowledge.module.css"), "utf8");
+  expect(css).toMatch(/\.review \{ max-width: 56rem; \}/);
 });

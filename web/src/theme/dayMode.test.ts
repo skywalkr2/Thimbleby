@@ -172,7 +172,7 @@ test("one link colour, the same by day and by night, and underlined; a row's tit
   // A link on a line of its own in the rail follows the same rule; one in a sentence keeps its underline.
   const rail = read("components/Today.module.css");
   expect(rail).toMatch(/\.rail :is\(a, :global\(\.link-button\)\):not\(:global\(\[data-variant\]\)\) \{ text-decoration-line: none; \}/);
-  expect(rail).toMatch(/\.rail :is\(p, :global\(\.tb-title\)\) :is\(a, :global\(\.link-button\)\):not\(:global\(\[data-variant\]\)\) \{ text-decoration-line: underline; \}/);
+  expect(rail).toMatch(/\.rail p :is\(a, :global\(\.link-button\)\):not\(:global\(\[data-variant\]\)\) \{ text-decoration-line: underline; \}/);
 });
 
 test("the type scale: a paragraph is never under 13px, and the 12px size is for pills, key caps, captions and group headers", () => {

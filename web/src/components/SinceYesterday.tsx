@@ -10,9 +10,10 @@ import { useAct } from "../lib/act";
 import { day, dayAndTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
-import { Icon } from "../ui/Icon";
+import { Icon, type IconName } from "../ui/Icon";
+import { GroupLabel } from "../ui/GroupLabel";
 import { LoadFailed } from "../ui/LoadFailed";
-import { Row } from "../ui/Row";
+import { Row, RowItem } from "../ui/Row";
 import { StateMark } from "../ui/StateMark";
 import { Skeleton } from "../ui/Skeleton";
 import { filedWords, movesToPick, useMoveFiled } from "./Filed";
@@ -67,20 +68,32 @@ function asLine(words: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-type Drawn = { status: "loading" } | { status: "failed" } | { status: "ready"; asOf: string; entries: Entry[] };
+/** What each kind of act looks like in the row's slot, so the mark says what was done. */
+const ACT_ICON: Record<Entry["act"], IconName> = {
+  added: "plus",
+  closed: "check",
+  moved: "calendar",
+  merged: "layers",
+  dropped: "minus",
+  set_aside: "archive",
+  news: "inbox",
+};
+
+type Drawn = { status: "loading" } | { status: "failed" } | { status: "ready"; asOf: string; entries: Entry[]; rowsShown: number };
 
 export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string) => void; onBack: () => void }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   useReviewTime("since");
   const client = useQueryClient();
   const heading = useRef<HTMLHeadingElement>(null);
   const [drawn, setDrawn] = useState<Drawn>({ status: "loading" });
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
+  const [more, setMore] = useState<Record<string, number>>({});
   const load = useCallback(async () => {
     setDrawn({ status: "loading" });
     try {
       const body = await api.sinceYesterday();
-      setDrawn({ status: "ready", asOf: body.as_of, entries: body.entries });
+      setDrawn({ status: "ready", asOf: body.as_of, entries: body.entries, rowsShown: body.rows_shown ?? 25 });
       // Opening the list is what marks it seen, as it was drawn; a failure here only leaves Today's line where it was.
       if (body.entries.length > 0) {
         await api.sinceSeen(body.as_of).catch(() => undefined);
@@ -96,6 +109,16 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
   // A screen with no field puts the cursor on its heading.
   useEffect(() => heading.current?.focus(), []);
   const entries = drawn.status === "ready" ? drawn.entries.filter((e) => !gone.has(e.ref)) : [];
+  // The list is grouped by the day each thing was done, newest first; a day shows its first rows and the rest on "Show more".
+  const days: Array<{ key: string; label: string; entries: Entry[] }> = [];
+  for (const e of entries) {
+    const key = e.when.slice(0, 10);
+    const last = days[days.length - 1];
+    if (last?.key === key) last.entries.push(e);
+    else days.push({ key, label: day(e.when), entries: [e] });
+  }
+  const pageRows = drawn.status === "ready" ? drawn.rowsShown : 25;
+  const unseen = entries.filter((e) => !e.seen && CLOSES.has(e.act)).length;
   return (
     <section className="panel-section" aria-labelledby="since-title">
       <PageHeader
@@ -103,7 +126,18 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
         headingRef={heading}
         focusable
         title={t("since.title")}
-        subtitle={t("since.intro")}
+        subtitle={
+          <>
+            {t("since.intro")}
+            {entries.length > 0 && (
+              <>
+                {" "}
+                <strong data-since-count="">{tn("since.count", entries.length)}</strong>
+                {unseen > 0 && <> · {tn("since.count_unseen", unseen)}</>}
+              </>
+            )}
+          </>
+        }
         back={{ label: t("since.back"), onClick: props.onBack }}
       />
       {drawn.status === "loading" ? (
@@ -117,11 +151,30 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
           <MissedOneLine className="hint" />
         </EmptyState>
       ) : (
-        <RowList aria-label={t("since.list_label")}>
-          {entries.map((e) => (
-            <EntryRow key={e.ref} entry={e} onOpenRecord={props.onOpenRecord} onGone={() => setGone((g) => new Set([...g, e.ref]))} />
-          ))}
-        </RowList>
+        <div className="since-days" aria-label={t("since.list_label")} role="group">
+          {days.map((d) => {
+            const limit = pageRows + (more[d.key] ?? 0);
+            return (
+              <section key={d.key} data-since-day={d.key} aria-label={d.label}>
+                <GroupLabel as="h2" count={d.entries.length}>
+                  {d.label}
+                </GroupLabel>
+                <RowList>
+                  {d.entries.slice(0, limit).map((e) => (
+                    <EntryRow key={e.ref} entry={e} onOpenRecord={props.onOpenRecord} onGone={() => setGone((g) => new Set([...g, e.ref]))} />
+                  ))}
+                  {d.entries.length > limit && (
+                    <RowItem>
+                      <Button variant="quiet" onClick={() => setMore((now) => ({ ...now, [d.key]: (now[d.key] ?? 0) + pageRows }))}>
+                        {t("since.show_more", { n: Math.min(pageRows, d.entries.length - limit) })}
+                      </Button>
+                    </RowItem>
+                  )}
+                </RowList>
+              </section>
+            );
+          })}
+        </div>
       )}
     </section>
   );
@@ -194,7 +247,7 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
   return (
     <Row
       as="li"
-      lead={<Icon name="archive" size={18} />}
+      lead={<Icon name={ACT_ICON[e.act]} size={18} />}
       title={subject(e, t)}
       aria-label={text}
       metaLines={[

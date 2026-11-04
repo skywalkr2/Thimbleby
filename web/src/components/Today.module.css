@@ -11,10 +11,7 @@
    content area's left and right edges at every width. */
 @media (min-width: 1100px) {
   .rail { grid-template-columns: minmax(0, 1fr); }
-  /* The queue's card runs down to where the rail ends, so the two columns finish level. */
-  .today { align-items: stretch; }
-  .queue { display: flex; flex-direction: column; }
-  .queue > section { flex: 1 1 auto; }
+  /* Each column ends at its own last row: a card never stretches to the other column's height. */
   .inspector { align-self: start; }
 }
 @media (max-width: 1099.98px) {
@@ -84,8 +81,9 @@
    sentence keeps its underline. */
 .rail :is(a, :global(.link-button)):not(:global([data-variant])) { text-decoration-line: none; }
 .rail :is(a, :global(.link-button)):not(:global([data-variant])):is(:hover, :focus-visible) { text-decoration-line: underline; }
-.rail :is(p, :global(.tb-title)) :is(a, :global(.link-button)):not(:global([data-variant])) { text-decoration-line: underline; }
-/* The titles in the Came in card are ink, underlined: the burgundy is kept for the screen's one filled button and the accent text. */
+.rail p :is(a, :global(.link-button)):not(:global([data-variant])) { text-decoration-line: underline; }
+/* The titles in the rail's cards are plain bold ink, like every row's title, underlined only under the pointer or the keyboard: the
+   burgundy is kept for the screen's one filled button and the accent text. */
 .rail :global(.tb-title) a { color: var(--text); }
 
 /* A rail panel folded to one line on the phone, and the week's own pieces. */
@@ -114,6 +112,11 @@
 .mp + .mp::before { content: "·"; margin: 0 var(--space-2); color: var(--text-subtle); }
 .mp strong { color: var(--text); font-weight: var(--weight-semibold); }
 .mark { display: inline; }
+/* A line's meta that is several lines: each is a row of parts that wrap whole, spaced apart and never joined by a separator that a
+   wrap could leave at a line's end. */
+.metaLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); min-width: 0; }
+.metaLine > .mp { display: inline-block; max-width: 100%; }
+.metaLine > .mp + .mp::before { content: none; }
 .markName { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; vertical-align: bottom; }
 .markName + .markName { margin-inline-start: var(--space-2); }
 /* Each calendar's name is shortened on its own, so the second one is never the part that is cut off. */

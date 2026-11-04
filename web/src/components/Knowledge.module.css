@@ -1,4 +1,6 @@
 /* The Knowledge screen and the rules review: its parts, a list of rows, and the form that narrows what a row applies to. */
+/* The review's intro, sizes and rows share one reading width, so their right edges meet and a row's words stay near its button. */
+.review { max-width: 56rem; }
 .intro { margin: 0 0 var(--space-3); color: var(--text-muted); }
 .review { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .review p { margin: 0; min-width: 0; }

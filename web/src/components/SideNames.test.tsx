@@ -57,13 +57,13 @@ test("on a phone the side filter is one button that opens a sheet of choices, wi
   expect(screen.queryByRole("radio")).toBeNull();
 });
 
-test("elsewhere each side is a chip cut to a width, with its full name on hover and in its own words", async () => {
+test("wide, long names are in one button's sheet, whole and wrapping, never cut chips in a row", async () => {
+  const user = userEvent.setup();
   fakeApi(routes());
   renderApp(<SideFilter />);
-  const chip = await screen.findByRole("radio", { name: SIDES[0].name });
-  const label = within(chip).getByText(SIDES[0].name);
-  expect(label).toHaveAttribute("title", SIDES[0].name);
-  expect(label.className).toMatch(/label/);
+  expect(screen.queryByRole("radio", { name: SIDES[0].name })).toBeNull();
+  await user.click(await screen.findByRole("button", { name: "Side: All" }));
+  expect(await screen.findByRole("button", { name: SIDES[0].name })).toBeInTheDocument();
   expect(screen.queryByRole("combobox")).toBeNull();
 });
 

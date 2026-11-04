@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { SinceYesterday } from "./SinceYesterday";
@@ -78,7 +80,7 @@ const RULED = entry({
 const REPLIED = entry({ ref: "changeset:CS-4:0", act: "closed", title: "Tell the shop when the proofs ship", because: "replied", day: "2026-10-18", by_you: true, quote: "The proofs ship November 3.", changeset: "CS-4" });
 
 function view(entries: Entry[]): S["SinceYesterdayView"] {
-  return { as_of: "2026-10-19T16:00:00Z", since: "2026-10-18T07:00:00Z", unseen: entries.filter((e) => !e.seen).length, entries };
+  return { as_of: "2026-10-19T16:00:00Z", since: "2026-10-18T07:00:00Z", unseen: entries.filter((e) => !e.seen).length, entries, rows_shown: 25 };
 }
 
 function open(entries: Entry[], extra: Routes = {}) {
@@ -93,13 +95,13 @@ function open(entries: Entry[], extra: Routes = {}) {
   return { calls, onOpenRecord };
 }
 
-const rows = () => within(screen.getByRole("list", { name: "What changed since yesterday" })).getAllByRole("listitem");
+const rows = () => within(screen.getByRole("group", { name: "What changed since yesterday" })).getAllByRole("listitem");
 const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
 test("each row says the act and its reason in the assistant's voice, with the quote and who said it", async () => {
   open([CLOSED, MOVED, ADDED, REPLIED]);
   expect(await screen.findByRole("heading", { level: 1, name: "Since yesterday" })).toBeInTheDocument();
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   const [closed, moved, added, replied] = rows();
   expect(closed).toHaveTextContent("Closed “Send the floor plan”");
   expect(closed).toHaveTextContent("Ana Cole said “it went out this morning”");
@@ -115,13 +117,13 @@ test("each row says the act and its reason in the assistant's voice, with the qu
 
 test("every row has a glyph in its leading slot, as its loading rows do", async () => {
   open([CLOSED, MOVED]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   for (const row of rows()) expect(row.querySelector("[data-row-lead] svg")).not.toBeNull();
 });
 
 test("a date in a row's words reads as a day, never in its raw form", async () => {
   open([entry({ act: "added", title: "Send the revised budget by 2026-11-05.", quote: "I will send the revised budget", by_you: true })]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   const [added] = rows();
   expect(added).toHaveTextContent(/Added “Send the revised budget by .*5\.”/);
   expect(added.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
@@ -129,7 +131,7 @@ test("a date in a row's words reads as a day, never in its raw form", async () =
 
 test("a close the person has not seen says so in words, and what was seen or isn't a close does not", async () => {
   open([CLOSED, MOVED, ADDED, SORTED]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   const [closed, moved, added, sorted] = rows();
   expect(closed).toHaveTextContent("Closed since you last looked");
   expect(sorted).toHaveTextContent("Closed since you last looked");
@@ -139,7 +141,7 @@ test("a close the person has not seen says so in words, and what was seen or isn
 
 test("rules and sorting say which kind of rule did it and why", async () => {
   open([RULED, SORTED]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   const [ruled, sorted] = rows();
   expect(ruled).toHaveTextContent("Closed “Plan”");
   expect(ruled).toHaveTextContent("A rule closed it (only spacing changed)");
@@ -150,7 +152,7 @@ test("rules and sorting say which kind of rule did it and why", async () => {
 test("Undo is the row's one button and Open is in its menu", async () => {
   const user = userEvent.setup();
   const { onOpenRecord } = open([CLOSED]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   const [row] = rows();
   const buttons = within(row).getAllByRole("button");
   expect(buttons.map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual(["Undo: Send the floor plan", "More actions for Send the floor plan"]);
@@ -162,7 +164,7 @@ test("Undo is the row's one button and Open is in its menu", async () => {
 test("a row with nothing to undo keeps Open as its one button", async () => {
   const user = userEvent.setup();
   const { onOpenRecord } = open([entry({ undo: null, changeset: null, op: null })]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: "Open: Send the floor plan" }));
   expect(onOpenRecord).toHaveBeenCalledWith("action", "ACT-1");
 });
@@ -170,7 +172,7 @@ test("a row with nothing to undo keeps Open as its one button", async () => {
 test("Undo undoes that one op, says so, and the row leaves the list", async () => {
   const user = userEvent.setup();
   const { calls } = open([CLOSED, ADDED], { "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: "Undo: Send the floor plan" }));
   await waitFor(() => expect(body(calls, "POST changesets/CS-1/undo")).toEqual({ ops: [0] }));
   expect(await screen.findByText("Undone: Send the floor plan.")).toBeInTheDocument();
@@ -181,7 +183,7 @@ test("Undo undoes that one op, says so, and the row leaves the list", async () =
 test("an undo that was skipped because the record changed says so and keeps the row", async () => {
   const user = userEvent.setup();
   open([CLOSED], { "POST changesets/CS-1/undo": () => ({ restored: [], skipped: [{ ops: [0], reason: "changed" }] }) });
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: "Undo: Send the floor plan" }));
   expect(await screen.findByText("Couldn't undo this because it has changed since.")).toBeInTheDocument();
   expect(rows()).toHaveLength(1);
@@ -193,7 +195,7 @@ test("a rule's close offers a closer look and set-aside mail offers This is work
     "POST requests/REQ-1/closer-look": () => ({ id: "REQ-1" }),
     "POST set-aside/SNAP-1/work": () => ({ id: "SNAP-1", version: 5, section: "sales", address: null, domain: null }),
   });
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: "Take a closer look: Plan" }));
   await waitFor(() => expect(body(calls, "POST requests/REQ-1/closer-look")).toEqual({ read_version: 2 }));
   await user.click(within(rows()[0]).getByRole("button", { name: "This is work: Autumn sale" }));
@@ -202,7 +204,7 @@ test("a rule's close offers a closer look and set-aside mail offers This is work
 
 test("opening the list marks it seen as it was drawn", async () => {
   const { calls } = open([CLOSED]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await waitFor(() => expect(body(calls, "POST since-yesterday/seen")).toEqual({ until: "2026-10-19T16:00:00Z" }));
 });
 
@@ -245,7 +247,7 @@ const ADDED_BY_WORDS = entry({ ref: "changeset:CS-9:0", act: "added", title: "Or
 test("an item filed by words says why on its row, and Move to the other side is in the menu", async () => {
   const user = userEvent.setup();
   open([ADDED_BY_WORDS, ADDED]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   const [filed, plain] = rows();
   expect(filed).toHaveTextContent("Filed under Business: it names Salt Orchard");
   expect(plain).not.toHaveTextContent("Filed under");
@@ -257,7 +259,7 @@ test("an item filed by words says why on its row, and Move to the other side is 
 
 test("a sender's domain that filed an item is said as where it is from", async () => {
   open([entry({ ...ADDED_BY_WORDS, filed: { ...FILED, by: "domain", word: "example.com" } })]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   expect(rows()[0]).toHaveTextContent("Filed under Business: it's from example.com");
 });
 
@@ -266,7 +268,7 @@ test("an item filed on a side reads as in the side and in no project", async () 
     entry({ ...ADDED_BY_WORDS, filed: { ...FILED, side_name: "Business" } }),
     entry({ ...ADDED_BY_WORDS, ref: "changeset:CS-9:1", filed: { ...FILED, by: "domain", word: "example.com", side_name: "Business" } }),
   ]);
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   expect(rows()[0]).toHaveTextContent("Filed in Business, not in a project: it names Salt Orchard");
   expect(rows()[1]).toHaveTextContent("Filed in Business, not in a project: it's from example.com");
 });
@@ -279,7 +281,7 @@ test("Move edits the item's project as the person, says so with Undo, and the ro
     // Personal is the other side, so moving there says only where it went.
     "GET setup/business": () => ({ business: true, name: "Business", personal: "PRJ-2", sides: [{ project: "PRJ-1", kind: "business", name: "Business", removable: false, filed: 0 }], chosen: "work" }),
   });
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Move to Personal" }));
   await waitFor(() => expect(body(calls, "POST records/edit")).toEqual({ kind: "action", id: "ACT-9", fields: { project: "PRJ-2" }, read_version: 3 }));
@@ -304,7 +306,7 @@ test("with several other sides the row's menu has Move to… over a list of them
     "POST records/edit": () => ({ changeset: "CS-21" }),
     "POST changesets/CS-21/undo": () => ({ restored: ["ACT-9"], skipped: [] }),
   });
-  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await screen.findByRole("group", { name: "What changed since yesterday" });
   await user.click(within(rows()[0]).getByRole("button", { name: /More actions for/ }));
   // No "Move to Personal" or "Move to Lantern Works": one titled list holds them.
   expect(screen.queryByRole("menuitem", { name: /^Move to / })).toBeNull();
@@ -313,4 +315,38 @@ test("with several other sides the row's menu has Move to… over a list of them
   await user.click(screen.getByRole("menuitem", { name: "Lantern Works" }));
   await waitFor(() => expect(body(calls, "POST records/edit")).toEqual({ kind: "action", id: "ACT-9", fields: { project: "PRJ-3" }, read_version: 3 }));
   expect(await screen.findByText("Moved 1 item to Lantern Works. It is now visible with Lantern Works's work.")).toBeInTheDocument();
+});
+
+const listBody = (entries: Entry[], rows_shown = 25) => ({ as_of: "2026-10-19T07:00:00Z", since: "2026-10-17T00:00:00Z", unseen: 0, rows_shown, entries });
+
+test("the list says how many changes and how many closes are unseen, and is grouped by the day each was done", async () => {
+  const one = entry({ ref: "a", act: "added", seen: true });
+  const two = entry({ ref: "b", when: "2026-10-17T19:00:00Z", seen: false });
+  fakeApi({ "GET since-yesterday": () => listBody([one, two]) });
+  renderApp(<SinceYesterday onOpenRecord={vi.fn()} onBack={vi.fn()} />);
+  await screen.findByRole("group", { name: "What changed since yesterday" });
+  expect(screen.getByText("2 changes")).toBeInTheDocument();
+  expect(screen.getByText(/1 closed since you last looked/)).toBeInTheDocument();
+  expect(document.querySelectorAll("[data-since-day]")).toHaveLength(2);
+});
+
+test("a day shows its first rows and Show more adds the next page", async () => {
+  const many = Array.from({ length: 7 }, (_, n) => entry({ ref: `r${n}`, seen: true }));
+  fakeApi({ "GET since-yesterday": () => listBody(many, 5) });
+  renderApp(<SinceYesterday onOpenRecord={vi.fn()} onBack={vi.fn()} />);
+  await screen.findByRole("group", { name: "What changed since yesterday" });
+  expect(document.querySelectorAll("[data-since-entry]")).toHaveLength(5);
+  await userEvent.click(screen.getByRole("button", { name: "Show 2 more" }));
+  expect(document.querySelectorAll("[data-since-entry]")).toHaveLength(7);
+});
+
+test("each kind of act has its own glyph, and the days keep a reading width", async () => {
+  const kinds = (["added", "closed", "moved", "set_aside"] as const).map((act, n) => entry({ ref: `k${n}`, act, seen: true }));
+  fakeApi({ "GET since-yesterday": () => listBody(kinds) });
+  renderApp(<SinceYesterday onOpenRecord={vi.fn()} onBack={vi.fn()} />);
+  await screen.findByRole("group", { name: "What changed since yesterday" });
+  const glyphs = Array.from(document.querySelectorAll("[data-since-entry] [data-row-lead] svg")).map((svg) => svg.innerHTML);
+  expect(new Set(glyphs).size).toBe(4);
+  const css = readFileSync(join(__dirname, "..", "styles.css"), "utf8");
+  expect(css).toMatch(/\.since-days \{[^}]*max-width: 56rem/);
 });

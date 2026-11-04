@@ -2,6 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import en from "../wording/en.json";
 import { Handled } from "./Handled";
@@ -383,6 +385,10 @@ test("a list that can't be loaded says so and tries again", async () => {
     },
   });
   expect(await screen.findByText(/The list couldn't be loaded/)).toBeInTheDocument();
+  // A list that isn't there has nothing to search or group: the controls, and the tabs' counts, wait for it.
+  expect(screen.queryByRole("searchbox")).toBeNull();
+  expect(screen.queryByRole("radio", { name: "Reason" })).toBeNull();
+  expect(screen.queryByText("…")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("button", { name: "Sales, promotions and social updates · 2" })).toBeInTheDocument();
 });
@@ -458,7 +464,7 @@ test("Closed without you seeing sits under the Read tab, not under Set aside, wi
   expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).not.toBeInTheDocument();
 });
 
-test("closes counted but made by rules say so and never claim everything closed was made or seen (X30)", async () => {
+test("closes counted but made by rules leave one empty state on the tab and claim nothing about what was seen (X30)", async () => {
   const user = userEvent.setup();
   open({
     "GET silent-closes": () => ({
@@ -469,10 +475,10 @@ test("closes counted but made by rules say so and never claim everything closed 
     }),
   });
   await user.click(await screen.findByRole("button", { name: /^Read \d/ }));
-  const section = (await screen.findByRole("heading", { name: "Closed without you seeing" })).closest("section") as HTMLElement;
-  expect(within(section).getByText("2 of 2 closed without you seeing them")).toBeInTheDocument();
-  expect(within(section).queryByText("Everything that was closed, you made or saw.")).toBeNull();
-  expect(within(section).getByText(/Nothing here was closed by the assistant itself/)).toBeInTheDocument();
+  // Two empty states on one tab would contradict each other: with nothing of the assistant's own to list, the section is not there.
+  await waitFor(() => expect(screen.queryByRole("heading", { name: "Closed without you seeing" })).toBeNull());
+  expect(screen.queryByText(/Nothing here was closed by the assistant itself/)).toBeNull();
+  expect(screen.queryByText("Everything that was closed, you made or saw.")).toBeNull();
 });
 
 test("one close that was not seen reads 1 of 3 closed without you seeing it, and none reads that everything was seen", async () => {
@@ -652,4 +658,9 @@ test("Take a closer look while Today waits for Start says it waits until the per
   await user.click(within(files).getByRole("button", { name: "Take a closer look at Plan a" }));
   expect(await screen.findByText("Handed in. It waits until you choose Start on Today.")).toBeInTheDocument();
   expect(screen.queryByText(/is on it/)).toBeNull();
+});
+
+test("the rows keep a reading width, so a row's words and its action stay close on a wide window", () => {
+  const css = readFileSync(join(__dirname, "Handled.module.css"), "utf8");
+  expect(css).toMatch(/\.groups \{[^}]*max-width: 56rem/);
 });

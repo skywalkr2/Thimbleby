@@ -43,6 +43,7 @@ import { useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
 import { FilteredEmpty } from "../ui/FilteredEmpty";
 import { ListState } from "../ui/ListState";
+import { Icon, type IconName } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Pill, type PillTone } from "../ui/Pill";
 import { StateMark, toneOfPill, withStatus } from "../ui/StateMark";
@@ -236,13 +237,12 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
         {announce}
       </p>
       {((waitingOnToday !== null && waitingOnToday > 0) || handledCount > 0) && (
-        <p className="hint" data-changes-summary="">
+        <p className="hint summary" data-changes-summary="">
           {waitingOnToday !== null && waitingOnToday > 0 && (
             <span data-waiting-on-today="">
-              {tn("changes.waiting_on_today", waitingOnToday)} · <ButtonLink variant="quiet" size="sm" href={viewHref("today")}>{t("changes.open_today")}</ButtonLink>
+              {tn("changes.waiting_on_today", waitingOnToday)} <ButtonLink variant="quiet" size="sm" href={viewHref("today")}>{t("changes.open_today")}</ButtonLink>
             </span>
           )}
-          {waitingOnToday !== null && waitingOnToday > 0 && handledCount > 0 && " · "}
           {handledCount > 0 && (
             <span data-handled-count="">
               <ButtonLink variant="quiet" size="sm" href={viewHref("work/handled")}>{t("changes.handled", { n: handledCount })}</ButtonLink>
@@ -530,6 +530,35 @@ function historyMenu(primary: { label: string; run: () => void } | null, menu: M
   return primary ? [{ id: "first-choice", label: primary.label, run: primary.run }, ...menu] : menu;
 }
 
+/** A change that waits for the person is decided on Today: the pane links to its line there, or to Today when the line is not found. */
+function OnTodayLink(props: { item: S["ChangeItem"] }) {
+  const { t } = useWords();
+  const queue = useQueue();
+  const line = (queue.data ?? []).find((l) => !!props.item.changeset && l.changeset === props.item.changeset.id);
+  return (
+    <p className="hint" data-on-today="">
+      {line ? <AnswerOnToday line={line.key} /> : <ButtonLink size="sm" href={viewHref("today")}>{t("changes.decide_on_today")}</ButtonLink>}
+    </p>
+  );
+}
+
+/** The glyph in a row's leading slot for what the change came from, so an email and a calendar entry are not the same row. */
+function kindIcon(kind: NonNullable<S["ChangeItem"]["title"]>["kind"] | undefined): IconName | null {
+  switch (kind) {
+    case "email":
+      return "inbox";
+    case "calendar":
+      return "calendar";
+    case "note":
+    case "pasted":
+      return "book";
+    case "answer":
+      return "chat";
+    default:
+      return null;
+  }
+}
+
 /** What a change's list row says under its title: the estimate while it waits for the go, else what was done. */
 function useChangeSub(item: S["ChangeItem"]): string {
   const { t, tn } = useWords();
@@ -634,6 +663,9 @@ function SingleChangeListRow(props: ChangeListRowProps) {
     startChoosing: () => props.onWant("choose"),
   });
   const sub = useChangeSub(item);
+  // A title written "Kind from Sender · Subject" leads with what is distinct, the subject; the kind and the sender go to the meta.
+  const { subject, lead } = leadWithSubject(title, withTopicJoin(t));
+  const subLine = lead ? `${lead} · ${sub}` : sub;
   useEffect(() => {
     if (props.reveal) showRow(ref.current);
   }, [props.reveal]);
@@ -647,16 +679,17 @@ function SingleChangeListRow(props: ChangeListRowProps) {
       aria-labelledby={`t-${item.id}`}
       data-changeset={cs?.id}
       {...choice.rowProps(item.id)}
-      title={title}
+      lead={kindIcon(item.title?.kind) ? <Icon name={kindIcon(item.title?.kind)!} size={18} /> : undefined}
+      title={subject}
       titleId={`t-${item.id}`}
       meta={withStatus(
         statusOf(item, gated, t),
         props.count > 1 ? (
           <>
-            <strong>×{props.count}</strong> · {sub}
+            <strong>×{props.count}</strong> · {subLine}
           </>
         ) : (
-          sub
+          subLine
         ),
       )}
       expand={{ expanded: choice.chosen === item.id, inert: choice.chosen === item.id, onToggle: () => choice.choose(item.id) }}
@@ -670,6 +703,19 @@ function SingleChangeListRow(props: ChangeListRowProps) {
       <OnTheRow item={item} />
     </ExpandableRow>
   );
+}
+
+/** What the wording puts between a title's head and its topic ("Email from Pat · Question"). */
+function withTopicJoin(t: T): string {
+  const filled = t("queue.title.with_topic", { head: "\u0000", topic: "\u0001" });
+  return filled.slice(filled.indexOf("\u0000") + 1, filled.indexOf("\u0001"));
+}
+
+/** A title written "Head · Topic" split into its topic and its head; a title with no topic is all subject. */
+export function leadWithSubject(title: string, join: string): { subject: string; lead: string | null } {
+  const at = join ? title.indexOf(join) : -1;
+  if (at <= 0 || at + join.length >= title.length) return { subject: title, lead: null };
+  return { subject: title.slice(at + join.length), lead: title.slice(0, at) };
 }
 
 /** What the list row keeps in view without the change being chosen: what is being learned from it, and the drafts and files
@@ -812,6 +858,7 @@ export function ChangeRow(props: {
           actions={actions}
         />
         {secondOpinion && <p className="hint">{secondOpinion}</p>}
+        {item.state === "needs_you" && !gated && !item.dismissed && <OnTodayLink item={item} />}
         {open && <RowBody pane id={`b-${item.id}`}>{opened}</RowBody>}
       </DetailItem>
     );

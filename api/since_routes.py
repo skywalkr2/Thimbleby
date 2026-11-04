@@ -29,6 +29,7 @@ def build_since_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             as_of=plan.until,
             since=plan.since,
             unseen=len(plan.unseen),
+            rows_shown=cfg.ui.since_rows_shown,
             entries=[
                 SinceEntryView(
                     **{k: v for k, v in vars(e).items() if k != "record"},

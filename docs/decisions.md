@@ -16,6 +16,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Impact:** `web/src/ui/`, `web/src/shell/`, `web/src/styles.css`, `web/src/theme/tokens.css`, `web/src/wording/en.json`. Change log: section 339.
 
+## 2026-11-04: Today up to its mockup, What changed, Since yesterday, Handled for you, Stages, Rules to look over, Search and an event's page, batch G2c of the fix round
+
+**Decided:** (the gate's fix round, batch G2c; design by the main session, within D3, D7 and D9; no owner choice needed.)
+- **Today's work comes first:** the setup line moves under the queue and the rail (one dismissible line, never a second row of controls above the one decision). The queue's card and the rail each end at their own last row; neither stretches to the other's height (the mockup's card ends at its last row; the earlier "finish level" rule is dropped).
+- **A clash is two meta lines:** the day and how long, then the calendars, each part whole. From three clashes at risk the first stays a row and the rest fold under "Show N more clashes" (folding one would save no room, so the number three is structure, not a preference).
+- **A failure is said once on Today:** a rail card that couldn't load is one line, and offline it has no button of its own (the offline bar holds the one Try now).
+- **The side choice is one button and its sheet** whenever there are more than five choices or a name is longer than 22 characters, at every width; a few short names stay a strip. A side with nothing on it says so, how many things wait on the other sides, and offers "Show all sides".
+- **A clash's Clash flag** is drawn in the Schedule card for a connected calendar's meeting too, found by its page.
+- **An event's page** (opened from a clash) shows the clash it came from: both meetings, Open for each, and the ways out; the kind of page is said in its line under the title, not as a tag.
+- **What changed:** a row leads with its subject; the kind and the sender go first in its meta; the summary line's parts wrap whole; a change that waits for the person links from its pane to the line that decides it on Today.
+- **Since yesterday:** grouped by the day each thing was done, a count line ("3 changes · 1 closed since you last looked"), each day showing its first rows (`ui.since_rows_shown`, 25, 5 to 500, advanced, applies at once) and "Show N more"; a glyph for each kind of act; a reading width.
+- **Handled for you:** the search and grouping controls wait for the list to load; the Read tab has one empty state, and "Closed without you seeing" appears only when the assistant itself closed something; a reading width.
+- **Stages:** the empty state is one short line with "Find an add-on for it".
+- **Rules to look over:** no tag that says the same word on every row; the intro says where Keep, Limit and Stop using are; "Offered with 14 tasks, never used"; one reading width.
+- **Search:** results are grouped by what they are (People, Projects, To-dos, ...) with a count, a long title keeps to two lines, the results scroll and the question to ask and its note stay in reach.
+- **Capture:** Stages "With items" now loads the screen afresh with the made-up answer; the Today review picture is the "Look over" line; a clash opened, the failed save, the merge, one account needing the person, a hundred items, Handled's two empty states and the status popover's two states are captured.
+
+**Not changed:** the header (search box, status chip), the sidebar (counts, "Your sides", tiles), the offline bar's words, the inline empty state's button placement, the Row's action column across rows, the status popover's anchor: shared parts and the shell, G1d's.
+
+**Why:** the cold scorers named these on each screen. **Impact:** `web/src/components/` (Today, TodayQueue, RailPanel, ScheduleCard, SideFilter, WhatChanged, SinceYesterday, Handled, HandledClosed, Stages, RuleReview, SearchBox, ConnectedEventPage), `engine/config/schema.py` and `levels.py` (`ui.since_rows_shown`), `api/since_routes.py` and `api/schemas.py` (`rows_shown`), both demo workspaces' `ui.yaml`, design 4 and 7.7, the wording sheet, `web/visual/`, `web/e2e/` (a side-pick helper). Change log: section 340.
+
 ## 2026-11-04: Settings, part two (Your business, Connections, Add a connection, Lists, Files, Add-ons and an add-on's page), batch G5b of the fix round
 
 **Decided:** (the gate's fix round, batch G5b; design by the main session, within D1, D7 and D10; no owner choice needed.)

@@ -4,14 +4,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
 import { day, wallTime } from "../lib/dates";
+import { useQueue } from "../lib/today";
 import { useWords } from "../lib/wording";
+import { ClashDetail } from "./ClashDetail";
 import { Skeleton } from "../ui/Skeleton";
 import { Attendees } from "./Attendees";
 import { domainOf } from "./SafeText";
 import { ButtonLink } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
-import { Pill } from "../ui/Pill";
 import { DefinitionList, Definition } from "../ui/DefinitionList";
 type T = ReturnType<typeof useWords>["t"];
 
@@ -43,6 +44,9 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
   const found = useQuery({ queryKey: ["schedule-event", snapshot, start ?? ""], queryFn: () => api.scheduleEvent(snapshot, start), retry: false });
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const event = found.data;
+  // A clash line of Today that names this event: what it clashes with is shown here, so the page opened from it has something to decide on.
+  const queue = useQueue();
+  const clash = (queue.data ?? []).find((l) => l.kind === "clash" && (l.event_page === props.id || l.other_event_page === props.id));
   const calendar = event ? ((watch.data ?? []).find((s) => s.id === event.source)?.label ?? t("schedule.event.calendar_unknown")) : "";
   const rows: Array<{ name: string; label: string; value: string }> = event
     ? [
@@ -58,8 +62,13 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
       <PageHeader
         id="record-title"
         title={event?.title ?? t("schedule.event.kind")}
-        kind={<Pill tone="neutral">{t("schedule.event.kind")}</Pill>}
-        subtitle={event ? t("schedule.event.note") : undefined}
+        subtitle={
+          event ? (
+            <>
+              <span>{t("schedule.event.kind")}</span> · <span>{t("schedule.event.note")}</span>
+            </>
+          ) : undefined
+        }
         back={{ label: t("record.back"), onClick: props.onBack }}
         primary={
           event?.link && domainOf(event.link) ? (
@@ -89,6 +98,14 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
               ))}
             </DefinitionList>
           </section>
+          {clash && (
+            <section aria-labelledby="record-clash" data-event-clash="">
+              <div className="heading">
+                <h2 id="record-clash">{t("schedule.event.clash")}</h2>
+              </div>
+              <ClashDetail line={clash} />
+            </section>
+          )}
           <Attendees fields={{ organizer: event.organizer, attendees: event.attendees, invitation: false }} names={new Map()} />
         </div>
       )}

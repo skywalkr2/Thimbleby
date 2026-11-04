@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 340. Today up to its mockup, What changed, Since yesterday, Handled for you, Stages, Rules to look over, Search and an event's page (2026-11-04; gate fix batch G2c)
+
+| Where | Before | Now |
+|---|---|---|
+| Today (7.7) | The setup line sat above the work; the queue's card stretched to the rail's height; a clash's meta ran on several lines with stranded separators; seven clashes were seven rows; three retry buttons for one failure | The setup line is under the work; each column ends at its own last row; a clash is two meta lines; from three clashes the first is a row and the rest fold under "Show N more clashes"; a rail card that couldn't load is one line with no button while offline. Built: `Today.test.tsx` ("the setup line is under the work", "a clash's meta is two lines", "with three or more clashes"), `RailFailed.test.tsx` |
+| Side choice (6.32, 7.8) | A strip of cut chips for any number of sides | One button and its sheet for more than five choices or a name over 22 characters, at every width; "Show all sides" and the count of the other sides when a side has nothing. Built: `SideFilterSheet.test.tsx`, `SideNames.test.tsx`, `SideFilter.test.tsx` |
+| Schedule card (7.7) | Clash shown only for entries the app keeps | Also for a connected calendar's meeting, by its page. Built: `TodayRail.test.tsx` |
+| An event's page (7.7) | Read-only details and a square "Calendar event" tag | The clash it was opened from (both meetings, Open for each); the kind in the line under the title. Built: `ConnectedEventPage.test.tsx` |
+| What changed (7.13) | "Email from Sam · Subject" led every row; a waiting change's pane had no way to act | The subject leads, the kind and sender begin the meta; the pane links to the deciding line on Today; the summary line wraps by part. Built: `WhatChanged.test.tsx` |
+| Since yesterday (6.32) | One unbroken list with one icon | Days with counts, a count line, "Show N more" (`ui.since_rows_shown`, 25), a glyph for each act. Built: `SinceYesterday.test.tsx`, `tests/test_since_yesterday.py` |
+| Handled for you (7.20) | Controls drawn while loading; two empty states on the Read tab | Controls wait for the list; one empty state; a reading width. Built: `Handled.test.tsx` |
+| Stages (6.26), Rules to look over (7.18), Search (7.12) | A four-line empty state; a "Rule" tag on every row; a flat list of results cut mid-line | A short empty state; no tag and a clearer intro and meta; grouped results that scroll above a pinned Ask row. Built: `Stages.test.tsx`, `RuleReview.test.tsx`, `SearchBox.test.tsx` |
+
 ## 339. The shared parts, second pass: what the screen batches handed back (2026-11-04; gate fix batch G1d)
 
 Batch G1d of the gate's fix round (7.12, 7.14). Every change is in `web/src/ui/`, the shell or the shared style sheet, so every screen that uses the part moves together; the design text is the "shared parts again" entry of 7.12.
