@@ -10,427 +10,6 @@ Those are unchanged. What changed falls into three groups: the design was **prod
 work plug into, deployable locally or hosted), **lessons from the running deployment** were added, and a **systems review**
 changed the storage, identity and safety models underneath.
 
-## 337. Three choices in the gate's fix round (2026-11-04; owner)
-
-| Where | Before | Now |
-|---|---|---|
-| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls (D11); batch G4c |
-| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet line (D12); batch G4c |
-| A person's page (7.13) | "Draft a message", "Files from" and two tabs not made yet | To be made in batch G4c (D13) |
-
-- **No config key, API or op change in this section;** G4c records its own.
-
-## 336. Settings, part one: the frame, rows, You, AI and spending, Notices, Backups, Appearance, Quick links, Sign out, Advanced (2026-11-04; gate fix batch G5a)
-
-Batch G5a of the gate's fix round (7.9, 7.12, 6.16). The frame's intro is one muted line and the save line is at the page's foot; "Changed" is a dot and a word with an outline Reset and the default in its tooltip; help is one sentence; an amount is a short box; a disabled box keeps its edge; an ask-before amount above a run's limit is noted. You sets the accounts the assistant can act on off by a rule and stacks them on a phone. AI and spending shows no account as a warning row and holds its fields while offline; the empty compare page offers Add an account and a sub-page hides the phone's section row. Notices puts where reminders reach you on the rows' column, folds an unusable choice to one line and gives a blocked computer a status and Check again. Backups is blocks under rules with left-aligned buttons, a folder shown by its name and one empty pattern; a kept key hides Save and Make one for me. Quick links has an empty line, middle-cut addresses and a left-aligned form. Sign out starts on Keep signed in. Advanced counts each topic's settings. Help on a touch screen lists no shortcuts; Handover with no folder speaks only of this computer.
-
-## 334. The shared parts at the gate: drawer, header status, offline bar, segmented control, Filter sheet, empty state, table skeleton (2026-11-04)
-
-Batch G1b of the gate's fix round (7.12, 7.13). The drawer is full height; the header's status has no fill and Hand something in is the outline weight; the offline state is one slim line with the status saying "Offline" and a failed card without a second retry; the segmented control is an outlined track with a filled choice; calendar chips become "Calendars (n)" when they do not fit; one Filter sheet holds a screen's filters on a phone; the empty state is a left-aligned card with a display-face title; tables, grids and the schedule's subtitle keep their shape while they load; the side menu and search words stay as last known until the sides are read; an entry's pane is level with it and points at it.
-
-## 333. Follow-ups, To-dos, Questions and the drawers (2026-11-04; gate fix batch G2b)
-
-| Where | Before | Now |
-|---|---|---|
-| Follow-ups lines (7.5) | A Copy button on every line and a fourth in the detail | A line opens the detail, which holds the one Copy; Today's compact list keeps its line Copy |
-| Message or table (7.5) | A Message / Table switch on each card | "Show as a table" / "Show as a message" in the person's menu |
-| Own to-dos, empty state, message style (7.5) | A card shaped like a row; a four-line empty paragraph; a disclosure far below | One plain line; one line and a link to People; a "Message style" drawer from the header |
-| A message (7.5) | Every item listed, a resizable box | The first six and "Show N more", a box sized to its text |
-| To-dos and Questions (7.5; 4 `ui.open_rows_shown`) | A header Add button; the line under the title counted both tabs; every row of a group; "To-dos and questions" in the sidebar | No header button, More options on the add row; the line follows the tab; the first 15 of a group and "Show N more"; "To-dos" in the sidebar |
-| Add and edit a to-do (7.5) | Six fields shown equally; Repeats a box to type in; the edit form inline | What and Due first, the rest under More options; Repeats a list; the edit form a drawer |
-| Hand in, Feedback, Ask (7) | Five questions before the one action; checkboxes, subject and preview on the first view; two help paragraphs | Text and Choose a file, then Options; the box first, then "What will be sent"; one help line; the reason a primary waits beside it |
-| A to-do's page (7.5) | The facts split in two columns; the words repeated under the title; "Promised to: No one in particular" | One card; the words only when they differ from the title; the person's own to-do says nothing of it |
-| Outside these screens | Files showed a kind chip on every row; a person's Activity heading twice; "Nothing filled in yet"; "End them with it"; "From your notes" | The chip only with several kinds; the heading for a screen reader; the line gone; "Remove them too"; "Added by you" |
-
-## 331. Projects, a project's page, Files, Knowledge, Notes, Handover, Quality, Handled by account and the menus (2026-11-04; gate fix batch G4b)
-
-Batch G4b of the gate's fix round (7.12, 7.20, 5.0, 6.20). Project names are ink, Views is one quiet line until a first view exists, a project's page has Add a to-do as its one primary action and no empty details card; Files and Knowledge open on a drop zone or an add row; Handover shows In sync, when it was last looked over and Check now (`last_checked`, `folder_set`, `POST /api/sync/check`); Quality's too-early card leads with the answer at 18px, names the assistant, and two tiles carry a next step (promises found and false alerts; the other two have nothing to do) the week still under way ends today and reads "to now" (`week_end`), the measures with nothing in them are one count with Show them; Handled for you can group by account; the shortcuts list is three labeled groups, the More sheet is grouped with Help last and offers no shortcuts item. Built: `tests/test_handover_screen.py`, `tests/test_quality.py`, `tests/test_handled.py`, `web/src/components/Handover.test.tsx`, `Quality.test.tsx`, `Handled.test.tsx`, `Views.test.tsx`, `RecordPageRecords.test.tsx`, `ScheduleReview.test.tsx`, `web/src/shell/BottomBar.test.tsx`.
-
-## 330. People, a person's page, the person form and Organizations at the gate (2026-11-04; gate fix batch G4a)
-
-| Where | Before | Now |
-|---|---|---|
-| People (7.13) | Two tables with filter rows above them, mostly empty cells, labels over values on a phone | One list of rows (initials, name, one meta line, menu); the title says "4 people, 6 organizations"; the side and Organization filters only from twelve people, on one row |
-| Organizations (7.13) | A second table with its own outline button | Rows with one meta line, a quiet add button, "Removed organization X", one load-failed card for its own part |
-| Person form (7.14) | Eleven fields of equal weight; Save blocked for a person whose record names no side; hints in brackets | Name, where they belong (one panel), how to reach; the rest under More details (open when the record holds any); a person with no known side opens ready to save and is saved without touching sides |
-| A person's page (7.14) | "Add a to-do for Pat", "Open with Pat", a Person tag, the role twice, an empty-state card with a second button, tabs inside the left column | "Add a to-do", "Open items", no tag, the role once, who they are once, one muted line when nothing is open, tabs across both columns, a contact line on a phone, the ask box's help as a tooltip |
-| A missing person | Its own card with a warning icon and no crumb | A crumb, "Not here", one line, one filled Back to People; People stays marked |
-| An organization's page | Activity first, the note in a card | The note and "N people · N open items" under the title; a People section; no card when it has nothing to list |
-
-## 329. Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review (2026-11-04; gate fix batch G2a)
-
-| Where | Before | Now |
-|---|---|---|
-| Held for a restart (6.14, 4.22) | "Settings or code changed since the cockpit started; restart it to use them." shown as an item's body | "Settings changed since the app started; restart it to use them."; an older request is held for the same reason |
-| First go (6.32) | A go was asked for with no AI account | No go line until an account is set up |
-| Row status (7.14) | A chip after the title, in three styles | A dot and a word at the start of the meta line |
-| What changed (7.13) | One flat list, a chip and the same hand-in line on every row | Needs you, With the assistant, then days; runs with "x N"; a button for the rest of a group |
-| Since yesterday (7.13) | The reason in the title, Undo hidden in the menu | The subject as the title, the reason as meta, Undo as the row's action, a back link |
-| Handled for you (7.13) | A pill toggle, two help paragraphs | Tabs with counts, one subtitle, the reason in bold |
-| Search (7.12) | Plain rows, a note outside the panel | One panel, glyph and tag per result, a rule above Ask, the note inside, a scrim on a phone |
-| Stages, rules review, event page | A four-line empty paragraph; a size line always; details in a far column | One line and a link; the size line near the limit; one column with Open in your calendar |
-
-## 328. The Schedule at the gate: the grid in its own frame, titles on the Timeline, a mark on a clash day (2026-11-03; batch g3)
-
-| Where | Before | Now |
-|---|---|---|
-| Day, Work week and Week grids (7.7) | The page held twenty-four hours; the clash or the first entry could sit a thousand pixels down | The hours scroll inside a labelled frame that fits the window, with the day headings fixed on top; it opens on the first clash, else now, else the first entry |
-| Hour labels (7.7) | "10:00 AM" filled the gutter to the card's edge | "10 AM", with room at the edge |
-| The clash line (7.7) | Plain text under the title | A button that goes to the first clash |
-| Month (7.7) | A chip led with its time, so a title was cut to a few letters; a clash day was not marked | The title comes first and the time after it; a day with a clash has a mark and words for a screen reader |
-| Timeline (7.7) | Unlabeled marks, a seven-entry key, an instruction line | Each one-day mark carries its title; the key lists only what is on the screen; the instruction is for a screen reader |
-| Entry details (7.7) | "Open" with no object; a Back button beside the close button | "Open the event"; the close button is the one way out |
-| Add to schedule (7.7) | Silent about which calendar | A line says it goes on the app's own calendar |
-
-| Timeline (7.7) | A daily repeat was a mark for each day; the same to-do on consecutive days likewise | Runs of the same thing on consecutive days are one band over those days (engine/timeline.py) |
-| Loading (7.12) | A list skeleton under every view | The grids load as hour rows under a heading for each day; the Month and the phone's list as rows |
-| Calendar names (7.7) | The account's address in full in each name | The part before the "@" when all the addresses share a domain |
-| Phone Month (7.7) | A day opened Day view | A day is chosen and its entries are listed under the month, with "Open this day" |
-| Add to schedule (7.7) | Ends at showed an example time | Ends at follows Starts at by `ui.schedule.event_minutes` and says "No end time" when empty |
-| Entry pane (7.7) | Beside the time grid at 1440, squeezing its day headings | Covers its edge below 820px of room |
-| A calendar that needs signing in (7.7) | Its entries looked like the others | They have a dotted edge and say they are not up to date |
-
-- **New config key `ui.schedule.event_minutes` (60; 45 and 30 in the demo workspaces); the schedule answer carries it.** New wording: schedule.grid.region, schedule.month.clash, meeting.calendar_note; removed: schedule.pane.back.
-
-Third pass (batch g3b):
-
-| Where | Before | Now |
-|---|---|---|
-| Controls above the grid (7.7) | Four rows: the moves and range, the views, the calendars, then the grid's own heading with the date again | Two rows; the calendars are one line in the second row that scrolls inside itself and fades at an edge with more out of sight; a single day's column says "Today" or the weekday |
-| Header while loading (7.7, 7.12) | The page's buttons appeared when the days arrived | Add to schedule (or the phone's menu) is there from the first paint |
-| Subtitle (7.7) | The clash line, on grids only | The clash line and the meeting count in one line ("1 clash, on Tuesday · 2 meetings") on the grids and the Month |
-| All-day row (7.7) | Always drawn, 28px when empty; identical entries listed one by one | Not drawn when no shown day has an all-day entry; identical ones of a day are one with "×3" |
-| Hours (7.7) | The configured hours grown to the entries, no way to see the rest | "Show all hours" draws midnight to midnight, "Show fewer hours" goes back |
-| Today's column at night (7.7) | A tint a point lighter than its neighbors | A stronger tint |
-| Month (7.7) | A weekday left-aligned over centered numbers; title cut to one line; the time kept in a narrow cell; today the brand color; dots 8px | The weekday centered over the number's box, one edge for every number; titles take two lines; the time stays for a screen reader only below 56rem; today is ink; a day is a 24px target, 44px when narrow, with 10px dots and a 24px count |
-| Timeline (7.7) | A mark carried its title only; days-off bands heavy | The date comes before the title; the bands are lighter |
-| Entry pane on a phone (7.7) | A small Open beside its note | Open takes the width and a finger's height; a blank place is no Where row |
-| Add to schedule (7.7) | The end error was a loose line | The error belongs to the end field (marked invalid, described by the error) |
-
-- New wording: schedule.meetings, schedule.hours.all, schedule.hours.fewer, schedule.times, schedule.times_sr. No new config key.
-
-## 327. Shared rows, filter bars, tables, toasts, unknown addresses and the shell (2026-11-03; gate fix batch G1)
-
-| Where | Before | Now |
-|---|---|---|
-| Row (7.14) | Every row had a 24px slot and its gap before the title, empty or not | A list in which no row has a mark takes no width for the slot; one mark keeps it on every row of that list; held lines each have an icon of their kind |
-| Place on a row (6.32, 7.14) | "<side>: not in a project" as a chip on a row, and as a group heading under the side's own heading | A project chip only when the row has a project; a side's own items are "Not in a project" under that side's heading |
-| Filter bar (7.12) | Side counts were the whole screen's; the bar was drawn over any list | Counts are the open tab's; a list under 12 rows has no bar (a filter that is on keeps it) |
-| Tables (7.13) | A column empty for every row was drawn at rest; a heading with nothing under it said "· 0"; a phone's group heading was a 30% column; "0 projects" under the rows | An empty column is not drawn; no number for an empty heading; the heading spans the row; no count under rows of sides only |
-| Toasts (7.9) | The toast waited for every open screen to read again; some failures drew a check | The toast is shown as the save is made; every failure or block is a warning with the alert icon |
-| Addresses (7.1) | An unknown address opened Today or Settings | A "Not here" page with Back to Today; a record page that is gone offers its list |
-| Settings and setup on a phone (7.1, 7.15) | "Section: X" disclosure, a blank band, the section heading twice; a blank band above the setup step and a three-row footer | One picker row naming the section; the heading is read and not drawn below 1100px; the step starts under the header; the footer is two rows with a full-width primary |
-| Disabled primary (7.12) | The soft accent, like the tonal weight | A sunken fill and a firm edge, with the reason beside it |
-| Folds and group labels (7.12) | Four glyphs and one border chevron; Settings' group labels at the body size | One chevron (`--chevron-mask`); the shared 11px uppercase muted label |
-| Status popover (7.1) | A run-on line of what was checked | One row for each fact |
-| Way back (7.12) | A crumb or a bare Back, by page | `BackLink`, the page header's `back` (a person's page keeps its People › name crumb) |
-
-- **No config key, API or op change.** Wording: `not_here.title`, `not_here.text`, `not_here.back`, `record.not_found.back`, `settings.picker_label`; `settings.picker` is the section's name alone.
-
-## 326. The gate's fix round: scope and ten design choices (2026-11-03; owner)
-
-| Where | Before | Now |
-|---|---|---|
-| The U3 hand-back (roadmap) | Open tracking rows and the P2 groups could go back as "left" | Everything is fixed first: every open row, Y07 to Y11, and the cold scores' findings, until every screen is at least 4.0 with no point under 3.5 |
-| Privacy words (6.18, 7.13) | Three vocabularies across the AI step, the levels and the mail sides | One scale, Open, Confidential and Private (D1); built in batch G5, with the design text |
-| AI step, Clash, Quality, Follow-ups, To-dos (7.7, 7.13) | Open questions against the 4.6 mockups | Ring and tint (D2); the first meeting plus the menu (D3); the period stays a setting (D4); labelled buttons (D5); no Done tab (D6) |
-| Motion (7.1) | Open | Only the mark moves, at first launch and at the end of setup (D7) |
-| Screenshot comparisons (14) | Captures by hand | Six screens at two widths compared in CI (D8) |
-| Search (7.7) | Open | Own records only, and an empty result says so (D9) |
-| An add-on's install (3.11) | Open | It keeps its restart and says so before Install; a no-restart install is a plugin round question (D10) |
-
-- **No config key, API or op change in this section;** the batches that build each choice have their own sections.
-
-## 325. Today's all-clear is the brand card (2026-11-03; final review group f8)
-
-| Where | Before | Now |
-|---|---|---|
-| Today's empty state, all clear (7.7) | A check icon and one line, "Nothing needs you · Checked 2 connections, last at 8:05 PM", with Missed something? | When setup is done, a run has happened, every source was read and nothing waits: a card with the brand mark (decorative; the night mark in the night theme), "Nothing needs you" in the display face, "A little more room to think…", and "See what was handled today" (to Handled for you, drawn only when something was handled today). The coverage stays under it as a quiet line with Missed something?, so an empty Today is never mistaken for "couldn't check". The other empty states are unchanged, and a source that was not read still gives the one line "Nothing found that needs you · …". **Built** (`web/src/components/TodayAllClear.test.tsx`, `Today.test.tsx`) |
-
-## 324. The capture reaches "Nothing needs you"; the Schedule's header on a phone is one short row (2026-11-03; final review group f7)
-
-| Where | Before | Now |
-|---|---|---|
-| Browser-test and capture servers (14) | "All clear" could not be reached: the capture's workspace had setup unfinished, so the empty card said "Setup isn't finished" | `tests/e2e_server.py --all-clear` (`tests/e2e_all_clear.py`) finishes every counted setup step through the store and the app's own record-keeping (a service account whose whole connection test passed, an inbox and a sent folder read, a note handed in, a backup made, two people) and leaves nothing on Today; the capture's "All clear" state runs on it. **Built** (`tests/test_e2e_all_clear_seed.py`) |
-| The Schedule's header on a phone (7.7) | The title, an "Add to schedule" row, then Today and a range that wrapped to two lines: 187px at 390 | The title with a "..." menu holding Add to schedule (the tab bar's plus hands something in, so the menu is the way to add), then the moves and a short range ("Nov 2 – 6") on one row that does not wrap. Wide windows keep the filled button. **Built** (`ScheduleLayouts.test.tsx`, `dates.test.ts`) |
-
-- **No config key, no API change.**
-
-## 323. A removed person's page offers Restore; the quality server holds found promises; a dot never ends a line on setup's account row (2026-11-03; final review group f6)
-
-| Where | Before | Now |
-|---|---|---|
-| A person who was removed (7.12) | The card said "This person isn't here any more" for a removed person and for a wrong address alike | A removed person's page says "<name> was removed", when, and offers **Restore** (the existing restore, with Undo); an address with no record says so, with Back to People. `GET /api/people/{id}/removal` says which (`PersonRemoval`). No window: a removed record can be restored while it exists. **Built** (`RecordPageRecords.test.tsx`, `tests/test_routes.py`, `people-records.spec.ts`) |
-| Setup mail, account row (7.8) | The state line's dots were items of a wrapping row, so one could end a line before "Private to you" | The line is a `meta-line`: a dot belongs to the part after it and is hidden when that part starts a line. **Built** (`Walkthrough.test.tsx`, measured in the capture) |
-| Browser tests (14) | The people-records server held no promise the assistant found, so Quality showed "Too early to tell" | `tests/e2e_server.py --assistant-found` seeds promises at the server's clock (`tests/e2e_quality.py`) |
-| The capture (visual tool) | The "All clear" card and a failing calendar could not be reached | A stage with setup finished and nothing waiting; the stand-in service's `/__e2e/failing` takes `part` (all, mail or calendar) |
-
-- **No config key.** One new read route (`PersonRemoval`).
-
-## 322. The last fixes to setup, a person's page and Quality from the final side-by-side review (2026-11-03; final review group f5c)
-
-| Where | Before | Now |
-|---|---|---|
-| Setup on a phone (7.8) | A header of about 170px (title, intro, Finish later, then a Steps bar); the footer wrapped to two rows | One header bar: title, Steps, Finish later; one footer row, a waiting primary's reason on a line above it. **Built** (`Walkthrough.test.tsx`; measured in the capture) |
-| Setup, accepted (7.8) | The privacy question with three lines of hints | The question and one line; "Which account is it?" opens the rest. **Built** (`WelcomeAi.test.tsx`) |
-| Setup mail, no account yet (7.8) | The services and the mailbox loose on the page | One centred card holding the services as rows to sign in with and the mailbox folded as the quieter choice. **Built** (`Walkthrough.test.tsx`) |
-| Setup mail, account rows (7.8) | Tick boxes in the row; the account needing sign-in drawn by another row | One card for every account: "Private to you", "For <side> chips Change", and for an account that needs signing in an edge and Sign in again. **Built** (`Walkthrough.test.tsx`) |
-| A person's page on a phone (7.12) | The "more" menu alone at the left under the title | The menu at the right of the title's row (`PageHeader.more`). **Built** (`PersonPage.test.tsx`) |
-| A person who isn't there (7.12) | A "Not here" title and a Person chip over the card | The card alone; the heading is kept for a screen reader. **Built** (`RecordPageRecords.test.tsx`) |
-| Quality (6.20, 7.12) | "Back to Today" as a button; week headers of three lines; "Your own count" open with a wrapping title; a bare red line when it couldn't load; too-early card with a second panel | A "Today ›" crumb; headers Found, Done, False alerts, Looking over; the own count folded as "Count them yourself", its hint under a one-line title; the shared failed-load row (an edge, the words, a filled Try again); the own count folded inside the too-early card. **Built** (`Quality.test.tsx`) |
-
-- **Left:** the person-not-found line "Undo is on the People page for 10 minutes." is not written: no such Undo exists (a removal's Undo is its toast). Section 323 replaces it with a removed person's page that says so and offers Restore.
-- **No config key, no API change.**
-
-## 321. Setup's mail step as one first-account card, the offline banner in the setup guide, Quality's "Too early to tell" (2026-11-03; final review group f5b)
-
-| Where | Before | Now |
-|---|---|---|
-| Setup mail, no account yet (7.8) | The add-on's id and long description, a second mailbox form and "Add mail, calendar or folder" beside Sign in | One card: the services to sign in with by their own names; the mailbox with an app password folded inside it. **Built** (`Walkthrough.test.tsx`) |
-| Setup mail, waiting for the window (7.8) | The banner plus a disabled "Opening the sign-in page…" button | The banner alone. **Built** (`Walkthrough.test.tsx`) |
-| Setup mail, an account needing sign-in (7.8) | Every account "Connected" | The shared account row: "Needs sign-in since <time>", Sign in again. **Built** (`Walkthrough.test.tsx`) |
-| Setup, offline (7.21) | No banner in the guide | The offline banner under the guide's header, in setup's words. **Built** (`Walkthrough.test.tsx`, `states.test.tsx`) |
-| Quality with nothing found (6.20) | A page of zeros | One "Too early to tell" card, with `dispatch.knowledge.quality_min_promises`. **Built** (`Quality.test.tsx`) |
-
-- **Config:** `dispatch.knowledge.quality_min_promises` (schema entry, default 1, description, demo values in both workspaces; live).
-- **Wording:** `walkthrough.mail.first_account|mailbox_instead`, `walkthrough.offline.*`, `quality.early.*`.
-
-Change log: section 321.
-
-## 320. One cause is one Today line; a side with nothing says so; the wrap-up card and the to-do tabs agree with their counts (2026-11-03; final side-by-side review, group a)
-
-| Where | Before | Now |
-|---|---|---|
-| Today's queue (7.7) | One line for each request that stopped (thirteen "Choose another account" lines for one cause) and one "Add the Sent folder" line for each mailbox | `refused` and `failed` lines with one cause (`state` `no_person`, else the same words) are one line with `count` and the lines in `items`; its button for `no_person` is "Say who you are" (setup step 'workspace'), else it opens the list. `sent_folder` for several mailboxes is one line with `count`, `sources` and `names`. Built: `tests/test_one_line_per_cause.py`, `web/src/components/TodayStoppedGroup.test.tsx`, `web/src/shell/HeldLines.test.tsx` |
-| Today's clash line (7.7) | The first calendar's name and "and" used the line, the second was cut | Each calendar's name is shortened by itself and the second is always drawn |
-| Today's side filter (7.7) | A line that belongs to no side kept the screen from saying the side was empty | "Nothing on the {side} side today" with the way back above the app's own lines. Built: `TodaySides.test.tsx` |
-| The wrap-up card (7.7) | Every line of every section, with no cap | `ui.today.rail_rows` lines across the card, then "Show N more" and "Show fewer". Built: `BriefCard.test.tsx` |
-| To-dos and questions (7.5) | A tab with no rows said "Nothing matches these filters" | Says the tab is empty; the filter text is only for rows the filters hid. The line under the title counts both tabs, as the tabs do |
-| Connections (7.9) | "No connections yet" with an outline "Ask how to add one" | Card "Connect your mail and calendar" with the filled "Add a connection"; asking stays beside it. A refused sign-in card has one filled button |
-| Schedule on a phone (7.9) | The view switch wrapped, Timeline alone on a second line | One row of segments that share the width |
-| Skeletons (7.21) | A tone too near the surface in day and night | The border tone, shimmering to the well tone |
-| The capture tool | A full-page picture of a scrolled page put the sticky header mid-picture; a side picked in one state carried into the next; Loading kept the answers the shell had read | Scrolls to the top first; each state opens on every side; the screen's own reads are held and the app is loaded again |
-
-## 319. States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (2026-11-03; visual review VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04)
-
-| Where | Before | Now |
-|---|---|---|
-| Loading and couldn't load (7.21) | Each list drew its own skeleton or an alert-iconed empty state | One `ListState`: skeleton rows with a lead circle at row height; `LoadFailed` with the reason and Try again; offline words; a list that loaded stays readable. **Built** (`web/src/ui/states.test.tsx`, `web/src/components/ListStates.test.tsx`: eight screens) |
-| Offline (7.21) | The status chip and a Today line said it; no screen did | One `OfflineBanner` at the top of the content, from `lib/connection.tsx`; Try now reopens the stream. **Built** (`states.test.tsx`, `ListStates.test.tsx`) |
-| A failed save (7.21) | A toast (the to-do add row), a note (a person's form, a record's details) | `NotSaved` in the row or form: "Not saved", the reason, Try again; the words stay. **Built** (`InlineAddTodo.test.tsx`, `PersonForm.test.tsx`, `RecordPage.test.tsx`) |
-| Changed elsewhere (7.21) | Untouched fields refreshed and listed; a field the person also edited was silently kept | `ChangedElsewhere`: old → new and what they typed, Keep mine or Use the new one. **Built** (`RecordPage.test.tsx`, `states.test.tsx`) |
-| Filtered to nothing (7.21) | A sentence | `FilteredEmpty`: the sentence and Clear filter. **Built** (`ListStates.test.tsx`) |
-| A failing account on Today (7.12) | A pill after the words | A state row: the warning edge, tint, icon and word. **Built** (`web/src/shell/HeldLines.test.tsx`) |
-| Counts (7.12) | The whole number | "99+" in group labels, tabs, segmented choices and the menu; the exact number in the accessible name. **Built** (`states.test.tsx`) |
-| The phone's bar (7.1) | Today · Work · + · Search · More | Today · To-dos · + · Schedule · More; More is a sheet in sections; Search is a header icon. **Built** (`web/src/shell/BottomBar.test.tsx`, `Header.test.tsx`) |
-| The side filter on a phone and under 1100px (7.8, 7.21) | A strip, or a list on a phone | One button in the page header and a sheet. **Built** (`web/src/components/SideFilterSheet.test.tsx`) |
-| Hit targets on a touch screen (7.21) | 24px floor, a 32px icon button, 40px row buttons | 44px: `--hit-min`, `--hit-icon`, `--btn-h-sm` on a coarse pointer. Done in CSS; the browser check `web/e2e/states-phone.spec.ts` is written, not yet run |
-| Settings at 1024 (7.9) | The list of sections folded under 720px of the page | Folds under 1100px of the window. Done in CSS and `SettingsNav`; the browser check `web/e2e/states-phone.spec.ts` is written, not yet run |
-| A date at the end of a to-do's title (7.21) | Typed into the Add form only | The add row finds it by rules, shows the day before Enter with a way to drop it. **Built** (`web/src/lib/todo-phrase.test.ts`, `InlineAddTodo.test.tsx`, `tests/test_add_todo.py`) |
-| The rail's rows (7.7, 04) | A constant of 3 | `ui.today.rail_rows`. **Built** (`web/src/components/TodayRail.test.tsx`) |
-| The clock and the time list (7.12, 04) | The computer's locale; every 15 minutes | `ui.time_format` and `ui.time_step`. **Built** (`web/src/lib/dates.test.ts`, `web/src/ui/TimeField.test.tsx`) |
-| The setup key (7.8) | Leaving the key box started a second check | Checked only when the key changed since the last check. **Built** (`web/src/components/WelcomeAi.test.tsx`) |
-| The setup mail step (7.8) | Continue in the body | Continue in the footer on the column's edge. **Built** (`web/src/components/Walkthrough.test.tsx`) |
-
-- **Config:** `ui.today.rail_rows`, `ui.time_format`, `ui.time_step` (schema entries, defaults, descriptions, demo values in both workspaces; `RuntimeConfig.rail_rows|time_format|time_step`).
-- **Wording:** `state.*`, `people.load_failed`, `projects.load_failed`, `nav.tab.todos`, `nav.more.*`, `sides.filter.open|sheet|sheet_hint`, `open.inline_add.date_*`, `addtodo.phrase.*`, `settings.key.ui.time_*`, `settings.key.ui.today.rail_rows`.
-- **Left:** `docs/project/u3-differences/states-phone.md` lists each with its reason (Schedule and Connections, the Files drop zone, changed-elsewhere on a to-do's own edit, captures, the browser run).
-
-## 318. Schedule and Connections built to the 4.6 mockups; signing in again to one account refuses another (2026-11-03; visual review VS06, VS18, X45, X53, X57, VC13)
-
-| Where | Before | Now |
-|---|---|---|
-| Connections (7.15) | A table of every connection (name, privacy, status, actions) under a list of services with an account list | One card for each account address, its connections as rows with a status ("Read 2 min ago", "Not read since 10:51 AM"), its sides as chips with Change, its privacy once; folders and feeds in one card; an account that needs the person first with its edge and Sign in again. **Built** (`web/src/lib/connection-cards.test.ts`, `connection-words.test.ts`, `web/src/components/ConnectionCard.test.tsx`, `Sources.test.tsx`, `AccountsAgree.test.tsx`; browser, written: `web/e2e/accounts.spec.ts` X79, X77, VC13, VS18) |
-| Connections on a phone (7.15, 7.13) | Five lines of the service and the sides before the button | Name, state and Sign in again first; the service, privacy and sides after. **Built** (CSS; browser, written: `accounts.spec.ts` VS18 measures the order) |
-| Signing in again (6.16, 7.15) | Any account the person chose was added; the account that needed signing in stayed failing with no word | The sign-in is started for the account's address (`POST /api/sign-ins/{name}/start?account=`); another address is refused, nothing kept or started, and the card says "That was a different account: <address>. Sign in as <expected>." with Try again. **Built** (`tests/test_sign_in_refused.py`, `web/src/components/ConnectionCard.test.tsx`, `SignIns.test.tsx`; browser, written: `accounts.spec.ts` VS18) |
-| A state inside a card (7.12) | Alert icon and bold for every connection that needs the person | `StateMark quiet`: the dot in the tone's color and the word. **Built** (`web/src/ui/StateMark.test.tsx`) |
-| The week grid (7.7) | A bold 12px title and a muted time on a gray fill, 56px an hour | A block with the calendar's color on a 3px edge and, softly, in its fill; the title in the control weight, the time and calendar on a second line; 72px an hour. **Built** (`web/src/components/ScheduleLayouts.test.tsx`, `ScheduleViews.test.tsx`) |
-| Meetings that overlap (7.7) | Side by side, narrow | One Clash card naming them ("3 at once" with the time for more than two), for the pairs the engine lists (see the next row). **Built** (`web/src/lib/calendar.test.ts`: clashGroups, `ScheduleLayouts.test.tsx`) |
-| The Schedule's clashes (7.7, 6.32) | Any two meetings that overlap on the screen were a Clash card, whatever Today said | The Schedule's clashes now come from the same rules as Today's: the answer lists the pairs (`GET /api/schedule`, `clashes`: the two entries, overlap or travel, the minutes), and the screen draws a Clash card only for those pairs. A pair the person marked fine is two ordinary entries; an all-day entry, one called off or declined, or one not accepted is in none; a travel clash says it is about travel and the minutes asked for. **Built** (`tests/test_schedule_clashes.py`; `ScheduleViews.test.tsx`, `lib/calendar.test.ts`) |
-| An entry in two calendars (7.7) | Named in the words for a screen reader and in the pane | Shown once, "In 2 calendars" in its line. **Built** (`ScheduleLayouts.test.tsx`) |
-| Calendar legend (7.7) | Buttons with a round mark | Toggles with a tick box in the calendar's color, Hidden in words, scrolling inside their own row on a phone. **Built** (`ScheduleLayouts.test.tsx`, `ScheduleCalendars.test.tsx`; browser, written: `accounts.spec.ts` VS06) |
-| Widths (7.7, 7.13) | Week and work week fell back to Day when narrow | The Week is the working days below 1100px (and says so); on a phone the week is a list by day, a row for each entry and one row for a clash. **Built** (`ScheduleLayouts.test.tsx`; browser, written: `web/e2e/schedule.spec.ts`) |
-| Month, Timeline (7.7) | Gray dots and one accent for every calendar entry | The calendar's color on the month's dots and on a timeline entry's mark. **Built** (`ScheduleTimeline.test.tsx`) |
-| Page header of the Schedule (7.7) | Two outline buttons | A line under the title naming the clashes in view; Add to schedule is the one filled button. **Built** (`ScheduleLayouts.test.tsx`) |
-| Not built | | The weekend is not read while the Week shows the working days; the Day, Weekdays, Week, Month and Timeline are still a segmented control, not an underlined strip; the capture lists the Schedule and Connections states it cannot drive (long content, a large count, a failed save) |
-
-## 317. A person's page, Quality and the setup's AI and mail steps built to the 4.6 mockups (2026-11-03; visual review VS01, VS03, VS13, VS15, VC10, VC11, VC12, X59, Y01)
-
-| Where | Before | Now |
-|---|---|---|
-| A person's page, header (7.14) | **Edit** was the one filled button | **Add a to-do for <first name>** is; it opens the add form with them as the one who does it. **Built** (`web/src/components/PersonPage.test.tsx`: "the one filled button adds a to-do for them…") |
-| A person's details (7.14) | One panel of rows, "Last contact" a row | A contact card: their initials on a disc in their first side's color, how you were last in touch and **Edit** at its head, then the rows. **Built** (`PersonPage.test.tsx`: "the contact card has their initials…", "the details panel says each fact once…") |
-| The box to ask (6.25, 7.14) | In the main column, under the history | A rail card **Ask about <first name>** with the send button in the box; on a phone the last thing on the page. **Built** (`PersonPage.test.tsx`: "the box to ask is a card of the rail…") |
-| The page where columns stack (7.14) | Open, history, then the panel | Open with them, the contact card, the history, the box to ask (CSS order on `data-slot` parts). **Built** (`PersonPage.test.tsx`; browser `web/e2e/person-quality-setup-46.spec.ts`, written, not yet run) |
-| The timeline (7.14) | Time, then the words | An icon for who did it (assistant, adding, changing), the words, the time under them. **Built** (`PersonPage.test.tsx`: "each line of the timeline has an icon…") |
-| Nothing open, a person gone (7.14) | A hint; "This page isn't here any more" | "Nothing with <name> yet" with the add button; "This person isn't here any more" with Back to People. **Built** (`PersonPage.test.tsx`, `RecordPageRecords.test.tsx`) |
-| Quality's heading lines (7.17) | The window's dates only | A bold line saying what the figures mean, the false alerts to look at, then the window. **Built** (`web/src/components/Quality.test.tsx`: "the page says in one line…") |
-| Quality's tiles (7.17) | A sentence of change | An arrow and the sentence, and better or worse where one way is better; a trend line per tile with a text alternative. **Built** (`Quality.test.tsx`: "each change is said in words…", "a tile has a small trend picture…") |
-| The weekly table (7.17) | A table at every width | A list at 639px and under; the table above. **Built** (`Quality.test.tsx`: "the weeks are also a list…") |
-| Mistakes and empty measures (7.17) | A person's name and a count; a bordered box each | A row with a mark and **Review**; one card, a line each with a count of 0. **Built** (`Quality.test.tsx`: "a mistake is a row…", "a measure with nothing in it…") |
-| The wizard's rail and footer (7.8, 7.12) | Empty circles; the footer's left edge guessed | A numeral in the display face in each circle (a check once done); the buttons in the step's own column; the eyebrow as the small spaced label. **Built** (`web/src/ui/Wizard.test.tsx`) |
-| The key (7.8) | A hint, then "Works", then a problem note | Empty, checking (spinner and word), accepted (check, the account's label, "Works"), rejected (mark and the check's reason, box invalid); the steps one bordered list; one Open style. **Built** (`web/src/components/WelcomeAi.test.tsx`: "the key's four states…") |
-| The mail step's accounts and waiting (7.8) | Rows of text with ticks | A card each: mark, address, Connected, **For** and chips; "Connect your first account" with none; a banner with **Cancel** while the window is open. **Built** (`web/src/components/Walkthrough.test.tsx`: "each account row is a card…", "while the service's window is open…") |
-
-- **Wording:** `person.add_todo`, `person.nothing_*`, `person.gone_*`, `conversation.about*`, `quality.sowhat.*`, `quality.stat.better|worse`, `quality.trend.label`, `quality.mistakes.review*`, `walkthrough.mail.account.*`, `walkthrough.mail.none_title`, `sign_in.window.waiting_title|rest`; changed: "Connect another account".
-- **Left:** "Draft a message", "Files from <name>", a percentage "kept on time", a period chooser, "Private to you", the check disc on a chosen card, the details edited in place. `docs/project/u3-differences/person-quality-setup.md` lists each with its reason.
-
-## 316. Today, the opened review and To-dos built to the 4.6 mockups (2026-11-03; visual review VS05, VS10, VS11, VC01)
-
-| Where | Before | Now |
-|---|---|---|
-| Today's heading (7.7) | "Today", then the date and "N things need you" | A greeting for the time of day on the person's clock with their first name ("Good afternoon, Robin"); the date, then the count in bold. **Built** (`web/src/components/Today.test.tsx`: "the heading greets the person…") |
-| The queue (7.7) | A pane titled "Needs you" with its count, groups in sentence case | No title on the page (the pane keeps its name for a screen reader); groups uppercase with counts, At risk in the problem color. **Built** (`Today.test.tsx`: "the queue has no title of its own…", `web/src/ui/Panel.test.tsx`) |
-| A line's lead slot and meta (7.7, 7.14) | Empty slot; the side as a tag in the title | An icon by kind, or the side's color; the side and each calendar named in the meta after a mark (`web/src/ui/MarkDot.tsx`); one line. **Built** (`Today.test.tsx`: "a line on one of the person's sides…", "a clash line names both meetings…") |
-| One filled button (7.12) | None on Today (a row's action is never filled) | The first decision's action is filled, with a tint and a 3px edge; a line at risk has its own; while a review is open Keep all has the filled weight. **Built** (`Today.test.tsx`: "the first decision has the screen's one filled button…", "while a review is open…") |
-| A clash line (7.7) | "Sort out the clash on Tue, Nov 3: A and B", the pill Clash, "In X and in Y" | "A and B overlap" (or "are too close together"), the day and the overlap, the calendars with marks, "They overlap by 30 minutes". **Built** (`TodayCapacity.test.tsx`, `TodayAccounts.test.tsx`) |
-| The opened review (7.7) | A bordered card, "All looks good" | An inset card on the sunken surface under the row's text, ending in a hairline and "Keep all N" ("Keep it" for one). **Built** (`web/src/components/BatchDetail.test.tsx`) |
-| Today's rail (7.7) | Buttons in the card heads, every meeting and message listed | "Open" and "Check now" as quiet links; the Schedule card is headed "Today's schedule" (its region is still "Schedule"), three meetings on a calendar-colored edge, Clash when named by a clash line, and "N more in the schedule"; Came in holds three and a quiet "N more". **Built** (`web/src/components/TodayRail.test.tsx`) |
-| To-dos and questions (7.5) | One list in the server's order, a pill for Overdue, the add button in the header (and on a phone a line that opened the form), "Needs a date" a group at the top | Groups Overdue, Today, Coming up, Waiting on others with counts (`groupActions`); the add row first on every width; "N to-dos need a date" one line at the foot that opens the group; "N open · N overdue · N due today" over both tabs. **Built** (`OpenItems.test.tsx`, `InlineAddTodo.test.tsx`, `NeedsADate.test.tsx`, `web/src/lib/todo-groups.test.ts`; browser `web/e2e/today-todos-46.spec.ts`, written, not yet run) |
-
-- **Wording:** `today.greeting.*`, `queue.clash.title*`, `queue.batch.keep_all`, `open.group.*`, `open.due*`, `open.needs_date.line`, `open.inline_add.*`, `today.schedule.heading`; gone: "All looks good", "Sort out the clash on", `open.subtitle.late`.
-- **Left:** "by Friday" in the add row, "Show N more coming up", a Done tab, an icon on each system line, the rail's length enforced by layout; the review on a fixture the capture can drive. `docs/project/u3-differences/today-todos.md` lists each with its reason.
-
-## 315. The app's own lists, dates and times; one state mark; one account state for the header and Connections (2026-11-03; visual review VC05, VP05, VC13)
-
-| Where | Before | Now |
-|---|---|---|
-| Select (7.12) | The browser's select | A button that opens a listbox: arrows, Home, End, Page Up and Down, type-ahead, Enter, Escape (cursor back on the button); a filter box above twelve choices; the same props, so `<option>` children and `e.target.value` still work. **Built** (`web/src/ui/Select.test.tsx`) |
-| DateField (7.12) | The browser's date input ("mm/dd/yyyy") | A text box that reads the locale's order, month names, "today", "tomorrow" and weekdays, shows the day as `fieldDay` writes it, and a calendar button that opens a month grid (arrows, Page Up and Down, Home and End to the week's edges, Enter, Escape returns the cursor); the week starts on `ui.schedule.week_starts_on`, days not worked are underlined; ISO in and out. **Built** (`web/src/ui/DateField.test.tsx`, `web/src/lib/date-input.test.ts`) |
-| TimeField (7.12) | The browser's time input ("--:-- --") | A text box that reads "9", "9:30", "930", "9:30 pm", "21:30", shows the time in the locale's 12-hour or 24-hour clock, and a list of times every 15 minutes (combobox). A date with a time is the two side by side. **Built** (`web/src/ui/DateField.test.tsx`) |
-| Every screen (7.12) | Native controls on To-dos, Schedule's Add, Quality, Edit details | All of them are the app's own, `RecordPage`'s date fields included; the one native control left is the file picker. **Built** (browser: `web/e2e/shared-rules.spec.ts`, `guards.spec.ts`) |
-| State rows (7.12) | State as coloured tags (pills) and, in Connections, a bare dot | `StateMark` (a dot and a word; an icon when it needs the person) and `Row state` (a 3px edge and a soft tint); used by Connections' sources and accounts, add-on cards, AI accounts, sign-ins and the backup. **Built** (`web/src/ui/StateMark.test.tsx`) |
-| Header status (7.1) | "Connection failed" or "Signed out"; the popover listed the failing account in a red line of the coverage text | "1 account needs you" ("2 accounts need you"); the popover lists each account once as a state row. Connections' sign-in rows and the popover's are one component from one account state. **Built** (`web/src/shell/StatusMenu.test.tsx`, `web/src/lib/connections.test.ts`; browser: `web/e2e/accounts.spec.ts`) |
-
-- **7.1, 7.12:** the status chip, the form parts and the state rows as above; `RecordPage`'s date fields use `DateField`.
-- **Dependency:** `@internationalized/date` is now a direct dependency (the calendar grid's date type; already installed).
-- **Tests:** `selectOptions` still drives a list (a helper in `web/src/test-setup.ts` opens it and clicks the choice); a test reads
-  a list's choices through `snapshotOf` and `optionsOf` (`web/src/test-utils.tsx`). Browser tests use `web/e2e/choose.ts`.
-- **Left:** the 12-hour or 24-hour clock and the list's step have no setting (listed in `docs/decisions.md`); the Connections page
-  is still a table of sources with the accounts that need signing in above it, not the mockup's card per account.
-
-## 314. Restore from a backup copy in the app, staged and swapped in at the next start (2026-11-03; sweep X98, X04)
-
-| Where | Before | Now |
-|---|---|---|
-| Backups page (7.9) | "Restoring isn't a button in the app yet"; a copy could only become a new workspace from the command line | **Restore this copy** on each copy: a confirmation in plain words (the workspace goes back to how it was then, changes since are set aside not deleted, the app restarts when the person chooses), an encrypted copy asks for its key in the same dialog, a refusal is said in the dialog. A waiting restore shows on the page with Restart now and Cancel. **Built** (`web/src/components/BackupsPanel.test.tsx`, `RestoreLine.test.tsx`; `tests/test_restore_in_app.py`; browser test `web/e2e/settings-setup-fixes.spec.ts`, written, not yet run) |
-| Staging (5.0) | None | `restore_backup` into `.cockpit/restore-pending/`, marker `READY` last, then the usual restart ask (`restart_for` names `restore`); one at a time, a second replaces the first once made, Cancel removes it. **Built** (`tests/test_restore_in_app.py`: staging, wrong or missing key, second restore, Cancel; route tests) |
-| The swap (5.0, 6.14) | None | At the next `cockpit serve`, before anything opens the workspace: what a restore replaces is renamed into `.cockpit/before-restore/<time>/`, the restored files renamed in, `restore-pending/` removed; renames only, never deleted; a failing step is undone and the staged restore stays; a start after the computer stopped midway finishes the same plan. **Built** (`tests/test_restore_in_app.py`: the swap, renames only, a failing rename, a stopped swap, serving swaps first) |
-| Today (7.7) | None | `restore` lines: waiting for the restart (Restart now, Cancel in the menu), "Check your restored workspace (from <date>)" with Dismiss and Put back what was there before, and "The restore didn't happen" with why. **Built** (`tests/test_restore_in_app.py`: the lines; `RestoreLine.test.tsx`) |
-| Put back (5.0) | None | Stages the newest `before-restore/` folder the same way (its database's log folded in first), so each direction is reversible. **Built** (`tests/test_restore_in_app.py`: put back, the unfolded log) |
-| Synced folder (5.0) | n/a | A restore is refused while one is set up, with the reason: the next start would load the folder's newer copy over it. **Built** (`tests/test_restore_in_app.py`: the synced folder test; `BackupsPanel.test.tsx`) |
-
-- **API:** `POST /api/backups/restore`, `POST /api/backups/restore/cancel`, `POST /api/restore/put-back`, `POST /api/restore/dismiss`;
-  `GET /api/backups` gains `pending` and `restore_blocked`; the queue gains the kind `restore`.
-- **05 (5.0), 06 (6.14), 07 (7.9):** the restore, the swap and the page as above. The swap keeps this computer's own
-  settings (`storage.yaml`, `server.yaml`) in place, and a failed swap removes only its own plan from the kept folder.
-
-## 313. The mockups' shared rules: rows, type, one filled button, one grid, keyboard-only focus, the product's name (2026-11-03; visual review VP01 to VP04, VP06, VC01 to VC03, VC08)
-
-| Where | Before | Now |
-|---|---|---|
-| Row (7.12, 7.14) | The leading slot took no width when empty; a mark stood before the title; on a phone a lone action stayed at the right and several went under the title | A 24px slot always (`--row-lead-w`); the mark and a project or view tag after the title's words; on a phone the buttons go under the words and the menu sits at the top right. **Built** (`web/src/ui/Row.test.tsx`: "a row's leading slot is always there and is 24px wide…", "the buttons and the menu are separate parts…"; `web/src/theme/dayMode.test.ts`: "below 640px the parts of a row stack…"; browser `web/e2e/shared-rules.spec.ts`, written, not yet run) |
-| Group label (7.12 type) | Today's and "Needs a date"'s headings 12px, sentence case, in a band at night; counts plain | `GroupLabel`: 11px, uppercase, spaced, count in a pill; the sidebar's and menus' section labels use it; the band tokens are gone; a panel's, a tab's and the sidebar's counts are pills. **Built** (`web/src/ui/GroupLabel.test.tsx`, `web/src/ui/Panel.test.tsx`, `web/src/theme/dayMode.test.ts`) |
-| Type tokens (7.12) | Page title 22px | `--text-title` 30/36 for a screen's title (28px on a phone), `--text-label` 11px with `--tracking-label`; 22px stays for a smaller title. **Built** (`web/src/ui/PageHeader.test.tsx`) |
-| Button (7.12) | Primary, secondary, quiet, danger; the header's Hand something in was the primary | A `tonal` variant (soft accent fill); `data-weight` (filled, tonal, outline, plain) on every button; Hand something in and the phone's "+" are tonal. **Built** (`web/src/ui/Button.test.tsx`: "every variant names the weight it is drawn in…", `web/src/shell/Header.test.tsx`; browser `web/e2e/a11y.spec.ts` "day mode") |
-| PageHeader (7.12, 7.13) | The filter chips sat at the right of the tab strip, or hung off it | The tab strip, then the chips on a row of their own, both from the content area's left edge; Today's rail and a record's side drop under the main column below 1100px (before, 1024), a lone rail card full width. **Built** (`web/src/ui/PageHeader.test.tsx`; browser `shared-rules.spec.ts`, written, not yet run) |
-| Focus (7.1, 7.12) | The first line of Today took the cursor as it opened and showed its ring and cursor bar | It still takes the cursor (the keys begin there) but shows neither until a key is pressed (`web/src/lib/input-mode.ts`, `data-input` on the root). **Built** (`web/src/lib/input-mode.test.tsx`, `web/src/components/Today.test.tsx`: "the line that has the keyboard focus is the cursor row once a key is pressed…"; browser `shared-rules.spec.ts`, written, not yet run) |
-| Header (7.1) | The workspace's name beside the mark; the tab said the workspace's name | The product's name (`app.name`); the person's menu heading is "<person> · <workspace>" (`user.heading`); the tab says "<workspace> · <product>" (`app.title`). **Built** (`web/src/shell/Header.test.tsx`, `web/src/App.test.tsx`; browser `web/e2e/brand.spec.ts`, written, not yet run) |
-
-- **7.12, 7.11:** the build's "no uppercase" style rule has one exception, the group label's own style file.
-- **Setting `workspace.name`:** labelled "Workspace name", shown in the browser tab and at the top of the person's menu.
-- **Left:** icons and dots in Today's lead slots, the state sheets, the mockups' other pages.
-
-## 312. The product's palette, faces and mark; night surfaces lift (2026-11-03; visual review VP16, VP06)
-
-| Where | Before | Now |
-|---|---|---|
-| Default palette (7.12) | Cool gray paper and an indigo accent by day and night | Warm paper and a burgundy accent by day; near-black surfaces and a brass accent by night (`web/src/theme/tokens.css`, all three layers, under the same selectors). **Built** (`web/src/theme/brand.test.ts`, `web/src/theme/dayMode.test.ts`) |
-| State colors (7.12) | Red, amber and green hues near the brand's | Their own hues in both themes (danger `#b93815` / `#ff8a75`, warn `#8a4f00` / `#ff9a5c`, ok `#1b6b44` / `#7fd3a5`), never the accent. **Built** (`brand.test.ts`: "the state colors have hues of their own") |
-| Side and calendar marks (7.12) | Eight calendar hues, some the state colors' neighbors; no side colors | `--side-1` to `--side-5` and `--cal-1` to `--cal-8`, muted, none a state color; the Schedule reads them. **Built** (`brand.test.ts`: "side and calendar colors differ from every state color") |
-| Night surfaces (7.12) | Cool blue-gray, a pane edge by hairline only | Each level lifts (canvas, pane, well and hover, raised); a pane has a hairline and a faint top light. **Built** (`brand.test.ts`: "night surfaces lift") |
-| The accent's text (7.12, `lib/theme.ts`) | One value (`--text-on-accent`) set for both themes when white was unreadable | `--brand-on` (day) and `--brand-on-night` set from the chosen color, white or near-black for each. **Built** (`brand.test.ts`: "the text on a chosen color is readable"; `lib/theme.test.ts`) |
-| Type (7.12) | System faces | Inter for the interface, Fraunces for page titles, setup step titles and the name beside the mark, bundled by the build; nothing fetched at run time. **Built** (`brand.test.ts`: "the faces"; browser test `web/e2e/brand.spec.ts`, written, not yet run) |
-| The mark (7.1, 7.12) | A monogram of the workspace's name | The product's mark, a day and a night picture chosen by the theme in force (the person's own choice included); a workspace logo still wins; the tab's icon is the mark. **Built** (`web/src/shell/Header.test.tsx`; `brand.spec.ts`, written, not yet run) |
-
-- **04 (`ui.brand.color`):** the description says an empty color uses the app's own colors (burgundy by day, brass by night).
-- **Left for the next steps of the visual track:** the mark and name from one product file, the app icon, the brand moments
-  (VP17: the all-clear Today, the greeting), and the mockups' component rules.
-
-## 311. One follow-on run for repeated edits, none when nothing is tied, no note from a run with nothing to say (2026-11-03; sweep X72's source)
-
-| Where | Before | Now |
-|---|---|---|
-| Follow-on requests (6.7) | One request per change that moved a day: five edits of one to-do's day queued five | A later change to the same record joins the request that has not started (`follows_also`); the run reads the first value before and the last after, and edits that end where they began close it as stale with no call. **Built** (`tests/test_follow_on.py::test_repeated_edits_to_one_to_do_before_the_run_starts_make_one_request_with_the_first_before_and_last_after`, `::test_edits_that_end_where_they_began_close_the_one_request_as_stale_with_no_call`, `::test_a_request_already_running_is_not_changed_by_a_later_edit`) |
-| A move with nothing tied (6.7) | A run was made and paid for, to say nothing needed a change | Closed as "Nothing tied to this needed a change." before any packet, estimate or call. **Built** (`tests/test_follow_on.py::test_a_move_with_nothing_tied_closes_with_no_packet_no_call_and_nothing_spent`) |
-| A run with only notes (6.7) | Each note was filed (one echoed the run's packet) | The notes are dropped before the applier and the request reads as nothing tied; a note beside a question stays. **Built** (`tests/test_follow_on.py::test_a_run_answering_only_notes_files_none_and_reads_nothing_tied`, `::test_a_run_with_a_question_and_a_note_files_both`; browser: `web/e2e/data-and-trust.spec.ts` "five quick due-date edits…", written, not yet run) |
-| What changed | A follow-on that found nothing to bring in line showed as an "After '…' moved" row | Left out of What changed (`follow_on.closed_quietly`): it changed nothing (test `test_a_follow_on_that_found_nothing_to_bring_in_line_is_left_out_of_what_changed`) |
-
-## 310. Setup and Settings fixes: a choice can be let go, one card for an account, a folder chooser with a breadcrumb and New folder, one backup place, the synced folder after Save, Add connection that closes, plain refusals with limits, groups instead of a wall, add-on cards with a pill, a signed-out account as a warning (2026-11-03; X94 to X97, X99 to X104, X53, X58, X66 and the rows left partly)
-
-| Where | Before | Now |
-|---|---|---|
-| The AI step (7.8) | "Something else" left the last service's guide on screen with two cards selected; back on the step an account showed as a summary and a card with "Measure" and "Change AI models" | "Something else" lets the service go; the step shows one card for each account and leaves the summary, the skills line and the expert menu items to Settings |
-| A kind of source's form (7.15) | Fields labeled by whole sentences, one a password box with no short label; the cursor stayed on the page when the second step opened | A short label for each field (`sources.field.<kind>.<key>`); the cursor goes to the first field of the new step; the add-on's name is the one name |
-| The time zone note (7.8) | An empty bordered box lay over "No time zone matches" | The list is not drawn while nothing matches |
-| The folder chooser (7.8, 5.0) | No New folder, no breadcrumb; browsed `/` and accepted `/etc` | A breadcrumb, New folder (`POST /api/setup/folders/new`), a start at home; the computer's own folders (`engine/folder_rules.py`) are refused by the chooser, the backup check and the synced folder save, with a plain reason |
-| Where backups go (7.9, 5.0) | A second folder was added and every copy listed twice; no way to remove one; a 5000-character key was accepted | Choosing replaces; each place once with Remove that asks and leaves the copies (`DELETE /api/setup/backup-folder`); copies listed once; `storage.backups.key_max_chars` (256) |
-| Restoring (7.9, 11) | Shown as `cockpit restore …` | No command on screen; the page says restoring is not a button yet. **Restoring inside the app is not built**: it can't be done safely in a running app |
-| The synced folder (7.9) | Vanished after Save until a restart; Save disabled with no reason | Shows "applies after a restart" with Restart now; a disabled Save says why |
-| Add connection (7.15) | Asked "discard?" after a kind was chosen, so Escape and Close seemed dead; "Choose what to read" opened the generic drawer | Asks only when text was typed; "Choose what to read" is headed with the account |
-| Refusals (7.9, 7.0) | No limit on text settings; "That didn't work."; "$-5.00"; "1e-7"; a lower-case fragment; "there is already a project called …" | A limit on every text setting (500, 1000 for a path), "Use at most N characters."; the schema's own refusals in plain words; "-$5.00"; whole sentences; one sentence for a name already taken |
-| AI and spending (7.9) | Ten identical rows; a failure above "Nothing measured yet"; "Measure" | Folded groups, "no tests cover these kinds of work" said once, a failure in place of "Nothing checked yet", "Check skills" |
-| Add-ons (7.9) | A wall of text on each card; keys asked while signed in; Remove did not ask; Available listed an installed add-on | A name, a line, a status pill and one action, details folded; keys only when not signed in, in plain labels; Remove asks; Available leaves out an installed add-on |
-| The header after a sign-out (7.1, 7.15) | "Connection failed" in the danger color | "Signed out" as a warning; a refused or expired sign-in stays a danger |
-| Smaller rows | A folder with a slash at the end read as another source; "Empty uses the app's indigo"; a file name in the logo toast and a false "can't be found"; no email button without an address; a garbled count line; the tab said only the workspace's name; "You" three times in the menu | The same folder; the sentence gone; "the picture you chose" and a retry before "can't be found"; the button always; sentences; "<workspace> · Thimbleby"; the group is "About you" |
-| Not built | | Restore in the app (a staged restore swapped in at start-up is the safe design); `cockpit.db` and `.cockpit/` keep their names until phase I; toasts that trail a save by seconds were not measured |
-
-## 309. The re-sweep's Today and work screens (2026-11-03; sweep X86 to X93, X14, X24, X44, X69)
-
-- **7.14 Title rule, 04 (`ui.title_words`):** a row's title is short: the first sentence when it fits the configured words, else the
-  first words cut at a word with an ellipsis; a day the meta says is left out, and no stop stands before a comma. New setting
-  `ui.title_words` (12) with its schema entry, wording and demo values in both workspaces.
-- **7.5 Follow-ups:** the due-soon band holds only what still waits on the person.
-- **7.7 Today, 7.8 setup:** counts come from the rows beside them (the to-dos screen's "n of these m to-dos need you" and "m open ·
-  k overdue", the intake review's number, the setup's seven); the walkthrough's last screen has no number; the first result is not
-  Done while the look back waits for Start (`waits_for_go`); with setup unfinished Today says which step is next; a name to place
-  is one line; the phone shows every word of a line and the opened review in one column.
-- **6.32 the brief:** the evening wrap-up's Moved is a date put off to a later day; what is due today and still open is "Still open
-  from today". A clash of connected events carries the page of each and the calendar's address.
-- **Wording:** `.just_me` variants of the sheet's entries for a person with only their own life; an account named by a host and a
-  port reads as its service's name.
-- **API:** `RuntimeConfig.title_words`, `OpenActionView.needs_you`, the clash fields `event_page`, `other_event_page`,
-  `calendar_link`, `other_calendar_link`, and the setup step reason `waits_for_go`.
-
-## 308. Several accounts and sides: each connection told from its own account, one row for the same invitation and thread, accounts named, calendars with a color and a legend, every Today line on its side, sides served changeable, long names that hold (2026-11-03; sweep X77 to X85, X45)
-
-| Where | Before | Now |
-|---|---|---|
-| A connection's status (7.15) | "Read" or "Failed" from its own last read only; one failing account looked like nine failures, a signed-out account's rows said Read, the header said All good, no Sign in again | `WatchSourceView.account_state` (signed in, expired, signed out; expired also while the service refuses the sources); a row says Read only while its account is signed in; one line for an account that must sign in, with Sign in again (Connections, Today's `source_unread` with its `count`, the header popover); the header is a failed connection while any is not being read; a failure's sentence begins with a capital. **Built** (`tests/test_several_accounts.py`, `web/src/lib/connections.test.ts`, `web/src/components/Sources.test.tsx`, `web/src/shell/StatusMenu.test.tsx`; browser: `web/e2e/accounts.spec.ts` X77) |
-| The same invitation or thread in two accounts (6.4, 7.7) | Listed twice; filed twice | One agenda item (`EventDetails.uid` and start) and one Came-in row (`MessageDetails.message_id`, `references`), naming the other accounts in `also_in`; only different sources are joined, only on an identity the connector gave. **Built** (`tests/test_several_accounts.py`, `web/src/components/TodayAccounts.test.tsx`, `ScheduleCalendars.test.tsx`; browser: `accounts.spec.ts` X78). Not built: What changed lists each source's own record |
-| Naming accounts and calendars (7.7, 7.15) | "Your inbox" and "Your calendar" for every account; a color only if picked; clash lines unnamed | A source of a sign-in with several accounts is named by its account (also at start-up for older ones); each calendar has a color (picked, else by place: `shown_color`) on the entry's edge and as a mark; the Schedule has a legend with a show or hide button per calendar (Hidden said in words; remembered on the browser); clash lines name the calendars. **Built** (`tests/test_several_accounts.py`, `web/src/components/ScheduleCalendars.test.tsx`, `TodayAccounts.test.tsx`, `TodayCapacity.test.tsx`; browser: `accounts.spec.ts` X79 and X45) |
-| The side filter on Today (6.32, 7.7) | A clash between two sides and every Came-in item showed under every choice | `QueueLineView.sides` and `ArrivedView.sides`: a line shows under each side it is on, one on none under every choice. **Built** (`web/src/components/TodayAccounts.test.tsx`; browser: `accounts.spec.ts` X80) |
-| Filing from a source that serves sides (6.32) | Bills, orders and deliveries, and what nothing placed, went to Personal even from a mailbox serving two businesses | A source that serves sides and not Personal never files to Personal for want of a signal: the other ranks are narrowed to its sides, what none places stays unfiled for the person's question; the notes packet names the sides the source serves. **Built** (`tests/test_several_accounts.py`, `tests/test_many_sides.py`) |
-| The sides a connection serves (7.15, 6.32) | Chosen once in setup, never changeable; adding a business asked nothing | The change form on Connections has the tick boxes (`WatchSourceChange.sides`); adding a business or a job asks which connected mailboxes and calendars serve it. **Built** (`tests/test_several_accounts.py`, `web/src/components/Sources.test.tsx`, `BusinessSides.test.tsx`; browser: `accounts.spec.ts` X82) |
-| Long side names (7.1, 7.12) | The strip was unusable at 390px, the menu clipped with no ellipsis and scrolled sideways, five identical icons on the rail | A list to pick from on the phone layout, chips cut at about 24 characters with the full name on hover, the menu cuts with an ellipsis and never scrolls sideways, each side has a mark of its own. **Built** (`web/src/components/SideNames.test.tsx`, `web/src/shell/status.test.ts`; browser: `web/e2e/long-names.spec.ts`) |
-| Setup's mail step with several accounts (7.8) | A bold run-on of every source and a checkbox block for each account (1900px) | One compact row per account: its address, what is read there, who it is for. **Built** (`web/src/components/Walkthrough.test.tsx`; browser: `accounts.spec.ts` X84) |
-| A follow-up draft (7.5) | Named no mailbox; its greeting could contradict the Message style panel | `FollowupSection.send_from` and `send_from_default` (the mailbox the conversation came through): a list when several can send, remembered per person; the style the person set opens every message, and the panel says what an own-life person is opened with while it is the shipped one. **Built** (`tests/test_several_accounts.py`, `tests/test_greetings.py`, `web/src/components/FollowUps.test.tsx`, `MessageStyle.test.tsx`; browser: `accounts.spec.ts` X85) |
-| Plugin API (3.3) | 0.3.93 | 0.3.94: `EventDetails.uid`, `MessageDetails.message_id` and `references`. `docs/plugin-guide.md` and `docs/plugin-api-0.x.md` say so |
-| Not built | | What changed still lists each source's own record of an invitation or thread held twice; the Schedule's entries of a source serving two sides show under every side's filter; the private mail and calendar add-ons pass the new identities when they adopt 0.3.94 |
-
-## 307. The re-sweep's data-and-trust items (2026-11-03; X71, X01, X75, X16, X73, X37, X38, X72, X74, X76, the vendor-named key error)
-
-| Where | Before | Now |
-|---|---|---|
-| A to-do's Edit details (7.14) | A form of the record's own 25 fields ("PRJ-1", "[object Object]", Reply owed); a save of the day alone left the old day in the title | The short editor of its row; only what was touched is sent with the version read; the old day that ended the words is taken out by the applier (`record.tidy`, one Undo). Other core kinds' forms leave out the app's own bookkeeping; a message's page lists From and when. **Built** (`web/src/components/EditDetailsOfTodo.test.tsx`, `tests/test_stale_day.py`, `web/e2e/data-and-trust.spec.ts`) |
-| Settings quick edits (7.9) | Each save waited for a refresh of everything; no cue; a reload within seconds lost the last edits | The next save starts at once; a row and the page say Saving… then Saved; typed values are kept for the tab and saved after a reload, in the order typed. **Built** (`web/src/components/Settings.test.tsx`, `web/e2e/quick-edits.spec.ts`) |
-| Times with an offset (7.0) | The Schedule card, Came in and the week showed the digits as sent (UTC) beside "Now" in the person's zone | `clockTime` and `clockDay` move them to the person's clock. **Built** (`web/src/lib/dates.test.ts`, `web/src/components/Today.test.tsx`, `web/e2e/data-and-trust.spec.ts`) |
-| Ids, code and ISO dates (7.0) | The assistant's lessons, notes and the words of a change showed ids and a data dump; quotes, search and the Pause list showed year-month-day | `useReadable` names ids (or the kind), leaves dump lines out; quotes, search and Pause go through the date formatter. **Built** (`web/src/lib/read.test.ts`, `web/src/components/Notes.test.tsx`, `RecordPageNames.test.tsx`, `SearchBox.test.tsx`, `OnHold.test.tsx`, `web/e2e/data-and-trust.spec.ts`, and the internals scan reads a content hash and "(none)") |
-| A re-run after Send back (6.33) | The to-dos kept were added again unless they were owed to someone | An identical repeat from the same input folds into the open one whoever it is owed to. **Built** (`tests/test_promises.py::test_a_rerun_of_one_input_does_not_add_the_to_dos_that_were_kept_again`, `web/e2e/data-and-trust.spec.ts`) |
-| Removing the AI account (7.16) | Acted at once; Today still offered Start | Asks first when it stops the work; with no account the first go's line says so and offers Add an AI account. **Built** (`web/src/components/AiAccounts.test.tsx`, `Today.test.tsx`, `web/e2e/data-and-trust.spec.ts`) |
-| A service's own words in a failure (6.16) | They followed the plain words even when they named the service | Dropped when they name a service the catalog lists. **Built** (`tests/test_provider_safety.py::test_a_service_s_own_words_that_name_a_service_never_reach_the_screen`) |
-| Not built | | Undo of an account's removal after leaving the screen is the toast's, which stays while it offers Undo; a restore of a removed account from a list is not built |
-
 ## 1. Productized: a generic core plus plugins
 
 - **The workplace PM workflow is now a pack, not the product.** The core keeps the loop, the safety rules and a set of
@@ -1447,6 +1026,427 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
+
+## 337. Three choices in the gate's fix round (2026-11-04; owner)
+
+| Where | Before | Now |
+|---|---|---|
+| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls (D11); batch G4c |
+| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet line (D12); batch G4c |
+| A person's page (7.13) | "Draft a message", "Files from" and two tabs not made yet | To be made in batch G4c (D13) |
+
+- **No config key, API or op change in this section;** G4c records its own.
+
+## 336. Settings, part one: the frame, rows, You, AI and spending, Notices, Backups, Appearance, Quick links, Sign out, Advanced (2026-11-04; gate fix batch G5a)
+
+Batch G5a of the gate's fix round (7.9, 7.12, 6.16). The frame's intro is one muted line and the save line is at the page's foot; "Changed" is a dot and a word with an outline Reset and the default in its tooltip; help is one sentence; an amount is a short box; a disabled box keeps its edge; an ask-before amount above a run's limit is noted. You sets the accounts the assistant can act on off by a rule and stacks them on a phone. AI and spending shows no account as a warning row and holds its fields while offline; the empty compare page offers Add an account and a sub-page hides the phone's section row. Notices puts where reminders reach you on the rows' column, folds an unusable choice to one line and gives a blocked computer a status and Check again. Backups is blocks under rules with left-aligned buttons, a folder shown by its name and one empty pattern; a kept key hides Save and Make one for me. Quick links has an empty line, middle-cut addresses and a left-aligned form. Sign out starts on Keep signed in. Advanced counts each topic's settings. Help on a touch screen lists no shortcuts; Handover with no folder speaks only of this computer.
+
+## 334. The shared parts at the gate: drawer, header status, offline bar, segmented control, Filter sheet, empty state, table skeleton (2026-11-04)
+
+Batch G1b of the gate's fix round (7.12, 7.13). The drawer is full height; the header's status has no fill and Hand something in is the outline weight; the offline state is one slim line with the status saying "Offline" and a failed card without a second retry; the segmented control is an outlined track with a filled choice; calendar chips become "Calendars (n)" when they do not fit; one Filter sheet holds a screen's filters on a phone; the empty state is a left-aligned card with a display-face title; tables, grids and the schedule's subtitle keep their shape while they load; the side menu and search words stay as last known until the sides are read; an entry's pane is level with it and points at it.
+
+## 333. Follow-ups, To-dos, Questions and the drawers (2026-11-04; gate fix batch G2b)
+
+| Where | Before | Now |
+|---|---|---|
+| Follow-ups lines (7.5) | A Copy button on every line and a fourth in the detail | A line opens the detail, which holds the one Copy; Today's compact list keeps its line Copy |
+| Message or table (7.5) | A Message / Table switch on each card | "Show as a table" / "Show as a message" in the person's menu |
+| Own to-dos, empty state, message style (7.5) | A card shaped like a row; a four-line empty paragraph; a disclosure far below | One plain line; one line and a link to People; a "Message style" drawer from the header |
+| A message (7.5) | Every item listed, a resizable box | The first six and "Show N more", a box sized to its text |
+| To-dos and Questions (7.5; 4 `ui.open_rows_shown`) | A header Add button; the line under the title counted both tabs; every row of a group; "To-dos and questions" in the sidebar | No header button, More options on the add row; the line follows the tab; the first 15 of a group and "Show N more"; "To-dos" in the sidebar |
+| Add and edit a to-do (7.5) | Six fields shown equally; Repeats a box to type in; the edit form inline | What and Due first, the rest under More options; Repeats a list; the edit form a drawer |
+| Hand in, Feedback, Ask (7) | Five questions before the one action; checkboxes, subject and preview on the first view; two help paragraphs | Text and Choose a file, then Options; the box first, then "What will be sent"; one help line; the reason a primary waits beside it |
+| A to-do's page (7.5) | The facts split in two columns; the words repeated under the title; "Promised to: No one in particular" | One card; the words only when they differ from the title; the person's own to-do says nothing of it |
+| Outside these screens | Files showed a kind chip on every row; a person's Activity heading twice; "Nothing filled in yet"; "End them with it"; "From your notes" | The chip only with several kinds; the heading for a screen reader; the line gone; "Remove them too"; "Added by you" |
+
+## 331. Projects, a project's page, Files, Knowledge, Notes, Handover, Quality, Handled by account and the menus (2026-11-04; gate fix batch G4b)
+
+Batch G4b of the gate's fix round (7.12, 7.20, 5.0, 6.20). Project names are ink, Views is one quiet line until a first view exists, a project's page has Add a to-do as its one primary action and no empty details card; Files and Knowledge open on a drop zone or an add row; Handover shows In sync, when it was last looked over and Check now (`last_checked`, `folder_set`, `POST /api/sync/check`); Quality's too-early card leads with the answer at 18px, names the assistant, and two tiles carry a next step (promises found and false alerts; the other two have nothing to do) the week still under way ends today and reads "to now" (`week_end`), the measures with nothing in them are one count with Show them; Handled for you can group by account; the shortcuts list is three labeled groups, the More sheet is grouped with Help last and offers no shortcuts item. Built: `tests/test_handover_screen.py`, `tests/test_quality.py`, `tests/test_handled.py`, `web/src/components/Handover.test.tsx`, `Quality.test.tsx`, `Handled.test.tsx`, `Views.test.tsx`, `RecordPageRecords.test.tsx`, `ScheduleReview.test.tsx`, `web/src/shell/BottomBar.test.tsx`.
+
+## 330. People, a person's page, the person form and Organizations at the gate (2026-11-04; gate fix batch G4a)
+
+| Where | Before | Now |
+|---|---|---|
+| People (7.13) | Two tables with filter rows above them, mostly empty cells, labels over values on a phone | One list of rows (initials, name, one meta line, menu); the title says "4 people, 6 organizations"; the side and Organization filters only from twelve people, on one row |
+| Organizations (7.13) | A second table with its own outline button | Rows with one meta line, a quiet add button, "Removed organization X", one load-failed card for its own part |
+| Person form (7.14) | Eleven fields of equal weight; Save blocked for a person whose record names no side; hints in brackets | Name, where they belong (one panel), how to reach; the rest under More details (open when the record holds any); a person with no known side opens ready to save and is saved without touching sides |
+| A person's page (7.14) | "Add a to-do for Pat", "Open with Pat", a Person tag, the role twice, an empty-state card with a second button, tabs inside the left column | "Add a to-do", "Open items", no tag, the role once, who they are once, one muted line when nothing is open, tabs across both columns, a contact line on a phone, the ask box's help as a tooltip |
+| A missing person | Its own card with a warning icon and no crumb | A crumb, "Not here", one line, one filled Back to People; People stays marked |
+| An organization's page | Activity first, the note in a card | The note and "N people · N open items" under the title; a People section; no card when it has nothing to list |
+
+## 329. Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review (2026-11-04; gate fix batch G2a)
+
+| Where | Before | Now |
+|---|---|---|
+| Held for a restart (6.14, 4.22) | "Settings or code changed since the cockpit started; restart it to use them." shown as an item's body | "Settings changed since the app started; restart it to use them."; an older request is held for the same reason |
+| First go (6.32) | A go was asked for with no AI account | No go line until an account is set up |
+| Row status (7.14) | A chip after the title, in three styles | A dot and a word at the start of the meta line |
+| What changed (7.13) | One flat list, a chip and the same hand-in line on every row | Needs you, With the assistant, then days; runs with "x N"; a button for the rest of a group |
+| Since yesterday (7.13) | The reason in the title, Undo hidden in the menu | The subject as the title, the reason as meta, Undo as the row's action, a back link |
+| Handled for you (7.13) | A pill toggle, two help paragraphs | Tabs with counts, one subtitle, the reason in bold |
+| Search (7.12) | Plain rows, a note outside the panel | One panel, glyph and tag per result, a rule above Ask, the note inside, a scrim on a phone |
+| Stages, rules review, event page | A four-line empty paragraph; a size line always; details in a far column | One line and a link; the size line near the limit; one column with Open in your calendar |
+
+## 328. The Schedule at the gate: the grid in its own frame, titles on the Timeline, a mark on a clash day (2026-11-03; batch g3)
+
+| Where | Before | Now |
+|---|---|---|
+| Day, Work week and Week grids (7.7) | The page held twenty-four hours; the clash or the first entry could sit a thousand pixels down | The hours scroll inside a labelled frame that fits the window, with the day headings fixed on top; it opens on the first clash, else now, else the first entry |
+| Hour labels (7.7) | "10:00 AM" filled the gutter to the card's edge | "10 AM", with room at the edge |
+| The clash line (7.7) | Plain text under the title | A button that goes to the first clash |
+| Month (7.7) | A chip led with its time, so a title was cut to a few letters; a clash day was not marked | The title comes first and the time after it; a day with a clash has a mark and words for a screen reader |
+| Timeline (7.7) | Unlabeled marks, a seven-entry key, an instruction line | Each one-day mark carries its title; the key lists only what is on the screen; the instruction is for a screen reader |
+| Entry details (7.7) | "Open" with no object; a Back button beside the close button | "Open the event"; the close button is the one way out |
+| Add to schedule (7.7) | Silent about which calendar | A line says it goes on the app's own calendar |
+
+| Timeline (7.7) | A daily repeat was a mark for each day; the same to-do on consecutive days likewise | Runs of the same thing on consecutive days are one band over those days (engine/timeline.py) |
+| Loading (7.12) | A list skeleton under every view | The grids load as hour rows under a heading for each day; the Month and the phone's list as rows |
+| Calendar names (7.7) | The account's address in full in each name | The part before the "@" when all the addresses share a domain |
+| Phone Month (7.7) | A day opened Day view | A day is chosen and its entries are listed under the month, with "Open this day" |
+| Add to schedule (7.7) | Ends at showed an example time | Ends at follows Starts at by `ui.schedule.event_minutes` and says "No end time" when empty |
+| Entry pane (7.7) | Beside the time grid at 1440, squeezing its day headings | Covers its edge below 820px of room |
+| A calendar that needs signing in (7.7) | Its entries looked like the others | They have a dotted edge and say they are not up to date |
+
+- **New config key `ui.schedule.event_minutes` (60; 45 and 30 in the demo workspaces); the schedule answer carries it.** New wording: schedule.grid.region, schedule.month.clash, meeting.calendar_note; removed: schedule.pane.back.
+
+Third pass (batch g3b):
+
+| Where | Before | Now |
+|---|---|---|
+| Controls above the grid (7.7) | Four rows: the moves and range, the views, the calendars, then the grid's own heading with the date again | Two rows; the calendars are one line in the second row that scrolls inside itself and fades at an edge with more out of sight; a single day's column says "Today" or the weekday |
+| Header while loading (7.7, 7.12) | The page's buttons appeared when the days arrived | Add to schedule (or the phone's menu) is there from the first paint |
+| Subtitle (7.7) | The clash line, on grids only | The clash line and the meeting count in one line ("1 clash, on Tuesday · 2 meetings") on the grids and the Month |
+| All-day row (7.7) | Always drawn, 28px when empty; identical entries listed one by one | Not drawn when no shown day has an all-day entry; identical ones of a day are one with "×3" |
+| Hours (7.7) | The configured hours grown to the entries, no way to see the rest | "Show all hours" draws midnight to midnight, "Show fewer hours" goes back |
+| Today's column at night (7.7) | A tint a point lighter than its neighbors | A stronger tint |
+| Month (7.7) | A weekday left-aligned over centered numbers; title cut to one line; the time kept in a narrow cell; today the brand color; dots 8px | The weekday centered over the number's box, one edge for every number; titles take two lines; the time stays for a screen reader only below 56rem; today is ink; a day is a 24px target, 44px when narrow, with 10px dots and a 24px count |
+| Timeline (7.7) | A mark carried its title only; days-off bands heavy | The date comes before the title; the bands are lighter |
+| Entry pane on a phone (7.7) | A small Open beside its note | Open takes the width and a finger's height; a blank place is no Where row |
+| Add to schedule (7.7) | The end error was a loose line | The error belongs to the end field (marked invalid, described by the error) |
+
+- New wording: schedule.meetings, schedule.hours.all, schedule.hours.fewer, schedule.times, schedule.times_sr. No new config key.
+
+## 327. Shared rows, filter bars, tables, toasts, unknown addresses and the shell (2026-11-03; gate fix batch G1)
+
+| Where | Before | Now |
+|---|---|---|
+| Row (7.14) | Every row had a 24px slot and its gap before the title, empty or not | A list in which no row has a mark takes no width for the slot; one mark keeps it on every row of that list; held lines each have an icon of their kind |
+| Place on a row (6.32, 7.14) | "<side>: not in a project" as a chip on a row, and as a group heading under the side's own heading | A project chip only when the row has a project; a side's own items are "Not in a project" under that side's heading |
+| Filter bar (7.12) | Side counts were the whole screen's; the bar was drawn over any list | Counts are the open tab's; a list under 12 rows has no bar (a filter that is on keeps it) |
+| Tables (7.13) | A column empty for every row was drawn at rest; a heading with nothing under it said "· 0"; a phone's group heading was a 30% column; "0 projects" under the rows | An empty column is not drawn; no number for an empty heading; the heading spans the row; no count under rows of sides only |
+| Toasts (7.9) | The toast waited for every open screen to read again; some failures drew a check | The toast is shown as the save is made; every failure or block is a warning with the alert icon |
+| Addresses (7.1) | An unknown address opened Today or Settings | A "Not here" page with Back to Today; a record page that is gone offers its list |
+| Settings and setup on a phone (7.1, 7.15) | "Section: X" disclosure, a blank band, the section heading twice; a blank band above the setup step and a three-row footer | One picker row naming the section; the heading is read and not drawn below 1100px; the step starts under the header; the footer is two rows with a full-width primary |
+| Disabled primary (7.12) | The soft accent, like the tonal weight | A sunken fill and a firm edge, with the reason beside it |
+| Folds and group labels (7.12) | Four glyphs and one border chevron; Settings' group labels at the body size | One chevron (`--chevron-mask`); the shared 11px uppercase muted label |
+| Status popover (7.1) | A run-on line of what was checked | One row for each fact |
+| Way back (7.12) | A crumb or a bare Back, by page | `BackLink`, the page header's `back` (a person's page keeps its People › name crumb) |
+
+- **No config key, API or op change.** Wording: `not_here.title`, `not_here.text`, `not_here.back`, `record.not_found.back`, `settings.picker_label`; `settings.picker` is the section's name alone.
+
+## 326. The gate's fix round: scope and ten design choices (2026-11-03; owner)
+
+| Where | Before | Now |
+|---|---|---|
+| The U3 hand-back (roadmap) | Open tracking rows and the P2 groups could go back as "left" | Everything is fixed first: every open row, Y07 to Y11, and the cold scores' findings, until every screen is at least 4.0 with no point under 3.5 |
+| Privacy words (6.18, 7.13) | Three vocabularies across the AI step, the levels and the mail sides | One scale, Open, Confidential and Private (D1); built in batch G5, with the design text |
+| AI step, Clash, Quality, Follow-ups, To-dos (7.7, 7.13) | Open questions against the 4.6 mockups | Ring and tint (D2); the first meeting plus the menu (D3); the period stays a setting (D4); labelled buttons (D5); no Done tab (D6) |
+| Motion (7.1) | Open | Only the mark moves, at first launch and at the end of setup (D7) |
+| Screenshot comparisons (14) | Captures by hand | Six screens at two widths compared in CI (D8) |
+| Search (7.7) | Open | Own records only, and an empty result says so (D9) |
+| An add-on's install (3.11) | Open | It keeps its restart and says so before Install; a no-restart install is a plugin round question (D10) |
+
+- **No config key, API or op change in this section;** the batches that build each choice have their own sections.
+
+## 325. Today's all-clear is the brand card (2026-11-03; final review group f8)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's empty state, all clear (7.7) | A check icon and one line, "Nothing needs you · Checked 2 connections, last at 8:05 PM", with Missed something? | When setup is done, a run has happened, every source was read and nothing waits: a card with the brand mark (decorative; the night mark in the night theme), "Nothing needs you" in the display face, "A little more room to think…", and "See what was handled today" (to Handled for you, drawn only when something was handled today). The coverage stays under it as a quiet line with Missed something?, so an empty Today is never mistaken for "couldn't check". The other empty states are unchanged, and a source that was not read still gives the one line "Nothing found that needs you · …". **Built** (`web/src/components/TodayAllClear.test.tsx`, `Today.test.tsx`) |
+
+## 324. The capture reaches "Nothing needs you"; the Schedule's header on a phone is one short row (2026-11-03; final review group f7)
+
+| Where | Before | Now |
+|---|---|---|
+| Browser-test and capture servers (14) | "All clear" could not be reached: the capture's workspace had setup unfinished, so the empty card said "Setup isn't finished" | `tests/e2e_server.py --all-clear` (`tests/e2e_all_clear.py`) finishes every counted setup step through the store and the app's own record-keeping (a service account whose whole connection test passed, an inbox and a sent folder read, a note handed in, a backup made, two people) and leaves nothing on Today; the capture's "All clear" state runs on it. **Built** (`tests/test_e2e_all_clear_seed.py`) |
+| The Schedule's header on a phone (7.7) | The title, an "Add to schedule" row, then Today and a range that wrapped to two lines: 187px at 390 | The title with a "..." menu holding Add to schedule (the tab bar's plus hands something in, so the menu is the way to add), then the moves and a short range ("Nov 2 – 6") on one row that does not wrap. Wide windows keep the filled button. **Built** (`ScheduleLayouts.test.tsx`, `dates.test.ts`) |
+
+- **No config key, no API change.**
+
+## 323. A removed person's page offers Restore; the quality server holds found promises; a dot never ends a line on setup's account row (2026-11-03; final review group f6)
+
+| Where | Before | Now |
+|---|---|---|
+| A person who was removed (7.12) | The card said "This person isn't here any more" for a removed person and for a wrong address alike | A removed person's page says "<name> was removed", when, and offers **Restore** (the existing restore, with Undo); an address with no record says so, with Back to People. `GET /api/people/{id}/removal` says which (`PersonRemoval`). No window: a removed record can be restored while it exists. **Built** (`RecordPageRecords.test.tsx`, `tests/test_routes.py`, `people-records.spec.ts`) |
+| Setup mail, account row (7.8) | The state line's dots were items of a wrapping row, so one could end a line before "Private to you" | The line is a `meta-line`: a dot belongs to the part after it and is hidden when that part starts a line. **Built** (`Walkthrough.test.tsx`, measured in the capture) |
+| Browser tests (14) | The people-records server held no promise the assistant found, so Quality showed "Too early to tell" | `tests/e2e_server.py --assistant-found` seeds promises at the server's clock (`tests/e2e_quality.py`) |
+| The capture (visual tool) | The "All clear" card and a failing calendar could not be reached | A stage with setup finished and nothing waiting; the stand-in service's `/__e2e/failing` takes `part` (all, mail or calendar) |
+
+- **No config key.** One new read route (`PersonRemoval`).
+
+## 322. The last fixes to setup, a person's page and Quality from the final side-by-side review (2026-11-03; final review group f5c)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup on a phone (7.8) | A header of about 170px (title, intro, Finish later, then a Steps bar); the footer wrapped to two rows | One header bar: title, Steps, Finish later; one footer row, a waiting primary's reason on a line above it. **Built** (`Walkthrough.test.tsx`; measured in the capture) |
+| Setup, accepted (7.8) | The privacy question with three lines of hints | The question and one line; "Which account is it?" opens the rest. **Built** (`WelcomeAi.test.tsx`) |
+| Setup mail, no account yet (7.8) | The services and the mailbox loose on the page | One centred card holding the services as rows to sign in with and the mailbox folded as the quieter choice. **Built** (`Walkthrough.test.tsx`) |
+| Setup mail, account rows (7.8) | Tick boxes in the row; the account needing sign-in drawn by another row | One card for every account: "Private to you", "For <side> chips Change", and for an account that needs signing in an edge and Sign in again. **Built** (`Walkthrough.test.tsx`) |
+| A person's page on a phone (7.12) | The "more" menu alone at the left under the title | The menu at the right of the title's row (`PageHeader.more`). **Built** (`PersonPage.test.tsx`) |
+| A person who isn't there (7.12) | A "Not here" title and a Person chip over the card | The card alone; the heading is kept for a screen reader. **Built** (`RecordPageRecords.test.tsx`) |
+| Quality (6.20, 7.12) | "Back to Today" as a button; week headers of three lines; "Your own count" open with a wrapping title; a bare red line when it couldn't load; too-early card with a second panel | A "Today ›" crumb; headers Found, Done, False alerts, Looking over; the own count folded as "Count them yourself", its hint under a one-line title; the shared failed-load row (an edge, the words, a filled Try again); the own count folded inside the too-early card. **Built** (`Quality.test.tsx`) |
+
+- **Left:** the person-not-found line "Undo is on the People page for 10 minutes." is not written: no such Undo exists (a removal's Undo is its toast). Section 323 replaces it with a removed person's page that says so and offers Restore.
+- **No config key, no API change.**
+
+## 321. Setup's mail step as one first-account card, the offline banner in the setup guide, Quality's "Too early to tell" (2026-11-03; final review group f5b)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup mail, no account yet (7.8) | The add-on's id and long description, a second mailbox form and "Add mail, calendar or folder" beside Sign in | One card: the services to sign in with by their own names; the mailbox with an app password folded inside it. **Built** (`Walkthrough.test.tsx`) |
+| Setup mail, waiting for the window (7.8) | The banner plus a disabled "Opening the sign-in page…" button | The banner alone. **Built** (`Walkthrough.test.tsx`) |
+| Setup mail, an account needing sign-in (7.8) | Every account "Connected" | The shared account row: "Needs sign-in since <time>", Sign in again. **Built** (`Walkthrough.test.tsx`) |
+| Setup, offline (7.21) | No banner in the guide | The offline banner under the guide's header, in setup's words. **Built** (`Walkthrough.test.tsx`, `states.test.tsx`) |
+| Quality with nothing found (6.20) | A page of zeros | One "Too early to tell" card, with `dispatch.knowledge.quality_min_promises`. **Built** (`Quality.test.tsx`) |
+
+- **Config:** `dispatch.knowledge.quality_min_promises` (schema entry, default 1, description, demo values in both workspaces; live).
+- **Wording:** `walkthrough.mail.first_account|mailbox_instead`, `walkthrough.offline.*`, `quality.early.*`.
+
+Change log: section 321.
+
+## 320. One cause is one Today line; a side with nothing says so; the wrap-up card and the to-do tabs agree with their counts (2026-11-03; final side-by-side review, group a)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's queue (7.7) | One line for each request that stopped (thirteen "Choose another account" lines for one cause) and one "Add the Sent folder" line for each mailbox | `refused` and `failed` lines with one cause (`state` `no_person`, else the same words) are one line with `count` and the lines in `items`; its button for `no_person` is "Say who you are" (setup step 'workspace'), else it opens the list. `sent_folder` for several mailboxes is one line with `count`, `sources` and `names`. Built: `tests/test_one_line_per_cause.py`, `web/src/components/TodayStoppedGroup.test.tsx`, `web/src/shell/HeldLines.test.tsx` |
+| Today's clash line (7.7) | The first calendar's name and "and" used the line, the second was cut | Each calendar's name is shortened by itself and the second is always drawn |
+| Today's side filter (7.7) | A line that belongs to no side kept the screen from saying the side was empty | "Nothing on the {side} side today" with the way back above the app's own lines. Built: `TodaySides.test.tsx` |
+| The wrap-up card (7.7) | Every line of every section, with no cap | `ui.today.rail_rows` lines across the card, then "Show N more" and "Show fewer". Built: `BriefCard.test.tsx` |
+| To-dos and questions (7.5) | A tab with no rows said "Nothing matches these filters" | Says the tab is empty; the filter text is only for rows the filters hid. The line under the title counts both tabs, as the tabs do |
+| Connections (7.9) | "No connections yet" with an outline "Ask how to add one" | Card "Connect your mail and calendar" with the filled "Add a connection"; asking stays beside it. A refused sign-in card has one filled button |
+| Schedule on a phone (7.9) | The view switch wrapped, Timeline alone on a second line | One row of segments that share the width |
+| Skeletons (7.21) | A tone too near the surface in day and night | The border tone, shimmering to the well tone |
+| The capture tool | A full-page picture of a scrolled page put the sticky header mid-picture; a side picked in one state carried into the next; Loading kept the answers the shell had read | Scrolls to the top first; each state opens on every side; the screen's own reads are held and the app is loaded again |
+
+## 319. States on every list screen and the phone shell built to the 4.6 mockups; five small follow-ups (2026-11-03; visual review VP07, VP08, VP11, VP12, VP13, VC04, VC06, Y04)
+
+| Where | Before | Now |
+|---|---|---|
+| Loading and couldn't load (7.21) | Each list drew its own skeleton or an alert-iconed empty state | One `ListState`: skeleton rows with a lead circle at row height; `LoadFailed` with the reason and Try again; offline words; a list that loaded stays readable. **Built** (`web/src/ui/states.test.tsx`, `web/src/components/ListStates.test.tsx`: eight screens) |
+| Offline (7.21) | The status chip and a Today line said it; no screen did | One `OfflineBanner` at the top of the content, from `lib/connection.tsx`; Try now reopens the stream. **Built** (`states.test.tsx`, `ListStates.test.tsx`) |
+| A failed save (7.21) | A toast (the to-do add row), a note (a person's form, a record's details) | `NotSaved` in the row or form: "Not saved", the reason, Try again; the words stay. **Built** (`InlineAddTodo.test.tsx`, `PersonForm.test.tsx`, `RecordPage.test.tsx`) |
+| Changed elsewhere (7.21) | Untouched fields refreshed and listed; a field the person also edited was silently kept | `ChangedElsewhere`: old → new and what they typed, Keep mine or Use the new one. **Built** (`RecordPage.test.tsx`, `states.test.tsx`) |
+| Filtered to nothing (7.21) | A sentence | `FilteredEmpty`: the sentence and Clear filter. **Built** (`ListStates.test.tsx`) |
+| A failing account on Today (7.12) | A pill after the words | A state row: the warning edge, tint, icon and word. **Built** (`web/src/shell/HeldLines.test.tsx`) |
+| Counts (7.12) | The whole number | "99+" in group labels, tabs, segmented choices and the menu; the exact number in the accessible name. **Built** (`states.test.tsx`) |
+| The phone's bar (7.1) | Today · Work · + · Search · More | Today · To-dos · + · Schedule · More; More is a sheet in sections; Search is a header icon. **Built** (`web/src/shell/BottomBar.test.tsx`, `Header.test.tsx`) |
+| The side filter on a phone and under 1100px (7.8, 7.21) | A strip, or a list on a phone | One button in the page header and a sheet. **Built** (`web/src/components/SideFilterSheet.test.tsx`) |
+| Hit targets on a touch screen (7.21) | 24px floor, a 32px icon button, 40px row buttons | 44px: `--hit-min`, `--hit-icon`, `--btn-h-sm` on a coarse pointer. Done in CSS; the browser check `web/e2e/states-phone.spec.ts` is written, not yet run |
+| Settings at 1024 (7.9) | The list of sections folded under 720px of the page | Folds under 1100px of the window. Done in CSS and `SettingsNav`; the browser check `web/e2e/states-phone.spec.ts` is written, not yet run |
+| A date at the end of a to-do's title (7.21) | Typed into the Add form only | The add row finds it by rules, shows the day before Enter with a way to drop it. **Built** (`web/src/lib/todo-phrase.test.ts`, `InlineAddTodo.test.tsx`, `tests/test_add_todo.py`) |
+| The rail's rows (7.7, 04) | A constant of 3 | `ui.today.rail_rows`. **Built** (`web/src/components/TodayRail.test.tsx`) |
+| The clock and the time list (7.12, 04) | The computer's locale; every 15 minutes | `ui.time_format` and `ui.time_step`. **Built** (`web/src/lib/dates.test.ts`, `web/src/ui/TimeField.test.tsx`) |
+| The setup key (7.8) | Leaving the key box started a second check | Checked only when the key changed since the last check. **Built** (`web/src/components/WelcomeAi.test.tsx`) |
+| The setup mail step (7.8) | Continue in the body | Continue in the footer on the column's edge. **Built** (`web/src/components/Walkthrough.test.tsx`) |
+
+- **Config:** `ui.today.rail_rows`, `ui.time_format`, `ui.time_step` (schema entries, defaults, descriptions, demo values in both workspaces; `RuntimeConfig.rail_rows|time_format|time_step`).
+- **Wording:** `state.*`, `people.load_failed`, `projects.load_failed`, `nav.tab.todos`, `nav.more.*`, `sides.filter.open|sheet|sheet_hint`, `open.inline_add.date_*`, `addtodo.phrase.*`, `settings.key.ui.time_*`, `settings.key.ui.today.rail_rows`.
+- **Left:** `docs/project/u3-differences/states-phone.md` lists each with its reason (Schedule and Connections, the Files drop zone, changed-elsewhere on a to-do's own edit, captures, the browser run).
+
+## 318. Schedule and Connections built to the 4.6 mockups; signing in again to one account refuses another (2026-11-03; visual review VS06, VS18, X45, X53, X57, VC13)
+
+| Where | Before | Now |
+|---|---|---|
+| Connections (7.15) | A table of every connection (name, privacy, status, actions) under a list of services with an account list | One card for each account address, its connections as rows with a status ("Read 2 min ago", "Not read since 10:51 AM"), its sides as chips with Change, its privacy once; folders and feeds in one card; an account that needs the person first with its edge and Sign in again. **Built** (`web/src/lib/connection-cards.test.ts`, `connection-words.test.ts`, `web/src/components/ConnectionCard.test.tsx`, `Sources.test.tsx`, `AccountsAgree.test.tsx`; browser, written: `web/e2e/accounts.spec.ts` X79, X77, VC13, VS18) |
+| Connections on a phone (7.15, 7.13) | Five lines of the service and the sides before the button | Name, state and Sign in again first; the service, privacy and sides after. **Built** (CSS; browser, written: `accounts.spec.ts` VS18 measures the order) |
+| Signing in again (6.16, 7.15) | Any account the person chose was added; the account that needed signing in stayed failing with no word | The sign-in is started for the account's address (`POST /api/sign-ins/{name}/start?account=`); another address is refused, nothing kept or started, and the card says "That was a different account: <address>. Sign in as <expected>." with Try again. **Built** (`tests/test_sign_in_refused.py`, `web/src/components/ConnectionCard.test.tsx`, `SignIns.test.tsx`; browser, written: `accounts.spec.ts` VS18) |
+| A state inside a card (7.12) | Alert icon and bold for every connection that needs the person | `StateMark quiet`: the dot in the tone's color and the word. **Built** (`web/src/ui/StateMark.test.tsx`) |
+| The week grid (7.7) | A bold 12px title and a muted time on a gray fill, 56px an hour | A block with the calendar's color on a 3px edge and, softly, in its fill; the title in the control weight, the time and calendar on a second line; 72px an hour. **Built** (`web/src/components/ScheduleLayouts.test.tsx`, `ScheduleViews.test.tsx`) |
+| Meetings that overlap (7.7) | Side by side, narrow | One Clash card naming them ("3 at once" with the time for more than two), for the pairs the engine lists (see the next row). **Built** (`web/src/lib/calendar.test.ts`: clashGroups, `ScheduleLayouts.test.tsx`) |
+| The Schedule's clashes (7.7, 6.32) | Any two meetings that overlap on the screen were a Clash card, whatever Today said | The Schedule's clashes now come from the same rules as Today's: the answer lists the pairs (`GET /api/schedule`, `clashes`: the two entries, overlap or travel, the minutes), and the screen draws a Clash card only for those pairs. A pair the person marked fine is two ordinary entries; an all-day entry, one called off or declined, or one not accepted is in none; a travel clash says it is about travel and the minutes asked for. **Built** (`tests/test_schedule_clashes.py`; `ScheduleViews.test.tsx`, `lib/calendar.test.ts`) |
+| An entry in two calendars (7.7) | Named in the words for a screen reader and in the pane | Shown once, "In 2 calendars" in its line. **Built** (`ScheduleLayouts.test.tsx`) |
+| Calendar legend (7.7) | Buttons with a round mark | Toggles with a tick box in the calendar's color, Hidden in words, scrolling inside their own row on a phone. **Built** (`ScheduleLayouts.test.tsx`, `ScheduleCalendars.test.tsx`; browser, written: `accounts.spec.ts` VS06) |
+| Widths (7.7, 7.13) | Week and work week fell back to Day when narrow | The Week is the working days below 1100px (and says so); on a phone the week is a list by day, a row for each entry and one row for a clash. **Built** (`ScheduleLayouts.test.tsx`; browser, written: `web/e2e/schedule.spec.ts`) |
+| Month, Timeline (7.7) | Gray dots and one accent for every calendar entry | The calendar's color on the month's dots and on a timeline entry's mark. **Built** (`ScheduleTimeline.test.tsx`) |
+| Page header of the Schedule (7.7) | Two outline buttons | A line under the title naming the clashes in view; Add to schedule is the one filled button. **Built** (`ScheduleLayouts.test.tsx`) |
+| Not built | | The weekend is not read while the Week shows the working days; the Day, Weekdays, Week, Month and Timeline are still a segmented control, not an underlined strip; the capture lists the Schedule and Connections states it cannot drive (long content, a large count, a failed save) |
+
+## 317. A person's page, Quality and the setup's AI and mail steps built to the 4.6 mockups (2026-11-03; visual review VS01, VS03, VS13, VS15, VC10, VC11, VC12, X59, Y01)
+
+| Where | Before | Now |
+|---|---|---|
+| A person's page, header (7.14) | **Edit** was the one filled button | **Add a to-do for <first name>** is; it opens the add form with them as the one who does it. **Built** (`web/src/components/PersonPage.test.tsx`: "the one filled button adds a to-do for them…") |
+| A person's details (7.14) | One panel of rows, "Last contact" a row | A contact card: their initials on a disc in their first side's color, how you were last in touch and **Edit** at its head, then the rows. **Built** (`PersonPage.test.tsx`: "the contact card has their initials…", "the details panel says each fact once…") |
+| The box to ask (6.25, 7.14) | In the main column, under the history | A rail card **Ask about <first name>** with the send button in the box; on a phone the last thing on the page. **Built** (`PersonPage.test.tsx`: "the box to ask is a card of the rail…") |
+| The page where columns stack (7.14) | Open, history, then the panel | Open with them, the contact card, the history, the box to ask (CSS order on `data-slot` parts). **Built** (`PersonPage.test.tsx`; browser `web/e2e/person-quality-setup-46.spec.ts`, written, not yet run) |
+| The timeline (7.14) | Time, then the words | An icon for who did it (assistant, adding, changing), the words, the time under them. **Built** (`PersonPage.test.tsx`: "each line of the timeline has an icon…") |
+| Nothing open, a person gone (7.14) | A hint; "This page isn't here any more" | "Nothing with <name> yet" with the add button; "This person isn't here any more" with Back to People. **Built** (`PersonPage.test.tsx`, `RecordPageRecords.test.tsx`) |
+| Quality's heading lines (7.17) | The window's dates only | A bold line saying what the figures mean, the false alerts to look at, then the window. **Built** (`web/src/components/Quality.test.tsx`: "the page says in one line…") |
+| Quality's tiles (7.17) | A sentence of change | An arrow and the sentence, and better or worse where one way is better; a trend line per tile with a text alternative. **Built** (`Quality.test.tsx`: "each change is said in words…", "a tile has a small trend picture…") |
+| The weekly table (7.17) | A table at every width | A list at 639px and under; the table above. **Built** (`Quality.test.tsx`: "the weeks are also a list…") |
+| Mistakes and empty measures (7.17) | A person's name and a count; a bordered box each | A row with a mark and **Review**; one card, a line each with a count of 0. **Built** (`Quality.test.tsx`: "a mistake is a row…", "a measure with nothing in it…") |
+| The wizard's rail and footer (7.8, 7.12) | Empty circles; the footer's left edge guessed | A numeral in the display face in each circle (a check once done); the buttons in the step's own column; the eyebrow as the small spaced label. **Built** (`web/src/ui/Wizard.test.tsx`) |
+| The key (7.8) | A hint, then "Works", then a problem note | Empty, checking (spinner and word), accepted (check, the account's label, "Works"), rejected (mark and the check's reason, box invalid); the steps one bordered list; one Open style. **Built** (`web/src/components/WelcomeAi.test.tsx`: "the key's four states…") |
+| The mail step's accounts and waiting (7.8) | Rows of text with ticks | A card each: mark, address, Connected, **For** and chips; "Connect your first account" with none; a banner with **Cancel** while the window is open. **Built** (`web/src/components/Walkthrough.test.tsx`: "each account row is a card…", "while the service's window is open…") |
+
+- **Wording:** `person.add_todo`, `person.nothing_*`, `person.gone_*`, `conversation.about*`, `quality.sowhat.*`, `quality.stat.better|worse`, `quality.trend.label`, `quality.mistakes.review*`, `walkthrough.mail.account.*`, `walkthrough.mail.none_title`, `sign_in.window.waiting_title|rest`; changed: "Connect another account".
+- **Left:** "Draft a message", "Files from <name>", a percentage "kept on time", a period chooser, "Private to you", the check disc on a chosen card, the details edited in place. `docs/project/u3-differences/person-quality-setup.md` lists each with its reason.
+
+## 316. Today, the opened review and To-dos built to the 4.6 mockups (2026-11-03; visual review VS05, VS10, VS11, VC01)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's heading (7.7) | "Today", then the date and "N things need you" | A greeting for the time of day on the person's clock with their first name ("Good afternoon, Robin"); the date, then the count in bold. **Built** (`web/src/components/Today.test.tsx`: "the heading greets the person…") |
+| The queue (7.7) | A pane titled "Needs you" with its count, groups in sentence case | No title on the page (the pane keeps its name for a screen reader); groups uppercase with counts, At risk in the problem color. **Built** (`Today.test.tsx`: "the queue has no title of its own…", `web/src/ui/Panel.test.tsx`) |
+| A line's lead slot and meta (7.7, 7.14) | Empty slot; the side as a tag in the title | An icon by kind, or the side's color; the side and each calendar named in the meta after a mark (`web/src/ui/MarkDot.tsx`); one line. **Built** (`Today.test.tsx`: "a line on one of the person's sides…", "a clash line names both meetings…") |
+| One filled button (7.12) | None on Today (a row's action is never filled) | The first decision's action is filled, with a tint and a 3px edge; a line at risk has its own; while a review is open Keep all has the filled weight. **Built** (`Today.test.tsx`: "the first decision has the screen's one filled button…", "while a review is open…") |
+| A clash line (7.7) | "Sort out the clash on Tue, Nov 3: A and B", the pill Clash, "In X and in Y" | "A and B overlap" (or "are too close together"), the day and the overlap, the calendars with marks, "They overlap by 30 minutes". **Built** (`TodayCapacity.test.tsx`, `TodayAccounts.test.tsx`) |
+| The opened review (7.7) | A bordered card, "All looks good" | An inset card on the sunken surface under the row's text, ending in a hairline and "Keep all N" ("Keep it" for one). **Built** (`web/src/components/BatchDetail.test.tsx`) |
+| Today's rail (7.7) | Buttons in the card heads, every meeting and message listed | "Open" and "Check now" as quiet links; the Schedule card is headed "Today's schedule" (its region is still "Schedule"), three meetings on a calendar-colored edge, Clash when named by a clash line, and "N more in the schedule"; Came in holds three and a quiet "N more". **Built** (`web/src/components/TodayRail.test.tsx`) |
+| To-dos and questions (7.5) | One list in the server's order, a pill for Overdue, the add button in the header (and on a phone a line that opened the form), "Needs a date" a group at the top | Groups Overdue, Today, Coming up, Waiting on others with counts (`groupActions`); the add row first on every width; "N to-dos need a date" one line at the foot that opens the group; "N open · N overdue · N due today" over both tabs. **Built** (`OpenItems.test.tsx`, `InlineAddTodo.test.tsx`, `NeedsADate.test.tsx`, `web/src/lib/todo-groups.test.ts`; browser `web/e2e/today-todos-46.spec.ts`, written, not yet run) |
+
+- **Wording:** `today.greeting.*`, `queue.clash.title*`, `queue.batch.keep_all`, `open.group.*`, `open.due*`, `open.needs_date.line`, `open.inline_add.*`, `today.schedule.heading`; gone: "All looks good", "Sort out the clash on", `open.subtitle.late`.
+- **Left:** "by Friday" in the add row, "Show N more coming up", a Done tab, an icon on each system line, the rail's length enforced by layout; the review on a fixture the capture can drive. `docs/project/u3-differences/today-todos.md` lists each with its reason.
+
+## 315. The app's own lists, dates and times; one state mark; one account state for the header and Connections (2026-11-03; visual review VC05, VP05, VC13)
+
+| Where | Before | Now |
+|---|---|---|
+| Select (7.12) | The browser's select | A button that opens a listbox: arrows, Home, End, Page Up and Down, type-ahead, Enter, Escape (cursor back on the button); a filter box above twelve choices; the same props, so `<option>` children and `e.target.value` still work. **Built** (`web/src/ui/Select.test.tsx`) |
+| DateField (7.12) | The browser's date input ("mm/dd/yyyy") | A text box that reads the locale's order, month names, "today", "tomorrow" and weekdays, shows the day as `fieldDay` writes it, and a calendar button that opens a month grid (arrows, Page Up and Down, Home and End to the week's edges, Enter, Escape returns the cursor); the week starts on `ui.schedule.week_starts_on`, days not worked are underlined; ISO in and out. **Built** (`web/src/ui/DateField.test.tsx`, `web/src/lib/date-input.test.ts`) |
+| TimeField (7.12) | The browser's time input ("--:-- --") | A text box that reads "9", "9:30", "930", "9:30 pm", "21:30", shows the time in the locale's 12-hour or 24-hour clock, and a list of times every 15 minutes (combobox). A date with a time is the two side by side. **Built** (`web/src/ui/DateField.test.tsx`) |
+| Every screen (7.12) | Native controls on To-dos, Schedule's Add, Quality, Edit details | All of them are the app's own, `RecordPage`'s date fields included; the one native control left is the file picker. **Built** (browser: `web/e2e/shared-rules.spec.ts`, `guards.spec.ts`) |
+| State rows (7.12) | State as coloured tags (pills) and, in Connections, a bare dot | `StateMark` (a dot and a word; an icon when it needs the person) and `Row state` (a 3px edge and a soft tint); used by Connections' sources and accounts, add-on cards, AI accounts, sign-ins and the backup. **Built** (`web/src/ui/StateMark.test.tsx`) |
+| Header status (7.1) | "Connection failed" or "Signed out"; the popover listed the failing account in a red line of the coverage text | "1 account needs you" ("2 accounts need you"); the popover lists each account once as a state row. Connections' sign-in rows and the popover's are one component from one account state. **Built** (`web/src/shell/StatusMenu.test.tsx`, `web/src/lib/connections.test.ts`; browser: `web/e2e/accounts.spec.ts`) |
+
+- **7.1, 7.12:** the status chip, the form parts and the state rows as above; `RecordPage`'s date fields use `DateField`.
+- **Dependency:** `@internationalized/date` is now a direct dependency (the calendar grid's date type; already installed).
+- **Tests:** `selectOptions` still drives a list (a helper in `web/src/test-setup.ts` opens it and clicks the choice); a test reads
+  a list's choices through `snapshotOf` and `optionsOf` (`web/src/test-utils.tsx`). Browser tests use `web/e2e/choose.ts`.
+- **Left:** the 12-hour or 24-hour clock and the list's step have no setting (listed in `docs/decisions.md`); the Connections page
+  is still a table of sources with the accounts that need signing in above it, not the mockup's card per account.
+
+## 314. Restore from a backup copy in the app, staged and swapped in at the next start (2026-11-03; sweep X98, X04)
+
+| Where | Before | Now |
+|---|---|---|
+| Backups page (7.9) | "Restoring isn't a button in the app yet"; a copy could only become a new workspace from the command line | **Restore this copy** on each copy: a confirmation in plain words (the workspace goes back to how it was then, changes since are set aside not deleted, the app restarts when the person chooses), an encrypted copy asks for its key in the same dialog, a refusal is said in the dialog. A waiting restore shows on the page with Restart now and Cancel. **Built** (`web/src/components/BackupsPanel.test.tsx`, `RestoreLine.test.tsx`; `tests/test_restore_in_app.py`; browser test `web/e2e/settings-setup-fixes.spec.ts`, written, not yet run) |
+| Staging (5.0) | None | `restore_backup` into `.cockpit/restore-pending/`, marker `READY` last, then the usual restart ask (`restart_for` names `restore`); one at a time, a second replaces the first once made, Cancel removes it. **Built** (`tests/test_restore_in_app.py`: staging, wrong or missing key, second restore, Cancel; route tests) |
+| The swap (5.0, 6.14) | None | At the next `cockpit serve`, before anything opens the workspace: what a restore replaces is renamed into `.cockpit/before-restore/<time>/`, the restored files renamed in, `restore-pending/` removed; renames only, never deleted; a failing step is undone and the staged restore stays; a start after the computer stopped midway finishes the same plan. **Built** (`tests/test_restore_in_app.py`: the swap, renames only, a failing rename, a stopped swap, serving swaps first) |
+| Today (7.7) | None | `restore` lines: waiting for the restart (Restart now, Cancel in the menu), "Check your restored workspace (from <date>)" with Dismiss and Put back what was there before, and "The restore didn't happen" with why. **Built** (`tests/test_restore_in_app.py`: the lines; `RestoreLine.test.tsx`) |
+| Put back (5.0) | None | Stages the newest `before-restore/` folder the same way (its database's log folded in first), so each direction is reversible. **Built** (`tests/test_restore_in_app.py`: put back, the unfolded log) |
+| Synced folder (5.0) | n/a | A restore is refused while one is set up, with the reason: the next start would load the folder's newer copy over it. **Built** (`tests/test_restore_in_app.py`: the synced folder test; `BackupsPanel.test.tsx`) |
+
+- **API:** `POST /api/backups/restore`, `POST /api/backups/restore/cancel`, `POST /api/restore/put-back`, `POST /api/restore/dismiss`;
+  `GET /api/backups` gains `pending` and `restore_blocked`; the queue gains the kind `restore`.
+- **05 (5.0), 06 (6.14), 07 (7.9):** the restore, the swap and the page as above. The swap keeps this computer's own
+  settings (`storage.yaml`, `server.yaml`) in place, and a failed swap removes only its own plan from the kept folder.
+
+## 313. The mockups' shared rules: rows, type, one filled button, one grid, keyboard-only focus, the product's name (2026-11-03; visual review VP01 to VP04, VP06, VC01 to VC03, VC08)
+
+| Where | Before | Now |
+|---|---|---|
+| Row (7.12, 7.14) | The leading slot took no width when empty; a mark stood before the title; on a phone a lone action stayed at the right and several went under the title | A 24px slot always (`--row-lead-w`); the mark and a project or view tag after the title's words; on a phone the buttons go under the words and the menu sits at the top right. **Built** (`web/src/ui/Row.test.tsx`: "a row's leading slot is always there and is 24px wide…", "the buttons and the menu are separate parts…"; `web/src/theme/dayMode.test.ts`: "below 640px the parts of a row stack…"; browser `web/e2e/shared-rules.spec.ts`, written, not yet run) |
+| Group label (7.12 type) | Today's and "Needs a date"'s headings 12px, sentence case, in a band at night; counts plain | `GroupLabel`: 11px, uppercase, spaced, count in a pill; the sidebar's and menus' section labels use it; the band tokens are gone; a panel's, a tab's and the sidebar's counts are pills. **Built** (`web/src/ui/GroupLabel.test.tsx`, `web/src/ui/Panel.test.tsx`, `web/src/theme/dayMode.test.ts`) |
+| Type tokens (7.12) | Page title 22px | `--text-title` 30/36 for a screen's title (28px on a phone), `--text-label` 11px with `--tracking-label`; 22px stays for a smaller title. **Built** (`web/src/ui/PageHeader.test.tsx`) |
+| Button (7.12) | Primary, secondary, quiet, danger; the header's Hand something in was the primary | A `tonal` variant (soft accent fill); `data-weight` (filled, tonal, outline, plain) on every button; Hand something in and the phone's "+" are tonal. **Built** (`web/src/ui/Button.test.tsx`: "every variant names the weight it is drawn in…", `web/src/shell/Header.test.tsx`; browser `web/e2e/a11y.spec.ts` "day mode") |
+| PageHeader (7.12, 7.13) | The filter chips sat at the right of the tab strip, or hung off it | The tab strip, then the chips on a row of their own, both from the content area's left edge; Today's rail and a record's side drop under the main column below 1100px (before, 1024), a lone rail card full width. **Built** (`web/src/ui/PageHeader.test.tsx`; browser `shared-rules.spec.ts`, written, not yet run) |
+| Focus (7.1, 7.12) | The first line of Today took the cursor as it opened and showed its ring and cursor bar | It still takes the cursor (the keys begin there) but shows neither until a key is pressed (`web/src/lib/input-mode.ts`, `data-input` on the root). **Built** (`web/src/lib/input-mode.test.tsx`, `web/src/components/Today.test.tsx`: "the line that has the keyboard focus is the cursor row once a key is pressed…"; browser `shared-rules.spec.ts`, written, not yet run) |
+| Header (7.1) | The workspace's name beside the mark; the tab said the workspace's name | The product's name (`app.name`); the person's menu heading is "<person> · <workspace>" (`user.heading`); the tab says "<workspace> · <product>" (`app.title`). **Built** (`web/src/shell/Header.test.tsx`, `web/src/App.test.tsx`; browser `web/e2e/brand.spec.ts`, written, not yet run) |
+
+- **7.12, 7.11:** the build's "no uppercase" style rule has one exception, the group label's own style file.
+- **Setting `workspace.name`:** labelled "Workspace name", shown in the browser tab and at the top of the person's menu.
+- **Left:** icons and dots in Today's lead slots, the state sheets, the mockups' other pages.
+
+## 312. The product's palette, faces and mark; night surfaces lift (2026-11-03; visual review VP16, VP06)
+
+| Where | Before | Now |
+|---|---|---|
+| Default palette (7.12) | Cool gray paper and an indigo accent by day and night | Warm paper and a burgundy accent by day; near-black surfaces and a brass accent by night (`web/src/theme/tokens.css`, all three layers, under the same selectors). **Built** (`web/src/theme/brand.test.ts`, `web/src/theme/dayMode.test.ts`) |
+| State colors (7.12) | Red, amber and green hues near the brand's | Their own hues in both themes (danger `#b93815` / `#ff8a75`, warn `#8a4f00` / `#ff9a5c`, ok `#1b6b44` / `#7fd3a5`), never the accent. **Built** (`brand.test.ts`: "the state colors have hues of their own") |
+| Side and calendar marks (7.12) | Eight calendar hues, some the state colors' neighbors; no side colors | `--side-1` to `--side-5` and `--cal-1` to `--cal-8`, muted, none a state color; the Schedule reads them. **Built** (`brand.test.ts`: "side and calendar colors differ from every state color") |
+| Night surfaces (7.12) | Cool blue-gray, a pane edge by hairline only | Each level lifts (canvas, pane, well and hover, raised); a pane has a hairline and a faint top light. **Built** (`brand.test.ts`: "night surfaces lift") |
+| The accent's text (7.12, `lib/theme.ts`) | One value (`--text-on-accent`) set for both themes when white was unreadable | `--brand-on` (day) and `--brand-on-night` set from the chosen color, white or near-black for each. **Built** (`brand.test.ts`: "the text on a chosen color is readable"; `lib/theme.test.ts`) |
+| Type (7.12) | System faces | Inter for the interface, Fraunces for page titles, setup step titles and the name beside the mark, bundled by the build; nothing fetched at run time. **Built** (`brand.test.ts`: "the faces"; browser test `web/e2e/brand.spec.ts`, written, not yet run) |
+| The mark (7.1, 7.12) | A monogram of the workspace's name | The product's mark, a day and a night picture chosen by the theme in force (the person's own choice included); a workspace logo still wins; the tab's icon is the mark. **Built** (`web/src/shell/Header.test.tsx`; `brand.spec.ts`, written, not yet run) |
+
+- **04 (`ui.brand.color`):** the description says an empty color uses the app's own colors (burgundy by day, brass by night).
+- **Left for the next steps of the visual track:** the mark and name from one product file, the app icon, the brand moments
+  (VP17: the all-clear Today, the greeting), and the mockups' component rules.
+
+## 311. One follow-on run for repeated edits, none when nothing is tied, no note from a run with nothing to say (2026-11-03; sweep X72's source)
+
+| Where | Before | Now |
+|---|---|---|
+| Follow-on requests (6.7) | One request per change that moved a day: five edits of one to-do's day queued five | A later change to the same record joins the request that has not started (`follows_also`); the run reads the first value before and the last after, and edits that end where they began close it as stale with no call. **Built** (`tests/test_follow_on.py::test_repeated_edits_to_one_to_do_before_the_run_starts_make_one_request_with_the_first_before_and_last_after`, `::test_edits_that_end_where_they_began_close_the_one_request_as_stale_with_no_call`, `::test_a_request_already_running_is_not_changed_by_a_later_edit`) |
+| A move with nothing tied (6.7) | A run was made and paid for, to say nothing needed a change | Closed as "Nothing tied to this needed a change." before any packet, estimate or call. **Built** (`tests/test_follow_on.py::test_a_move_with_nothing_tied_closes_with_no_packet_no_call_and_nothing_spent`) |
+| A run with only notes (6.7) | Each note was filed (one echoed the run's packet) | The notes are dropped before the applier and the request reads as nothing tied; a note beside a question stays. **Built** (`tests/test_follow_on.py::test_a_run_answering_only_notes_files_none_and_reads_nothing_tied`, `::test_a_run_with_a_question_and_a_note_files_both`; browser: `web/e2e/data-and-trust.spec.ts` "five quick due-date edits…", written, not yet run) |
+| What changed | A follow-on that found nothing to bring in line showed as an "After '…' moved" row | Left out of What changed (`follow_on.closed_quietly`): it changed nothing (test `test_a_follow_on_that_found_nothing_to_bring_in_line_is_left_out_of_what_changed`) |
+
+## 310. Setup and Settings fixes: a choice can be let go, one card for an account, a folder chooser with a breadcrumb and New folder, one backup place, the synced folder after Save, Add connection that closes, plain refusals with limits, groups instead of a wall, add-on cards with a pill, a signed-out account as a warning (2026-11-03; X94 to X97, X99 to X104, X53, X58, X66 and the rows left partly)
+
+| Where | Before | Now |
+|---|---|---|
+| The AI step (7.8) | "Something else" left the last service's guide on screen with two cards selected; back on the step an account showed as a summary and a card with "Measure" and "Change AI models" | "Something else" lets the service go; the step shows one card for each account and leaves the summary, the skills line and the expert menu items to Settings |
+| A kind of source's form (7.15) | Fields labeled by whole sentences, one a password box with no short label; the cursor stayed on the page when the second step opened | A short label for each field (`sources.field.<kind>.<key>`); the cursor goes to the first field of the new step; the add-on's name is the one name |
+| The time zone note (7.8) | An empty bordered box lay over "No time zone matches" | The list is not drawn while nothing matches |
+| The folder chooser (7.8, 5.0) | No New folder, no breadcrumb; browsed `/` and accepted `/etc` | A breadcrumb, New folder (`POST /api/setup/folders/new`), a start at home; the computer's own folders (`engine/folder_rules.py`) are refused by the chooser, the backup check and the synced folder save, with a plain reason |
+| Where backups go (7.9, 5.0) | A second folder was added and every copy listed twice; no way to remove one; a 5000-character key was accepted | Choosing replaces; each place once with Remove that asks and leaves the copies (`DELETE /api/setup/backup-folder`); copies listed once; `storage.backups.key_max_chars` (256) |
+| Restoring (7.9, 11) | Shown as `cockpit restore …` | No command on screen; the page says restoring is not a button yet. **Restoring inside the app is not built**: it can't be done safely in a running app |
+| The synced folder (7.9) | Vanished after Save until a restart; Save disabled with no reason | Shows "applies after a restart" with Restart now; a disabled Save says why |
+| Add connection (7.15) | Asked "discard?" after a kind was chosen, so Escape and Close seemed dead; "Choose what to read" opened the generic drawer | Asks only when text was typed; "Choose what to read" is headed with the account |
+| Refusals (7.9, 7.0) | No limit on text settings; "That didn't work."; "$-5.00"; "1e-7"; a lower-case fragment; "there is already a project called …" | A limit on every text setting (500, 1000 for a path), "Use at most N characters."; the schema's own refusals in plain words; "-$5.00"; whole sentences; one sentence for a name already taken |
+| AI and spending (7.9) | Ten identical rows; a failure above "Nothing measured yet"; "Measure" | Folded groups, "no tests cover these kinds of work" said once, a failure in place of "Nothing checked yet", "Check skills" |
+| Add-ons (7.9) | A wall of text on each card; keys asked while signed in; Remove did not ask; Available listed an installed add-on | A name, a line, a status pill and one action, details folded; keys only when not signed in, in plain labels; Remove asks; Available leaves out an installed add-on |
+| The header after a sign-out (7.1, 7.15) | "Connection failed" in the danger color | "Signed out" as a warning; a refused or expired sign-in stays a danger |
+| Smaller rows | A folder with a slash at the end read as another source; "Empty uses the app's indigo"; a file name in the logo toast and a false "can't be found"; no email button without an address; a garbled count line; the tab said only the workspace's name; "You" three times in the menu | The same folder; the sentence gone; "the picture you chose" and a retry before "can't be found"; the button always; sentences; "<workspace> · Thimbleby"; the group is "About you" |
+| Not built | | Restore in the app (a staged restore swapped in at start-up is the safe design); `cockpit.db` and `.cockpit/` keep their names until phase I; toasts that trail a save by seconds were not measured |
+
+## 309. The re-sweep's Today and work screens (2026-11-03; sweep X86 to X93, X14, X24, X44, X69)
+
+- **7.14 Title rule, 04 (`ui.title_words`):** a row's title is short: the first sentence when it fits the configured words, else the
+  first words cut at a word with an ellipsis; a day the meta says is left out, and no stop stands before a comma. New setting
+  `ui.title_words` (12) with its schema entry, wording and demo values in both workspaces.
+- **7.5 Follow-ups:** the due-soon band holds only what still waits on the person.
+- **7.7 Today, 7.8 setup:** counts come from the rows beside them (the to-dos screen's "n of these m to-dos need you" and "m open ·
+  k overdue", the intake review's number, the setup's seven); the walkthrough's last screen has no number; the first result is not
+  Done while the look back waits for Start (`waits_for_go`); with setup unfinished Today says which step is next; a name to place
+  is one line; the phone shows every word of a line and the opened review in one column.
+- **6.32 the brief:** the evening wrap-up's Moved is a date put off to a later day; what is due today and still open is "Still open
+  from today". A clash of connected events carries the page of each and the calendar's address.
+- **Wording:** `.just_me` variants of the sheet's entries for a person with only their own life; an account named by a host and a
+  port reads as its service's name.
+- **API:** `RuntimeConfig.title_words`, `OpenActionView.needs_you`, the clash fields `event_page`, `other_event_page`,
+  `calendar_link`, `other_calendar_link`, and the setup step reason `waits_for_go`.
+
+## 308. Several accounts and sides: each connection told from its own account, one row for the same invitation and thread, accounts named, calendars with a color and a legend, every Today line on its side, sides served changeable, long names that hold (2026-11-03; sweep X77 to X85, X45)
+
+| Where | Before | Now |
+|---|---|---|
+| A connection's status (7.15) | "Read" or "Failed" from its own last read only; one failing account looked like nine failures, a signed-out account's rows said Read, the header said All good, no Sign in again | `WatchSourceView.account_state` (signed in, expired, signed out; expired also while the service refuses the sources); a row says Read only while its account is signed in; one line for an account that must sign in, with Sign in again (Connections, Today's `source_unread` with its `count`, the header popover); the header is a failed connection while any is not being read; a failure's sentence begins with a capital. **Built** (`tests/test_several_accounts.py`, `web/src/lib/connections.test.ts`, `web/src/components/Sources.test.tsx`, `web/src/shell/StatusMenu.test.tsx`; browser: `web/e2e/accounts.spec.ts` X77) |
+| The same invitation or thread in two accounts (6.4, 7.7) | Listed twice; filed twice | One agenda item (`EventDetails.uid` and start) and one Came-in row (`MessageDetails.message_id`, `references`), naming the other accounts in `also_in`; only different sources are joined, only on an identity the connector gave. **Built** (`tests/test_several_accounts.py`, `web/src/components/TodayAccounts.test.tsx`, `ScheduleCalendars.test.tsx`; browser: `accounts.spec.ts` X78). Not built: What changed lists each source's own record |
+| Naming accounts and calendars (7.7, 7.15) | "Your inbox" and "Your calendar" for every account; a color only if picked; clash lines unnamed | A source of a sign-in with several accounts is named by its account (also at start-up for older ones); each calendar has a color (picked, else by place: `shown_color`) on the entry's edge and as a mark; the Schedule has a legend with a show or hide button per calendar (Hidden said in words; remembered on the browser); clash lines name the calendars. **Built** (`tests/test_several_accounts.py`, `web/src/components/ScheduleCalendars.test.tsx`, `TodayAccounts.test.tsx`, `TodayCapacity.test.tsx`; browser: `accounts.spec.ts` X79 and X45) |
+| The side filter on Today (6.32, 7.7) | A clash between two sides and every Came-in item showed under every choice | `QueueLineView.sides` and `ArrivedView.sides`: a line shows under each side it is on, one on none under every choice. **Built** (`web/src/components/TodayAccounts.test.tsx`; browser: `accounts.spec.ts` X80) |
+| Filing from a source that serves sides (6.32) | Bills, orders and deliveries, and what nothing placed, went to Personal even from a mailbox serving two businesses | A source that serves sides and not Personal never files to Personal for want of a signal: the other ranks are narrowed to its sides, what none places stays unfiled for the person's question; the notes packet names the sides the source serves. **Built** (`tests/test_several_accounts.py`, `tests/test_many_sides.py`) |
+| The sides a connection serves (7.15, 6.32) | Chosen once in setup, never changeable; adding a business asked nothing | The change form on Connections has the tick boxes (`WatchSourceChange.sides`); adding a business or a job asks which connected mailboxes and calendars serve it. **Built** (`tests/test_several_accounts.py`, `web/src/components/Sources.test.tsx`, `BusinessSides.test.tsx`; browser: `accounts.spec.ts` X82) |
+| Long side names (7.1, 7.12) | The strip was unusable at 390px, the menu clipped with no ellipsis and scrolled sideways, five identical icons on the rail | A list to pick from on the phone layout, chips cut at about 24 characters with the full name on hover, the menu cuts with an ellipsis and never scrolls sideways, each side has a mark of its own. **Built** (`web/src/components/SideNames.test.tsx`, `web/src/shell/status.test.ts`; browser: `web/e2e/long-names.spec.ts`) |
+| Setup's mail step with several accounts (7.8) | A bold run-on of every source and a checkbox block for each account (1900px) | One compact row per account: its address, what is read there, who it is for. **Built** (`web/src/components/Walkthrough.test.tsx`; browser: `accounts.spec.ts` X84) |
+| A follow-up draft (7.5) | Named no mailbox; its greeting could contradict the Message style panel | `FollowupSection.send_from` and `send_from_default` (the mailbox the conversation came through): a list when several can send, remembered per person; the style the person set opens every message, and the panel says what an own-life person is opened with while it is the shipped one. **Built** (`tests/test_several_accounts.py`, `tests/test_greetings.py`, `web/src/components/FollowUps.test.tsx`, `MessageStyle.test.tsx`; browser: `accounts.spec.ts` X85) |
+| Plugin API (3.3) | 0.3.93 | 0.3.94: `EventDetails.uid`, `MessageDetails.message_id` and `references`. `docs/plugin-guide.md` and `docs/plugin-api-0.x.md` say so |
+| Not built | | What changed still lists each source's own record of an invitation or thread held twice; the Schedule's entries of a source serving two sides show under every side's filter; the private mail and calendar add-ons pass the new identities when they adopt 0.3.94 |
+
+## 307. The re-sweep's data-and-trust items (2026-11-03; X71, X01, X75, X16, X73, X37, X38, X72, X74, X76, the vendor-named key error)
+
+| Where | Before | Now |
+|---|---|---|
+| A to-do's Edit details (7.14) | A form of the record's own 25 fields ("PRJ-1", "[object Object]", Reply owed); a save of the day alone left the old day in the title | The short editor of its row; only what was touched is sent with the version read; the old day that ended the words is taken out by the applier (`record.tidy`, one Undo). Other core kinds' forms leave out the app's own bookkeeping; a message's page lists From and when. **Built** (`web/src/components/EditDetailsOfTodo.test.tsx`, `tests/test_stale_day.py`, `web/e2e/data-and-trust.spec.ts`) |
+| Settings quick edits (7.9) | Each save waited for a refresh of everything; no cue; a reload within seconds lost the last edits | The next save starts at once; a row and the page say Saving… then Saved; typed values are kept for the tab and saved after a reload, in the order typed. **Built** (`web/src/components/Settings.test.tsx`, `web/e2e/quick-edits.spec.ts`) |
+| Times with an offset (7.0) | The Schedule card, Came in and the week showed the digits as sent (UTC) beside "Now" in the person's zone | `clockTime` and `clockDay` move them to the person's clock. **Built** (`web/src/lib/dates.test.ts`, `web/src/components/Today.test.tsx`, `web/e2e/data-and-trust.spec.ts`) |
+| Ids, code and ISO dates (7.0) | The assistant's lessons, notes and the words of a change showed ids and a data dump; quotes, search and the Pause list showed year-month-day | `useReadable` names ids (or the kind), leaves dump lines out; quotes, search and Pause go through the date formatter. **Built** (`web/src/lib/read.test.ts`, `web/src/components/Notes.test.tsx`, `RecordPageNames.test.tsx`, `SearchBox.test.tsx`, `OnHold.test.tsx`, `web/e2e/data-and-trust.spec.ts`, and the internals scan reads a content hash and "(none)") |
+| A re-run after Send back (6.33) | The to-dos kept were added again unless they were owed to someone | An identical repeat from the same input folds into the open one whoever it is owed to. **Built** (`tests/test_promises.py::test_a_rerun_of_one_input_does_not_add_the_to_dos_that_were_kept_again`, `web/e2e/data-and-trust.spec.ts`) |
+| Removing the AI account (7.16) | Acted at once; Today still offered Start | Asks first when it stops the work; with no account the first go's line says so and offers Add an AI account. **Built** (`web/src/components/AiAccounts.test.tsx`, `Today.test.tsx`, `web/e2e/data-and-trust.spec.ts`) |
+| A service's own words in a failure (6.16) | They followed the plain words even when they named the service | Dropped when they name a service the catalog lists. **Built** (`tests/test_provider_safety.py::test_a_service_s_own_words_that_name_a_service_never_reach_the_screen`) |
+| Not built | | Undo of an account's removal after leaving the screen is the toast's, which stays while it offers Undo; a restore of a removed account from a list is not built |
 
 ## 306. Several emails and phones per person, a place and a repeat for the person's own entries, the person's own edits folded, a plain feedback preview (2026-11-02; sweep X40, X45, X29, X61)
 
