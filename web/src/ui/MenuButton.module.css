@@ -2,10 +2,14 @@
 .popover { min-width: 220px; }
 .popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }
 @keyframes pop { from { opacity: 0; transform: scale(0.98); } }
-.menu {
-  display: grid; outline: none; padding: var(--space-1);
-  background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--elev-2), var(--overlay-edge);
-}
+.surface { background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--elev-2), var(--overlay-edge); }
+.menu { display: grid; outline: none; padding: var(--space-1); }
+/* The menu itself holds focus until an item takes it; each item shows its own ring, so the list draws none. */
+.menu:focus-visible { box-shadow: none; }
+/* Choices that act at once (theme, spacing) sit under the items, each a name over a compact segmented control. */
+.segments { display: grid; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-3); border-top: 1px solid var(--border); }
+.segmented { display: grid; gap: var(--space-1); justify-items: start; }
+.segmentedName { color: var(--text-subtle); }
 .item {
   display: grid; align-content: center; min-height: 36px; padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm);
   cursor: pointer; outline: none; font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; color: var(--text);

@@ -125,12 +125,12 @@ test.describe("the visual system", () => {
     await page.setViewportSize({ width: 1440, height: HEIGHT });
     await signIn(page, "styleguide");
     const theme = page.getByRole("radiogroup", { name: "Show the page in" });
-    await theme.getByRole("radio", { name: "Dark" }).click();
+    await theme.getByRole("radio", { name: "Night" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
     await expectNoViolations(page);
     await shoot(page, "styleguide-toggle-dark");
-    await theme.getByRole("radio", { name: "Light" }).click();
+    await theme.getByRole("radio", { name: "Day" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expectNoViolations(page);
     // The toggle shows a theme without changing what this device remembers.
@@ -141,10 +141,10 @@ test.describe("the visual system", () => {
     await page.setViewportSize({ width: 1440, height: HEIGHT });
     await signIn(page);
     await page.getByRole("button", { name: /^Menu for / }).click();
-    await page.getByRole("menuitemradio", { name: "Dark" }).click();
+    await page.getByRole("radiogroup", { name: "Theme" }).getByRole("radio", { name: "Night" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.getByRole("button", { name: /^Menu for / }).click();
-    await page.getByRole("menuitemradio", { name: "Compact" }).click();
+    // The choice acts at once and the menu stays open for the next one.
+    await page.getByRole("radiogroup", { name: "Spacing" }).getByRole("radio", { name: "Compact" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

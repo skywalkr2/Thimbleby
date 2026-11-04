@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { monthDay } from "../lib/dates";
@@ -184,7 +184,7 @@ test("a load that fails says so with Try again", async () => {
 test("the page says in one line which accounts read the project and whether anything leaves the computer", async () => {
   show(knows({ area: true, reading: { state: "local", levels: ["private"], readers: [{ account: "localbox", name: "Local server", leaves: false }] } }));
   const line = (await screen.findByText("Who reads it:", { exact: false })).closest("p")!;
-  expect(line).toHaveTextContent("Read by Local server, which runs on this computer: nothing from it leaves this computer.");
+  expect(line).toHaveTextContent("Read by Local server, which runs on this computer: nothing leaves it.");
   expect(line).toHaveTextContent("Its material is marked private.");
   expect(screen.getByText("An area of your life: it never finishes, so it has no end day and is never behind.")).toBeInTheDocument();
   // One line, not a card with a list of accounts.
@@ -194,12 +194,29 @@ test("the page says in one line which accounts read the project and whether anyt
 
 test("an account that sends what it reads away is named as such, and no account at all says nothing is sent", async () => {
   show(knows({ reading: { state: "away", levels: [], readers: [{ account: "hosted", name: "Hosted service", leaves: true }] } }));
-  expect(await screen.findByText("Read by Hosted service. What it reads is sent away from this computer to reach it.", { exact: false })).toBeInTheDocument();
+  expect(await screen.findByText("Read by Hosted service. What it reads is sent away from this computer.", { exact: false })).toBeInTheDocument();
 });
 
 test("when no account may read it, the page says nothing from it is sent anywhere", async () => {
   show(knows({ reading: { state: "none", levels: ["private"], readers: [] } }));
   expect(await screen.findByText("No AI account of yours may read this, so nothing from it is sent anywhere.", { exact: false })).toBeInTheDocument();
+});
+
+test("the reader line is always shown, as one quiet muted line that the screen reader gives a name", async () => {
+  for (const state of ["local", "away", "none"] as const) {
+    const readers = state === "none" ? [] : [{ account: "acct", name: "Some account", leaves: state === "away" }];
+    show(knows({ reading: { state, levels: [], readers } }));
+    const line = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>(`[data-reading="${state}"]`);
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(line.tagName).toBe("P");
+    expect(line).toHaveClass("hint");
+    expect(line.querySelector(".sr")).toHaveTextContent("Who reads it:");
+    expect(line.textContent!.length).toBeLessThan(100);
+    cleanup();
+  }
 });
 
 test("a fact from mail with a local address shows a short label, never the full address, and an outside link its real domain", async () => {

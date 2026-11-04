@@ -5,6 +5,7 @@
 import { Fragment, useRef, type ReactNode } from "react";
 import { Header, Menu, MenuItem, MenuSection, MenuTrigger, Popover, Separator, Text } from "react-aria-components";
 import { Icon, type IconName } from "./Icon";
+import { SegmentedControl, type SegmentOption } from "./SegmentedControl";
 import label from "./GroupLabel.module.css";
 import styles from "./MenuButton.module.css";
 
@@ -24,6 +25,13 @@ export interface MenuEntry {
   note?: string;
 }
 
+/** A choice between two to four values drawn as a compact segmented control under the menu's items (this device's theme, its spacing). */
+export interface MenuSegments {
+  value: string;
+  options: SegmentOption<string>[];
+  onChange: (value: string) => void;
+}
+
 export interface MenuGroup {
   id: string;
   /** A small heading over the group. */
@@ -31,6 +39,8 @@ export interface MenuGroup {
   /** What a screen reader calls a group that has no visible heading; the group's id when there is neither. */
   label?: string;
   entries: MenuEntry[];
+  /** The group is one segmented control, named by `title`, drawn after the menu's items: a choice that acts at once and keeps the menu open. */
+  segments?: MenuSegments;
   /** The one chosen entry's id, for a group that picks a value (theme, density); it shows a check. */
   selected?: string;
   /** The ids of the entries that are switched on, for a group of independent choices (the columns of a table); each shows a check. */
@@ -38,10 +48,12 @@ export interface MenuGroup {
 }
 
 export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; placement?: "bottom end" | "bottom start" | "top end" | "top start" }) {
-  const groups = props.groups.filter((g) => g.entries.length);
+  const all = props.groups.filter((g) => g.entries.length || g.segments);
+  const groups = all.filter((g) => !g.segments);
+  const segments = all.filter((g) => g.segments);
   const chosen = useRef<(() => void) | null>(null);
   const opener = useRef<Element | null>(null);
-  if (!groups.length) return null;
+  if (!all.length) return null;
   const find = (key: unknown) => groups.flatMap((g) => g.entries).find((e) => e.id === key);
   // The open menu keeps focus inside itself, with the page behind it out of reach, and gives focus back to its button as it
   // closes. An entry that opens something with its own cursor (a form's first field) can't take it while the menu is still
@@ -66,6 +78,7 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
     <MenuTrigger onOpenChange={closed}>
       {props.trigger}
       <Popover placement={props.placement ?? "bottom end"} offset={6} className={styles.popover}>
+        <div className={styles.surface}>
         <Menu
           className={styles.menu}
           onAction={(key) => {
@@ -124,6 +137,19 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
             </Fragment>
           ))}
         </Menu>
+        {segments.length > 0 && (
+          <div className={styles.segments}>
+            {segments.map((group) => (
+              <div key={group.id} className={styles.segmented}>
+                <span className={`${label.label} ${styles.segmentedName}`} aria-hidden="true">
+                  {group.title}
+                </span>
+                <SegmentedControl label={group.title ?? group.label ?? group.id} value={group.segments!.value} options={group.segments!.options} onChange={group.segments!.onChange} />
+              </div>
+            ))}
+          </div>
+        )}
+        </div>
       </Popover>
     </MenuTrigger>
   );

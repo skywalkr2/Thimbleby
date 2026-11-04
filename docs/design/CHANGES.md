@@ -1031,11 +1031,12 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls (D11); batch G4c |
-| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet line (D12); batch G4c |
-| A person's page (7.13) | "Draft a message", "Files from" and two tabs not made yet | To be made in batch G4c (D13) |
+| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls under the items, Theme (Day, Night, Auto) and Spacing (Comfortable, Compact); a choice acts at once and the menu stays open (D11). Built: `web/src/shell/Header.test.tsx` |
+| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet muted line, shortened to fit one line (D12). Built: `web/src/components/ProjectKnows.test.tsx` |
+| A person's page (7.13, 7.14) | "Draft a message", "Files from" and two tabs not made yet | "Draft a message" (to their group in Follow-ups, when something waits), a "Files from" card and Files tab (only when a file's details name the person), an "Everything with" tab (D13). Built: `web/src/components/PersonPage.test.tsx` |
+| A person's contact rows (7.14) | An empty kind was a row with its own "Add email" or "Add phone" | One Contact row, "Add contact details", opens their details; kinds they have keep Remove and "Add another" (by the mockup). Built: `web/src/components/PersonPage.test.tsx` |
 
-- **No config key, API or op change in this section;** G4c records its own.
+- **No config key, API or op change in this section.** The files card reads the existing files list; a file names its person by the detail `person`.
 
 ## 336. Settings, part one: the frame, rows, You, AI and spending, Notices, Backups, Appearance, Quick links, Sign out, Advanced (2026-11-04; gate fix batch G5a)
 

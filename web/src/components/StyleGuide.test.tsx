@@ -31,9 +31,9 @@ test("the page's own toggle shows light and dark without changing what the devic
   const user = userEvent.setup();
   renderApp(<StyleGuide />);
   const theme = screen.getByRole("radiogroup", { name: "Show the page in" });
-  await user.click(within(theme).getByRole("radio", { name: "Dark" }));
+  await user.click(within(theme).getByRole("radio", { name: "Night" }));
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-  await user.click(within(theme).getByRole("radio", { name: "Light" }));
+  await user.click(within(theme).getByRole("radio", { name: "Day" }));
   expect(document.documentElement).toHaveAttribute("data-theme", "light");
   expect(window.localStorage.getItem("cockpit:theme")).toBeNull();
 });

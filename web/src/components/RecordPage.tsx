@@ -25,6 +25,7 @@ import { useIsNarrow } from "../lib/media";
 import { PersonDrawer, heldReach, kindLabel, useContactKinds } from "./PersonForm";
 import { PersonReach } from "./PersonReach";
 import { PersonAvatar } from "./PersonAvatar";
+import { FilesFromCard, PersonFilesList, usePersonFiles } from "./PersonFiles";
 import { useAddTodo } from "./AddTodo";
 import { useSideSlot } from "../lib/marks";
 import { onWorkSide, usePersonMenu } from "./PersonMenu";
@@ -40,7 +41,8 @@ import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
 import { SideInside } from "./SideInside";
 import { useSideOf, useSides } from "../lib/sides";
-import { recordView, viewHref, type View } from "../lib/views";
+import { recordView, toHash, viewHref, type View } from "../lib/views";
+import { revealOrKeep } from "../lib/reveal";
 import { PromiseWhy } from "./PromiseWhy";
 import { useNoted } from "./NoteBox";
 import { ProjectDrawer } from "./ProjectForm";
@@ -134,8 +136,12 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // A person's page also knows how you were last in touch, their dates and what matters to them, and says how each open item
   // relates to them; the details panel and the open list carry these, so none is said twice.
   const memory = useQuery({ queryKey: ["person-memory", id], queryFn: () => api.personMemory(id), enabled: kind === "person" && !isSelf });
+  // Drafting a message to them is the Follow-ups drafting: it is offered when something is waiting to go out to them or on them.
+  const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups, enabled: kind === "person" && !isSelf });
+  const toDraft = (followups.data ?? []).some((s) => !s.is_pm && s.person === id && s.questions.length + s.actions.length + (s.later ?? []).length > 0);
+  const filesFrom = usePersonFiles(id, kind === "person" && !isSelf);
   const kinds = useContactKinds();
-  const [tab, setTab] = useState<"overview" | "open" | "activity">("overview");
+  const [tab, setTab] = useState<"overview" | "open" | "everything" | "files" | "activity">("overview");
   const waitingOnYou = kind === "question" && questionFields?.status === "open" && !!me.data?.person && questionFields?.to === me.data.person;
   const questionMenu = useQuestionMenu(
     { id, title: String(questionFields?.title ?? ""), text: String(questionFields?.text ?? "") },
@@ -277,10 +283,14 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   if (data && settled && kind === "person") {
     // Each kind lists every value the person has of it, with Remove and Add in place; the first two kinds are offered even when empty.
     const held = heldReach(data.fields.how_to_reach);
+    // A kind with nothing yet is not a row of its own with its own Add: one "Add contact details" row opens the person's details.
+    let emptyKind = false;
     kinds.forEach((ck, i) => {
       const found = Object.keys(held).some((k) => k.trim().toLocaleLowerCase() === ck.trim().toLocaleLowerCase());
-      if (found || i < 2) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [], reach: ck });
+      if (found) personRows.push({ name: `reach-${ck}`, label: kindLabel(ck), lines: [], reach: ck });
+      else if (i < 2) emptyKind = true;
     });
+    if (emptyKind && drawer) personRows.push({ name: "reach-add", label: t("person.row.contact"), lines: [t("person.add_contact")], onAdd: () => setEditing(true) });
     const role = String(data.fields.role ?? "").trim();
     const who = person && !isSelf ? whoTheyAre(person, personal, sides, t) : role;
     // Who they are is the line under their name, so the card does not say it again; a role that line doesn't say is a row of its own.
@@ -344,8 +354,15 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // A person's page has tabs: the overview, everything open with them, and the whole history.
   const tabbed = isPerson && !isSelf;
   const activity = page.data && (
-    <RecordActivity page={page.data} show={tabbed ? (tab === "open" ? ["completed", "facts", "repeat"] : ["activity"]) : ["repeat", "completed", "facts", "activity"]} shown={tabbed ? (tab === "overview" ? 3 : 20) : undefined} quietHeading={tabbed && tab === "activity"} />
+    <RecordActivity
+      page={page.data}
+      show={tabbed ? (tab === "open" ? ["completed", "facts", "repeat"] : tab === "everything" ? ["completed", "facts", "repeat", "activity"] : ["activity"]) : ["repeat", "completed", "facts", "activity"]}
+      shown={tabbed ? (tab === "overview" ? 3 : 20) : undefined}
+      quietHeading={tabbed && (tab === "activity" || tab === "everything")}
+    />
   );
+  // Everything with them: what is open, what finished and the whole history, in one list.
+  const everythingCount = openCount + (page.data?.completed_actions?.length ?? 0) + (page.data?.activity?.length ?? 0);
   // A person's details are a contact card: their initials on the color of their side, how you were last in touch, and Edit.
   const asCard = isPerson && !isSelf;
   const firstName = person?.first_name || name.split(" ")[0] || name;
@@ -397,7 +414,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                   ) : row.reach ? (
                     <PersonReach person={id} name={name} kind={row.reach} held={data.fields.how_to_reach} />
                   ) : row.onAdd ? (
-                    <Button variant="quiet" size="sm" className={styles.add} onClick={row.onAdd}>
+                    <Button variant="quiet" size="sm" icon="plus" className={styles.add} onClick={row.onAdd}>
                       {row.lines[0] as string}
                     </Button>
                   ) : (
@@ -492,6 +509,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         actions={
           data ? (
             <>
+              {asCard && data && person && toDraft && (
+                <Button onClick={() => { if (!revealOrKeep("person", id)) window.location.hash = toHash("work/followups"); }}>
+                  {t("person.draft")}
+                </Button>
+              )}
               <Offers kind={kind} id={id} />
               {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
               {versions.entries.length > 0 && <RowMenu label={heading} actions={versions.entries} />}
@@ -554,6 +576,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           options={[
             { value: "overview", label: t("person.tab.overview") },
             { value: "open", label: t("person.tab.open"), count: openCount },
+            { value: "everything", label: t("person.tab.everything", { name: firstName }), count: everythingCount },
+            ...(filesFrom.length > 0 ? [{ value: "files" as const, label: t("person.tab.files"), count: filesFrom.length }] : []),
             { value: "activity", label: t("person.tab.activity") },
           ]}
         />
@@ -582,7 +606,15 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             {kind === "event" && <Attendees fields={data.fields} names={names} />}
             {kind === "event" && <MeetingPrep entry={id} title={heading} />}
             {/* What is open comes first, then what finished and the history, and the box to talk about it last. */}
-            {page.data && (!tabbed || tab !== "activity") && (
+            {tabbed && tab === "files" && (
+              <section aria-labelledby="person-files-tab">
+                <h2 id="person-files-tab" className="sr">
+                  {t("person.files.title", { name: firstName })}
+                </h2>
+                <PersonFilesList files={filesFrom} />
+              </section>
+            )}
+            {page.data && (!tabbed || (tab !== "activity" && tab !== "files")) && (
               <div data-slot="open">
               <RecordActivity
                 page={page.data}
@@ -599,7 +631,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               )}
               </div>
             )}
-            {activity && <div data-slot="rest">{activity}</div>}
+            {activity && !(tabbed && tab === "files") && <div data-slot="rest">{activity}</div>}
             {kind === "project" && justMe && id === personal && <Unfiled />}
             {kind === "project" && <SideInside id={id} />}
             {kind === "project" && <ProjectKnows id={id} plain={justMe} />}
@@ -622,6 +654,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {asCard ? (
             <div className="record-rail">
               {detailsPanel}
+              {filesFrom.length > 0 && tab !== "files" && <FilesFromCard name={firstName} files={filesFrom} onSeeAll={() => setTab("files")} />}
               {/* The box to ask about them is the last card of the rail, on a phone the last thing on the page. */}
               <div className="record-side" data-slot="ask">
                 <RecordConversation kind={kind} id={id} about={firstName} />

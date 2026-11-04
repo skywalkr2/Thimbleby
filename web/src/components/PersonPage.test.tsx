@@ -102,10 +102,12 @@ test("the details panel says each fact once: how to reach them, who they are, th
   const details = await loaded();
   await within(details).findByText("Prefers short notes");
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
-  expect(terms).toEqual(["Email", "Phone", "Sides", "Dates", "What matters to them"]);
+  expect(terms).toEqual(["Email", "Contact", "Sides", "Dates", "What matters to them"]);
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Email")).toContain("ana@example.com");
-  expect(value("Phone")).toBe("Add phone");
+  // A kind with nothing yet is not a row with its own Add: one row offers the details.
+  expect(value("Contact")).toBe("Add contact details");
+  expect(within(details).queryByRole("button", { name: "Add phone" })).toBeNull();
   expect(value("Sides")).toBe("PersonalShop");
   // How you were last in touch is the head of the card, with their initials, not a row of it.
   const head = document.querySelector<HTMLElement>("[data-contact-card] .contact-head")!;
@@ -119,19 +121,13 @@ test("the details panel says each fact once: how to reach them, who they are, th
   expect(screen.getAllByText("ana@example.com")).toHaveLength(1);
 });
 
-test("Add phone opens a box in place, and adding it acts at once with an Undo that puts back what was there", async () => {
+test("Add contact details opens the person's details to fill in, and there is no Add email or Add phone of its own", async () => {
   const user = userEvent.setup();
-  const calls = serve(friend, { "POST people/PER-2": () => ({ ok: "PER-2" }) });
+  serve(friend);
   const details = await loaded();
-  await user.click(await within(details).findByRole("button", { name: "Add phone" }));
-  await user.type(within(details).getByLabelText("New phone for Ana Example"), "555 0100");
-  await user.click(within(details).getByRole("button", { name: "Add" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST people/PER-2")).toBe(true));
-  expect(calls.find((c) => c.route === "POST people/PER-2")!.body).toEqual({ how_to_reach: { email: ["ana@example.com"], phone: ["555 0100"] } });
-  expect(await screen.findByText("Added 555 0100 for Ana Example.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(calls.filter((c) => c.route === "POST people/PER-2")).toHaveLength(2));
-  expect(calls.filter((c) => c.route === "POST people/PER-2")[1].body).toEqual({ how_to_reach: { email: ["ana@example.com"] } });
+  expect(within(details).queryByRole("button", { name: /^Add (email|phone)$/ })).toBeNull();
+  await user.click(await within(details).findByRole("button", { name: "Add contact details" }));
+  expect(await screen.findByRole("textbox", { name: /Name|Full name/ })).toBeInTheDocument();
 });
 
 test("every address or number they have is listed, a second one is added beside the first, and Remove takes one away with Undo", async () => {
@@ -296,4 +292,65 @@ test("the person's name is said once in the page's own places: no button or tab 
   expect(screen.queryByRole("button", { name: /^Open with / })).toBeNull();
   // The kind of page is not a tag beside the name: the crumb says it is a person.
   expect(document.querySelector("[data-page-header] [data-pill]")).toBeNull();
+});
+
+// The parts the person mockup has beyond the overview: drafting a message, the files from them, and the tabs that hold them.
+const fileFrom = (id: string, name: string, person: string | null): S["FileView"] => ({
+  id,
+  version: 1,
+  name,
+  media_type: "application/pdf",
+  size: 2048,
+  file_kind: "attachment",
+  kind_label: "Document",
+  project: null,
+  meta: person ? { person } : {},
+  origin: "upload",
+  replaces: null,
+  added_at: "2026-10-09T14:00:00Z",
+  data_level: "internal",
+});
+const waitingOn = { person: "PER-2", name: ANA, is_pm: false, questions: [{ id: "Q-1" }], actions: [], later: [] };
+
+test("Draft a message is offered when something waits on them, and opens the Follow-ups drafting for them", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "";
+  serve(friend, { "GET followups": () => [waitingOn] });
+  await loaded();
+  await user.click(await screen.findByRole("button", { name: "Draft a message" }));
+  expect(window.location.hash).toBe("#work/followups");
+});
+
+test("with nothing waiting to go out or on them there is no Draft a message", async () => {
+  serve(friend, { "GET followups": () => [] });
+  await loaded();
+  await screen.findByRole("button", { name: "Add a to-do" });
+  expect(screen.queryByRole("button", { name: "Draft a message" })).toBeNull();
+});
+
+test("the files from them are a card with See all, and a Files tab with every one; files of anyone else are not there", async () => {
+  const user = userEvent.setup();
+  const files = [fileFrom("FILE-1", "Venue floor plan.pdf", "PER-2"), fileFrom("FILE-2", "Fabric swatches.jpg", "PER-2"), fileFrom("FILE-3", "Someone else's.pdf", "PER-9"), fileFrom("FILE-4", "No person.pdf", null)];
+  serve(friend, { "GET files": () => files });
+  await loaded();
+  const card = await screen.findByRole("region", { name: "Files from Ana" });
+  expect(within(card).getAllByRole("link").map((a) => a.textContent)).toEqual(["Venue floor plan.pdf", "Fabric swatches.jpg"]);
+  expect(screen.queryByText("Someone else's.pdf")).toBeNull();
+  await user.click(screen.getByRole("button", { name: /^Files/ }));
+  const tab = await screen.findByRole("region", { name: "Files from Ana" });
+  expect(within(tab).getAllByRole("link")).toHaveLength(2);
+  expect(screen.queryByRole("region", { name: `Open with ${ANA}` })).toBeNull();
+});
+
+test("with no file from them there is no card and no Files tab, and Everything with them holds what is open, what finished and the history", async () => {
+  const user = userEvent.setup();
+  serve(friend, { "GET files": () => [fileFrom("FILE-3", "Someone else's.pdf", "PER-9")] });
+  await loaded();
+  await screen.findByRole("button", { name: /^Open items/ });
+  expect(screen.queryByRole("button", { name: /^Files/ })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Files from Ana" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: /^Everything with Ana/ }));
+  expect(await screen.findByRole("region", { name: `Open with ${ANA}` })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Completed" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Activity" })).toBeInTheDocument();
 });

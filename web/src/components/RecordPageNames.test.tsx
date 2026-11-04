@@ -79,12 +79,12 @@ test("a person's details say names, words and a label for a choice, in the order
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Quarry House");
   // How to reach them is one row for each kind (email, phone), the app's own flags are not details, and status says only that someone left.
-  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Email", "Phone", "Role", "Organization", "Team", "Other names"]);
+  expect(within(details).getAllByRole("term").map((x) => x.textContent)).toEqual(["Email", "Contact", "Role", "Organization", "Team", "Other names"]);
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Organization")).toBe("Quarry House");
   expect(value("Team")).toBe("Quarry Editorial");
   expect(value("Email")).toContain("robin@example.org");
-  expect(value("Phone")).toBe("Add phone");
+  expect(value("Contact")).toBe("Add contact details");
   // The name is the heading's and a flag that is off says nothing: neither is a row.
   expect(within(details).queryByText("Full name")).toBeNull();
   expect(within(details).queryByText("Name verified")).toBeNull();

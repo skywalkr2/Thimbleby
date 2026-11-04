@@ -30,7 +30,7 @@ import { StatusMenu } from "./StatusMenu";
 import { ASSISTANT_OWN, initials } from "./status";
 import styles from "./Header.module.css";
 
-/** The menu of this device's appearance: theme and density, each a choice with a check. Shared with the phone's More sheet. */
+/** This device's appearance in the person's menu: theme and spacing, each a compact segmented control that acts at once. */
 export function useAppearanceGroups(): MenuGroup[] {
   const { t } = useWords();
   const { theme, density } = useAppearance();
@@ -38,18 +38,22 @@ export function useAppearanceGroups(): MenuGroup[] {
     {
       id: "theme",
       title: t("user.theme"),
-      selected: theme,
-      entries: (["system", "light", "dark"] as Theme[]).map((id) => ({
-        id,
-        label: t(`user.theme.${id}`),
-        run: () => setTheme(id),
-      })),
+      entries: [],
+      segments: {
+        value: theme,
+        options: (["light", "dark", "system"] as Theme[]).map((id) => ({ value: id, label: t(`user.theme.${id}`) })),
+        onChange: (id) => setTheme(id as Theme),
+      },
     },
     {
       id: "density",
       title: t("user.density"),
-      selected: density,
-      entries: (["comfortable", "compact"] as Density[]).map((id) => ({ id, label: t(`user.density.${id}`), run: () => setDensity(id) })),
+      entries: [],
+      segments: {
+        value: density,
+        options: (["comfortable", "compact"] as Density[]).map((id) => ({ value: id, label: t(`user.density.${id}`) })),
+        onChange: (id) => setDensity(id as Density),
+      },
     },
   ];
 }

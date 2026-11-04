@@ -193,14 +193,18 @@ test("the person's initials open the user menu, where theme and density are save
   const avatar = await screen.findByRole("button", { name: "Menu for Casey Example" });
   expect(avatar).toHaveTextContent("CE");
   await user.click(avatar);
-  const dark = screen.getByRole("menuitemradio", { name: "Dark" });
-  expect(screen.getByRole("menuitemradio", { name: "Match this computer" })).toBeChecked();
-  await user.click(dark);
+  // Theme and spacing are two compact segmented controls under the items, never a column of radio items.
+  expect(screen.queryByRole("menuitemradio")).toBeNull();
+  const theme = screen.getByRole("radiogroup", { name: "Theme" });
+  expect(within(theme).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Day", "Night", "Auto"]);
+  expect(within(screen.getByRole("radiogroup", { name: "Spacing" })).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Comfortable", "Compact"]);
+  expect(within(theme).getByRole("radio", { name: "Auto" })).toBeChecked();
+  await user.click(within(theme).getByRole("radio", { name: "Night" }));
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   expect(window.localStorage.getItem("cockpit:theme")).toBe("dark");
-  await user.click(screen.getByRole("button", { name: "Menu for Casey Example" }));
-  expect(screen.getByRole("menuitemradio", { name: "Dark" })).toBeChecked();
-  await user.click(screen.getByRole("menuitemradio", { name: "Compact" }));
+  // The choice acts at once and the menu stays open for the next one.
+  expect(within(screen.getByRole("radiogroup", { name: "Theme" })).getByRole("radio", { name: "Night" })).toBeChecked();
+  await user.click(within(screen.getByRole("radiogroup", { name: "Spacing" })).getByRole("radio", { name: "Compact" }));
   expect(document.documentElement).toHaveAttribute("data-density", "compact");
   expect(window.localStorage.getItem("cockpit:density")).toBe("compact");
 });
@@ -290,7 +294,8 @@ test("the header has no Quick links button: the links are the first group of the
   expect(screen.queryByRole("menuitem", { name: "Odd one" })).toBeNull();
   // The person and Settings lead, then the links under their own title, then the figures and the appearance choices.
   const groups = screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
-  expect(groups.slice(0, 4)).toEqual(["Casey Example · Example Workspace", "Quick links", "How Helper is doing", "Theme"]);
+  expect(groups.slice(0, 3)).toEqual(["Casey Example · Example Workspace", "Quick links", "How Helper is doing"]);
+  expect(screen.getAllByRole("radiogroup").map((g) => g.getAttribute("aria-label"))).toEqual(["Theme", "Spacing"]);
 });
 
 test("the person's menu leads with their name and the workspace's, then Settings, and the button is named after them, not after what is in the menu", async () => {
@@ -315,7 +320,7 @@ test("with no links the person's menu is only the appearance choices", async () 
   show({ links: [] });
   await user.click(await screen.findByRole("button", { name: /^Menu for / }));
   expect(screen.queryByRole("group", { name: "Quick links" })).toBeNull();
-  expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
+  expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
 });
 
 test("the person's menu has How the assistant is doing, which opens the figures, and Quality is no longer in Settings' list", async () => {

@@ -123,7 +123,7 @@ async function chooseTheme(context: BrowserContext, running: Running, theme: Siz
     await page.goto(`${running.base}?token=${running.token}#today`);
     await settle(page);
     await page.getByRole("button", { name: /^Menu for / }).click();
-    await page.getByRole("menuitemradio", { name: theme === "night" ? "Dark" : "Light", exact: true }).click();
+    await page.getByRole("radiogroup", { name: "Theme" }).getByRole("radio", { name: theme === "night" ? "Night" : "Day", exact: true }).click();
     await page.waitForFunction((want) => document.documentElement.getAttribute("data-theme") === want, theme === "night" ? "dark" : "light", { timeout: 10_000 });
   } finally {
     await page.close();

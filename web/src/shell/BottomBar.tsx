@@ -107,7 +107,7 @@ export function BottomBar(props: {
               label={t("user.theme")}
               value={theme}
               onChange={setTheme}
-              options={(["system", "light", "dark"] as Theme[]).map((id) => ({ value: id, label: t(`user.theme.${id}`) }))}
+              options={(["light", "dark", "system"] as Theme[]).map((id) => ({ value: id, label: t(`user.theme.${id}`) }))}
             />
           </div>
           <GroupLabel as="p" className={styles.section}>{t("user.density")}</GroupLabel>

@@ -54,13 +54,12 @@ test.describe("the brand", () => {
     await shows("night");
     // The person chooses light from the user menu while the system is dark: the day mark.
     await page.getByRole("button", { name: /^Menu for / }).click();
-    await page.getByRole("menuitemradio", { name: "Light" }).click();
+    await page.getByRole("radiogroup", { name: "Theme" }).getByRole("radio", { name: "Day" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await shows("day");
     // And dark while the system is light.
     await page.emulateMedia({ colorScheme: "light" });
-    await page.getByRole("button", { name: /^Menu for / }).click();
-    await page.getByRole("menuitemradio", { name: "Dark" }).click();
+    await page.getByRole("radiogroup", { name: "Theme" }).getByRole("radio", { name: "Night" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await shows("night");
   });
