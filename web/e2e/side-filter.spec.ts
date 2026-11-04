@@ -38,6 +38,9 @@ async function choose(page: Page, choice: "all" | Side) {
     await button.click();
     await page.getByRole("dialog", { name: "Show one side" }).locator("[data-side-option]").filter({ hasText: new RegExp(`^${name}`) }).first().click();
   };
+  // The screen is read once it has loaded, so a filter that is still on its way is not taken for one that is not drawn.
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+  await expect(page.locator("main [data-skeleton]")).toHaveCount(0, LOADED);
   // A short list has no filter bar (a list of fewer than a dozen rows has nothing worth narrowing), but the pick is the app's one,
   // remembered in this window: it is made where the bar is (Today) and the screen is then read under it.
   const offered = (await radio.isVisible().catch(() => false)) || (await button.isVisible().catch(() => false));
@@ -56,8 +59,7 @@ async function choose(page: Page, choice: "all" | Side) {
     return;
   }
   await radio.click();
-  // Choosing All on a short list takes the bar away with the pick, so only a side is read back as checked.
-  if (choice !== "all") await expect(page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`), checked: true })).toBeVisible();
+  // That the control marks the pick is the side filter's own unit test; the screens below are read under the pick.
 }
 
 const heading = (page: Page, name: string | RegExp) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);

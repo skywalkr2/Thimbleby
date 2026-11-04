@@ -231,8 +231,11 @@ test("sending one item back adds none of the others again", async ({ page, reque
       { timeout: 60_000, message: "the hand-in made its to-dos" },
     )
     .toBe(true);
-  const changes = (await (await page.request.get("api/changes", { headers: AUTH })).json()) as Array<{ changeset: { id: string; ops: Array<{ index: number; op: string; status: string; title: string }> } | null }>;
-  const made = changes.find((c) => c.changeset?.ops.some((o) => o.op === "action.add" && o.title === adds[0]))!;
+  type Listed = { changeset: { id: string; ops: Array<{ index: number; op: string; status: string; title: string }> } | null };
+  // The change that made the to-do is read when it is listed, never at the instant the to-do appears.
+  const findMade = async () => ((await (await page.request.get("api/changes", { headers: AUTH })).json()) as Listed[]).find((c) => c.changeset?.ops.some((o) => o.op === "action.add" && o.title === adds[0]));
+  await expect.poll(async () => (await findMade()) !== undefined, { timeout: 60_000, message: "the change that made the first to-do is listed" }).toBe(true);
+  const made = (await findMade())!;
   const first = made.changeset!.ops.find((o) => o.op === "action.add" && o.title === adds[0])!;
   const kept = Object.fromEntries(adds.map((t) => [t, times(before, t) + 1]));
   const sent = await page.request.post(`api/changesets/${made.changeset!.id}/send-back`, { headers: AUTH, data: { note: "Not this one", ops: [first.index] } });

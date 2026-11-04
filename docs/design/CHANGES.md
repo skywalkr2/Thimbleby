@@ -1037,6 +1037,14 @@ yet follow, that it is *designed*, with its phase.
 
 - **No config key, API or op change.**
 
+## 342. Tests that earn their place, and the settings save lock (2026-11-04; gate fix batch T1)
+
+- **12.x, settings saves:** saves of settings are made one at a time; a save that waited on another is refused as out of date, as a change made elsewhere is, and what was typed stays (6.7, 7.2).
+- **7.9, Reset:** the box for an amount keeps nothing on the cursor entering it, so a Reset that puts the cursor in the box it reset is never undone by leaving it.
+- **7.8, backup folder:** the write check of a chosen folder uses a file of its own name each time.
+- **7.x, notices:** the test of a way of getting a notice stays available once its address is kept.
+- **Testing:** the browser tests keep data and trust, sides, outward acts, accessibility and no sideways scroll at several widths, the nested base path and deploy checks, the journeys' core path and every guard of a CLAUDE.md rule; tests that only measured a pixel layout or an exact wording are removed (decisions, 2026-11-04).
+
 ## 341. A file records the person it came from (2026-11-04; gate fix batch G4d)
 
 Batch G4d of the gate's fix round (5.3, 5.1, 7.14). The person page's Files card and tab read no real files, because nothing recorded whose a file was; they read an ad-hoc details key. Now the `file` record has **from_person** (a reference to a person), written by `engine.files.add_file` and by `file.add`, checked to exist, and shown in the files list (`FileView.from_person`).

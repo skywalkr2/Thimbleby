@@ -24,6 +24,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Impact:** `engine/records.py`, `engine/files.py`, `engine/ops.py`, `engine/applier.py`, `api/`, `web/src/components/PersonFiles.tsx`, `web/visual/stages.ts`. A connector's mail attachment is not kept as a file today, so it records no person; that waits on keeping attachments. Change log: section 341.
 
+## 2026-11-04: Tests that earn their place, and the settings save lock (batch T1 of the fix round)
+
+**Decided:** (the owner's rule of 2026-11-04 in CLAUDE.md, "A test earns its place"; no owner choice needed.)
+- **Two saves of settings never overlap.** The save reads the settings files, changes them and writes them back; two that ran at once each wrote from the text it had read, so the later silently undid the earlier while both were answered as saved (the "quick edits lost" fault, X01). Saves now take one lock; the one that waits finds the files changed and is refused as out of date, never merged over.
+- **A Reset is never undone by the cursor arriving in its box.** The box for an amount kept the amount it showed when the cursor entered it, so a Reset that moved the cursor into the box it had just reset left the old amount to be written back as the cursor left (the lost-quick-edit fault seen as "three Resets"); entering the box now keeps nothing.
+- **A backup folder's write check has a file name of its own each time.** Two checks of one folder at once (the one made as the path is typed and the one made as the step is left) shared one probe file and the later removed the earlier's, so a good folder read as "can't write"; each check now makes and removes its own.
+- **The notice test button stays once the address is kept.** The row hid every extra action once a key was kept, which took away "Send me a test" exactly when it could be used; a row now names what it still offers when a key is held.
+- **Browser tests that only measured pixels or exact wording were removed or reduced** (header height, a row's pill position, a pane's column widths, a calendar's gutter size, a pixel offset of the first queue line, the colour of a month cell, the spacing of a menu's group labels, the width of a connection's name on a phone). What they protected stays under the guards that enforce a CLAUDE.md rule, the no-sideways-scroll and accessibility specs at several widths, and the unit tests of the same screens.
+- **The journeys no longer depend on the time of day.** The mail and new-start journeys do not read where a meeting falls on Today's schedule (the Schedule's own spec does), so a journey that crosses midnight cannot fail on it.
+
+**Why:** a test whose failure no person would feel costs a run and a fix each time it goes red, and the quick-edits failure turned out to be a real race that a loaded run exposed.
+
+**Impact:** `engine/settings.py` (the save lock), `engine/setup.py` (the backup folder check), `web/src/components/MoneyField.tsx`, `KeptSecrets.tsx` and `Notifications.tsx`, `web/e2e/` (removals and updates to the changed screens). Change log: section 342.
+
 ## 2026-11-04: The shared parts, second pass (batch G1d of the fix round)
 
 **Decided:** (design by the main session, within D7; no owner choice needed.)

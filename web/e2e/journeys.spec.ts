@@ -111,7 +111,7 @@ test.describe.serial("journeys", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
     await main.getByRole("button", { name: "Continue" }).click();
-    await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done");
+    await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done", { timeout: 30_000 });
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
     await visit(page);
 
@@ -263,6 +263,12 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     const toasts = page.getByRole("region", { name: "Notifications" });
     const undo = () => toasts.getByRole("button", { name: "Undo" }).last().click();
+    // Undo and a correction start work of the assistant's own (a lesson from it); Today redraws its lines while that runs,
+    // so a line is acted on only once nothing is queued or running.
+    const settled = () =>
+      expect
+        .poll(async () => (await json<Array<{ state: string }>>("api/changes")).every((c) => !["queued", "running"].includes(c.state)), { timeout: 60_000, message: "the assistant's own work settled" })
+        .toBe(true);
     const json = async <T>(path: string): Promise<T> => {
       const response = await page.request.get(path);
       expect(response.status(), path).toBe(200);
@@ -281,6 +287,11 @@ test.describe.serial("journeys", () => {
     const handIn = async (text: string) => {
       // Leaving Today first, so a line answered there (it stays until the person moves on) is gone when Today opens again.
       await page.getByRole("link", { name: /^What changed/ }).first().click();
+      await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
+      await expect(page.locator("main [data-skeleton]")).toHaveCount(0);
+      // The changes already listed, so the one just handed in is found by what is new, whatever else (a lesson from a
+      // correction) is listed above it.
+      const known = await page.locator("main [data-row-list] > li[data-row]").evaluateAll((els) => els.map((el) => el.getAttribute("data-choice") ?? ""));
       await page.getByRole("link", { name: /^Today/ }).first().click();
       // A hand-in shows as a review line, or, when all of it waits for the person, as its decisions alone.
       const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"], [data-queue-line="held"]');
@@ -293,10 +304,11 @@ test.describe.serial("journeys", () => {
         .poll(async () => (await lines.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 30_000 })
         .toBe(true);
       await page.getByRole("link", { name: /^What changed/ }).first().click();
-      // What changed is newest first and titles a change as Today does, so the change just handed in is the top line.
+      // The change just handed in is the one that was not listed before.
       // Choosing the line shows the whole change in the detail pane beside the list, which is what the steps read.
-      const line = page.getByRole("main").locator("[data-row-list] > li[data-row]").first();
-      await expect(line).toContainText(/not yet checked|filed/i, { timeout: 30_000 });
+      const fresh = known.filter(Boolean).map((id) => `:not([data-choice="${id}"])`).join("");
+      const line = page.getByRole("main").locator(`[data-row-list] > li[data-row]${fresh}`).filter({ hasText: /not yet checked|filed/i }).first();
+      await expect(line).toBeVisible({ timeout: 30_000 });
       const expander = line.locator("[data-expander]").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
       const detail = page.locator("aside[data-detail-pane] [data-detail-item]");
@@ -311,17 +323,26 @@ test.describe.serial("journeys", () => {
       await expect(item.getByRole("button", { name: /^(Add|Keep it|Drop it|Do it anyway|Use this person)/ })).toHaveCount(0);
       await item.getByRole("link", { name: "Answer on Today" }).first().click();
       await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
-      return page.getByRole("main");
+      const main = page.getByRole("main");
+      if (hasText) {
+        // The line is open when it was selected by the link; when Today drew it again unselected it is one line with Decide.
+        const opened = main.locator("li[data-item]", { hasText });
+        const closed = main.getByRole("group").filter({ hasText }).getByRole("button", { name: "Decide", exact: true });
+        await expect(opened.or(closed).first()).toBeVisible();
+        if (!(await opened.first().isVisible())) await closed.first().click();
+      }
+      return main;
     };
     // A line that comes back after Undo is not selected on Today, so its link on What changed is followed again. The change
-    // that holds it is the first of the newest changes whose details have the link (an answer made since is newer).
+    // that holds it is the first of the newest changes whose details have the link (an answer made since is newer, and each Undo adds a
+    // lesson from the correction above it, so more than a few are looked at).
     const backToToday = async (hasText?: string) => {
       await openView(page, "What changed");
       const detail = page.locator("aside[data-detail-pane] [data-detail-item]");
       await expect(detail).toBeVisible();
       const holder = (hasText ? detail.locator("li[data-item]", { hasText }) : detail).getByRole("link", { name: "Answer on Today" });
       const rows = page.getByRole("main").locator("[data-row-list] > li[data-row]");
-      for (let i = 0; i < Math.min(await rows.count(), 5); i++) {
+      for (let i = 0; i < Math.min(await rows.count(), 15); i++) {
         await rows.nth(i).locator("[data-expander]").first().click();
         if (await holder.first().isVisible({ timeout: 3000 }).catch(() => false)) break;
         // The link is drawn once the queue has loaded; try again before moving to the next change.
@@ -454,6 +475,7 @@ test.describe.serial("journeys", () => {
       { op: "project.add", name: tour, evidence: { quote: `looking forward to the ${tour}` } },
     ]);
     row = await handIn(trip);
+    await settled();
     row = await onToday(row, tour);
     let tourProposal = row.locator("li[data-item]", { hasText: `Add a project “${tour}”?` });
     for (const keep of [false, true]) {
@@ -463,6 +485,7 @@ test.describe.serial("journeys", () => {
       expect(await projectNamed(tour)).toBeUndefined();
       if (keep) break;
       await undo();
+      await settled();
       tourProposal = await toProposal(tour);
       await expect(tourProposal).toBeVisible();
     }

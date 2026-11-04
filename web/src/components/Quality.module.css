@@ -83,7 +83,7 @@
 .tooEarly { display: grid; gap: var(--space-4); }
 .tooEarly h2 { font-size: var(--text-lg); line-height: var(--lh-lg); }
 .windowMeta { margin: var(--space-2) 0 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
-.next { display: inline-block; margin-top: var(--space-2); color: var(--accent-text); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
+.next { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-2); color: var(--accent-text); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
 
 /* Their own count is folded closed: one line says what it is for, and the form opens under "Count them yourself". */
 .fold { min-width: 0; margin-top: var(--space-2); }

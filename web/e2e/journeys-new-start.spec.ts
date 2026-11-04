@@ -284,13 +284,11 @@ test.describe.serial("journey: new start", () => {
     await expect(page.getByRole("region", { name: "Backup", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^App status: / })).not.toContainText("Backup needed");
 
-    // 9. The recent mail is on Came in within seconds, and today's meetings are on the agenda; what is older isn't.
+    // 9. The recent mail is on Came in within seconds; what is older isn't.
     const came = page.getByRole("region", { name: "Came in" });
-    const agenda = page.getByRole("region", { name: "Schedule" });
     await expect(came.getByText(recentMail[0])).toBeVisible({ timeout: 10_000 });
     for (const title of recentMail) await expect(came.getByText(title, { exact: true })).toBeVisible();
-    // A meeting that runs past midnight is listed under both days, so the first is enough.
-    for (const title of recentEvents) await expect(agenda.getByText(title, { exact: true }).first()).toBeVisible();
+    // Which day a meeting falls on is the Schedule's own check (schedule.spec.ts); a journey that crosses midnight must not depend on it.
     for (const title of recentNoted) await expect(came.getByText(title, { exact: true })).toHaveCount(0);
     await visit(page);
 

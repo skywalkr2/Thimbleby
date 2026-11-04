@@ -16,6 +16,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -588,10 +589,11 @@ def check_backup_folder(ws: Any, raw: str) -> FolderCheck:
         return FolderCheck(str(folder), False, "Choose a folder somewhere else, so the backup is a real copy.")
     if not folder.is_dir():
         return FolderCheck(str(folder), False, "That folder isn't there. Connect the drive, or create the folder.")
-    probe = folder / ".cockpit-write-test"
+    # A name of its own for each check: two checks of one folder at once (as the path is typed, and as the step is left)
+    # must not remove each other's file and read as a folder that can't be written.
     try:
-        probe.write_text("ok", encoding="utf-8")
-        probe.unlink()
+        with tempfile.NamedTemporaryFile(dir=folder, prefix=".cockpit-write-test-"):
+            pass
     except OSError:
         return FolderCheck(str(folder), False, "This app can't write in that folder.")
     free = shutil.disk_usage(folder).free / (1024 * 1024)

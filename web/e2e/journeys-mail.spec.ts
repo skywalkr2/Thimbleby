@@ -168,7 +168,6 @@ test.describe.serial("journey: mail", () => {
     // The sign-in's sources were read at once; taking them in waits for the Start on Today, which shows its cost first. One
     // request for each item taken in, each item once. The stand-in rules find the person's own to-dos in these messages,
     // and they arrive below as lines to look over.
-    const agenda = page.getByRole("region", { name: "Schedule" });
     const came = page.getByRole("region", { name: "Came in" });
     await expect(came.getByText(recentMail[0])).toBeVisible({ timeout: 10_000 });
     await startOnToday(page);
@@ -181,10 +180,9 @@ test.describe.serial("journey: mail", () => {
     }
     for (const title of aside) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
 
-    // Today lists the recent mail on Came in and today's meetings on the agenda; what is older or further off is not.
+    // Today lists the recent mail on Came in; what is older or further off is not.
     for (const title of recentMail) await expect(came.getByText(title, { exact: true })).toBeVisible();
-    // A meeting that runs past midnight is listed under both days, so the first is enough.
-    for (const title of recentEvents) await expect(agenda.getByText(title, { exact: true }).first()).toBeVisible();
+    // Which day a meeting falls on is the Schedule's own check (schedule.spec.ts); a journey that crosses midnight must not depend on it.
     // Came in shows only the work mail; what was set aside is counted on What changed and listed on Handled for you,
     // never on Today.
     for (const title of aside) await expect(came.getByText(title, { exact: true })).toHaveCount(0);

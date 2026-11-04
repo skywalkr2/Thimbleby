@@ -184,3 +184,17 @@ def test_a_drive_that_is_not_in_the_list_or_not_on_this_computer_is_refused(tmp_
         refused = c.post(f"{api}/setup/backup-folder/cloud", json={"name": name, "fingerprint": fingerprint})
         assert refused.status_code == 400
     assert load_config(ws.config_dir, env={}).storage.backups.targets == []
+
+
+def test_checking_a_backup_folder_never_depends_on_one_shared_file_name(tmp_path):
+    """Two checks of one folder at once (as the path is typed, and as the step is left) must not read as a folder that
+    can't be written: the check's own file has a name of its own, and leaves nothing behind."""
+    from engine.workspace import init_workspace
+    from tests.conftest import DEMO_B
+
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    folder = tmp_path / "copies"
+    folder.mkdir()
+    (folder / ".cockpit-write-test").mkdir()  # a fixed name would be taken here
+    assert check_backup_folder(ws, str(folder)).ok
+    assert [p.name for p in folder.iterdir()] == [".cockpit-write-test"]

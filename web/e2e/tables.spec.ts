@@ -35,7 +35,6 @@ async function brokenWords(page: Page): Promise<string[]> {
 
 for (const [name, hash] of [
   ["Projects", "records/projects"],
-  ["People", "records/people"],
 ] as const) {
   test(`${name} with the pane open at 1440px: no header or cell breaks inside a word, and rows have no filled button`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

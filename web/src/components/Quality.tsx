@@ -106,7 +106,7 @@ function StatTile(props: { title: string; value: string; change?: string; delta?
       {props.next && (
         <a className={styles.next} href={props.next.href}>
           {props.next.label}
-          <span aria-hidden="true"> →</span>
+          <Icon name="chevron" size={14} />
         </a>
       )}
     </article>

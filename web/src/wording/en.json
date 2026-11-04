@@ -1117,6 +1117,7 @@
   "handover.intro": "Your work is kept on this computer and in the folder it syncs to.",
   "handover.intro_local": "Your work is kept on this computer.",
   "handover.intro.just_me": "Everything you keep here is saved on this computer and in the folder it syncs to.",
+  "handover.intro_local.just_me": "Everything you keep here is saved on this computer.",
   "not_available.text": "This page isn't available here.",
   "not_here.title": "Not here",
   "not_here.text": "There is no page at this address. It may have moved, or the address may have a typing mistake.",

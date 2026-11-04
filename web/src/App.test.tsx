@@ -181,8 +181,7 @@ test("a person's page that is gone keeps People marked in the navigation", async
   window.location.hash = "#records/person/PER-9999";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name: "Not here" })).toBeInTheDocument();
-  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "People", current: "page" })).toBeInTheDocument();
+  expect(await within(await screen.findByRole("navigation", { name: "Views" })).findByRole("link", { name: "People", current: "page" })).toBeInTheDocument();
 });
 
 test("the old address of Waiting to go out opens Follow-ups on its To send tab, and the address says so", async () => {

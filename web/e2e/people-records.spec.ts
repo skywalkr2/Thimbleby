@@ -240,7 +240,8 @@ test.describe("People and record pages", () => {
 
     // Removing it asks what happens to what is in it and whether its organization goes too; Undo brings both back.
     await go(page, "settings/business");
-    await row.getByRole("button", { name: "Remove Quarry Studio" }).click();
+    await row.getByRole("button", { name: "More actions for Quarry Studio" }).click();
+    await page.getByRole("menuitem", { name: "Remove" }).click();
     const ask = row.getByRole("group", { name: /What happens to the projects and to-dos in Quarry Studio/ });
     await ask.getByRole("checkbox", { name: /Also take Quarry Studio off your list of organizations/ }).check();
     await ask.getByRole("button", { name: "Move them to Personal" }).click();

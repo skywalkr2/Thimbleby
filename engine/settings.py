@@ -15,6 +15,7 @@ import logging
 import shutil
 import subprocess
 import tempfile
+import threading
 import typing
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -550,7 +551,19 @@ def _kind(annotation: Any) -> tuple[Kind, list[str]]:
 # ---- saving ----------------------------------------------------------------------------------------------------------
 
 
-def save(
+# One save at a time: a save reads the files, changes them and writes them back, so two that overlapped would each write
+# from the text it read and the later would silently undo the earlier. The one that waits then finds the files changed
+# and is refused as out of date, never merged over.
+_SAVING = threading.Lock()
+
+
+def save(ws: Any, cfg: Any, store: Any, **kwargs: Any) -> Saved:
+    """Write the person's changes; see `_save`. Saves are made one at a time."""
+    with _SAVING:
+        return _save(ws, cfg, store, **kwargs)
+
+
+def _save(
     ws: Any,
     cfg: Any,
     store: Any,

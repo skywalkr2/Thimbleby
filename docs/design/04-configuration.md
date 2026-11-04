@@ -1078,7 +1078,9 @@ from the screens…" and "The app restarts only when it must, and only when the 
   English until a translated wording sheet exists. The screens name each tag in the browser's language ("English (United
   States)") and keep the stored value a tag. Plugins' settings come as their own groups (4.12).
 - **A save names the fingerprint of the files the form was built from**, so two saves never race; if the files changed it
-  says so and asks the person to look again.
+  says so and asks the person to look again. Saves are also made one at a time on the server: a save reads the files, changes
+  them and writes them back, so one that began before another finished would have written from the text it had read and
+  undone the other. The one that waits finds the files changed and is refused like any save made on an old fingerprint.
 - **What can't be saved from a screen:** a key locked by an environment variable or flag, and the file-only keys: all of
   `server.*` and `storage.backend`. A guided step (adding an AI account, choosing a backup folder, a sign-in starting sources)
   may set a key no form shows, by an explicit allow-list for that step.

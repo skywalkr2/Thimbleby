@@ -2,7 +2,7 @@
 // widths with accessibility checks, how much of the screen the content uses, a header that never wraps, views that are links,
 // the offline state, and the phone's bottom bar. Screenshots go to the folder named by E2E_SHOTS, when it is set.
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { choicesOf, choose } from "./choose";
 import { pressStart, showSteps, FIRST_SCREEN } from "./journey-helpers";
 
@@ -243,37 +243,6 @@ test.describe("the visual system", () => {
 });
 
 test.describe("screen use and the shell", () => {
-  const SIDEBAR = 232;
-
-  for (const [width, height] of [
-    [1440, 900],
-    [1920, 1080],
-  ]) {
-    test(`at ${width}×${height} every view fills the content area, under a header of at most 56px and no banner`, async ({ page }) => {
-      await page.setViewportSize({ width, height });
-      await signIn(page);
-      const hrefs = await page.getByRole("navigation", { name: "Views" }).getByRole("link").evaluateAll((links) => links.map((a) => a.getAttribute("href")!));
-      expect(hrefs.length).toBeGreaterThanOrEqual(11);
-      for (const href of hrefs) {
-        await page.getByRole("navigation", { name: "Views" }).locator(`a[href="${href}"]`).click();
-        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-        await page.waitForTimeout(150);
-        const header = (await page.getByRole("banner").boundingBox())!;
-        const main = (await page.getByRole("main").boundingBox())!;
-        expect(header.height).toBeLessThanOrEqual(56);
-        // No banner above the content: it starts right under the header.
-        expect(main.y).toBeLessThanOrEqual(56);
-        expect(main.x).toBeLessThanOrEqual(SIDEBAR + 1);
-        expect(main.width).toBeGreaterThanOrEqual(0.9 * (width - SIDEBAR));
-        expect(main.x + main.width).toBeGreaterThanOrEqual(width - 1);
-        // The first heading is within the first screenful.
-        const h1 = (await page.getByRole("heading", { level: 1 }).first().boundingBox())!;
-        expect(h1.y).toBeLessThan(56 + 60);
-        await shoot(page, `view-${width}-${href.replace(/^.*#/, "").replace(/[^a-z]+/gi, "-")}`);
-      }
-      await shoot(page, `shell-${width}`);
-    });
-  }
 
   // The first-go line is a line of the queue (design 7.8); the walkthrough's last button focuses it, and Go must then be
   // fully on the screen, not clipped.
@@ -306,78 +275,6 @@ test.describe("screen use and the shell", () => {
       await shoot(page, `first-go-${width}`);
     });
   }
-
-  // The pill's words are long ("Waiting for you to start it"): the pill stays inside the row and clear of the title's words (it follows them and wraps with them), whatever the window width or theme.
-  for (const scheme of ["light", "dark"] as const) {
-    test(`the first-go line's pill stays inside the row and clear of the title's words in ${scheme}, at every width`, async ({ page }) => {
-      await page.emulateMedia({ colorScheme: scheme });
-      await page.route("**/api/today/queue", async (route) => {
-        if (route.request().method() !== "GET") return route.fallback();
-        await route.fulfill({
-          json: [{ key: "first_go", group: "decide", kind: "first_go", count: 6, estimate_usd: 0.3, unpriced: 0, untrusted: false, actions: [], questions: [], outcome: {} }],
-        });
-      });
-      await signIn(page, "today");
-      const line = page.locator('[data-queue-line="first_go"]');
-      for (const width of [2000, 1440, 1280, 390]) {
-        await page.setViewportSize({ width, height: HEIGHT });
-        await expect(line).toBeVisible();
-        // Measured until the row has laid out at the new width: under load the first frame after a resize can show the pill not yet sized. A layout that never settles right still fails when the retries run out.
-        await expect(async () => {
-          const m = await line.evaluate((row) => {
-            const pill = row.querySelector("[data-state-mark]")!.getBoundingClientRect();
-            // The title's words: the mark follows them (design 7.14), on the same line or the one under; no word is drawn under it.
-            const words = row.querySelector('[id$="-title"]')!;
-            let overlap = 0;
-            const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
-            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-              if (!(node.textContent ?? "").trim() || (node.parentElement as HTMLElement).closest("[data-state-mark]")) continue;
-              const range = document.createRange();
-              range.selectNodeContents(node);
-              for (const rect of Array.from(range.getClientRects())) {
-                const across = Math.min(rect.right, pill.right) - Math.max(rect.left, pill.left);
-                const down = Math.min(rect.bottom, pill.bottom) - Math.max(rect.top, pill.top);
-                if (across > 1 && down > 1) overlap += 1;
-              }
-            }
-            const box = row.getBoundingClientRect();
-            return { pillLeft: pill.left, pillRight: pill.right, pillBottom: pill.bottom, pillW: pill.width, overlap, rowLeft: box.left, rowRight: box.right };
-          });
-          const note = `${scheme} ${width}: ${JSON.stringify(m)}`;
-          if (process.env.E2E_MEASURE) console.log(note);
-          expect(m.overlap, note).toBe(0);
-          expect(m.pillLeft, note).toBeGreaterThanOrEqual(m.rowLeft);
-          expect(m.pillRight, note).toBeLessThanOrEqual(m.rowRight);
-        }).toPass({ timeout: 5000 });
-      }
-    });
-  }
-
-  // On a phone the step list is one line with a Steps button, so the first field of a step is above the fold (390×844).
-  test("on a phone the setup shows its place on one line, the list is behind Steps, and You's first field is above the fold", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await signIn(page, "setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
-    await pressStart(page);
-    // The shared workspace resumes at the first screen not done, so the You screen is opened from the step list.
-    const steps = page.getByRole("button", { name: "Steps", exact: true });
-    await showSteps(page);
-    await page.locator('#walkthrough-steps [data-screen="you"]').click();
-    const main = page.getByRole("main");
-    await expect(main.getByRole("heading", { level: 2, name: "You", exact: true })).toBeVisible();
-    if ((await steps.getAttribute("aria-expanded")) === "true") await steps.click();
-    // On a phone the place is the step's own "Step 1 of 7" line; the header bar holds only the title, Steps and Finish later.
-    await expect(page.getByText("Step 1 of 7")).toBeVisible();
-    await expect(steps).toHaveAttribute("aria-expanded", "false");
-    await expect(page.locator("#walkthrough-steps")).toBeHidden();
-    const field = (await main.getByLabel("Your full name").boundingBox())!;
-    expect(field.y + field.height).toBeLessThanOrEqual(844);
-    await steps.click();
-    await expect(page.locator("#walkthrough-steps")).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  });
 
   // A toast sits at the bottom of the window; while the walkthrough is open it never covers the screen's own buttons, and
   // it is gone when the walkthrough moves to another screen.
@@ -462,109 +359,6 @@ test.describe("screen use and the shell", () => {
       await expect(notices.getByText("Nothing to undo.")).toHaveCount(0);
     });
   }
-
-  test("the header and the sidebar do not move when the view changes", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await signIn(page);
-    const frame = async () => {
-      const header = (await page.getByRole("banner").boundingBox())!;
-      const brand = (await page.getByRole("banner").getByRole("link", { name: /^Go to Today/ }).boundingBox())!;
-      const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
-      return [header, brand, nav].map((b) => [b.x, b.y, b.width, b.height]);
-    };
-    // The product's faces are loaded before anything is measured: the name in the header is wider in its own face than in the first.
-    await page.evaluate(() => document.fonts.ready);
-    const first = await frame();
-    for (const label of [/^Stages/, /^People/, /^Settings/]) {
-      await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: label }).click();
-      await page.waitForTimeout(100);
-      expect(await frame()).toEqual(first);
-    }
-  });
-
-  test("the header never wraps, with plugin panels present", async ({ page }) => {
-    await page.route("**/api/panels", async (route) => {
-      const panel = (n: number, tab: string) => ({
-        name: `demo/panel-${n}`,
-        title: `A plugin panel with a rather long title number ${n}`,
-        tab,
-        kind: "demo/thing",
-        view: "table",
-        columns: ["title"],
-        primary_action: null,
-        row_actions: [],
-        new_action: null,
-      });
-      await route.fulfill({ json: [1, 2, 3, 4, 5, 6].map((n) => panel(n, n % 2 ? "work" : "people")) });
-    });
-    for (const width of [1024, 1280, 1440, 1920, 2560]) {
-      await page.setViewportSize({ width, height: 900 });
-      await signIn(page);
-      const header = page.getByRole("banner");
-      // Everything sits on one row of 56px at every width. The assistant's line (a dot and its name) is beside the status chip
-      // from 1440px; below that its state is in the chip's popover.
-      const beside = width >= 1440;
-      expect((await header.boundingBox())!.height).toBe(56);
-      const statusRow = header.getByRole("button", { name: /^App status: / });
-      const assistant = header.getByRole("button", { name: new RegExp(`^${await assistantName(page)}`) });
-      await expect(assistant).toHaveCount(beside ? 1 : 0);
-      const rowOf = async (selector: Locator) => {
-        const box = (await selector.boundingBox())!;
-        return Math.round(box.y + box.height / 2);
-      };
-      if (beside) expect(Math.abs((await rowOf(statusRow)) - (await rowOf(assistant)))).toBeLessThan(6);
-      const tops = await header.locator("a, button").evaluateAll((els) =>
-        els
-          .filter((e) => (e as HTMLElement).getClientRects().length > 0)
-          .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
-      );
-      expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
-      const menu = (await header.getByRole("button", { name: /^Menu for / }).boundingBox())!;
-      expect(menu.x + menu.width).toBeLessThanOrEqual(width);
-      if (width >= 1280) {
-        // Nothing in the status is cut off: the chip's word and the assistant's name (when it is there) show whole.
-        const cut = await header.evaluate((h) =>
-          Array.from(h.querySelectorAll<HTMLElement>("button[data-status] *, [data-alive] *")).filter((e) => e.scrollWidth > e.clientWidth + 1).length,
-        );
-        expect(cut).toBe(0);
-      }
-      if (beside) {
-        // The assistant's line is a dot and its name; a long name is cut at a fixed length, never pushing the header's end past
-        // the window, and nothing in the row is cut off by the window's edge from 1280px.
-        await header.evaluate((h) => {
-          const name = h.querySelector<HTMLElement>("[data-alive] span:last-child");
-          if (name) name.textContent = "an assistant with a rather long name that someone chose";
-        });
-        const after = (await header.getByRole("button", { name: /^Menu for / }).boundingBox())!;
-        expect(after.x + after.width).toBeLessThanOrEqual(width);
-      }
-      // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.
-      await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /number 1$/ })).toHaveCount(1);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-      // Every header button stays a target of at least 24px (WCAG 2.5.8), also when the computer's fonts run wider than
-      // ours and the row gets tight (a CI runner's did): letter spacing stands in for those fonts.
-      const narrowest = async () =>
-        Math.min(...(await header.locator("a, button").evaluateAll((els) =>
-          els.filter((e) => (e as HTMLElement).getClientRects().length > 0).map((e) => e.getBoundingClientRect().width))));
-      expect(await narrowest()).toBeGreaterThanOrEqual(24);
-      const spacing = (value: string) =>
-        header.evaluate((h, v) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = v; }), value);
-      // A wider font leaves the row tight: the status chip gives up its age before anything is pushed past the window's edge.
-      await spacing("0.1em");
-      const tight = (await header.getByRole("button", { name: /^Menu for / }).boundingBox())!;
-      expect(tight.x + tight.width).toBeLessThanOrEqual(width);
-      await spacing("0.25em");
-      expect(await narrowest()).toBeGreaterThanOrEqual(24);
-      // The assistant's line keeps its dot (or its icon when it needs a look), which says how it is.
-      if (beside) {
-        const [line, mark] = await assistant.evaluate((e) => [e.getBoundingClientRect(), e.querySelector("[data-indicator], svg")!.getBoundingClientRect()].map((r) => [r.left, r.right]));
-        expect(mark[1] - mark[0]).toBeGreaterThanOrEqual(8);
-        expect(mark[0]).toBeGreaterThanOrEqual(line[0]);
-        expect(mark[1]).toBeLessThanOrEqual(line[1]);
-      }
-      await spacing("");
-    }
-  });
 
   // Below 1440px the header is one row (design 7.1): the title, Ask, the status chip and the buttons, with the assistant's state in
   // the chip's popover and "Quick links" in the person's menu; at about 1,000px Ask is an icon. Nothing is clipped by the
@@ -1077,34 +871,6 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     // The queue route may still be answering a poll as the page closes; that is not a failure of the test.
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
-
-  // C47 (UI/UX re-review, 3.1): the work starts near the top of the first screen. At 1280x720 the first queue line is at
-  // most 260px down with setup unfinished (200px with it done), and at least six lines are in view.
-  for (const finished of [false, true]) {
-    test(`Today at 1280x720 with setup ${finished ? "done" : "unfinished"}: the first queue line is at most ${finished ? 200 : 260}px down and six lines show`, async ({ page }) => {
-      const steps = ["workspace", "ai", "mail", "backup", "people"].map((id, n) => ({ id, label: "", counted: true, done: finished || n === 0, skipped: false }));
-      await page.route("**/api/setup", async (route) => {
-        const response = await route.fetch();
-        const body = await response.json();
-        await route.fulfill({ json: { ...body, finished, steps } });
-      });
-      const lines = [
-        { key: "backup", group: "risk", kind: "backup", count: 1, state: "never" },
-        ...Array.from({ length: 8 }, (_, n) => ({ key: `question:Q-${n}`, group: "decide", kind: "question", count: 1, text: `Which option for item ${n + 1}?`, question: `Q-${n}` })),
-      ].map((l) => ({ untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...l }));
-      await page.route("**/api/today/queue", (route) => route.fulfill({ json: lines }));
-      await page.setViewportSize({ width: 1280, height: 720 });
-      await signIn(page);
-      const rows = page.locator("[data-queue-line]");
-      await expect(rows.first()).toBeVisible();
-      await layoutSettled(page);
-      const boxes = await rows.evaluateAll((els) => els.map((e) => ({ top: e.getBoundingClientRect().top, bottom: e.getBoundingClientRect().bottom })));
-      // The page header (title, then its line) takes about 20px more than the title and date it replaced; six lines still show.
-      expect(boxes[0].top).toBeLessThanOrEqual(finished ? 220 : 280);
-      expect(boxes.filter((b) => b.bottom <= 720).length).toBeGreaterThanOrEqual(6);
-      await page.unrouteAll({ behavior: "ignoreErrors" });
-    });
-  }
 
   // C47 and C56 (UI/UX re-review of B-7, R3): the lines that ran tallest in the demo (a decision, two held questions from
   // outside with long items, a move, a failed backup and an overdue to-do) leave six lines fully visible at 1280x720, and

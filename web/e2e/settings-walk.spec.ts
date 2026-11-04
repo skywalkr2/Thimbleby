@@ -216,68 +216,15 @@ test("the settings walk counts 20 shown and 27 more rows, each labelled in plain
   }
 });
 
-test("every page of Settings is built in one frame: the same title, search and side bar in the same place and the same column widths", async ({ page }) => {
-  test.setTimeout(180_000);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("?token=e2e-token#settings/you");
-  await expect(bar(page)).toBeVisible(LOADED);
-  const names = (await (await settingsSections(page)).getByRole("link").allTextContents()).map((n) => n.trim());
-  expect(names).toContain("Connections");
-  expect(names).toContain("Add-ons");
-  const frames: Array<{ name: string; title: number[]; search: number[]; side: number[]; content: number[] }> = [];
-  const once = async (selector: string) => {
-    const found = await page.locator(selector).first().boundingBox();
-    return found ? [Math.round(found.x), Math.round(found.y), Math.round(found.width)] : [];
-  };
-  // A page's frame is measured once its layout has settled (the same box on three reads a short while apart), so a page
-  // still filling in on a busy machine is not measured half-built. What is compared is unchanged.
-  const box = async (selector: string) => {
-    // The page's own faces must have loaded: a title measured in the fallback face is wider than the same title later.
-    await page.evaluate(() => document.fonts.ready.then(() => undefined));
-    let last = await once(selector);
-    let same = 0;
-    for (let tries = 0; tries < 100 && same < 3; tries++) {
-      await page.waitForTimeout(50);
-      const now = await once(selector);
-      same = JSON.stringify(now) === JSON.stringify(last) ? same + 1 : 0;
-      last = now;
-    }
-    return last;
-  };
-  for (const name of names) {
-    await (await settingsSections(page)).getByRole("link", { name, exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Settings", exact: true })).toBeVisible(LOADED);
-    // Each page has exactly one title, one search box and one side bar, and its own section heading under the title.
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.getByRole("searchbox", { name: "Search settings" })).toHaveCount(1);
-    await expect(bar(page)).toHaveCount(1);
-    await expect(page.locator(".settings-content")).toHaveCount(1, LOADED);
-    frames.push({
-      name,
-      title: await box("main h1"),
-      search: await box(".settings-side [data-field]"),
-      side: await box(".settings-nav"),
-      content: await box(".settings-content"),
-    });
-  }
-  for (const f of frames) {
-    expect(f.title, `${f.name}: title`).toEqual(frames[0].title);
-    expect(f.search, `${f.name}: search`).toEqual(frames[0].search);
-    expect(f.side.slice(0, 1), `${f.name}: side bar`).toEqual(frames[0].side.slice(0, 1));
-    // The content starts at the same place and is as wide on every page.
-    expect(f.content.slice(0, 1), `${f.name}: content`).toEqual(frames[0].content.slice(0, 1));
-    expect(f.content[2], `${f.name}: content width`).toBe(frames[0].content[2]);
-  }
-});
-
 test("the search on Connections and Add-ons opens the Settings results for what was typed", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("?token=e2e-token#settings/connections");
   await expect(page.getByRole("heading", { level: 2, name: "Connections", exact: true })).toBeVisible(LOADED);
   const search = page.getByRole("searchbox", { name: "Search settings" });
   await search.fill("time zone");
+  // The address changes once the typing has been taken in; wait on it, never read it at the instant of typing.
+  await expect.poll(() => new URL(page.url()).hash, LOADED).toBe("#settings/you");
   await expect(search).toBeFocused();
-  expect(new URL(page.url()).hash).toBe("#settings/you");
   await expect(page.locator(".settings-results").first()).toBeVisible(LOADED);
   await expect(search).toHaveValue("time zone");
 });
@@ -309,50 +256,6 @@ test("How the assistant is doing is in the person's menu, and opens the page hea
   await expect(bar(page)).toHaveCount(0);
 });
 
-// A table rule in one CSS module once reached every table's first cell (a third of the width), so a connection's name and
-// facts were squeezed into a narrow column on a phone. Connections is cards now: measured, a connection's words take the card's
-// width beside its icon and menu, and a records table is not cut while the window has room.
-test("on a phone a connection's name takes the row's width, and a records table is not cut while the window has room", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("?token=e2e-token#settings/connections");
-  const first = page.locator("[data-connection-card] [data-source-row]").first().locator("p").first();
-  await expect(first).toBeVisible(LOADED);
-  const cell = (await first.boundingBox())!;
-  const row = (await page.locator("[data-connection-card] [data-source-row]").first().boundingBox())!;
-  expect(cell.width).toBeGreaterThan(row.width * 0.5);
-  expect(await page.locator(".source-table").count()).toBe(0);
-  await notWider(page, "Connections on a phone");
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("?token=e2e-token#records/projects");
-  const heads = page.locator("table thead th");
-  await expect(heads.first()).toBeVisible(LOADED);
-  // No header is cut to an ellipsis: each is as wide as its own text.
-  for (const head of await heads.all()) {
-    const fits = await head.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
-    expect(fits, `${await head.textContent()} is cut`).toBe(true);
-  }
-});
-
-// A group label in the side list sits close above its own links and well apart from the group before it, so a link never reads as
-// being under the wrong label (measured: the gap above each label is at least half again the gap below it).
-test("each group label of the side list has more room above it than below it", async ({ page }) => {
-  await page.setViewportSize({ width: 1512, height: 982 });
-  await page.goto("?token=e2e-token#settings/you");
-  const nav = bar(page);
-  await expect(nav.getByRole("link", { name: "Advanced", exact: true })).toBeVisible(LOADED);
-  const gaps = await nav.evaluate((root) =>
-    Array.from(root.querySelectorAll<HTMLElement>(".settings-nav-group")).map((group, n, all) => {
-      const label = group.querySelector<HTMLElement>("[data-group-label]")!.getBoundingClientRect();
-      const first = group.querySelector<HTMLElement>("a")!.getBoundingClientRect();
-      const before = n === 0 ? null : all[n - 1].querySelectorAll<HTMLElement>("a");
-      const last = before ? before[before.length - 1].getBoundingClientRect() : null;
-      return { above: last ? label.top - last.bottom : null, below: first.top - label.bottom };
-    }),
-  );
-  expect(gaps.length).toBeGreaterThanOrEqual(3);
-  for (const g of gaps.slice(1)) expect(g.above!, JSON.stringify(g)).toBeGreaterThanOrEqual(g.below * 1.5);
-});
-
 // A disabled radio keeps its whole outline: its ring against the page is at least 3:1, so it reads as a control that is off,
 // never as one that is missing.
 test("a disabled radio's ring can be seen against the page (at least 3 to 1)", async ({ page }) => {
@@ -378,41 +281,6 @@ test("a disabled radio's ring can be seen against the page (at least 3 to 1)", a
   expect((a + 0.05) / (b + 0.05), JSON.stringify(colors)).toBeGreaterThanOrEqual(3);
 });
 
-// On a phone the accounts the assistant can act on put each account's words across the row, and its switch under them; the
-// section picker is followed by the page with no dead band; the working hours are two pairs, each on a line of its own.
-test("on a phone an account row's switch sits under its words, the picker is followed by the page, and each pair of hours is on one line", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.route("**/api/acts/accounts", (route) =>
-    route.fulfill({
-      json: {
-        accounts: ["one", "two"].map((id) => ({ id: `mailbox:${id}`, label: `Example mail (${id}@example.com)`, acting: false, sign_in: `demo/${id}`, can_act: true })),
-      },
-    }),
-  );
-  await page.goto("?token=e2e-token#settings/you");
-  const row = page.locator("[data-acting-accounts] li").first();
-  await expect(row).toBeVisible(LOADED);
-  const words = (await row.locator("strong").boundingBox())!;
-  const hint = (await row.locator("p").boundingBox())!;
-  const box = (await row.getByRole("checkbox").boundingBox())!;
-  expect(hint.width).toBeGreaterThan(250);
-  expect(box.y).toBeGreaterThanOrEqual(hint.y + hint.height - 1);
-  expect(box.y).toBeGreaterThan(words.y);
-  // The picker is one row with a down chevron's room at its end, and the first setting follows within a normal gap.
-  const picker = (await page.locator(".settings-picker > summary").boundingBox())!;
-  const firstRow = (await page.locator(".setting").first().boundingBox())!;
-  expect(firstRow.y - (picker.y + picker.height)).toBeLessThan(28);
-  await notWider(page, "You on a phone");
-  await page.goto("?token=e2e-token#settings/today");
-  const hours = page.getByRole("group", { name: "Working hours" });
-  await expect(hours).toBeVisible(LOADED);
-  const tops = await hours.getByRole("combobox").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
-  expect(tops).toHaveLength(4);
-  expect(tops[0]).toBe(tops[1]);
-  expect(tops[2]).toBe(tops[3]);
-  expect(tops[2]).toBeGreaterThan(tops[0]);
-});
-
 // A page reached from a section's own page (what each account can do) has its way back on the page, so a phone does not also show
 // the row of sections above it; a window with the side list keeps the list.
 test("the compare page has no section row on a phone, and the side list on a wide window", async ({ page }) => {
@@ -423,47 +291,4 @@ test("the compare page has no section row on a phone, and the side list on a wid
   await expect(bar(page)).toHaveCount(0);
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(bar(page)).toBeVisible(LOADED);
-});
-
-// The intro under the title is one muted line of 13px, and the line that says Saving… is under the page, not between the heading and its first row.
-test("the Settings intro is one 13px line, and the saving line comes after the page's rows", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("?token=e2e-token#settings/you");
-  const intro = page.locator(".settings-intro");
-  await expect(intro).toBeVisible(LOADED);
-  const look = await intro.evaluate((el) => ({ size: getComputedStyle(el).fontSize, lines: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)) }));
-  expect(look).toEqual({ size: "13px", lines: 1 });
-  const rows = (await page.locator(".setting").last().boundingBox())!;
-  const status = (await page.locator("[data-save-status]").boundingBox())!;
-  expect(status.y).toBeGreaterThanOrEqual(rows.y + rows.height - 1);
-});
-
-// A headed group of a page (AI spending) has a rule above its heading, as the rows under it have rules of their own: the two blocks
-// of the AI page are told apart, and the heading does not draw a second rule under itself.
-test("the AI page sets its spending group off with a rule above the heading", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("?token=e2e-token#settings/ai");
-  const group = page.locator(".settings-group[aria-labelledby]").first();
-  await expect(group).toBeVisible(LOADED);
-  const look = await group.evaluate((el) => ({
-    above: getComputedStyle(el).borderTopWidth,
-    firstRow: getComputedStyle(el.querySelector(".setting")!).borderTopWidth,
-  }));
-  expect(look).toEqual({ above: "1px", firstRow: "0px" });
-});
-
-// The page of an add-on in the side list is a nested link; its selected fill starts at the same edge as the other links' fill.
-test("the selected link of an add-on's page starts where the selected link of any other page starts", async ({ page }) => {
-  await page.setViewportSize({ width: 1512, height: 982 });
-  await page.goto("?token=e2e-token#settings/connections");
-  const selected = async () => (await bar(page).locator("a[aria-current='page']").boundingBox())!;
-  await expect(bar(page).locator("a[aria-current='page']")).toBeVisible(LOADED);
-  const plain = await selected();
-  const nested = bar(page).locator(".settings-nav-sublist a").first();
-  await expect(nested).toBeVisible(LOADED);
-  await nested.click();
-  await expect(bar(page).locator(".settings-nav-sublist a[aria-current='page']")).toBeVisible(LOADED);
-  const inner = await selected();
-  expect(Math.abs(inner.x - plain.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(inner.width - plain.width)).toBeLessThanOrEqual(1);
 });

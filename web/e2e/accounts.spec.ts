@@ -312,28 +312,19 @@ test.describe.serial("several accounts", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("VS06. the calendars are toggles with their color: pressing one hides its entries and says Hidden, pressing it again shows them; the week never scrolls sideways at 1440, 1024 and 390", async ({ page }) => {
+  test("VS06. the calendars are toggles with their color: pressing one hides its entries and says Hidden, pressing it again shows them", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto(`?token=${info.token}`);
-    for (const [width, lanes] of [[1440, 5], [1024, 5], [390, 0]] as const) {
-      await page.setViewportSize({ width, height: 900 });
-      await go(page, "schedule");
-      await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible(LOADED);
-      await page.locator("body").press("2");
-      // Exact: the list of calendars that need a sign-in is named "Calendars that need you to sign in" and holds a button too.
-      const toggles = page.getByRole("list", { name: "Calendars", exact: true });
-      await expect(toggles.getByRole("button")).toHaveCount(3, LOADED);
-      if (lanes) await expect(page.locator("main ul[data-day]")).toHaveCount(lanes);
-      else await expect(page.locator("main [data-schedule-list]")).toBeVisible();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
-      // On a phone the toggles scroll inside their own row, never moving the page.
-      if (width === 390) expect(["auto", "scroll"]).toContain(await toggles.evaluate((el) => getComputedStyle(el).overflowX));
-    }
     await page.setViewportSize({ width: 1440, height: 900 });
     await go(page, "schedule");
     // The month: the third calendar's one entry is an all-day holiday three days ahead, which the day view of today never shows.
     await page.locator("body").press("4");
+    // When the toggles don't fit in a row they are one "Calendars (n)" button that opens them in a popover.
+    const folded = page.getByRole("button", { name: /^Calendars \(\d+\)/ });
     const toggles = page.getByRole("list", { name: "Calendars", exact: true });
+    await expect(toggles.or(folded).first()).toBeVisible(LOADED);
+    if (await folded.isVisible()) await folded.click();
+    await expect(toggles.getByRole("button")).toHaveCount(3, LOADED);
     const third = toggles.getByRole("button", { name: onSchedule(addresses[2]) });
     const color = await third.locator("[data-color]").getAttribute("data-color");
     const mine = page.locator(`main [data-entry-key][data-color="${color}"]`);

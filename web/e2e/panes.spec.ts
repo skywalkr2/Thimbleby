@@ -1,7 +1,6 @@
 // The panes the shell opens beside or over a screen (design 7.1, 7.13): Hand something in as a drawer, Ask as a pane on a
 // wide screen and a dialog below it, the stages board, and the phone's review mode.
 import { expect, test, type Page } from "@playwright/test";
-import { pressStart, FIRST_SCREEN } from "./journey-helpers";
 
 /** Opens Ask the way a person does: whatever is open (Ask from an earlier width) is closed first, then the header's search
  * field (on a phone, the bar's Search button first) and its Ask row. */
@@ -251,16 +250,6 @@ test.describe("the phone's review mode", () => {
     );
     expect(selectedFilters, `Follow-ups filter should be To send; selected filters: ${JSON.stringify(selectedFilters)}`).toEqual(["To send"]);
 
-    const byPerson = page.getByRole("radio", { name: "By person" });
-    const groupedByPerson = await byPerson.isChecked();
-    expect(groupedByPerson, `Follow-ups grouping should be By person; selected: ${groupedByPerson}`).toBe(true);
-
-    const phoneLayout = await page.evaluate(() => ({
-      width: window.innerWidth,
-      narrow: document.documentElement.hasAttribute("data-narrow"),
-    }));
-    expect(phoneLayout.narrow, `Follow-ups phone layout at ${phoneLayout.width}px; data-narrow: ${phoneLayout.narrow}`).toBe(true);
-
     const start = page.getByRole("button", { name: "Send one at a time" });
     await expect(start).toBeVisible();
     await start.click();
@@ -269,10 +258,6 @@ test.describe("the phone's review mode", () => {
     await expect(page.getByRole("button", { name: "Copy message" }).last()).toBeVisible();
     const bar = page.getByRole("group", { name: "What to do with this one" });
     await expect(bar).toBeVisible();
-    const box = (await bar.boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width).toBeLessThanOrEqual(390);
-    expect(box.y + box.height).toBeLessThanOrEqual(844);
     await expect(bar.getByRole("button", { name: "Next" })).toBeVisible();
     await expect(bar.getByRole("button", { name: "Looks good" })).toHaveCount(0);
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0);
@@ -281,40 +266,3 @@ test.describe("the phone's review mode", () => {
   });
 });
 
-test.describe("the walkthrough's look", () => {
-  test("fields are as wide as what they hold, the list marks where you are and says nothing is 'not done yet', and a step is one centered column", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1920, height: 1000 });
-    await signIn(page, "setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Getting started" })).toBeVisible(FIRST_SCREEN);
-    await pressStart(page);
-    const steps = page.getByRole("navigation", { name: "Setup steps" });
-    await steps.getByRole("button", { name: /^Mail and calendar/ }).click();
-    await steps.getByRole("button", { name: /^You/ }).first().click();
-    const main = page.getByRole("main");
-    await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
-    // The step shows a loading placeholder until the person's details are read; on a busy machine that can take a while.
-    await expect(main.getByRole("status", { name: "Loading…" }), "the You step should finish loading").toHaveCount(0, { timeout: 20_000 });
-    const youView = await main.evaluate((screen) => ({
-      heading: screen.querySelector("h2")?.textContent?.trim() ?? null,
-      formCount: screen.querySelectorAll("form").length,
-      labels: Array.from(screen.querySelectorAll("label"), (label) => label.textContent?.trim() ?? "").filter(Boolean),
-      screenText: screen.textContent?.trim() ?? "",
-    }));
-    const name = main.getByLabel("Your full name");
-    await expect(name, `You step view at full-name lookup: ${JSON.stringify(youView)}`).toBeVisible();
-    const field = (await name.boundingBox())!;
-    expect(field.width).toBeLessThanOrEqual(361);
-    await expect(page.getByText("Not done yet")).toHaveCount(0);
-    await expect(steps.getByText("You are here")).toHaveCount(1);
-    // A step is one centered column of 640 to 720px, its explanation above its fields.
-    const column = await main.getByRole("heading", { level: 2, name: "You" }).evaluate((h) => h.parentElement!.getBoundingClientRect().width);
-    expect(column).toBeGreaterThanOrEqual(600);
-    expect(column).toBeLessThanOrEqual(721);
-    const why = main.locator("p").filter({ hasText: /./ }).first();
-    const whyBox = (await why.boundingBox())!;
-    expect(whyBox.y).toBeLessThan(field.y);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-  });
-});

@@ -109,6 +109,11 @@ function WebhookTarget(props: { local: boolean }) {
   const test = useTest("webhook");
   const base = useId();
   const held = view.data ? heldOf(view.data.webhook) : null;
+  const testButton = held ? (
+    <Button size="sm" disabled={test.busy} onClick={() => void test.run()}>
+      {t("notices.test")}
+    </Button>
+  ) : null;
   const apps = view.data?.apps ?? [];
   const chosen = apps.find((a) => a.id === view.data?.app);
   return (
@@ -152,13 +157,8 @@ function WebhookTarget(props: { local: boolean }) {
           const saved = await inOrder(async () => api.setNotifyWebhook({ ...body, fingerprint: await fingerprint() }));
           await afterSave(saved, { message: t("notices.webhook.saved") });
         }}
-        more={
-          held ? (
-            <Button size="sm" disabled={test.busy} onClick={() => void test.run()}>
-              {t("notices.test")}
-            </Button>
-          ) : null
-        }
+        more={testButton}
+        whenHeld={testButton}
       />
       {(test.problem || view.data?.problem) && (
         <p className="problem-note" role="alert">

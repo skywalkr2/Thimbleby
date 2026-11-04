@@ -36,6 +36,8 @@ export function KeptSecretRow(props: {
   onSave: (body: { value: string } | { reference: string }) => Promise<void>;
   /** Extra buttons beside Save. */
   more?: ReactNode;
+  /** What the row still offers once a key is kept (a way to try it), beside the choice to type another. */
+  whenHeld?: ReactNode;
 }) {
   const { t } = useWords();
   const [typed, setTyped] = useState("");
@@ -98,13 +100,15 @@ export function KeptSecretRow(props: {
         </p>
       )}
       {/* Once a key is kept, there is nothing to save or make until the person chooses to type another. */}
-      {!(props.held && how === "held") && (
+      {!(props.held && how === "held") ? (
         <Actions align="start">
           <Button variant="secondary" size="sm" type="submit" disabled={!ready || busy} aria-label={props.saveLabel}>
             {t(busy ? "secrets.saving" : "secrets.save")}
           </Button>
           {props.more}
         </Actions>
+      ) : (
+        props.whenHeld && <Actions align="start">{props.whenHeld}</Actions>
       )}
     </FormBlock>
   );

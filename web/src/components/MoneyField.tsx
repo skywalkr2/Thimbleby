@@ -32,7 +32,7 @@ export function MoneyField(props: {
 }) {
   const { locale } = useWords();
   const write = useWriteAmount();
-  // What is typed while the cursor is in the box; none the rest of the time, when the amount is written out.
+  // What is typed while the cursor is in the box; none before the first key and the rest of the time, when the amount is written out.
   const [typed, setTyped] = useState<string | null>(null);
   const draftOf = (text: string) => {
     const n = parseAmount(text, locale);
@@ -54,10 +54,9 @@ export function MoneyField(props: {
       disabled={props.disabled}
       aria-invalid={props.invalid ? true : undefined}
       aria-describedby={props.describedBy}
-      onFocus={(e) => {
-        setTyped(typed ?? written(props.value));
-        e.currentTarget.select();
-      }}
+      // Nothing is kept on entering the box: the amount shown is the one that is saved, so a value put back from outside while
+      // the cursor is in the box (Reset) is what the box shows and what leaving it writes, never an older one.
+      onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => {
         setTyped(e.target.value);
         props.onChange(draftOf(e.target.value));
