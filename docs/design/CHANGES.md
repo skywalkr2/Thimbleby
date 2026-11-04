@@ -1031,9 +1031,9 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls (D11), built in G4c |
-| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet line (D12), built in G4c |
-| A person's page (7.13) | "Draft a message", "Files from" and two tabs unbuilt | Built (D13), in G4c |
+| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls (D11); batch G4c |
+| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet line (D12); batch G4c |
+| A person's page (7.13) | "Draft a message", "Files from" and two tabs not made yet | To be made in batch G4c (D13) |
 
 - **No config key, API or op change in this section;** G4c records its own.
 
