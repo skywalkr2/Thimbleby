@@ -152,6 +152,13 @@ The self-check enforces it: a decision entry cites its change-log section ("Chan
       - no sleep loops.
 
   **Size:** about 50 to 80 items, or one shared component, so it fits one helper's context. A whole area is too much.
+- **No fix loops on full runs** (owner, 2026-11-04: "do not let a subagent loop on fixes when its more efficient to fix
+  tests at the end"). A full browser run takes about 30 minutes here.
+  - A helper runs only the specs it touched, plus a failing spec's own project, and never repeats a full run just to see
+    where things stand.
+  - During a round of many batches, merges collect locally. One full run, and one pass that fixes what it finds, happens at
+    the end of the round, before the push.
+  - A failure that recurs after one fix is reported as open, with its cause, not chased run after run.
 - A subagent's "this can't be done" or "this needs a new op" comes back to the main session, never straight into a design
   change or a report.
 - **Quality and efficiency governance is the prime directive** (owner, 2026-10-13):
