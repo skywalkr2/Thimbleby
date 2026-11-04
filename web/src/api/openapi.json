@@ -27579,6 +27579,11 @@
             "title": "Days",
             "type": "array"
           },
+          "event_minutes": {
+            "description": "How long a new entry lasts when only its start is given (`ui.schedule.event_minutes`).",
+            "title": "Event Minutes",
+            "type": "integer"
+          },
           "first": {
             "format": "date",
             "title": "First",
@@ -27635,6 +27640,7 @@
           "week_starts_on",
           "grid_starts",
           "grid_ends",
+          "event_minutes",
           "month_entries"
         ],
         "title": "ScheduleView",

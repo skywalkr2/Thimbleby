@@ -72,7 +72,7 @@ function laneTitle(lane: Lane, other: string, t: T): string {
 function Details(props: { active: { item: Item; lane: Lane } | null; off: TimelineData["off_days"]; other: string; owners: (item: Item) => string }) {
   const { t } = useWords();
   const { active } = props;
-  if (!active) return <p className="hint">{t("schedule.timeline.hint")}</p>;
+  if (!active) return <p className="sr">{t("schedule.timeline.hint")}</p>;
   const { item, lane } = active;
   // The days off that fall on the item's days, from the workspace's and from its lane.
   const offs = [...props.off, ...lane.days_off].filter((o) => o.day >= item.start && o.day <= item.end);
@@ -102,9 +102,21 @@ function Details(props: { active: { item: Item; lane: Lane } | null; off: Timeli
   );
 }
 
-function Legend() {
+function Legend(props: { lanes: Lane[]; offDays: boolean; colorOf?: (entry: Entry) => string | undefined }) {
   const { t } = useWords();
-  const entries: [string, string, string?][] = [
+  const items = props.lanes.flatMap((l) => l.items);
+  const has = (test: (i: Item) => boolean) => items.some(test);
+  const shown: Record<string, boolean> = {
+    [t("schedule.timeline.legend.entry")]: has((i) => i.kind === "entry"),
+    [t("schedule.timeline.legend.todo")]: has((i) => i.kind === "todo" || i.kind === "promise"),
+    [t("schedule.timeline.legend.target")]: has((i) => i.kind === "target" || i.kind === "fact"),
+    [t("schedule.timeline.legend.bar")]: has((i) => i.start !== i.end),
+    [t("schedule.timeline.legend.overdue")]: has((i) => i.state === "overdue"),
+    [t("schedule.timeline.legend.done")]: has((i) => i.state === "done"),
+    [t("schedule.timeline.legend.off")]: props.offDays,
+  };
+  const colors = [...new Set(items.flatMap((i) => (i.entry && !i.entry.own && i.entry.kind !== "due" ? [props.colorOf?.(i.entry)] : [])).filter((c): c is string => !!c))].slice(0, 3);
+  const entries: [string, string, string?][] = ([
     ["circle", t("schedule.timeline.legend.entry")],
     ["square", t("schedule.timeline.legend.todo")],
     ["diamond", t("schedule.timeline.legend.target")],
@@ -112,15 +124,24 @@ function Legend() {
     ["square", t("schedule.timeline.legend.overdue"), "overdue"],
     ["square", t("schedule.timeline.legend.done"), "done"],
     ["off", t("schedule.timeline.legend.off")],
-  ];
+  ] as [string, string, string?][]).filter(([, label]) => shown[label]);
+  if (entries.length === 0) return null;
   return (
     <ul className={styles.legend} aria-label={t("schedule.timeline.legend")}>
       {entries.map(([shape, label, state]) => (
         <li key={label}>
-          <span className={styles.key} data-shape={shape} data-state={state ?? "open"} aria-hidden="true">
-            {state === "overdue" && <Icon name="alert" size={12} />}
-            {state === "done" && <Icon name="check" size={12} />}
-          </span>
+          {shape === "circle" && colors.length > 0 ? (
+            <span className={styles.keyColors} aria-hidden="true">
+              {colors.map((c) => (
+                <span key={c} className={styles.key} data-shape="circle" data-color={c} data-state="open" />
+              ))}
+            </span>
+          ) : (
+            <span className={styles.key} data-shape={shape} data-state={state ?? "open"} aria-hidden="true">
+              {state === "overdue" && <Icon name="alert" size={12} />}
+              {state === "done" && <Icon name="check" size={12} />}
+            </span>
+          )}
           {label}
         </li>
       ))}
@@ -203,7 +224,7 @@ export function Timeline(props: {
                 <h3 className={styles.side}>{group.side ? (props.sideName(group.side) ?? "") : other}</h3>
               )}
               {group.lanes.map((lane) => {
-                const { placed, rows } = packLane(lane.items, data.first, data.days, pitch);
+                const { placed, rows } = packLane(lane.items, data.first, data.days, pitch, (i) => `${monthDay(i.start)} ${i.title}`);
                 const off = runsOf([...data.off_days, ...lane.days_off]);
                 const own = lane.days_off.map((o) => t("schedule.timeline.off_on", { day: day(o.day), reason: o.reason || t(`schedule.timeline.off.${o.kind}`) }));
                 const id = `timeline-lane-${lane.project ?? "none"}`;
@@ -226,7 +247,7 @@ export function Timeline(props: {
                       ))}
                       {todayX !== null && <span className={styles.todayLine} style={{ left: todayX }} aria-hidden="true" />}
                       <ul className={styles.items} aria-label={t("schedule.timeline.items", { lane: lane.name || other })}>
-                        {placed.map(({ item, x, w, row }) => {
+                        {placed.map(({ item, x, w, row, point, flip }) => {
                           const key = itemKey(lane, item);
                           return (
                             <li key={key + item.title} className={styles.slot} style={{ left: x, width: w, top: 4 + row * ROW, height: TOUCH }} onMouseEnter={() => setActive({ item, lane })} onMouseLeave={() => setActive(null)}>
@@ -235,7 +256,8 @@ export function Timeline(props: {
                                 className={styles.mark}
                                 data-kind={item.kind}
                                 data-state={item.state}
-                                data-bar={w > TOUCH ? "" : undefined}
+                                data-bar={point ? undefined : w > TOUCH ? "" : undefined}
+                                data-flip={flip ? "" : undefined}
                                 data-entry-key={item.entry ? key : undefined}
                                 data-color={item.entry && !item.entry.own && item.entry.kind !== "due" ? props.colorOf?.(item.entry) : undefined}
                                 data-selected={props.selected === key ? "" : undefined}
@@ -245,6 +267,14 @@ export function Timeline(props: {
                                 onClick={() => open(item, props.onOpen)}
                               >
                                 <Shape item={item} />
+                                {point && (
+                                  <>
+                                    <span className={styles.pointDate} aria-hidden="true">
+                                      {monthDay(item.start)}
+                                    </span>
+                                    <span className={styles.pointTitle}>{item.title}</span>
+                                  </>
+                                )}
                               </button>
                             </li>
                           );
@@ -260,7 +290,7 @@ export function Timeline(props: {
       )}
       {!empty && !wide && <WeekList data={data} lanes={props.lanes} other={other} selected={props.selected} onOpen={props.onOpen} />}
       {wide && !empty && <Details active={active} off={data.off_days} other={other} owners={ownersOf} />}
-      <Legend />
+      <Legend colorOf={props.colorOf} lanes={props.lanes} offDays={data.off_days.length > 0 || props.lanes.some((l) => l.days_off.length > 0)} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 // The Schedule's calendar toggles (design 7.7): each calendar the person reads, by name, with a tick box in its color, as a
 // button that shows or hides its entries. Hidden is said in words as well as by the mark, so nothing is told by color alone. Shown only with more
 // than one calendar; the choice is remembered on this browser, as the view is.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWords } from "../lib/wording";
 import { Icon } from "../ui/Icon";
 import type { Calendars } from "./ScheduleEntry";
@@ -39,13 +39,30 @@ export function useHiddenCalendars(): [Set<string>, (id: string) => void] {
 export function ScheduleLegend(props: { calendars: Calendars; hidden: Set<string>; onToggle: (id: string) => void }) {
   const { t } = useWords();
   const list = props.calendars.list ?? [];
+  const row = useRef<HTMLUListElement>(null);
+  // The row of calendars is one line that scrolls inside itself; an edge fades where more is out of sight.
+  const [fade, setFade] = useState<"" | "end" | "start" | "both">("");
+  const measure = () => {
+    const el = row.current;
+    if (!el) return;
+    const room = el.scrollWidth - el.clientWidth;
+    setFade(room <= 1 ? "" : el.scrollLeft <= 1 ? "end" : el.scrollLeft >= room - 1 ? "start" : "both");
+  };
+  useEffect(() => {
+    measure();
+    const el = row.current;
+    const watch = typeof ResizeObserver === "function" && el ? new ResizeObserver(measure) : null;
+    if (el && watch) watch.observe(el);
+    return () => watch?.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.length]);
   if (list.length < 2) return null;
   return (
     <div className={styles.toggles} data-schedule-legend="">
       <span className={styles.togglesLabel} id="schedule-calendars-label">
         {t("schedule.legend.label")}
       </span>
-      <ul className={styles.legend} aria-labelledby="schedule-calendars-label">
+      <ul ref={row} className={styles.legend} data-fade={fade || undefined} onScroll={measure} aria-labelledby="schedule-calendars-label">
         {list.map((calendar) => {
           const off = props.hidden.has(calendar.id);
           return (

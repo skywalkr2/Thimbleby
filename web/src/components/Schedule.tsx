@@ -7,7 +7,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { api, type S } from "../lib/api";
-import { minutesOf, moveBy, rangeOf, rememberView, SHORT, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
+import { minutesOf, moveBy, shortCalendarNames, rangeOf, rememberView, SHORT, startOfWeek, storedView, VIEWS, type CalendarView } from "../lib/calendar";
 import { RANGE_DAYS, RANGES, rememberRange, storedRange, type TimelineRange } from "../lib/timeline";
 import { addDays, fullDay, shortDay, shortRange, todayOn, monthDayLong, monthDayYear, monthYear, weekdayLong } from "../lib/dates";
 import { typing } from "../lib/keys";
@@ -19,6 +19,7 @@ import { IconButton } from "../ui/IconButton";
 import { ListDetail } from "../ui/ListDetail";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
+import { ScheduleSkeleton } from "./ScheduleSkeleton";
 import { restoreFocus } from "./ModalPanel";
 import { SideFilter } from "./SideFilter";
 import { useNow } from "./RailSources";
@@ -46,10 +47,12 @@ const WEEK_MIN = 736;
 const WORK_WEEK_MIN = 544;
 /** The room the calendar needs beside the details pane before the pane covers its edge instead of squeezing it. */
 const PANE_FIT = 520;
+/** The same for the time grids, whose day headings and entries need about this much to stay on one line each. */
+const GRID_FIT = 820;
 
 type Page = S["ScheduleView"];
 /** What the server says about the person's week and hours, kept from the last answer so the next request can be made at once. */
-const FIRST_MEANS: Pick<Page, "week_starts_on" | "work_days"> = { week_starts_on: 0, work_days: [0, 1, 2, 3, 4] };
+const FIRST_MEANS: Pick<Page, "week_starts_on" | "work_days" | "event_minutes"> = { week_starts_on: 0, work_days: [0, 1, 2, 3, 4], event_minutes: 60 };
 /** The keys that pick a view, in the order of the view switch. */
 const VIEW_KEYS: Record<string, CalendarView> = { "1": "day", "2": "work_week", "3": "week", "4": "month", "5": "timeline" };
 /** The room the Timeline needs beside the details pane before the pane covers its edge: enough for the weeks beside the names. */
@@ -64,17 +67,16 @@ function findEntry(entries: DayEntries[], rest: Entry[], key: string): { entry: 
 }
 
 export function Schedule() {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const filter = useSideFilter();
   const [pick, setPick] = useState<CalendarView>(storedView);
   // The Timeline's range: the person's last pick on this browser, else what the workspace's setting says (read with the answer).
   const [rangePick, setRangePick] = useState<TimelineRange | null>(storedRange);
   // The day being looked at; none means today, wherever the server says today is.
   const [anchor, setAnchor] = useState<string | null>(null);
-  const [means, setMeans] = useState<Pick<Page, "week_starts_on" | "work_days"> & { today: string | null }>({ ...FIRST_MEANS, today: null });
+  const [means, setMeans] = useState<Pick<Page, "week_starts_on" | "work_days" | "event_minutes"> & { today: string | null }>({ ...FIRST_MEANS, today: null });
   const region = useRef<HTMLDivElement>(null);
   const width = useWidth(region);
-  const beside = useMediaQuery("(min-width: 1024px)");
   // Below this the week has no room for seven days: it shows the working days, and says so. On a phone it is a list by day.
   const weekdaysOnly = useMediaQuery("(max-width: 1099.98px)");
   const phone = useIsNarrow();
@@ -103,16 +105,22 @@ export function Schedule() {
   const data = page.data;
   useEffect(() => {
     const known = data ?? tl;
-    if (known) setMeans((m) => (m.today === known.today && m.week_starts_on === known.week_starts_on && m.work_days.join() === known.work_days.join() ? m : { today: known.today, week_starts_on: known.week_starts_on, work_days: known.work_days }));
+    if (known) setMeans((m) => (m.today === known.today && m.week_starts_on === known.week_starts_on && m.work_days.join() === known.work_days.join() ? m : { ...m, today: known.today, week_starts_on: known.week_starts_on, work_days: known.work_days }));
+    if (data) setMeans((m) => (m.event_minutes === data.event_minutes ? m : { ...m, event_minutes: data.event_minutes }));
   }, [data, tl]);
 
   const calendars: Calendars = useMemo(() => {
     const found = watch.data ?? [];
-    const names = new Map(found.map((s) => [s.id, s.label]));
+    // The account's address inside a calendar's name is shortened when they all share one domain.
+    const calendarLike = found.filter((s) => (s.reads ?? []).includes("calendar"));
+    const shortened = shortCalendarNames(calendarLike.map((c) => c.label));
+    const short = new Map(calendarLike.map((s, n) => [s.id, shortened[n]]));
+    const names = new Map(found.map((s) => [s.id, short.get(s.id) ?? s.label]));
     // Each calendar has a color: the one the person picked, else one the app gave it, so two calendars are told apart.
     const colors = new Map(found.flatMap((s) => (s.shown_color || s.color ? [[s.id, (s.shown_color ?? s.color) as string] as const] : [])));
-    const list = found.filter((s) => s.enabled && (s.reads ?? []).includes("calendar")).map((s) => ({ id: s.id, name: s.label, color: s.shown_color ?? s.color ?? null }));
-    return { name: (id) => names.get(id), color: (id) => colors.get(id), list };
+    const list = found.filter((s) => s.enabled && (s.reads ?? []).includes("calendar")).map((s) => ({ id: s.id, name: names.get(s.id) ?? s.label, color: s.shown_color ?? s.color ?? null }));
+    const stale = new Set(found.filter((s) => s.account_state === "expired" || s.account_state === "signed_out").map((s) => s.id));
+    return { name: (id) => names.get(id), color: (id) => colors.get(id), stale: (id) => stale.has(id), list };
   }, [watch.data]);
   // The calendars the person hid with the legend: an entry shows unless every calendar that holds it is hidden.
   const [hidden, toggleCalendar] = useHiddenCalendars();
@@ -226,7 +234,27 @@ export function Schedule() {
   const unit = view === "month" ? "month" : view === "day" ? "day" : isTimeline ? "timeline" : "week";
   // How many clashes the days shown hold, and the first day one is on.
   const clashes = days.flatMap((d) => clashCards(d, d.timed.map((e) => ({ item: e, start: minutesOf(e.begins) ?? 0, end: Math.max(minutesOf(e.ends) ?? (minutesOf(e.begins) ?? 0) + SHORT, (minutesOf(e.begins) ?? 0) + 1) }))).map(() => d.date));
-  const subtitle = isTimeline || view === "month" || clashes.length === 0 ? undefined : t(clashes.length === 1 ? "schedule.clash.sub.one" : "schedule.clash.sub.other", { n: clashes.length, day: weekdayLong(clashes[0]) });
+  // The line that names the clashes jumps to the first one on the grid (or its mark in a month).
+  const toClash = () => region.current?.querySelector<HTMLElement>("[data-clash],[data-clash-mark]")?.scrollIntoView?.({ block: "nearest" });
+  // The week's "so what" in one line: the clashes and how many meetings there are (the days of the month, in a month).
+  const meetings = days.filter((d) => view !== "month" || d.date.slice(0, 7) === date.slice(0, 7)).reduce((n, d) => n + d.timed.filter((e) => !e.cancelled && e.kind !== "due" && e.kind !== "delivery").length, 0);
+  const subtitle =
+    isTimeline || (clashes.length === 0 && meetings === 0) ? undefined : (
+      <>
+        {clashes.length > 0 && (
+          <button type="button" className="link-button" data-clash-jump="" onClick={toClash}>
+            {t(clashes.length === 1 ? "schedule.clash.sub.one" : "schedule.clash.sub.other", { n: clashes.length, day: weekdayLong(clashes[0]) })}
+          </button>
+        )}
+        {clashes.length > 0 && meetings > 0 && " "}
+        {meetings > 0 && (
+          <span className={styles.meetings} data-meetings="">
+            {clashes.length > 0 ? "· " : ""}
+            {tn("schedule.meetings", meetings)}
+          </span>
+        )}
+      </>
+    );
   const back = { day: t("schedule.back.day"), week: t("schedule.back.week"), month: t("schedule.back.month"), timeline: t("schedule.back.timeline") }[unit];
   const forward = { day: t("schedule.forward.day"), week: t("schedule.forward.week"), month: t("schedule.forward.month"), timeline: t("schedule.forward.timeline") }[unit];
   // On a phone the range is short ("Nov 2 – 6") so the row of moves and the range stays one line.
@@ -257,10 +285,10 @@ export function Schedule() {
         subtitle={subtitle}
         // Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. On a phone the tab bar's
         // plus hands something in rather than adding to the schedule, so both adds are in the menu at the right of the title's row.
-        primary={data && !phone ? <AddMeeting today={data.today} primary /> : undefined}
+        primary={!phone ? <AddMeeting today={today} minutes={means.event_minutes} primary /> : undefined}
         // A connected calendar that can add events after the person's yes offers a new event on it.
-        actions={data && !phone ? <NewEvent today={data.today} /> : undefined}
-        more={data && phone ? <ScheduleMenu today={data.today} /> : undefined}
+        actions={!phone ? <NewEvent today={today} /> : undefined}
+        more={phone ? <ScheduleMenu today={today} minutes={means.event_minutes} /> : undefined}
       />
       <div className={styles.bar}>
         <div className={`${styles.row} ${styles.navRow}`} data-bar-row="" data-nav-row="">
@@ -276,16 +304,16 @@ export function Schedule() {
         <div className={styles.row} data-bar-row="">
           <SegmentedControl<CalendarView> label={t("schedule.views")} value={view} onChange={choose} options={options} className={styles.views} />
           {isTimeline && <SegmentedControl<TimelineRange> label={t("schedule.timeline.range")} value={tl?.range ?? rangeName} onChange={chooseRange} options={rangeOptions} className={styles.views} />}
+          <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
           <SideFilter />
         </div>
-        <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
         <ScheduleStale />
       </div>
       <ListDetail
         title={found ? entryTitle(found.entry, t) : ""}
         onClose={close}
-        fit={isTimeline ? TIMELINE_FIT : PANE_FIT}
-        detail={found ? <EntryDetails entry={found.entry} date={found.date} calendars={calendars} sideName={sideName} onBack={beside ? undefined : close} /> : null}
+        fit={isTimeline ? TIMELINE_FIT : view === "month" ? PANE_FIT : GRID_FIT}
+        detail={found ? <EntryDetails entry={found.entry} date={found.date} calendars={calendars} sideName={sideName} /> : null}
       >
         {isTimeline ? (
           timeline.isPending ? (
@@ -298,13 +326,13 @@ export function Schedule() {
             </div>
           )
         ) : page.isPending ? (
-          <Skeleton />
+          <ScheduleSkeleton view={view === "month" ? "month" : asList ? "list" : "grid"} days={range.shown.length} />
         ) : page.isError || !data ? (
           <EmptyState icon="alert" text={t("schedule.load_failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
         ) : (
           <div className={styles.frame} data-swipe="" data-view={view} data-shown={shown} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
             {view === "month" ? (
-              <MonthGrid days={days} today={data.today} month={date} limit={data.month_entries} calendars={calendars} selected={picked} onOpen={open} onOpenDay={openDay} />
+              <MonthGrid days={days} today={data.today} month={date} limit={data.month_entries} calendars={calendars} selected={picked} onOpen={open} onOpenDay={openDay} listBelow={phone} />
             ) : asList ? (
               <ScheduleList days={days} today={data.today} calendars={calendars} selected={picked} onOpen={open} />
             ) : (

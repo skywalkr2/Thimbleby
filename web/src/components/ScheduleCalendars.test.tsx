@@ -47,7 +47,7 @@ test("the legend lists each calendar by its name with its color, as a button tha
   await open();
   const list = await legend();
   const buttons = within(list).getAllByRole("button");
-  expect(buttons.map((b) => b.textContent)).toEqual(CALENDARS.map((c) => c.label));
+  expect(buttons.map((b) => b.textContent)).toEqual(CALENDARS.map((c) => c.label.replace(/@example\.com$/, "")));  // the shared domain is not said again
   expect(buttons.every((b) => b.getAttribute("aria-pressed") === "true")).toBe(true);
   // The color is a mark beside the name, never the only sign: the name is the button's own text.
   expect(buttons.map((b) => b.querySelector("[data-color]")?.getAttribute("data-color"))).toEqual(["blue", "teal", "green"]);
@@ -57,7 +57,7 @@ test("each entry carries its calendar's color on its edge and its name in its wo
   await open();
   const review = await screen.findByRole("button", { name: /Quarterly review/ });
   expect(review).toHaveAttribute("data-color", "blue");
-  expect(review).toHaveTextContent("From Calendar, alex@example.com, also in Calendar, blake@example.com");
+  expect(review).toHaveTextContent("From Calendar, alex, also in Calendar, blake");
   expect(screen.getByRole("button", { name: /School run/ })).toHaveAttribute("data-color", "green");
   // The app's own entries have no calendar color.
   expect(screen.getByRole("button", { name: /Dentist/ })).not.toHaveAttribute("data-color");
@@ -67,15 +67,15 @@ test("hiding a calendar hides its entries and says Hidden in words; an invitatio
   const user = userEvent.setup();
   await open();
   const list = await legend();
-  await user.click(within(list).getByRole("button", { name: "Calendar, casey@example.com" }));
+  await user.click(within(list).getByRole("button", { name: "Calendar, casey" }));
   expect(screen.queryByRole("button", { name: /School run/ })).toBeNull();
-  expect(within(list).getByRole("button", { name: /Calendar, casey@example.com/ })).toHaveAttribute("aria-pressed", "false");
+  expect(within(list).getByRole("button", { name: /Calendar, casey/ })).toHaveAttribute("aria-pressed", "false");
   expect(within(list).getByText("Hidden")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Supplier call/ })).toBeInTheDocument();
   // The invitation is held by both of the first two: hiding one of them keeps it, hiding both takes it away.
-  await user.click(within(list).getByRole("button", { name: "Calendar, alex@example.com" }));
+  await user.click(within(list).getByRole("button", { name: "Calendar, alex" }));
   expect(screen.getByRole("button", { name: /Quarterly review/ })).toBeInTheDocument();
-  await user.click(within(list).getByRole("button", { name: "Calendar, blake@example.com" }));
+  await user.click(within(list).getByRole("button", { name: "Calendar, blake" }));
   expect(screen.queryByRole("button", { name: /Quarterly review/ })).toBeNull();
   expect(screen.getByRole("button", { name: /Dentist/ })).toBeInTheDocument();
   // The choice is remembered on this browser.

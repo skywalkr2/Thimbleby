@@ -614,7 +614,7 @@ test("a meeting is added from the drawer: what, the day (today until chosen) and
   await user.type(within(drawer).getByLabelText("Starts at (optional)"), "15:00");
   await user.tab();
   await user.click(within(drawer).getByRole("button", { name: "Add" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00", until: null, side: null, where: null, repeat: null, repeat_until: null }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00", until: "16:00", side: null, where: null, repeat: null, repeat_until: null }));
   expect(await screen.findByText("Print sync added to your calendar.")).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add a meeting" })).toBeNull());
   await user.click(screen.getByRole("button", { name: "Undo" }));
@@ -630,10 +630,17 @@ test("the drawer asks when it ends, only once there is a start, and refuses an e
   await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Print sync");
   await user.type(within(drawer).getByLabelText("Starts at (optional)"), "15:00");
   await user.tab();
+  // The end follows the start (an hour on, the setting's length) until the person chooses one.
+  expect((within(drawer).getByLabelText("Ends at (optional)") as HTMLInputElement).value).not.toBe("");
+  await user.clear(within(drawer).getByLabelText("Ends at (optional)"));
   await user.type(within(drawer).getByLabelText("Ends at (optional)"), "14:00");
   await user.tab();
   expect(await within(drawer).findByText("It has to end after it starts.")).toBeInTheDocument();
   expect(within(drawer).getByRole("button", { name: "Add" })).toBeDisabled();
+  // The error is the end field's own: it is marked and the field is described by it.
+  const end = within(drawer).getByLabelText("Ends at (optional)");
+  expect(end).toHaveAttribute("aria-invalid", "true");
+  expect(end.getAttribute("aria-describedby")).toBe(within(drawer).getByRole("alert").id);
   await user.clear(within(drawer).getByLabelText("Ends at (optional)"));
   await user.type(within(drawer).getByLabelText("Ends at (optional)"), "16:30");
   await user.tab();

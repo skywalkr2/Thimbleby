@@ -24,6 +24,8 @@ export interface TimeFieldProps {
   value?: string;
   defaultValue?: string;
   onChange?: (event: FieldChange) => void;
+  /** What the empty box says instead of an example time. */
+  placeholder?: string;
   /** The minutes between the times in the list; the setting's when a field names none. */
   step?: number;
   required?: boolean;
@@ -157,7 +159,7 @@ export function TimeField(props: TimeFieldProps) {
           data-kind="time"
           className={styles.input}
           value={shownText}
-          placeholder={example}
+          placeholder={props.placeholder ?? example}
           onChange={(e) => {
             setDraft(e.target.value);
             setProblem(false);

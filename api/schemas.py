@@ -3000,6 +3000,9 @@ class ScheduleView(BaseModel):
     week_starts_on: int = Field(description="The first day of a week, Monday as 0 (`ui.schedule.week_starts_on`).")
     grid_starts: str = Field(description="The first time of day the time grid shows (`ui.schedule.day_starts`).")
     grid_ends: str = Field(description="The last time of day the time grid shows (`ui.schedule.day_ends`).")
+    event_minutes: int = Field(
+        description="How long a new entry lasts when only its start is given (`ui.schedule.event_minutes`)."
+    )
     month_entries: int = Field(
         description="How many entries a day lists in the month view (`ui.schedule.month_entries`)."
     )

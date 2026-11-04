@@ -6,7 +6,7 @@
 import { day } from "../lib/dates";
 import { deliveryLines, deliveryRange } from "../lib/deliveries";
 import { useWords } from "../lib/wording";
-import { Button, ButtonLink } from "../ui/Button";
+import { ButtonLink } from "../ui/Button";
 import { Pill } from "../ui/Pill";
 import { Definition, DefinitionList } from "../ui/DefinitionList";
 import { useEventActs } from "./EventActs";
@@ -37,14 +37,14 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
   const delivery = deliveryLines(entry.delivery, t);
   const rows: [string, React.ReactNode][] = [
     [t("schedule.pane.when"), fullWhen(entry, props.date, t)],
-    ...(entry.where ? [[t("schedule.event.where"), entry.where] as [string, React.ReactNode]] : []),
+    ...(entry.where?.trim() ? [[t("schedule.event.where"), entry.where] as [string, React.ReactNode]] : []),
     ...(entry.repeats ? [[t("schedule.pane.repeats"), t(`meeting.repeat.${entry.repeats}`)] as [string, React.ReactNode]] : []),
     [
       t("schedule.event.calendar"),
-      <>
+      <span className={styles.calendarName}>
         {color && <span className={styles.mark} data-color={color} aria-hidden="true" />}
         {calendar}
-      </>,
+      </span>,
     ],
     ...(alsoIn(entry, props.calendars).length > 0 ? [[t("schedule.pane.also_in"), alsoIn(entry, props.calendars).join(", ")] as [string, React.ReactNode]] : []),
     ...(props.sideName ? [[t("schedule.pane.side"), props.sideName] as [string, React.ReactNode]] : []),
@@ -56,11 +56,6 @@ export function EntryDetails(props: { entry: Entry; date: string | null; calenda
   const appOnly = entry.kind === "event" && !entry.own && !changeable;
   return (
     <div className={styles.pane}>
-      {props.onBack && (
-        <Button variant="secondary" onClick={props.onBack}>
-          {t("schedule.pane.back")}
-        </Button>
-      )}
       {entry.cancelled && (
         <p>
           <Pill tone="warn">{t("today.agenda.called_off")}</Pill>

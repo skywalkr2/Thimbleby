@@ -111,7 +111,7 @@ test("an entry's page: its own page for the app's entries and kept ones, a read-
   const hrefOf = async (title: RegExp) => {
     await user.click(await screen.findByRole("button", { name: title }));
     const pane = await screen.findByRole("complementary");
-    return within(pane).getByRole("link", { name: "Open" }).getAttribute("href") ?? "";
+    return within(pane).getByRole("link", { name: "Open the event" }).getAttribute("href") ?? "";
   };
   expect(await hrefOf(/Standup/)).toMatch(/#records\/event\/EVT-1$/);
   expect(await hrefOf(/Dentist/)).toMatch(/#records\/event\/EVT-7$/);

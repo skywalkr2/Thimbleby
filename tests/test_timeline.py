@@ -243,3 +243,39 @@ def test_the_route_answers_with_lanes_and_refuses_a_range_that_is_not_one(env):
     assert body["off_days"] and body["work_days"] == [0, 1, 2, 3, 4]
     assert env.client.get("/api/schedule/timeline", params={"range": "decade"}).status_code == 422
     assert env.client.get("/api/schedule/timeline", params={"from": "2026-11-02"}).json()["first"] == "2026-11-02"
+
+
+def test_the_same_thing_on_consecutive_days_is_one_band_over_those_days(env):
+    for day in ("2026-10-19", "2026-10-20", "2026-10-21"):
+        todo(env, "Pay the deposit", env.both, day)
+    todo(env, "Pay the deposit", env.both, "2026-10-26")  # after a gap: its own mark
+    todo(env, "Send the quote", env.both, "2026-10-20")  # another title: apart
+    items = sorted(lanes(env)[env.both].items, key=lambda i: (i.title, i.start))
+    assert [(i.title, i.start, i.end) for i in items] == [
+        ("Pay the deposit", date(2026, 10, 19), date(2026, 10, 21)),
+        ("Pay the deposit", date(2026, 10, 26), date(2026, 10, 26)),
+        ("Send the quote", date(2026, 10, 20), date(2026, 10, 20)),
+    ]
+
+
+def test_a_to_do_that_is_overdue_is_not_folded_into_one_that_is_open(env):
+    todo(env, "Pay the deposit", env.both, "2026-10-12")  # before today: overdue
+    todo(env, "Pay the deposit", env.both, "2026-10-13")
+    todo(env, "Pay the deposit", env.both, "2026-10-14")
+    states = [(i.start, i.end, i.state) for i in sorted(lanes(env)[env.both].items, key=lambda i: i.start)]
+    assert len(states) == 2 and states[0][2] == "overdue" and states[1][2] != "overdue"
+
+
+def test_a_daily_repeat_is_one_band_not_a_mark_for_each_day(env):
+    add(
+        env,
+        "event",
+        {
+            "title": "Stand-up",
+            "start": "2026-10-19T09:00:00+00:00",
+            "repeat": {"every": "day", "until": "2026-10-23"},
+            "project": env.both,
+        },
+    )
+    items = [i for i in lanes(env)[env.both].items if i.title == "Stand-up"]
+    assert len(items) == 1 and items[0].start == date(2026, 10, 19) and items[0].end == date(2026, 10, 23)

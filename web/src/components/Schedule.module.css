@@ -17,6 +17,8 @@
   .views > button { flex: 1 1 auto; min-width: 0; padding-inline: var(--space-2); }
 }
 .frame { min-width: 0; touch-action: pan-y; }
+/* The meeting count stays whole, so it moves to the next line as one piece rather than splitting from its number. */
+.meetings { white-space: nowrap; }
 .none { margin: var(--space-3) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
 .caption { margin: 0; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); }
 
@@ -32,6 +34,8 @@
 .chip:hover { background: color-mix(in srgb, var(--cal) 22%, var(--surface)); }
 .chip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .own { border-left-style: dashed; }
+/* An entry from a calendar that needs signing in again has a dotted edge as well as its words. */
+.chip[data-stale] { border-left-style: dotted; }
 .selected { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .name { min-width: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
 .struck { text-decoration: line-through; }
@@ -39,6 +43,8 @@
 /* The grid's block: the title in the control weight, the time and the calendar on a line under it. A block too short for two lines
    runs them on after the title. */
 .block { display: grid; align-content: start; align-items: start; gap: 0; border-radius: var(--radius-md); }
+.block[data-color] { background: color-mix(in srgb, var(--cal) 24%, var(--surface)); }
+.block[data-color]:hover { background: color-mix(in srgb, var(--cal) 32%, var(--surface)); }
 .block .name { font-weight: var(--weight-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
 .line { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .block[data-short] { align-content: center; padding-block: 0; }
@@ -60,7 +66,9 @@
 /* A clash: the meetings that overlap are one card naming them all, with the word and an icon, so it is never told by color alone. */
 .slot[data-clash] { min-height: calc(var(--space-4) + var(--lh-meta) + var(--n, 2) * var(--entry-min)); z-index: 2; }
 .clash { box-sizing: border-box; height: 100%; margin: 0; padding: var(--space-1) var(--space-2); border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-soft); overflow: hidden; min-width: 0; }
-.clashHead { display: flex; align-items: center; gap: var(--space-1); margin: 0; font-size: var(--text-meta); line-height: var(--lh-meta); font-weight: var(--weight-semibold); color: var(--danger); }
+.clashHead { display: flex; align-items: center; gap: var(--space-1); min-width: 0; margin: 0; font-size: var(--text-meta); line-height: var(--lh-meta); font-weight: var(--weight-semibold); color: var(--danger); }
+.clashHead svg { flex: none; }
+.clashText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clashRows { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
 .clashRows > li { min-width: 0; }
 .clashRow { --cal: var(--text-subtle); min-height: var(--entry-min); display: flex; align-items: center; gap: var(--space-1); width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--text-meta); line-height: var(--lh-meta); text-align: left; cursor: pointer; }
@@ -71,10 +79,16 @@
 
 /* The calendar toggles: the word, then one pill for each calendar with a tick box in its color; hidden is said in words as well as by
    the empty box. On a phone the pills scroll inside their own row, never cut and never moving the page. */
-.toggles { display: flex; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
+.toggles { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex: 1 1 14rem; min-width: 0; }
 .togglesLabel { flex: none; font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); }
-.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); min-width: 0; }
-.legend > li { min-width: 0; max-width: 100%; }
+/* The calendars are one line that scrolls inside its own row, so the controls above stay in two rows at any width; an edge fades
+   where more is out of sight. */
+.legend { list-style: none; margin: calc(-1 * var(--space-1)) 0; padding: var(--space-1) 0; display: flex; flex-wrap: nowrap; gap: var(--space-2); flex: 1 1 auto; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+.legend::-webkit-scrollbar { display: none; }
+.legend[data-fade="end"] { mask-image: linear-gradient(to right, var(--text) calc(100% - 2rem), transparent); }
+.legend[data-fade="start"] { mask-image: linear-gradient(to right, transparent, var(--text) 2rem); }
+.legend[data-fade="both"] { mask-image: linear-gradient(to right, transparent, var(--text) 2rem, var(--text) calc(100% - 2rem), transparent); }
+.legend > li { flex: none; min-width: 0; max-width: 80%; scroll-snap-align: start; }
 .legendButton {
   display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; min-height: var(--btn-h-sm); padding: 0 var(--space-3); font: inherit; font-size: var(--text-meta);
   line-height: var(--lh-meta); font-weight: var(--weight-medium); color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-btn); cursor: pointer;
@@ -86,29 +100,30 @@
 .legendName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legendHidden { flex: none; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
 @media (max-width: 639.98px) {
-  .toggles { flex-direction: column; align-items: stretch; gap: var(--space-1); }
-  .legend { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: var(--space-1); scroll-snap-type: x proximity; }
-  .legend > li { flex: none; max-width: 80%; scroll-snap-align: start; }
+  .toggles { flex: 1 1 100%; flex-direction: column; align-items: stretch; gap: var(--space-1); }
 }
-:global([data-narrow]) .toggles { flex-direction: column; align-items: stretch; gap: var(--space-1); }
-:global([data-narrow]) .legend { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: var(--space-1); scroll-snap-type: x proximity; }
-:global([data-narrow]) .legend > li { flex: none; max-width: 80%; scroll-snap-align: start; }
+:global([data-narrow]) .toggles { flex: 1 1 100%; flex-direction: column; align-items: stretch; gap: var(--space-1); }
 
 /* The time grid: an hour column and a column for each day, in three rows: the day headings, the all-day strip and the hours. */
 .grid {
   --hour: 4.5rem; --hours-w: 4rem; --entry-min: 1.75rem;
   display: grid; grid-template-columns: var(--hours-w) repeat(var(--cols, 1), minmax(0, 1fr)); min-width: 0;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
 }
-.colHead { margin: 0; padding: var(--space-2); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; min-width: 0; }
+/* The grid scrolls inside its own frame, so the hours that matter are in the window and the headings stay on top. */
+.scroller { min-width: 0; max-height: clamp(24rem, calc(100vh - 19rem), 46rem); overflow: auto; overscroll-behavior: contain; border-radius: var(--radius-lg); }
+.corner { position: sticky; top: 0; z-index: 3; background: var(--surface); border-bottom: 1px solid var(--border); }
+.colHead { position: sticky; top: 0; z-index: 3; background: var(--surface); margin: 0; padding: var(--space-2); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; min-width: 0; }
 .colHead[data-today] { background: var(--today-tint); }
-.stripLabel { padding: var(--space-2) var(--space-1); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
-.strip { list-style: none; margin: 0; padding: var(--space-1); display: grid; align-content: start; gap: var(--space-1); min-width: 0; min-height: 2rem; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.stripLabel { position: sticky; top: var(--head-h, 2.5rem); z-index: 2; background: var(--surface); padding: var(--space-2) var(--space-1); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.strip { position: sticky; top: var(--head-h, 2.5rem); z-index: 2; background: var(--surface); max-height: 7rem; overflow-y: auto; list-style: none; margin: 0; padding: var(--space-1); display: grid; align-content: start; gap: var(--space-1); min-width: 0; min-height: 2rem; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .strip > li { min-width: 0; }
 .strip .chip { height: auto; }
 .strip[data-today] { background: var(--today-tint); }
 .hours { position: relative; height: calc(var(--rows, 12) * var(--hour)); }
-.hour { position: absolute; right: var(--space-2); transform: translateY(-50%); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hoursSwitch { display: flex; justify-content: flex-end; margin-bottom: var(--space-1); }
+.times { flex: none; padding: 0 var(--space-1); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); color: var(--text-muted); border-radius: var(--radius-full); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.hour { position: absolute; right: var(--space-3); transform: translateY(-50%); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lane {
   list-style: none; margin: 0; padding: 0; position: relative; min-width: 0; height: calc(var(--rows, 12) * var(--hour)); border-left: 1px solid var(--border);
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--hour) - 1px), var(--border) calc(var(--hour) - 1px), var(--border) var(--hour));
@@ -122,32 +137,47 @@
 /* The Month view. */
 .month { container-type: inline-size; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
-.weekdays span { padding: var(--space-1) var(--space-2); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); font-weight: var(--weight-semibold); overflow: hidden; text-overflow: ellipsis; }
+.weekdays > span { padding: var(--space-1) calc(2 * var(--space-1)); text-align: left; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-subtle); font-weight: var(--weight-semibold); overflow: hidden; }
+/* A weekday is centered over the day number's own box, so the name and the numbers below it share one edge and one center. */
+.weekdayName { display: block; width: 1.75rem; text-align: center; overflow: hidden; text-overflow: clip; white-space: nowrap; }
 .cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cell { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; min-height: 6.5rem; padding: var(--space-1); border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
 .cell:nth-child(7n + 1) { border-left: 0; }
 .cell[data-outside] { color: var(--text-muted); }
-.dayButton { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); width: 100%; padding: var(--space-1); font: inherit; font-size: var(--text-sm); color: inherit; background: transparent; border: 0; border-radius: var(--radius-sm); cursor: pointer; text-align: left; }
+.cell[data-outside] .dayNumber { font-weight: var(--weight-regular); }
+.dayButton { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); width: 100%; min-height: 2rem; padding: var(--space-1); font: inherit; font-size: var(--text-sm); color: inherit; background: transparent; border: 0; border-radius: var(--radius-sm); cursor: pointer; text-align: left; }
 .dayButton:hover { background: var(--surface-hover); }
 .dayButton:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .dayNumber { font-weight: var(--weight-semibold); }
-.dayNumber { display: inline-flex; align-items: center; justify-content: center; min-width: 1.75rem; height: 1.75rem; border-radius: var(--radius-full); }
-.cell[data-today] .dayNumber { background: var(--accent); color: var(--text-on-accent); }
-.count { display: none; min-width: 1.25rem; padding: 0 var(--space-1); text-align: center; font-size: var(--text-xs); line-height: var(--lh-xs); border-radius: var(--radius-full); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.dayNumber { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-full); }
+/* Today is ink on the day's number, not the brand color, so the brand stays for actions and the clash keeps the one warning color. */
+.cell[data-today] .dayNumber { background: var(--text); color: var(--surface); }
+.count { display: none; min-width: 1.5rem; height: 1.5rem; box-sizing: border-box; align-items: center; justify-content: center; padding: 0 var(--space-1); text-align: center; font-size: var(--text-xs); line-height: var(--lh-xs); border-radius: var(--radius-full); box-shadow: inset 0 0 0 1px var(--border-strong); }
 .titles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); min-width: 0; }
 .titles > li { min-width: 0; }
-.titles .chip { height: auto; flex-wrap: nowrap; }
-.titles .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The title comes first and keeps the width; the time follows it. */
+.titles .when { order: 2; flex: none; color: var(--text-muted); }
+.clashMark { display: inline-flex; align-items: center; color: var(--danger); margin-left: auto; }
+.titles .chip { position: relative; height: auto; flex-wrap: wrap; }
+/* A title that does not fit takes a second line before it is cut. */
+.titles .name { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 1.25rem); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: normal; }
 .more { padding: 0 var(--space-2); font: inherit; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--accent-text); background: transparent; border: 0; cursor: pointer; text-decoration: underline; }
 .more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .dots { display: none; flex-wrap: wrap; gap: var(--space-1); padding: 0 var(--space-1); }
-.dot { width: 0.5rem; height: 0.5rem; border-radius: var(--radius-full); background: var(--cal, var(--text-muted)); }
+.dot { width: 0.625rem; height: 0.625rem; border-radius: var(--radius-full); background: var(--cal, var(--text-muted)); }
 .dot[data-color="blue"] { --cal: var(--cal-1); } .dot[data-color="teal"] { --cal: var(--cal-2); } .dot[data-color="green"] { --cal: var(--cal-3); } .dot[data-color="orange"] { --cal: var(--cal-4); }
 .dot[data-color="red"] { --cal: var(--cal-5); } .dot[data-color="pink"] { --cal: var(--cal-6); } .dot[data-color="purple"] { --cal: var(--cal-7); } .dot[data-color="gray"] { --cal: var(--cal-8); }
 .dot[data-own] { background: transparent; box-shadow: inset 0 0 0 1px var(--text-muted); }
 /* In a narrow space a day keeps its number, its count and a row of dots; the day opens in Day view. */
+@container (max-width: 56rem) {
+  /* Cells too narrow for a time and a title: the title keeps the room; the time stays for a screen reader. */
+  .titles .when { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 @container (max-width: 36rem) {
-  .cell { min-height: 3.5rem; }
+  /* The day's button fills the cell, so it is a finger wide as well as tall. */
+  .cell { min-height: 4.5rem; padding: 0; }
+  .weekdays > span { padding-inline: var(--space-1); }
+  .dayButton { min-height: 2.75rem; }
   .titles { display: none; }
   .count, .dots { display: flex; }
   .dayButton { flex-direction: column; align-items: flex-start; }
@@ -161,6 +191,9 @@
 /* An entry's details. */
 .pane { display: grid; gap: var(--space-3); min-width: 0; }
 .paneActs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+/* On a phone the one main action of the details takes the width and a finger's height. */
+:global([data-narrow]) .paneActs > a[data-variant="primary"] { flex: 1 1 100%; justify-content: center; min-height: var(--tap-min); }
+.paneActs > a[data-variant="primary"] { min-width: 0; }
 
 /* The week as a list by day, for a phone. */
 .list { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -190,3 +223,17 @@
 .stale { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: var(--radius-md); font-size: var(--text-meta); line-height: var(--lh-meta); min-width: 0; }
 .staleText { display: flex; align-items: flex-start; gap: var(--space-2); flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; }
 .staleText svg { flex: none; color: var(--danger); }
+
+.calendarName { display: inline-flex; align-items: center; min-width: 0; }
+
+/* The grid's loading shape: a heading row, then hour rows, a column for each day. */
+.gridSkeleton { display: grid; grid-template-columns: 4rem repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: 4.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.gridSkeleton > .skeletonHead { grid-row: 1; height: 2.5rem; margin: var(--space-2); border-radius: var(--radius-sm); background: var(--surface-sunk); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+.skeletonHour { grid-column: 1; align-self: start; width: 2rem; height: 0.75rem; margin: var(--space-2); border-radius: var(--radius-sm); background: var(--surface-sunk); }
+.skeletonCell { border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
+@keyframes skeleton-pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .gridSkeleton > .skeletonHead { animation: none; } }
+
+/* On a phone the chosen day's entries under the month. */
+.dayList { display: grid; gap: var(--space-2); margin-top: var(--space-3); min-width: 0; }
+.dayList .caption { margin: 0; }

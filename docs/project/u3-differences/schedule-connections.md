@@ -68,3 +68,30 @@ The last picture was taken before the stale-calendar line over the Schedule (bel
 | schedule | All-day chips collapse into "+2 more" | The strip lists every all-day entry for the day |
 | schedule-states | A save that failed, Long content, A large count | Not drivable: the Schedule only reads and the calendars hold a handful of entries (listed by the capture) |
 | schedule-states | Loading, Offline, A week with nothing in it | Captured; they are the shared states (skeleton, the shell's banner, "Nothing on the calendar in these days") |
+
+## Schedule at the gate (batch g3, section 328)
+
+Compared with the `schedule` and `schedule-states` side-by-sides at 1440 and 390, day and night.
+
+| Page | Difference found | What was done |
+|---|---|---|
+| schedule | The mockup's grid is a frame; the build's grid ran twenty-four hours down the page | The grid scrolls in its own labelled frame, headings fixed, opening on the first clash, else now, else the first entry |
+| schedule | Hour labels touched the card's edge | Short labels ("10 AM") with room at the edge |
+| schedule | Month chips led with the time | The title first, the time after; a clash day has a mark |
+| schedule-states | Three meetings at once is one card listing them (the mockup) | Kept as one card; the scorers' "each in its own slot" is not followed |
+| schedule-states | The loading skeleton is a grid in the mockup; the build's is a list | Left: the skeleton is the shared one (a grid-shaped one is in the open list below) |
+| schedule-states | One calendar that can't be read; a week with nothing in it | Held by the existing stale line and empty text; no new picture-level change |
+
+Left open, with reasons: the calendar filter chips carry the connection's own label (a data fact of the fixture).
+
+### Third pass (batch g3b)
+
+| Page | Difference found | What was done |
+|---|---|---|
+| schedule | Four rows of controls above the grid; the day's date said twice | Two rows, the calendars one scrolling line with an edge fade; a single day's column says "Today" or the weekday |
+| schedule | No one-line summary of the week | "1 clash, on Tuesday · 2 meetings" under the title, on the grids and the Month |
+| schedule | An empty all-day row; identical all-day entries listed one by one | No row when none; identical ones fold with a count |
+| schedule | No way to see the hours outside the configured ones | "Show all hours" / "Show fewer hours" |
+| schedule | Month: weekday names off their numbers, numbers not on one edge, cut titles, tiny dots, today in the brand color | Centered names, one edge, two-line titles, time hidden when narrow, 24px/44px targets, today in ink |
+| schedule | Timeline: marks without dates, heavy days-off bands | A date beside each mark, light bands |
+| schedule-states | A week with nothing, a busy week of 40, all-day entries and overlaps, a busy month, many lanes, many entries, none, a long title and place, no place, a long Add title, an end before the start | Each has a capture state in `web/visual/inventory.ts` (the server's own answer, changed) |

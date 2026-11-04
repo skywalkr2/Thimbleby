@@ -225,6 +225,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             grid_starts=cfg.ui.schedule.day_starts,
             grid_ends=cfg.ui.schedule.day_ends,
             month_entries=cfg.ui.schedule.month_entries,
+            event_minutes=cfg.ui.schedule.event_minutes,
         )
 
     @r.get("/schedule/timeline")

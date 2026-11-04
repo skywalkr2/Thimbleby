@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: The Schedule at the gate (batch g3; section 328)
+
+**Decided:** (main session, by the gate's cold scores of the Schedule; no owner choice needed.) The time grid scrolls inside its own
+frame and opens on the first clash, else now, else the first entry; hour labels are short; the clash line jumps to the clash; the
+Month leads with titles and marks a clash day; the Timeline labels each one-day mark and its key shows only what is drawn; an
+entry's page has one way out. The mockup draws three overlapping meetings as one clash card that lists them, as the build does, so
+they stay one card (the scorers' "each event in its own slot" is not followed). Add to schedule says it goes on the app's own
+calendar rather than offering a picker with one choice. Second pass (same day): repeats fold in the engine, new setting `ui.schedule.event_minutes`, grid-shaped loading, shortened calendar names, a phone day list under the Month, the pane covering the grid below 820px, and stale-calendar entries marked. Third pass (batch g3b, same day): the controls above the grid are two rows, with the calendars as one scrolling line that fades at an edge; the header is there while the days load; the week and the month say their so-what in one line ("1 clash, on Tuesday · 2 meetings"); a day's column does not repeat the heading's date; no all-day row when no day has one, and identical all-day entries of a day fold into one with a count; "Show all hours" / "Show fewer hours"; Month centers each weekday over its numbers, shares one edge, leads with a title of two lines and hides the time in narrow cells, and a day is a 24px (44px when narrow) target with today in ink rather than the brand color; the Timeline shows a date beside each one-day mark and its days-off bands are lighter; the entry sheet is captured as a window and its Open fills the width on a phone; the end-before-start error belongs to the end field; capture states for nothing, a busy week, all-day entries and overlaps, a busy month, many lanes and entries, a long title and place, no place, and a long Add title. **Impact:** screens only. Change log: section 328.
 ## 2026-11-03: Shared rows, filter bars, tables, toasts, unknown addresses and the shell, batch G1 of the gate's fix round (section 327)
 
 **Decided:** (the gate's fix round, batch G1; design by the main session.) Each rule that shows on many screens is fixed once, in the shared part:

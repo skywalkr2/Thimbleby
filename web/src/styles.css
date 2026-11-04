@@ -436,11 +436,11 @@ input[data-key-field-state="works"] { border-color: var(--ok); }
 .tb-row .answer-form { flex: 1 0 100%; }
 .tb-row .struck { text-decoration: line-through; }
 /* A meeting added in one line, in the agenda's drawer: the fields share the row and wrap rather than widen it. */
-.meeting-line { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-2); }
-.meeting-line [data-field] { flex: 1 1 8rem; min-width: 0; margin-bottom: 0; }
-.meeting-line [data-field]:first-child { flex-basis: 12rem; }
-.meeting-line [data-variant] { flex: none; }
-.meeting-line > .hint { flex: 1 1 100%; margin: 0; }
+.meeting-line { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-3) var(--space-3); }
+.meeting-line [data-field] { min-width: 0; margin-bottom: 0; }
+.meeting-line [data-field]:first-child { grid-column: 1 / -1; }
+.meeting-line [data-variant] { justify-self: start; }
+.meeting-line > .hint, .meeting-line > .problem-note { grid-column: 1 / -1; margin: 0; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 /* The unread mark: a dot before the title, and no slot at all once the message is read. */
 .tb-unread-dot { display: inline-block; width: 8px; height: 8px; margin-inline-end: var(--space-2); border-radius: var(--radius-full); background: var(--accent); flex: none; }

@@ -140,8 +140,11 @@ test("a calendar whose account needs signing in again is named in one line over 
   const line = await screen.findByRole("list", { name: "Calendars that need you to sign in" });
   expect(line).toHaveTextContent(/Home calendar isn't up to date\. robin@example\.com needs you to sign in again\. Entries shown are from /);
   expect(await within(line).findByRole("button", { name: "Sign in again as robin@example.com" })).toBeInTheDocument();
-  // The entries it last read stay shown.
-  expect(screen.getByRole("button", { name: /Venue walk-through/ })).toBeInTheDocument();
+  // The entries it last read stay shown, and the ones from that calendar (not the other's) are marked as not up to date.
+  const venue_ = screen.getByRole("button", { name: /Venue walk-through/ });
+  expect(venue_).toHaveAttribute("data-stale");
+  expect(venue_).toHaveTextContent("Not up to date: its calendar needs you to sign in again.");
+  expect(screen.getByRole("button", { name: /Budget check-in/ })).not.toHaveAttribute("data-stale");
 });
 
 test("on a phone the header is the title and a menu, and the moves and a short range are one row", async () => {
@@ -164,4 +167,166 @@ test("wide, Add to schedule is the header's button and the range is written out"
   expect(screen.getByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "More actions for Schedule" })).toBeNull();
   expect(within(document.querySelector("[data-nav-row]") as HTMLElement).getByRole("heading", { level: 2 })).toHaveTextContent("October 26 – November 1, 2026");
+});
+
+describe("the grid opens on what matters", () => {
+  test("it scrolls inside its own labelled frame to the first clash, never to empty early hours", async () => {
+    window_({ wide: true });
+    await open("day");
+    const frame = screen.getByRole("region", { name: "Hours of the day" });
+    expect(frame).toHaveAttribute("data-scroller");
+    expect(frame.querySelector("[data-grid]")).not.toBeNull();
+    expect(frame.querySelector("[data-clash]")).not.toBeNull();
+  });
+
+  test("the frame is placed on the clash even when the day's entries arrive after the view was picked", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const top = this.hasAttribute("data-clash") ? 900 : 0;
+      return { top, bottom: top + 40, left: 0, right: 100, width: 100, height: 40, x: 0, y: top, toJSON: () => ({}) };
+    });
+    window_({ wide: true });
+    await open("day");
+    const frame = screen.getByRole("region", { name: "Hours of the day" });
+    await waitFor(() => expect(frame.scrollTop).toBeGreaterThan(0));
+    vi.restoreAllMocks();
+  });
+
+  test("an hour on the edge is its short form, so it has room inside the gutter", async () => {
+    window_({ wide: true });
+    await open("day");
+    const labels = Array.from(document.querySelectorAll("[data-hour]")).map((el) => el.textContent);
+    expect(labels).toContain("10 AM");
+    expect(labels.some((l) => /:00/.test(l ?? ""))).toBe(false);
+  });
+
+  test("the line that names the clashes is a button that goes to the first clash", async () => {
+    window_({ wide: true });
+    await open("day");
+    const jump = document.querySelector<HTMLButtonElement>("[data-clash-jump]")!;
+    expect(jump).not.toBeNull();
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    await userEvent.setup().click(jump);
+    expect(scroll).toHaveBeenCalled();
+  });
+});
+
+describe("the month marks a day with a clash", () => {
+  test("a day the engine names a clash on shows a mark with words for a screen reader", async () => {
+    window_({ wide: true });
+    await open("month");
+    const cell = document.querySelector(`[data-day="${TODAY}"]`)!;
+    expect(cell.querySelector("[data-clash-mark]")).not.toBeNull();
+    expect(within(cell as HTMLElement).getByText("Clash on this day")).toBeInTheDocument();
+  });
+});
+
+test("on a phone a day of the month is chosen, and its entries are listed under the month", async () => {
+  const user = userEvent.setup();
+  window_({ phone: true });
+  await open("month");
+  const cell = document.querySelector(`[data-day="${TODAY}"]`) as HTMLElement;
+  await user.click(within(cell).getByRole("button", { name: /Open/ }));
+  const below = document.querySelector("[data-month-day-list]") as HTMLElement;
+  expect(below).not.toBeNull();
+  expect(within(below).getByRole("button", { name: /Venue walk-through/ })).toBeInTheDocument();
+  expect(within(below).getByRole("button", { name: "Open this day" })).toBeInTheDocument();
+});
+
+const holiday = (n: number) => allDay("Public holiday", TODAY, { snapshot: `holiday-${n}`, source: "cal-a" });
+
+test("identical all-day entries of a day are one with a count, and a day with none has no all-day strip at all", async () => {
+  const user = userEvent.setup();
+  window_({ wide: true });
+  window.localStorage.setItem("cockpit:schedule-view", "week");
+  fakeApi(scheduleRoutes((date) => (date === TODAY ? { all_day: [holiday(1), holiday(2), holiday(3), allDay("Offsite", TODAY, { source: "cal-a" })] } : {}), {}, { "GET watch": () => CALENDARS }));
+  renderApp(<Schedule />);
+  const strip = await screen.findByRole("list", { name: /^All day, Today/ });
+  const buttons = within(strip).getAllByRole("button");
+  expect(buttons).toHaveLength(2);
+  expect(within(strip).getByRole("button", { name: /Public holiday.*3 identical entries/ })).toHaveTextContent("×3");
+  await user.click(buttons[0]);
+  expect(await screen.findByRole("heading", { name: "Public holiday" })).toBeInTheDocument();
+});
+
+test("a week with no all-day entries draws no all-day row", async () => {
+  window_({ wide: true });
+  window.localStorage.setItem("cockpit:schedule-view", "week");
+  fakeApi(scheduleRoutes(() => ({ timed: [] }), {}, { "GET watch": () => CALENDARS }));
+  renderApp(<Schedule />);
+  await waitFor(() => expect(document.querySelector("[data-grid]")).not.toBeNull());
+  expect(screen.queryByText("All day")).toBeNull();
+  expect(document.querySelector("ul[aria-label^='All day']")).toBeNull();
+});
+
+test("the Day column says which day it is without repeating the date the heading already gives", async () => {
+  window_({ wide: true });
+  await open("day");
+  expect(screen.getByRole("heading", { level: 3, name: "Today" })).toBeInTheDocument();
+});
+
+test("the controls above the grid are two rows with the calendars among them, and the header is there while the days load", async () => {
+  window_({ wide: true });
+  window.localStorage.setItem("cockpit:schedule-view", "week");
+  fakeApi(scheduleRoutes(content, { clashes: CLASHES }, { "GET watch": () => CALENDARS, "GET schedule": () => new Promise(() => undefined) }));
+  renderApp(<Schedule />);
+  // Before any day has arrived the page already has its title's buttons and its two rows.
+  expect(await screen.findByRole("button", { name: "Add to schedule" })).toBeInTheDocument();
+  expect(document.querySelectorAll("[data-bar-row]")).toHaveLength(2);
+  await waitFor(() => expect(document.querySelector("[data-schedule-legend]")).not.toBeNull());
+  const rows = Array.from(document.querySelectorAll("[data-bar-row]"));
+  expect(rows[1].contains(document.querySelector("[data-schedule-legend]"))).toBe(true);
+});
+
+test("the week says its so-what in one line: the clashes and how many meetings there are", async () => {
+  window_({ wide: true });
+  await open("week");
+  const sub = document.querySelector("[data-clash-jump]")?.parentElement;
+  expect(sub).toHaveTextContent("1 clash, on Monday · 4 meetings");
+});
+
+test("Show all hours draws the whole day, and Show fewer hours goes back", async () => {
+  const user = userEvent.setup();
+  window_({ wide: true });
+  await open("day");
+  const hours = () => document.querySelectorAll("[data-hour]").length;
+  const some = hours();
+  expect(some).toBeLessThan(24);
+  await user.click(screen.getByRole("button", { name: "Show all hours" }));
+  expect(hours()).toBe(24);
+  await user.click(screen.getByRole("button", { name: "Show fewer hours" }));
+  expect(hours()).toBe(some);
+});
+
+test("a month says its so-what too, and a day's dots are inside the day's one button", async () => {
+  window_({ wide: true });
+  await open("month");
+  expect(document.querySelector("[data-clash-jump]")?.parentElement).toHaveTextContent("1 clash, on Monday · 4 meetings");
+  const cell = document.querySelector(`section[data-day="${TODAY}"]`)!;
+  const button = within(cell as HTMLElement).getAllByRole("button")[0];
+  expect(button.querySelector("[class*='dots']")).not.toBeNull();
+});
+
+test("the calendars are one line that scrolls, and an edge fades where more is out of sight", async () => {
+  const scroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollWidth");
+  const client = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+  Object.defineProperty(HTMLElement.prototype, "scrollWidth", { configurable: true, get: () => 800 });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 300 });
+  try {
+    window_({ wide: true });
+    await open("week");
+    const row = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>("[data-schedule-legend] ul");
+      expect(found).toHaveAttribute("data-fade", "end");
+      return found!;
+    });
+    row.scrollLeft = 200;
+    row.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(row).toHaveAttribute("data-fade", "both"));
+  } finally {
+    if (scroll) Object.defineProperty(HTMLElement.prototype, "scrollWidth", scroll);
+    else delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollWidth;
+    if (client) Object.defineProperty(HTMLElement.prototype, "clientWidth", client);
+    else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth;
+  }
 });

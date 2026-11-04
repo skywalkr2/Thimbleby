@@ -27,6 +27,8 @@ export interface DateFieldProps {
   value?: string;
   defaultValue?: string;
   kind?: "date" | "time" | "datetime-local";
+  /** What an empty time box says instead of an example time. */
+  placeholder?: string;
   /** The first and the last day that can be chosen (a day, as ISO text). */
   min?: string;
   max?: string;
@@ -51,7 +53,7 @@ const WHOLE = /^(\d{4}-\d{2}-\d{2}|\d{1,2}[/.-]\d{1,2}[/.-]\d{4})$/;
 
 export function DateField(props: DateFieldProps) {
   const { kind = "date" } = props;
-  if (kind === "time") return <TimeField id={props.id} name={props.name} className={props.className} value={props.value} defaultValue={props.defaultValue} step={props.step} required={props.required} disabled={props.disabled} autoFocus={props.autoFocus} onChange={props.onChange} onBlur={props.onBlur} ref={props.ref} aria-label={props["aria-label"]} aria-describedby={props["aria-describedby"]} aria-invalid={props["aria-invalid"]} />;
+  if (kind === "time") return <TimeField placeholder={props.placeholder} id={props.id} name={props.name} className={props.className} value={props.value} defaultValue={props.defaultValue} step={props.step} required={props.required} disabled={props.disabled} autoFocus={props.autoFocus} onChange={props.onChange} onBlur={props.onBlur} ref={props.ref} aria-label={props["aria-label"]} aria-describedby={props["aria-describedby"]} aria-invalid={props["aria-invalid"]} />;
   if (kind === "datetime-local") return <DayAndTime {...props} />;
   return <Day {...props} />;
 }

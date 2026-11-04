@@ -1,4 +1,4 @@
-import { addMonths, clashGroups, type ClashLink, gridHours, hourOf, minutesOf, moveBy, placeOverlaps, rangeOf, rememberView, startOfMonth, startOfWeek, storedView, weekdayIndex } from "./calendar";
+import { addMonths, foldIdentical, clashGroups, type ClashLink, gridHours, hourLabel, hourOf, minutesOf, shortCalendarNames, moveBy, placeOverlaps, rangeOf, rememberView, startOfMonth, startOfWeek, storedView, weekdayIndex } from "./calendar";
 
 const MON = [0, 1, 2, 3, 4];
 
@@ -104,4 +104,31 @@ describe("clashGroups", () => {
     const [group] = clashGroups([at("a", 60, 120), at("b", 130, 180)], pairs(["a", "b", { kind: "travel", minutes: 20, travel: 30 }]));
     expect([group.overlap, group.travel]).toEqual([0, 30]);
   });
+});
+
+test("an hour on the grid's edge drops its empty minutes", () => {
+  expect(hourLabel("10:00 AM")).toBe("10 AM");
+  expect(hourLabel("12:00 PM")).toBe("12 PM");
+  expect(hourLabel("09:00")).toBe("09");
+  expect(hourLabel("10:30 AM")).toBe("10:30 AM");
+});
+
+test("an address in a calendar's name loses its shared domain, and keeps it when the domains differ", () => {
+  expect(shortCalendarNames(["Your calendar, avery.lane@example.com", "Your calendar, avery.lane.home@example.com", "Holidays"])).toEqual(["Your calendar, avery.lane", "Your calendar, avery.lane.home", "Holidays"]);
+  expect(shortCalendarNames(["Work, a@example.com", "Home, b@example.org"])).toEqual(["Work, a@example.com", "Home, b@example.org"]);
+});
+
+test("identical entries fold into one with a count, in the order each first appears", () => {
+  const items = [
+    { title: "Holiday", id: 1 },
+    { title: "Offsite", id: 2 },
+    { title: "Holiday", id: 3 },
+    { title: "Holiday", id: 4 },
+  ];
+  const folded = foldIdentical(items, (i) => i.title);
+  expect(folded.map((f) => [f.item.id, f.count])).toEqual([
+    [1, 3],
+    [2, 1],
+  ]);
+  expect(foldIdentical([], () => "x")).toEqual([]);
 });

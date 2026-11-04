@@ -69,7 +69,7 @@ describe("the views", () => {
     const strip = screen.getByRole("list", { name: /^All day, Today/ });
     expect(within(strip).getByRole("button", { name: /Offsite/ })).toBeInTheDocument();
     expect(within(strip).getByRole("button", { name: /Due: Send the figures/ })).toBeInTheDocument();
-    const lane = screen.getByRole("list", { name: /^Today · / });
+    const lane = screen.getByRole("list", { name: /^Today$/ });
     expect(within(lane).getAllByRole("button").map((b) => /Standup|Dentist|Design review/.exec(b.textContent ?? "")?.[0])).toEqual(["Standup", "Dentist", "Design review"]);
     expect(within(lane).queryByRole("button", { name: /Offsite/ })).toBeNull();
   });
@@ -287,6 +287,23 @@ describe("the grid", () => {
 });
 
 describe("an entry's details", () => {
+  test("a long title and a long place wrap inside the pane, and an entry with no place (or a blank one) has no Where row", async () => {
+    room({ beside: true });
+    const user = userEvent.setup();
+    const long = "Annual planning review with the whole leadership group and every regional partner";
+    const place = "Conference Room 4, Building B, North Campus, 1200 Harborview Avenue, Suite 300";
+    await open((date) => (date === TODAY ? { timed: [entry({ title: long, where: place }, date), entry({ title: "Blank place", where: "   ", begins: `${date}T13:00:00+00:00` }, date), entry({ title: "No place", begins: `${date}T15:00:00+00:00` }, date)] } : {}));
+    await user.click(screen.getByRole("button", { name: new RegExp(long) }));
+    const pane = await screen.findByRole("complementary", { name: long });
+    expect(within(pane).getByText(place)).toBeInTheDocument();
+    expect(within(pane).getByText("Where")).toBeInTheDocument();
+    for (const title of ["Blank place", "No place"]) {
+      await user.click(screen.getByRole("button", { name: new RegExp(title) }));
+      const next = await screen.findByRole("complementary", { name: title });
+      expect(within(next).queryByText("Where")).toBeNull();
+    }
+  });
+
   test("beside the calendar on a wide window: what it is, when, where, its calendar and its page, and Escape returns the cursor", async () => {
     room({ beside: true });
     const user = userEvent.setup();
@@ -298,7 +315,7 @@ describe("an entry's details", () => {
     expect(within(pane).getByText("Room A")).toBeInTheDocument();
     expect(within(pane).getByText("Work calendar")).toBeInTheDocument();
     expect(pane).toHaveTextContent(/9:00.*9:30/);
-    expect(within(pane).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringMatching(/#records\/event\/EVT-1$/));
+    expect(within(pane).getByRole("link", { name: "Open the event" })).toHaveAttribute("href", expect.stringMatching(/#records\/event\/EVT-1$/));
     expect(button).toHaveAttribute("data-selected");
     fireEvent.keyDown(button, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("complementary", { name: "Standup" })).toBeNull());
@@ -313,8 +330,8 @@ describe("an entry's details", () => {
     const heading = within(dialog).getByRole("heading", { name: "Dentist" });
     await waitFor(() => expect(heading).toHaveFocus());
     expect(within(dialog).getByText("The app's own calendar")).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringMatching(/#records\/event\/EVT-7$/));
-    await user.click(within(dialog).getByRole("button", { name: "Back to the calendar" }));
+    expect(within(dialog).getByRole("link", { name: "Open the event" })).toHaveAttribute("href", expect.stringMatching(/#records\/event\/EVT-7$/));
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(screen.getByRole("button", { name: /Dentist/ })).toHaveFocus());
   });
@@ -327,7 +344,7 @@ describe("an entry's details", () => {
     await user.click(screen.getByRole("button", { name: /Design review/ }));
     const pane = await screen.findByRole("complementary", { name: "Design review" });
     expect(within(pane).getByText("Home calendar")).toBeInTheDocument();
-    expect(within(pane).getByRole("link", { name: "Open" })).toHaveAttribute("href", expect.stringMatching(/#records\/calendar-event\/snap-Design%20review%40/));
+    expect(within(pane).getByRole("link", { name: "Open the event" })).toHaveAttribute("href", expect.stringMatching(/#records\/calendar-event\/snap-Design%20review%40/));
     expect(within(pane).getByRole("link", { name: "Open in your calendar" })).toHaveAttribute("href", address);
     expect(pane).toHaveTextContent("meet.example.com");
   });

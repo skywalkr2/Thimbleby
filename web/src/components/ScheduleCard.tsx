@@ -225,7 +225,7 @@ export function useScheduleCard(onAddSource?: () => void, connectHref?: string):
 /** The button that adds a meeting to the agenda, opening a drawer with a short form to fill: what, the day (today to begin with),
  * the time (none: all day), when it ends (with a time) and, for a person with more than one side, which side it belongs to. The server makes the person's own calendar entry, or merges the meeting into one already
  * there and says so; Undo takes an added one back. The drawer closes once it is added; a refusal leaves what was typed. */
-export function AddMeeting(props: { today: string; compact?: boolean; primary?: boolean }) {
+export function AddMeeting(props: { today: string; compact?: boolean; primary?: boolean; minutes?: number }) {
   const { t } = useWords();
   const [open, setOpen] = useState(false);
   return (
@@ -233,12 +233,22 @@ export function AddMeeting(props: { today: string; compact?: boolean; primary?: 
       <Button size="sm" variant={props.primary ? "primary" : "secondary"} icon={props.compact && !props.primary ? "plus" : props.primary ? "plus" : undefined} onClick={() => setOpen(true)}>
         {t(props.compact ? "meeting.add_short" : "meeting.open")}
       </Button>
-      {open && <MeetingDrawer today={props.today} onClose={() => setOpen(false)} />}
+      {open && <MeetingDrawer today={props.today} minutes={props.minutes} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-export function MeetingDrawer(props: { today: string; onClose: () => void }) {
+/** How long a new entry lasts when nothing says: the setting's value is passed in where the screen knows it. */
+const DEFAULT_MINUTES = 60;
+
+/** A time "HH:MM" some minutes later, or none when that passes midnight. */
+function later(start: string, minutes: number): string {
+  const [h, m] = start.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  return total >= 24 * 60 ? "" : `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+export function MeetingDrawer(props: { today: string; minutes?: number; onClose: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
@@ -246,6 +256,7 @@ export function MeetingDrawer(props: { today: string; onClose: () => void }) {
   const [on, setOn] = useState("");
   const [at, setAt] = useState("");
   const [until, setUntil] = useState("");
+  const [untilChosen, setUntilChosen] = useState(false);
   const [where, setWhere] = useState("");
   const [repeat, setRepeat] = useState<"" | "day" | "week" | "two_weeks" | "month">("");
   const [stops, setStops] = useState("");
@@ -308,10 +319,23 @@ export function MeetingDrawer(props: { today: string; onClose: () => void }) {
           <DateField id={`${base}-day`} value={day_} onChange={(e) => setOn(e.target.value)} />
         </FormField>
         <FormField id={`${base}-time`} label={t("meeting.time")}>
-          <DateField id={`${base}-time`} kind="time" value={at} onChange={(e) => setAt(e.target.value)} />
+          <DateField
+            id={`${base}-time`}
+            kind="time"
+            value={at}
+            placeholder={t("meeting.time_placeholder")}
+            onChange={(e) => {
+              setAt(e.target.value);
+              // The end follows the start, unless the person chose one.
+              if (!untilChosen) setUntil(e.target.value ? later(e.target.value, props.minutes ?? DEFAULT_MINUTES) : "");
+            }}
+          />
         </FormField>
         <FormField id={`${base}-until`} label={t("meeting.until")}>
-          <DateField id={`${base}-until`} kind="time" value={until} disabled={at === ""} aria-describedby={at === "" ? `${base}-until-why` : undefined} onChange={(e) => setUntil(e.target.value)} />
+          <DateField id={`${base}-until`} kind="time" value={until} disabled={at === ""} placeholder={t("meeting.until_placeholder")} aria-invalid={endBad || undefined} aria-describedby={at === "" ? `${base}-until-why` : endBad ? `${base}-until-bad` : undefined} onChange={(e) => {
+            setUntilChosen(true);
+            setUntil(e.target.value);
+          }} />
         </FormField>
         {at === "" && (
           <p className="hint" id={`${base}-until-why`}>
@@ -319,7 +343,7 @@ export function MeetingDrawer(props: { today: string; onClose: () => void }) {
           </p>
         )}
         {endBad && (
-          <p className="problem-note" role="alert">
+          <p className="problem-note" role="alert" id={`${base}-until-bad`}>
             {t("meeting.until_bad")}
           </p>
         )}
@@ -357,6 +381,9 @@ export function MeetingDrawer(props: { today: string; onClose: () => void }) {
             </Select>
           </FormField>
         )}
+        <p className="hint" data-calendar-note="">
+          {t("meeting.calendar_note")}
+        </p>
         {/* The drawer's Add button is outside the form; this one lets Enter in a field add the meeting. */}
         <button type="submit" hidden tabIndex={-1} aria-hidden="true" />
       </form>

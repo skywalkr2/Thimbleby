@@ -2,10 +2,10 @@
 // top for what has no time (all-day events, due dates, dated deliveries) and each day's timed entries placed by start and end,
 // overlapping ones side by side. The hours are the configured ones, grown to hold an entry outside them. A line marks now on
 // today's column. Today is named in words in its heading, never only by color.
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { S } from "../lib/api";
-import { clashGroups, gridHours, minutesOf, placeOverlaps, SHORT, type ClashGroup, type Span } from "../lib/calendar";
-import { day, onTheClock, wallTime } from "../lib/dates";
+import { clashGroups, foldIdentical, gridHours, hourLabel, minutesOf, placeOverlaps, SHORT, type ClashGroup, type Span } from "../lib/calendar";
+import { day, onTheClock, wallTime, weekdayLong } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Icon } from "../ui/Icon";
 import { EntryButton, entryKey, type Calendars, type Entry } from "./ScheduleEntry";
@@ -68,43 +68,93 @@ export function TimeGrid(props: {
     const clashing = new Set(clashes.flatMap((c) => c.items));
     return { placed: placeOverlaps(spans.filter((s) => !clashing.has(s.item))), clashes };
   });
-  const { from, to } = gridHours(
+  const shownHours = gridHours(
     perDay.flatMap((d) => [...d.placed, ...d.clashes].map((p) => ({ start: p.start, end: p.end }))),
     props.startsAt,
     props.endsAt,
   );
+  // The whole day, midnight to midnight, when the person asks for it; else the configured hours grown to hold the entries.
+  const [allHours, setAllHours] = useState(false);
+  const { from, to } = allHours ? { from: 0, to: 24 } : shownHours;
+  const canShowAll = allHours || shownHours.to - shownHours.from < 24;
   const hours = Array.from({ length: to - from }, (_, n) => from + n);
+  // What the days hold, so the frame is placed again when the entries of a newly picked range arrive after its empty days.
+  const shape = `${allHours ? "all" : ""}${perDay.map((d) => `${d.placed.length}.${d.clashes.length}`).join()}`;
   const gridRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  // The day headings stay on top and the all-day row under them, so the row sticks at the headings' height, whatever it is.
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    const head = grid?.querySelector<HTMLElement>("h3");
+    if (!grid || !head) return;
+    const set = () => grid.style.setProperty("--head-h", `${head.getBoundingClientRect().height}px`);
+    set();
+    const watch = typeof ResizeObserver === "function" ? new ResizeObserver(set) : null;
+    watch?.observe(head);
+    return () => watch?.disconnect();
+  }, [props.days.length]);
   const nowMinutes = onTheClock(props.now).minutes;
-  const label = (date: string) => (date === props.today ? t("schedule.day_today", { date: day(date) }) : t("schedule.day_plain", { date: day(date) }));
-  const showsNow = props.days.some((d) => d.date === props.today) && nowMinutes >= from * 60 && nowMinutes <= to * 60;
-  // The grid opens with now in view, once for each time it is drawn from nothing (a view or a day picked).
+  // The words at the head of a clash card: how many meetings and when, or that the places are too far apart.
+  const clashText = (c: { items: Entry[]; start: number; travel: number }) =>
+    c.items.length > 2
+      ? t("schedule.clash.many", { n: c.items.length, time: wallTime(`2000-01-01T${String(Math.floor(c.start / 60)).padStart(2, "0")}:${String(c.start % 60).padStart(2, "0")}`) })
+      : c.travel > 0
+        ? t("schedule.clash.travel", { n: c.travel })
+        : t("schedule.clash.head");
+  // A single day's date is the page's heading already, so its column says only which day it is.
+  const single = props.days.length === 1;
+  const label = (date: string) =>
+    single ? (date === props.today ? t("today.agenda.today") : weekdayLong(date)) : date === props.today ? t("schedule.day_today", { date: day(date) }) : t("schedule.day_plain", { date: day(date) });
+  // Identical all-day entries of a day are one with a count; with none on any day the strip takes no room.
+  const strips = props.days.map((d) => foldIdentical(d.all_day, (e) => [e.kind, e.title, e.own, e.source, e.cancelled].join("|")));
+  const anyAllDay = strips.some((s) => s.length > 0);
+    // The grid opens scrolled to what matters: the first clash, else now, else the first entry, else the start of the hours shown
+  // (never on empty early hours). Once for each time it is drawn from nothing (a view or a day picked).
   useEffect(() => {
-    if (showsNow) gridRef.current?.querySelector("[data-now]")?.scrollIntoView?.({ block: "center" });
+    const box = scrollerRef.current;
+    if (!box) return;
+    const target = box.querySelector<HTMLElement>("[data-clash]") ?? box.querySelector<HTMLElement>("[data-now]") ?? box.querySelector<HTMLElement>("ul[data-day] > li");
+    if (!target) return;
+    const head = box.querySelector<HTMLElement>("[data-grid] h3")?.getBoundingClientRect().height ?? 0;
+    const strip = box.querySelector<HTMLElement>("[data-strip]")?.getBoundingClientRect().height ?? 0;
+    const above = target.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+    // Within the first hour of the top the grid stays at its top, so the first hour's label is not left half under the headings.
+    const wanted = above - head - strip - 2 * 16;
+    box.scrollTop = wanted < box.clientHeight / 8 ? 0 : wanted;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.days[0]?.date, props.days.length]);
+  }, [props.days[0]?.date, props.days.length, shape]);
   return (
+    <>
+    {canShowAll && (
+      <div className={styles.hoursSwitch}>
+        <button type="button" className="link-button" data-all-hours="" onClick={() => setAllHours(!allHours)}>
+          {t(allHours ? "schedule.hours.fewer" : "schedule.hours.all")}
+        </button>
+      </div>
+    )}
+    <div ref={scrollerRef} className={styles.scroller} tabIndex={0} role="region" aria-label={t("schedule.grid.region")} data-scroller="">
     <div ref={gridRef} className={styles.grid} style={{ ["--cols" as string]: props.days.length, ["--rows" as string]: to - from }} data-grid="">
-      <div aria-hidden="true" />
+      <div aria-hidden="true" className={styles.corner} />
       {props.days.map((d) => (
         <h3 key={d.date} className={styles.colHead} data-today={d.date === props.today ? "" : undefined}>
           {label(d.date)}
         </h3>
       ))}
-      <div className={styles.stripLabel}>{t("schedule.all_day")}</div>
-      {props.days.map((d) => (
-        <ul key={d.date} className={styles.strip} aria-label={`${t("schedule.all_day")}, ${label(d.date)}`} data-today={d.date === props.today ? "" : undefined}>
-          {d.all_day.map((e, i) => (
-            <li key={`${entryKey(e, d.date)}:${i}`}>
-              <EntryButton entry={e} date={d.date} calendars={props.calendars} time={false} selected={props.selected === entryKey(e, d.date)} onOpen={props.onOpen} t={t} />
-            </li>
-          ))}
-        </ul>
-      ))}
+      {anyAllDay && <div className={styles.stripLabel}>{t("schedule.all_day")}</div>}
+      {anyAllDay &&
+        props.days.map((d, i) => (
+          <ul key={d.date} className={styles.strip} data-strip="" aria-label={`${t("schedule.all_day")}, ${label(d.date)}`} data-today={d.date === props.today ? "" : undefined}>
+            {strips[i].map(({ item: e, count }, n) => (
+              <li key={`${entryKey(e, d.date)}:${n}`}>
+                <EntryButton entry={e} date={d.date} calendars={props.calendars} time={false} count={count} selected={props.selected === entryKey(e, d.date)} onOpen={props.onOpen} t={t} />
+              </li>
+            ))}
+          </ul>
+        ))}
       <div className={styles.hours} aria-hidden="true">
         {hours.map((h) => (
           <span key={h} className={styles.hour} data-hour="" data-first={h === from ? "" : undefined} style={{ top: `calc(${h - from} * var(--hour))` }}>
-            {wallTime(`2000-01-01T${String(h).padStart(2, "0")}:00`)}
+            {hourLabel(wallTime(`2000-01-01T${String(h).padStart(2, "0")}:00`))}
           </span>
         ))}
       </div>
@@ -132,9 +182,9 @@ export function TimeGrid(props: {
               data-clash=""
             >
               <div className={styles.clash} role="group" aria-label={t("schedule.clash.label", { names: c.items.map((e) => e.title).join(", ") })}>
-                <p className={styles.clashHead}>
+                <p className={styles.clashHead} title={clashText(c)}>
                   <Icon name="alert" size={16} />
-                  {c.items.length > 2 ? t("schedule.clash.many", { n: c.items.length, time: wallTime(`2000-01-01T${String(Math.floor(c.start / 60)).padStart(2, "0")}:${String(c.start % 60).padStart(2, "0")}`) }) : c.travel > 0 ? t("schedule.clash.travel", { n: c.travel }) : t("schedule.clash.head")}
+                  <span className={styles.clashText}>{clashText(c)}</span>
                 </p>
                 <ul className={styles.clashRows}>
                   {c.items.map((e, k) => (
@@ -152,5 +202,7 @@ export function TimeGrid(props: {
         </ul>
       ))}
     </div>
+    </div>
+    </>
   );
 }

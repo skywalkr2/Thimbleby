@@ -7,7 +7,7 @@ import { NewEventDrawer } from "./NewEvent";
 import { RowMenu } from "./RowMenu";
 import { MeetingDrawer } from "./ScheduleCard";
 
-export function ScheduleMenu(props: { today: string }) {
+export function ScheduleMenu(props: { today: string; minutes?: number }) {
   const { t } = useWords();
   const options = useCalendarOptions();
   const [open, setOpen] = useState<"meeting" | "event" | null>(null);
@@ -19,7 +19,7 @@ export function ScheduleMenu(props: { today: string }) {
   return (
     <>
       <RowMenu label={t("schedule.title")} actions={entries} />
-      {open === "meeting" && <MeetingDrawer today={props.today} onClose={() => setOpen(null)} />}
+      {open === "meeting" && <MeetingDrawer today={props.today} minutes={props.minutes} onClose={() => setOpen(null)} />}
       {open === "event" && <NewEventDrawer today={props.today} accounts={accounts} onClose={() => setOpen(null)} />}
     </>
   );

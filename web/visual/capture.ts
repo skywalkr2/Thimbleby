@@ -172,10 +172,10 @@ async function takeOne(context: BrowserContext, running: Running, entry: Entry, 
     }
     const file = captureName(entry.page, state, size);
     // A screen that opens scrolled (the Schedule, at now) is drawn whole from its top: a full-page picture of a scrolled page puts
-    // its sticky header at the scroll position, in the middle of the picture.
+    // its sticky header at the scroll position, in the middle of the picture. A frame that scrolls inside the page (a time grid, marked data-scroller) keeps where it opened: that is what the person sees.
     await page.evaluate(() => {
       window.scrollTo(0, 0);
-      for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) if (el.scrollTop > 0) el.scrollTop = 0;
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) if (el.scrollTop > 0 && !el.hasAttribute("data-scroller")) el.scrollTop = 0;
     });
     await page.waitForTimeout(300);
     if ((entry as Screen).window) await page.screenshot({ path: join(out, file) });

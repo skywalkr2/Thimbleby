@@ -99,6 +99,9 @@ export function hourOf(setting: string, up = false): number {
   return Math.min(24, Math.max(0, (h || 0) + (up && (m || 0) > 0 ? 1 : 0)));
 }
 
+/** An hour on the grid's edge in its short form: "10:00 AM" is "10 AM", so the label fits the gutter with room around it. */
+export const hourLabel = (time: string): string => time.replace(/:00(?=\s|$)/, "");
+
 /** How long, in minutes, an entry with no end is drawn: enough to read and press. */
 export const SHORT = 30;
 
@@ -205,4 +208,28 @@ export function clashGroups<T>(items: readonly { item: T; start: number; end: nu
         travel: overlaps.length ? 0 : Math.max(0, ...g.links.map((l) => l.travel)),
       };
     });
+}
+
+const ADDRESS = /([^\s@,]+)@([^\s@,]+\.[^\s@,]+)/;
+
+/** Calendar names with the account's address shortened to the part before the "@" when every address among them is on one
+ * domain, so the domain is not said again and again; names with no address, or addresses on different domains, are left as
+ * they are (the address is then all that tells them apart). */
+export function shortCalendarNames(names: readonly string[]): string[] {
+  const domains = new Set(names.map((n) => ADDRESS.exec(n)?.[2].toLowerCase()).filter((d): d is string => !!d));
+  if (domains.size !== 1) return [...names];
+  return names.map((n) => n.replace(ADDRESS, "$1"));
+}
+
+/** Entries that are the same thing said more than once (the key says what "the same" is) folded into one with how many there
+ * were, in the order of each one's first appearance. */
+export function foldIdentical<T>(items: readonly T[], keyOf: (item: T) => string): { item: T; count: number }[] {
+  const folded = new Map<string, { item: T; count: number }>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const found = folded.get(key);
+    if (found) found.count += 1;
+    else folded.set(key, { item, count: 1 });
+  }
+  return [...folded.values()];
 }

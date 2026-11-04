@@ -187,6 +187,204 @@ async function openHelpItem(env: Env, item: string | RegExp): Promise<void> {
   await env.page.waitForTimeout(900);
 }
 
+
+// ---------------------------------------------------------------- reshaped reads
+
+/** The parts of the schedule's answers the states below change. The answer is the server's own, read and put back changed, so a
+ * state is the screen's real answer with more, less or longer in it. */
+interface EntryJson {
+  [key: string]: unknown;
+  title: string;
+  snapshot: string;
+  where?: string | null;
+}
+interface DayJson {
+  date: string;
+  all_day: EntryJson[];
+  timed: EntryJson[];
+}
+interface ScheduleJson {
+  days: DayJson[];
+  clashes: unknown[];
+  on_its_way: unknown[];
+}
+interface ItemJson {
+  [key: string]: unknown;
+}
+interface LaneJson {
+  [key: string]: unknown;
+  items: ItemJson[];
+}
+interface TimelineJson {
+  first: string;
+  days: number;
+  lanes: LaneJson[];
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const clock = (date: string, minutes: number) => `${date}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}:00+00:00`;
+
+/** The text of the long states: a title and a place that do not fit one line anywhere. */
+const LONG_TITLE = "Annual planning review with the whole leadership group and every regional partner";
+const LONG_PLACE = "Conference Room 4, Building B, North Campus, 1200 Harborview Avenue, Suite 300";
+
+let made = 0;
+/** A new entry on a day, shaped like the ones the server sends (it takes the calendar of one that is there, so it has a color). */
+function entryOn(page: ScheduleJson, date: string, title: string, when?: { from: number; minutes: number }): EntryJson {
+  const sample = page.days.flatMap((d) => [...d.timed, ...d.all_day]).find((e) => e.own === false);
+  made += 1;
+  const id = `GATE-${made}`;
+  const begins = when ? clock(date, when.from) : undefined;
+  const ends = when ? clock(date, when.from + when.minutes) : undefined;
+  return {
+    snapshot: id,
+    title,
+    source: (sample?.source as string | undefined) ?? "",
+    own: sample === undefined,
+    kind: sample === undefined ? "own" : "event",
+    cancelled: false,
+    open_items: 0,
+    side: null,
+    days: [date],
+    slot: when ? "timed" : "all_day",
+    all_day: !when,
+    start: begins ?? date,
+    begins,
+    ends,
+    end: ends,
+  };
+}
+
+/** Answers the schedule's read with the server's own answer, changed. */
+const scheduleWith = (change: (page: ScheduleJson) => void) => async (env: Env, choice: RegExp | null) => {
+  await env.page.goto("about:blank");
+  await env.page.goto(`${env.base}?token=${env.token}#${NEUTRAL}`);
+  await settle(env.page);
+  const handler = async (route: Route) => {
+    const response = await route.fetch();
+    const page = (await response.json()) as ScheduleJson;
+    change(page);
+    await route.fulfill({ response, json: page });
+  };
+  const matches = (url: URL) => url.pathname.endsWith("/api/schedule");
+  await env.page.route(matches, handler);
+  env.undo.push(() => env.page.unroute(matches, handler));
+  await withChoice("schedule", choice ?? /^Day$/)(env);
+};
+
+/** The same for the Timeline's read. */
+const timelineWith = (change: (page: TimelineJson) => void) => async (env: Env) => {
+  await env.page.goto("about:blank");
+  await env.page.goto(`${env.base}?token=${env.token}#${NEUTRAL}`);
+  await settle(env.page);
+  const handler = async (route: Route) => {
+    const response = await route.fetch();
+    const page = (await response.json()) as TimelineJson;
+    change(page);
+    await route.fulfill({ response, json: page });
+  };
+  const matches = (url: URL) => url.pathname.endsWith("/api/schedule/timeline");
+  await env.page.route(matches, handler);
+  env.undo.push(() => env.page.unroute(matches, handler));
+  await withChoice("schedule", /^Timeline$/)(env);
+};
+
+/** What the schedule's states do to the answer. */
+const nothing = (page: ScheduleJson) => {
+  for (const d of page.days) {
+    d.all_day = [];
+    d.timed = [];
+  }
+  page.clashes = [];
+  page.on_its_way = [];
+};
+/** Forty meetings across five days, many of them overlapping. */
+const busy = (page: ScheduleJson) => {
+  const days = page.days.slice(0, 5);
+  for (let i = 0; i < 40; i++) {
+    const d = days[i % days.length];
+    d.timed.push(entryOn(page, d.date, `Meeting ${i + 1}`, { from: (8 + (i % 9)) * 60 + (i % 3) * 20, minutes: 30 + (i % 4) * 15 }));
+  }
+};
+/** Three identical all-day entries on one day, one on another, and two meetings that overlap without the engine calling it a clash. */
+const allDayAndOverlap = (page: ScheduleJson) => {
+  // The Day view asks for one day: both land on it.
+  const second = page.days[Math.min(1, page.days.length - 1)];
+  const third = page.days[Math.min(2, page.days.length - 1)];
+  for (let i = 0; i < 3; i++) second.all_day.push(entryOn(page, second.date, "Public holiday"));
+  second.all_day.push(entryOn(page, second.date, "Offsite"));
+  third.timed.push(entryOn(page, third.date, "Planning", { from: 600, minutes: 90 }), entryOn(page, third.date, "Review", { from: 660, minutes: 60 }));
+};
+/** A month with a busy day every week, a long title, and an all-day entry that runs for three days. */
+const busyMonth = (page: ScheduleJson) => {
+  page.days.forEach((d, n) => {
+    const count = n % 7 === 2 ? 8 : n % 4;
+    for (let i = 0; i < count; i++) d.timed.push(entryOn(page, d.date, i === 0 ? LONG_TITLE : `Meeting ${n}-${i}`, { from: (9 + i) * 60, minutes: 45 }));
+  });
+};
+const allDayMonth = (page: ScheduleJson) => {
+  for (const d of page.days.slice(9, 12)) d.all_day.push(entryOn(page, d.date, "Team offsite"));
+};
+const longEntry = (page: ScheduleJson) => {
+  const first = page.days.flatMap((d) => d.timed).find((e) => e.own === false) ?? page.days.flatMap((d) => d.timed)[0];
+  if (first) {
+    first.title = LONG_TITLE;
+    first.where = LONG_PLACE;
+  }
+};
+const noPlace = (page: ScheduleJson) => {
+  for (const d of page.days) for (const e of [...d.timed, ...d.all_day]) delete e.where;
+};
+
+/** Many lanes, many entries and none, for the Timeline. */
+const lanesOf = (page: TimelineJson, count: number): void => {
+  const sample = page.lanes[0];
+  page.lanes = Array.from({ length: count }, (_, n) => ({
+    project: `GATE-LANE-${n}`,
+    name: n % 5 === 0 ? `Quarterly program of work number ${n + 1} for the northern region` : `Project ${n + 1}`,
+    side: null,
+    in_project: true,
+    views: [],
+    depth: 0,
+    days_off: [],
+    ...(sample ? { owner: sample.owner, team: sample.team } : {}),
+    items: Array.from({ length: n % 4 }, (_, i) => ({ kind: "todo", id: `GATE-ITEM-${n}-${i}`, title: `Step ${i + 1} of ${n + 1}`, start: addDay(page.first, (n * 3 + i * 5) % page.days), end: addDay(page.first, (n * 3 + i * 5) % page.days), state: "open", owners: [] })),
+  }));
+};
+const addDay = (first: string, n: number): string => {
+  const [y, m, d] = first.split("-").map(Number);
+  const at = new Date(Date.UTC(y, m - 1, d + n));
+  return `${at.getUTCFullYear()}-${pad(at.getUTCMonth() + 1)}-${pad(at.getUTCDate())}`;
+};
+const manyLanes = (page: TimelineJson) => lanesOf(page, 14);
+const manyEntries = (page: TimelineJson) => {
+  lanesOf(page, 1);
+  page.lanes[0].name = "Everything";
+  page.lanes[0].items = Array.from({ length: 36 }, (_, n) => ({ kind: "todo", id: `GATE-ITEM-${n}`, title: `Item ${n + 1} with a longer name`, start: addDay(page.first, (n * 2) % page.days), end: addDay(page.first, (n * 2) % page.days), state: n % 7 === 0 ? "overdue" : "open", owners: [] }));
+};
+const noLanes = (page: TimelineJson) => {
+  page.lanes = [];
+};
+
+/** The form of Add to schedule, opened (on a phone from the "..." menu), for the states that fill it. */
+async function openAddForm(env: Env): Promise<void> {
+  await withChoice("schedule", /^Day$/)(env);
+  const direct = env.page.getByRole("button", { name: /Add to schedule/ }).first();
+  if (!((await direct.count()) > 0 && (await direct.isVisible().catch(() => false)))) {
+    await press(env, /^More .*Schedule/, "the Schedule has neither an Add to schedule button nor its menu");
+  }
+  await env.page.getByRole("menuitem", { name: /Add to schedule/ }).or(env.page.getByRole("button", { name: /Add to schedule/ })).first().click();
+  await env.page.waitForTimeout(700);
+}
+
+/** Opens the first entry of a view that shows a time (a clash card counts), or the one named. */
+async function openEntry(env: Env, named?: RegExp): Promise<void> {
+  const entry = env.page.locator("main button, main a").filter({ hasText: named ?? /\d{1,2}:\d\d ?(AM|PM)|at once/ }).first();
+  if ((await entry.count()) === 0) throw new Unreachable("the Schedule shows no entry to open on this fixture");
+  await entry.click();
+  await env.page.waitForTimeout(900);
+}
+
 // ---------------------------------------------------------------- building the map
 
 type Where = Pick<Screen, "server" | "stage">;
@@ -249,25 +447,78 @@ function build(): Screen[] {
     s("Work", "todos-many", "To-dos, over a hundred", { server: "sides", stage: "bulk" }, reach("work/open")),
     s("Work", "stages", "Stages", SEEDED, reach("work/stages")),
   );
-  const schedule = s("Schedule", "schedule-day", "Schedule, Day", SIGNED, withChoice("schedule", "Day"), { main: true });
+  const schedule = s("Schedule", "schedule-day", "Schedule, Day", SIGNED, withChoice("schedule", /^Day$/), { main: true });
   add(
     schedule,
     s("Schedule", "schedule-work-week", "Schedule, Work week", SIGNED, withChoice("schedule", /^(Work week|Weekdays)/)),
-    s("Schedule", "schedule-week", "Schedule, Week", SIGNED, withChoice("schedule", "Week"), { main: true }),
-    s("Schedule", "schedule-month", "Schedule, Month", SIGNED, withChoice("schedule", "Month")),
-    s("Schedule", "schedule-timeline", "Schedule, Timeline", SIGNED, withChoice("schedule", "Timeline")),
+    s("Schedule", "schedule-week", "Schedule, Week", SIGNED, withChoice("schedule", /^Week$/), { main: true }),
+    s("Schedule", "schedule-month", "Schedule, Month", SIGNED, withChoice("schedule", /^Month$/)),
+    s("Schedule", "schedule-timeline", "Schedule, Timeline", SIGNED, withChoice("schedule", /^Timeline$/)),
     s("Schedule", "schedule-add", "Schedule, Add to schedule", SIGNED, async (env) => {
       // The Schedule opens in the view last picked in this window; the Timeline, which a screen before this one picks, has no button.
-      await withChoice("schedule", "Day")(env);
-      await press(env, /Add to schedule/, "the Schedule has no Add to schedule button");
+      await withChoice("schedule", /^Day$/)(env);
+      // On a phone the add is in the "..." menu at the right of the title's row; on a wide window it is a button.
+      const direct = env.page.getByRole("button", { name: /Add to schedule/ }).first();
+      if (!((await direct.count()) > 0 && (await direct.isVisible().catch(() => false)))) {
+        await press(env, /^More .*Schedule/, "the Schedule has neither an Add to schedule button nor its menu");
+      }
+      await env.page.getByRole("menuitem", { name: /Add to schedule/ }).or(env.page.getByRole("button", { name: /Add to schedule/ })).first().click();
+      await env.page.waitForTimeout(900);
     }),
     s("Schedule", "schedule-entry", "Schedule, an entry opened", SIGNED, async (env) => {
-      await withChoice("schedule", "Week")(env);
+      await withChoice("schedule", /^Week$/)(env);
       // A clash block or an entry in the grid: the first thing in the main area that shows a time and can be pressed.
-      const entry = env.page.locator("main button, main a").filter({ hasText: /\d{1,2}:\d\d ?(AM|PM)|at once/ }).first();
-      if ((await entry.count()) === 0) throw new Unreachable("the Schedule shows no entry to open on this fixture");
-      await entry.click();
-      await env.page.waitForTimeout(900);
+      await openEntry(env);
+    }),
+    state(schedule, "Nothing today", SIGNED, (env) => scheduleWith(nothing)(env, /^Day$/)),
+    state(schedule, "All-day entries", SIGNED, (env) => scheduleWith(allDayAndOverlap)(env, /^Day$/)),
+    ...["schedule-work-week", "schedule-week"].flatMap((id) => {
+      const base = id === "schedule-week" ? { choice: /^Week$/ } : { choice: /^(Work week|Weekdays)/ };
+      const screen = s("Schedule", id, id === "schedule-week" ? "Schedule, Week" : "Schedule, Work week", SIGNED, reach("schedule"));
+      return [
+        state(screen, "Nothing this week", SIGNED, (env) => scheduleWith(nothing)(env, base.choice)),
+        state(screen, "A busy week", SIGNED, async (env) => {
+          await scheduleWith(busy)(env, base.choice);
+          // The grid opens on the clash; the forty meetings are in the working day, so the picture is taken there.
+          await env.page.getByRole("button", { name: /^Meeting 1\b/ }).first().scrollIntoViewIfNeeded().catch(() => undefined);
+          await env.page.waitForTimeout(300);
+        }),
+        state(screen, "All-day entries and overlaps", SIGNED, async (env) => {
+          await scheduleWith(allDayAndOverlap)(env, base.choice);
+          await env.page.getByRole("button", { name: /^Planning/ }).first().scrollIntoViewIfNeeded().catch(() => undefined);
+          await env.page.waitForTimeout(300);
+        }),
+      ];
+    }),
+    state(s("Schedule", "schedule-month", "Schedule, Month", SIGNED, reach("schedule")), "A busy month", SIGNED, (env) => scheduleWith(busyMonth)(env, /^Month$/)),
+    state(s("Schedule", "schedule-month", "Schedule, Month", SIGNED, reach("schedule")), "An all-day entry", SIGNED, (env) => scheduleWith(allDayMonth)(env, /^Month$/)),
+    state(s("Schedule", "schedule-month", "Schedule, Month", SIGNED, reach("schedule")), "A month with nothing", SIGNED, (env) => scheduleWith(nothing)(env, /^Month$/)),
+    state(s("Schedule", "schedule-timeline", "Schedule, Timeline", SIGNED, reach("schedule")), "Many lanes", SIGNED, timelineWith(manyLanes)),
+    state(s("Schedule", "schedule-timeline", "Schedule, Timeline", SIGNED, reach("schedule")), "Many entries", SIGNED, timelineWith(manyEntries)),
+    state(s("Schedule", "schedule-timeline", "Schedule, Timeline", SIGNED, reach("schedule")), "Nothing on it", SIGNED, timelineWith(noLanes)),
+    state(s("Schedule", "schedule-entry", "Schedule, an entry opened", SIGNED, reach("schedule")), "A long title and place", SIGNED, async (env) => {
+      await scheduleWith(longEntry)(env, /^Week$/);
+      await openEntry(env, /Annual planning review/);
+    }),
+    state(s("Schedule", "schedule-entry", "Schedule, an entry opened", SIGNED, reach("schedule")), "No place", SIGNED, async (env) => {
+      await scheduleWith(noPlace)(env, /^Week$/);
+      await openEntry(env);
+    }),
+    state(s("Schedule", "schedule-add", "Schedule, Add to schedule", SIGNED, reach("schedule")), "A long title", SIGNED, async (env) => {
+      await openAddForm(env);
+      await env.page.getByRole("textbox", { name: "What", exact: true }).fill(`${LONG_TITLE}, and then the follow-up with the people who could not come`);
+      await env.page.waitForTimeout(400);
+    }),
+    state(s("Schedule", "schedule-add", "Schedule, Add to schedule", SIGNED, reach("schedule")), "The end before the start", SIGNED, async (env) => {
+      await openAddForm(env);
+      await env.page.getByRole("textbox", { name: "What", exact: true }).fill("Standup");
+      const start = env.page.getByRole("combobox", { name: /^Starts at/ });
+      await start.fill("10:00");
+      await start.press("Tab");
+      const end = env.page.getByRole("combobox", { name: /^Ends at/ });
+      await end.fill("9:00");
+      await end.press("Tab");
+      await env.page.waitForTimeout(400);
     }),
     state(schedule, "Loading", SIGNED, loading("schedule", /\/api\/(schedule|today)/)),
     state(schedule, "Couldn't load", SIGNED, couldntLoad("schedule", /\/api\/(schedule|today)/)),
@@ -505,7 +756,7 @@ function build(): Screen[] {
 }
 
 /** The screens that are an overlay on another: pictures of the window, not of the whole page. */
-const OVERLAYS = new Set(["status-popover", "user-menu", "help-menu", "more-sheet", "shortcuts", "feedback", "hand-in", "add-todo", "ask", "search-results", "settings-sign-out", "settings-add-connection", "schedule-add", "person-add", "person-edit", "organization-removed", "todo-edit-details", "files-add", "settings-ai-add"]);
+const OVERLAYS = new Set(["status-popover", "user-menu", "help-menu", "more-sheet", "shortcuts", "feedback", "hand-in", "add-todo", "ask", "search-results", "settings-sign-out", "settings-add-connection", "schedule-add", "schedule-entry", "person-add", "person-edit", "organization-removed", "todo-edit-details", "files-add", "settings-ai-add"]);
 
 export const INVENTORY: Screen[] = build().map((e) => (OVERLAYS.has(e.page) ? { ...e, window: true } : e));
 

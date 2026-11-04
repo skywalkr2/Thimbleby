@@ -24,15 +24,18 @@
 /* Days people don't work: a hatch, so it is more than a tint. A weekend is the lightest, a holiday heavier, a team's day off and
    a person's own away heavier still with an edge; the words are in the details of an item on the day. */
 .off { position: absolute; top: 0; bottom: 0; pointer-events: auto; }
-.off[data-off="weekend"] { background: repeating-linear-gradient(135deg, transparent 0 5px, var(--border) 5px 6px); }
-.off[data-off="holiday"] { background: repeating-linear-gradient(135deg, transparent 0 3px, var(--border-strong) 3px 4px); }
-.off[data-off="team"], .off[data-off="away"] { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--border-strong) 3px 4px); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.off[data-off="weekend"] { background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--border) 55%, transparent) 6px 7px); }
+.off[data-off="holiday"] { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--border-strong) 55%, transparent) 4px 5px); }
+.off[data-off="team"], .off[data-off="away"] { background: repeating-linear-gradient(45deg, transparent 0 4px, color-mix(in srgb, var(--border-strong) 60%, transparent) 4px 5px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 60%, transparent); }
 
 /* An item: a button the size of a finger, with its shape drawn inside. A bar is a button over several days with the shape at its
    start; a selected one has a ring. Color never stands alone: the shape, the icon and the words in its name tell the kind and state. */
 .mark { position: relative; z-index: 2; display: flex; align-items: center; width: 100%; height: 100%; min-width: 0; padding: 0 var(--space-1); font: inherit; color: var(--text); background: transparent; border: 0; border-radius: var(--radius-sm); cursor: pointer; }
 .mark[data-bar] { justify-content: flex-start; background: var(--surface-sunk); box-shadow: inset 0 0 0 1px var(--border-strong); }
-.mark:not([data-bar]) { justify-content: center; }
+.mark:not([data-bar]) { justify-content: flex-start; gap: var(--space-1); }
+.mark[data-flip] { flex-direction: row-reverse; }
+.pointDate { flex: none; font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pointTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); }
 .mark:hover { background: var(--surface-hover); }
 .mark:focus-visible, .row:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .mark[data-selected], .row[data-selected] { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -71,3 +74,10 @@
 .rowDay { grid-column: 3; grid-row: 1; font-size: var(--text-meta); color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rowLane { grid-column: 2 / 4; min-width: 0; overflow-wrap: anywhere; font-size: var(--text-meta); color: var(--text-muted); }
 .row .shape { grid-row: 1 / 3; }
+
+/* A calendar entry's key is the calendar colors drawn on the chart, so the key matches what it explains. */
+.keyColors { display: inline-flex; gap: var(--space-1); }
+.key[data-shape="circle"][data-color="blue"] { background: var(--cal-1); } .key[data-shape="circle"][data-color="teal"] { background: var(--cal-2); }
+.key[data-shape="circle"][data-color="green"] { background: var(--cal-3); } .key[data-shape="circle"][data-color="orange"] { background: var(--cal-4); }
+.key[data-shape="circle"][data-color="red"] { background: var(--cal-5); } .key[data-shape="circle"][data-color="pink"] { background: var(--cal-6); }
+.key[data-shape="circle"][data-color="purple"] { background: var(--cal-7); } .key[data-shape="circle"][data-color="gray"] { background: var(--cal-8); }

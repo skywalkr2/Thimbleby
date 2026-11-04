@@ -2404,6 +2404,13 @@ class ScheduleSettings(ConfigModel):
         "the grid grows to include it.",
         json_schema_extra={"choices": "times_of_day"},
     )
+    event_minutes: int = Field(
+        60,
+        ge=5,
+        le=1440,
+        description="How long, in minutes, a new entry on the calendar page lasts when only its start is given: the Add"
+        " form offers an end this long after the start.",
+    )
     month_entries: int = Field(
         3,
         ge=1,

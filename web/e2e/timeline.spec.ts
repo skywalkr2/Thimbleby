@@ -101,4 +101,22 @@ test.describe("the timeline", () => {
     });
     await expect(page.getByRole("radio", { name: "2 weeks" })).toHaveAttribute("aria-checked", "true");
   });
+
+  test("a mark on one day carries its date, and the Today label does not cover any date", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seed(page);
+    await open(page);
+    await expect(page.locator("main [data-timeline] [class*='pointDate']").first()).toBeVisible();
+    const found = await page.evaluate(() => {
+      const label = document.querySelector("main [data-timeline] [class*='todayLabel']")!.getBoundingClientRect();
+      const dates = Array.from(document.querySelectorAll("main [data-timeline] [class*='dayCell'], main [data-timeline] [class*='weekCell']"));
+      return dates.filter((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const box = range.getBoundingClientRect();
+        return box.width > 0 && box.left < label.right && box.right > label.left && box.top < label.bottom && box.bottom > label.top;
+      }).length;
+    });
+    expect(found).toBe(0);
+  });
 });

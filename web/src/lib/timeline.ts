@@ -60,12 +60,21 @@ export interface Placed<T> {
   x: number;
   w: number;
   row: number;
+  /** A thing on one day carries its title beside the mark; `flip` puts the title on the mark's left, where the right has no room. */
+  point?: boolean;
+  flip?: boolean;
 }
+
+/** Pixels a title beside a mark takes, at most. */
+export const LABEL_MAX = 172;
+const LABEL_CHAR = 6.5;
+/** The width a title takes beside a mark. */
+export const labelWidth = (title: string): number => Math.min(LABEL_MAX, Math.ceil(title.length * LABEL_CHAR) + 6);
 
 /** Puts the items of one lane on rows. A thing on one day is a button centred on its day; one over several days is a bar from
  * its first day's start to its last day's end. An item takes the first row where nothing is within its reach, so nothing
  * overlaps and a lane grows by rows only as busy as it is. */
-export function packLane<T extends { start: string; end: string }>(items: readonly T[], first: string, days: number, pitch: number): { placed: Placed<T>[]; rows: number } {
+export function packLane<T extends { start: string; end: string }>(items: readonly T[], first: string, days: number, pitch: number, titleOf?: (item: T) => string): { placed: Placed<T>[]; rows: number } {
   const total = days * pitch;
   const wanted = items.map((item) => {
     const from = Math.min(days - 1, Math.max(0, daysBetween(first, item.start)));
@@ -73,7 +82,13 @@ export function packLane<T extends { start: string; end: string }>(items: readon
     const span = (to - from + 1) * pitch;
     const w = Math.min(total, Math.max(TOUCH, span));
     const x = Math.min(total - w, Math.max(0, span >= TOUCH ? from * pitch : from * pitch + pitch / 2 - TOUCH / 2));
-    return { item, x, w };
+    if (to !== from || !titleOf) return { item, x, w } as { item: T; x: number; w: number; point?: boolean; flip?: boolean };
+    // A mark on one day with its title beside it: the title goes on the right, or on the left when the right runs out.
+    const dot = Math.min(total - TOUCH, Math.max(0, from * pitch + pitch / 2 - TOUCH / 2));
+    const occupied = TOUCH + labelWidth(titleOf(item));
+    const flip = dot + occupied > total;
+    const left = flip ? Math.max(0, dot + TOUCH - occupied) : dot;
+    return { item, x: left, w: flip ? dot + TOUCH - left : occupied, point: true, flip };
   });
   wanted.sort((a, b) => a.x - b.x || b.w - a.w);
   const ends: number[] = [];

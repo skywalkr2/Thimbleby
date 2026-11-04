@@ -76,6 +76,7 @@ export function page(first: string, days: number, content: Content = WEEK, over:
     grid_starts: "07:00",
     grid_ends: "19:00",
     month_entries: 3,
+    event_minutes: 60,
     ...over,
   };
 }

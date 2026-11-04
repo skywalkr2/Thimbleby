@@ -1027,6 +1027,44 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 328. The Schedule at the gate: the grid in its own frame, titles on the Timeline, a mark on a clash day (2026-11-03; batch g3)
+
+| Where | Before | Now |
+|---|---|---|
+| Day, Work week and Week grids (7.7) | The page held twenty-four hours; the clash or the first entry could sit a thousand pixels down | The hours scroll inside a labelled frame that fits the window, with the day headings fixed on top; it opens on the first clash, else now, else the first entry |
+| Hour labels (7.7) | "10:00 AM" filled the gutter to the card's edge | "10 AM", with room at the edge |
+| The clash line (7.7) | Plain text under the title | A button that goes to the first clash |
+| Month (7.7) | A chip led with its time, so a title was cut to a few letters; a clash day was not marked | The title comes first and the time after it; a day with a clash has a mark and words for a screen reader |
+| Timeline (7.7) | Unlabeled marks, a seven-entry key, an instruction line | Each one-day mark carries its title; the key lists only what is on the screen; the instruction is for a screen reader |
+| Entry details (7.7) | "Open" with no object; a Back button beside the close button | "Open the event"; the close button is the one way out |
+| Add to schedule (7.7) | Silent about which calendar | A line says it goes on the app's own calendar |
+
+| Timeline (7.7) | A daily repeat was a mark for each day; the same to-do on consecutive days likewise | Runs of the same thing on consecutive days are one band over those days (engine/timeline.py) |
+| Loading (7.12) | A list skeleton under every view | The grids load as hour rows under a heading for each day; the Month and the phone's list as rows |
+| Calendar names (7.7) | The account's address in full in each name | The part before the "@" when all the addresses share a domain |
+| Phone Month (7.7) | A day opened Day view | A day is chosen and its entries are listed under the month, with "Open this day" |
+| Add to schedule (7.7) | Ends at showed an example time | Ends at follows Starts at by `ui.schedule.event_minutes` and says "No end time" when empty |
+| Entry pane (7.7) | Beside the time grid at 1440, squeezing its day headings | Covers its edge below 820px of room |
+| A calendar that needs signing in (7.7) | Its entries looked like the others | They have a dotted edge and say they are not up to date |
+
+- **New config key `ui.schedule.event_minutes` (60; 45 and 30 in the demo workspaces); the schedule answer carries it.** New wording: schedule.grid.region, schedule.month.clash, meeting.calendar_note; removed: schedule.pane.back.
+
+Third pass (batch g3b):
+
+| Where | Before | Now |
+|---|---|---|
+| Controls above the grid (7.7) | Four rows: the moves and range, the views, the calendars, then the grid's own heading with the date again | Two rows; the calendars are one line in the second row that scrolls inside itself and fades at an edge with more out of sight; a single day's column says "Today" or the weekday |
+| Header while loading (7.7, 7.12) | The page's buttons appeared when the days arrived | Add to schedule (or the phone's menu) is there from the first paint |
+| Subtitle (7.7) | The clash line, on grids only | The clash line and the meeting count in one line ("1 clash, on Tuesday · 2 meetings") on the grids and the Month |
+| All-day row (7.7) | Always drawn, 28px when empty; identical entries listed one by one | Not drawn when no shown day has an all-day entry; identical ones of a day are one with "×3" |
+| Hours (7.7) | The configured hours grown to the entries, no way to see the rest | "Show all hours" draws midnight to midnight, "Show fewer hours" goes back |
+| Today's column at night (7.7) | A tint a point lighter than its neighbors | A stronger tint |
+| Month (7.7) | A weekday left-aligned over centered numbers; title cut to one line; the time kept in a narrow cell; today the brand color; dots 8px | The weekday centered over the number's box, one edge for every number; titles take two lines; the time stays for a screen reader only below 56rem; today is ink; a day is a 24px target, 44px when narrow, with 10px dots and a 24px count |
+| Timeline (7.7) | A mark carried its title only; days-off bands heavy | The date comes before the title; the bands are lighter |
+| Entry pane on a phone (7.7) | A small Open beside its note | Open takes the width and a finger's height; a blank place is no Where row |
+| Add to schedule (7.7) | The end error was a loose line | The error belongs to the end field (marked invalid, described by the error) |
+
+- New wording: schedule.meetings, schedule.hours.all, schedule.hours.fewer, schedule.times, schedule.times_sr. No new config key.
 ## 327. Shared rows, filter bars, tables, toasts, unknown addresses and the shell (2026-11-03; gate fix batch G1)
 
 | Where | Before | Now |

@@ -173,7 +173,36 @@ def _items(store: Any, cfg: Any, now: datetime, first: date, last: date) -> list
         if first <= day <= last:
             owners = [{"person": p.data["owner"]}] if p.data.get("owner") else []
             found.append((p.id, Item("target", p.id, str(p.data.get("name") or ""), day, day, owners=owners)))
-    return found
+    return _folded(found)
+
+
+def _folded(found: list[tuple[str | None, Item]]) -> list[tuple[str | None, Item]]:
+    """Runs of the same thing on consecutive days become one band over those days: a daily repeat (one calendar entry
+    on each day) or identical to-dos with a day (a due date repeated each day). What differs in title, project, kind or
+    state stays apart, and a thing already over several days is left as it is."""
+    foldable = ("entry", "todo", "promise")
+
+    def key(pair: tuple[str | None, Item]) -> tuple[Any, ...]:
+        project, i = pair
+        return (project, i.kind, i.id if i.kind == "entry" else "", i.title, i.state)
+
+    kept: list[tuple[str | None, Item]] = [p for p in found if p[1].kind not in foldable or p[1].start != p[1].end]
+    singles = sorted(
+        (p for p in found if p[1].kind in foldable and p[1].start == p[1].end), key=lambda p: (str(key(p)), p[1].start)
+    )
+    band: tuple[str | None, Item] | None = None
+    for pair in singles:
+        project, i = pair
+        if band is not None and key(band) == key(pair) and i.start <= band[1].end + timedelta(days=1):
+            if i.start > band[1].end:
+                band[1].end = i.start
+            continue
+        if band is not None:
+            kept.append(band)
+        band = (project, Item(i.kind, i.id, i.title, i.start, i.end, i.state, i.owners, i.entry, i.detail))
+    if band is not None:
+        kept.append(band)
+    return kept
 
 
 def _workspace_off(cfg: Any, first: date, last: date) -> list[OffDay]:

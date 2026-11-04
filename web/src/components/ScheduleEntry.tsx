@@ -17,6 +17,8 @@ export type T = ReturnType<typeof useWords>["t"];
 export interface Calendars {
   name: (id: string) => string | undefined;
   color: (id: string) => string | undefined;
+  /** Whether a calendar can't be read until the person signs in again, so what it shows is from its last read. */
+  stale?: (id: string) => boolean;
   /** The calendars the person reads, each with its name and mark, for the legend; left out where there is no legend. */
   list?: Array<{ id: string; name: string; color: string | null }>;
 }
@@ -101,6 +103,8 @@ export function EntryButton(props: {
   clash?: boolean;
   /** The block is too short for a second line of its own: the line runs on after the title. */
   short?: boolean;
+  /** How many identical entries this one stands for, when more than one. */
+  count?: number;
   selected: boolean;
   onOpen: (entry: Entry, date: string | null) => void;
   t: T;
@@ -109,6 +113,7 @@ export function EntryButton(props: {
   const status = deliveryStatusWord(entry, t);
   const when = props.time ? shortWhen(entry, t) : "";
   const color = !entry.own && entry.kind !== "due" ? props.calendars.color(entry.source) : undefined;
+  const stale = !entry.own && entry.kind !== "due" && !!props.calendars.stale?.(entry.source);
   const line = props.block && !props.clash ? blockLine(entry, props.calendars, t) : "";
   return (
     <button
@@ -120,11 +125,20 @@ export function EntryButton(props: {
       data-source={entry.own ? "own" : entry.source}
       data-selected={props.selected ? "" : undefined}
       data-short={props.short ? "" : undefined}
+      data-stale={stale ? "" : undefined}
       onClick={() => props.onOpen(entry, props.date)}
     >
       {color && (!props.block || props.clash) && <span className={styles.mark} data-color={color} aria-hidden="true" />}
       {when && <span className={styles.when}>{when}</span>}
       <span className={entry.cancelled ? `${styles.name} ${styles.struck}` : styles.name}>{entryTitle(entry, t)}</span>
+      {props.count && props.count > 1 && (
+        <>
+          <span className={styles.times} aria-hidden="true">
+            {t("schedule.times", { n: props.count })}
+          </span>
+          <span className="sr">, {t("schedule.times_sr", { n: props.count })}</span>
+        </>
+      )}
       {entry.cancelled && <Pill tone="warn">{t("today.agenda.called_off")}</Pill>}
       {status && <Pill tone={entry.delivery?.status === "arrived" ? "ok" : "neutral"}>{status}</Pill>}
       {line && (
@@ -132,7 +146,10 @@ export function EntryButton(props: {
           {line}
         </span>
       )}
-      <span className="sr">, {fromWords(entry, props.calendars, t)}</span>
+      <span className="sr">
+        , {fromWords(entry, props.calendars, t)}
+        {stale ? `. ${t("schedule.entry.stale")}` : ""}
+      </span>
     </button>
   );
 }

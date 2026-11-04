@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { addDays, dayOfMonth, monthDayLong, monthDayYear, weekday } from "../lib/dates";
+import { addDays, dayOfMonth, monthDay, monthDayLong, monthDayYear, weekday } from "../lib/dates";
 import { entry, item, lane, timelineRoutes, TODAY } from "../lib/schedule-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
 import { Schedule } from "./Schedule";
@@ -49,6 +49,12 @@ async function open(lanes = LANES, over = {}, extra = {}) {
 const names = () => screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? "");
 
 describe("the Timeline", () => {
+  test("a mark on one day carries its date beside its title", async () => {
+    await open([lane("PRJ-1", "Harbor", [todo("Send the quote", addDays(TODAY, 2))])]);
+    const mark = screen.getByRole("button", { name: /^To-do: Send the quote/ });
+    expect(mark).toHaveTextContent(`${monthDay(addDays(TODAY, 2))}Send the quote`);
+  });
+
   test("a calendar entry has its calendar's color, as it has on every other view; the app's own entries have none", async () => {
     await open(LANES, {}, { "GET watch": () => [{ id: "cal-work", label: "Work calendar", connector: "k", connector_label: "K", enabled: true, every_minutes: 15, items: 1, failures: 0, problem: null, reads: ["calendar"], shown_color: "teal" }] });
     const harbor = screen.getByRole("list", { name: "Items on the Harbor lane" });
@@ -83,7 +89,9 @@ describe("the Timeline", () => {
     await open([lane("PRJ-1", "Harbor", [todo("First thing"), todo("Second thing"), todo("Other day", addDays(TODAY, 30))])]);
     const top = (title: string) => Number.parseInt(screen.getByRole("button", { name: new RegExp(`^To-do: ${title}\\.`) }).closest("li")!.style.top, 10);
     expect(top("First thing")).not.toBe(top("Second thing"));
-    expect(top("Other day")).toBe(top("First thing"));
+    // A day far from them shares a row with the first of them: nothing of theirs reaches it.
+    expect([top("First thing"), top("Second thing")]).toContain(top("Other day"));
+    expect(top("Other day")).toBe(Math.min(top("First thing"), top("Second thing")));
   });
 
   test("two weeks label every day, with today named in words as well as outlined", async () => {
@@ -127,9 +135,9 @@ describe("the Timeline", () => {
     const standup = screen.getByRole("button", { name: /^Calendar entry: Standup\./ });
     standup.focus();
     await user.keyboard("{Enter}");
-    expect(await screen.findByRole("link", { name: "Open" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Open the event" })).toBeInTheDocument();
     await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("link", { name: "Open" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("link", { name: "Open the event" })).toBeNull());
   });
 
   test("Enter on a to-do goes to its page", async () => {
@@ -199,5 +207,32 @@ describe("the Timeline", () => {
     await screen.findByRole("radio", { name: "Work week" });
     fireEvent.keyDown(document.body, { key: "5" });
     await screen.findByRole("group", { name: "Lanes by project" });
+  });
+});
+
+describe("a mark on one day carries its title", () => {
+  test("each one-day item shows its title beside its mark, and a bar does not", async () => {
+    await open([lane("PRJ-1", "Harbor", [todo("Send the quote", addDays(TODAY, 2)), item({ title: "Site visit", kind: "entry", id: "EVT-9", end: addDays(TODAY, 2), entry: entry({ title: "Site visit", own: true, kind: "own", snapshot: "EVT-9", source: "" }) }, addDays(TODAY, 1))])]);
+    const one = screen.getByRole("button", { name: /^To-do: Send the quote\./ });
+    expect(one).toHaveTextContent("Send the quote");
+    expect(one).not.toHaveAttribute("data-bar");
+    expect(screen.getByRole("button", { name: /^Calendar entry: Site visit\./ })).toHaveAttribute("data-bar");
+  });
+
+  test("the key lists only what is on the screen", async () => {
+    await open([lane("PRJ-1", "Harbor", [todo("Send the quote", addDays(TODAY, 2))])]);
+    const key = screen.getByRole("list", { name: "Key" });
+    expect(within(key).getByText("To-do or promise with a day")).toBeInTheDocument();
+    expect(within(key).queryByText("Overdue")).toBeNull();
+    expect(within(key).queryByText("Calendar entry")).toBeNull();
+  });
+});
+
+describe("a daily repeat is one band and the key matches the chart", () => {
+  test("an item over several days is a bar named with its days, and a calendar entry's key is its calendar's color", async () => {
+    await open([lane("PRJ-1", "Harbor", [item({ title: "Stand-up", kind: "entry", id: "EVT-3", end: addDays(TODAY, 4), entry: entry({ title: "Stand-up", snapshot: "snap-3", entry: "EVT-3", source: "cal-a" }) }, TODAY)])], {}, {});
+    const bar = screen.getByRole("button", { name: /^Calendar entry: Stand-up\. .* to .*/ });
+    expect(bar).toHaveAttribute("data-bar");
+    expect(screen.getAllByRole("button", { name: /Stand-up/ })).toHaveLength(1);
   });
 });
