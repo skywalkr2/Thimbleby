@@ -106,6 +106,11 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - [ ] G3 Schedule (G3 and G3b merged; G3c fixes what scorer D found: empty states, the Timeline, the phone Week, calendars as one control, the mockup pages to 4.6)
       - [ ] G4 Records
       - [ ] G5 Settings and Setup (with D1 and D10)
+      - *Phone at this gate (owner, 2026-11-04: "I dont care about phone issues really as this is not really intended as a 1.0 phone solution"; matches CLAUDE.md, phone polish waits for a hosted install):*
+        - The phone isn't a 1.0 target. At 390 the screens must not break: no sideways scroll, nothing unreachable, nothing cut off.
+        - Phone layout and polish aren't fixed in this round.
+        - In the gate's scoring, point 8 (Phone) is reported but doesn't hold a screen under the bar.
+        - Phone-only items, including the Week view showing five days on a phone, wait for the hosted install.
       - *G3c held by the owner (2026-11-04: "skip g3c and DO the small ones after it"):* the Schedule-to-its-mockup batch waits until after the owner's test (its lines stay open in `u3-gate/items.md`). G4d, T1 and G6 go ahead after G1d and G2c.
       - *Review point (owner, 2026-11-04: "do not do final build after T1 until we review where we are"):* after T1, nothing more starts (no G6, no end-of-round full run, no push) until the owner and the main session review where things stand.
       - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
