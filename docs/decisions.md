@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: Three choices during the gate's fix round (owner; section 337)
+
+**Decided:** the owner chose the recommended answer on three open choices that the fix batches raised.
+- **D11, the person's menu:** Theme (Day, Night, Auto) and Spacing (Comfortable, Compact) are two compact segmented
+  controls inside the menu, not five rows.
+- **D12, a project's page:** the line saying which AI account reads the project is always shown, as a quiet one-line
+  muted note.
+- **D13, a person's page:** the mockup's three unbuilt parts are built, not recorded as differences:
+  - "Draft a message", through the existing follow-up drafting;
+  - a "Files from" card;
+  - the "Everything with" and "Files" tabs.
+
+**Why:** pages with a mockup match it (the owner's finish rule), and who reads a project must always be visible.
+
+**Impact:** batch G4c. Change log: section 337.
+
 ## 2026-11-04: Projects, Files, Knowledge, Notes, Handover, Quality, Handled by account and the menus at the gate, batch G4b of the fix round
 
 **Decided:** (the gate's fix round, batch G4b; design by the main session, within D1, D4 and D7.) Project names are ink and the one primary stays burgundy; Views is a single quiet line until a first view exists; a project's page has Add a to-do as its primary and hides an empty details card. Files and Knowledge start with a drop zone or an add row. Handover says In sync, when it was last looked over and offers Check now; the check shares one lock with the background pass and never writes while the copies are held or lost. Quality: the too-early card leads with its answer, the period stays a setting (D4), only promises found and false alerts carry a next step (the other two figures have nothing to do), and the week under way ends today instead of on its Sunday. Handled for you also groups by account. The shortcuts dialog is three groups; the phone's More sheet is grouped, ends with Help and lists no shortcuts. Change log: section 331.

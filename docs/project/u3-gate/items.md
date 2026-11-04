@@ -1210,12 +1210,12 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 
 ## Found while reviewing G4a
 
-- [ ] [G4c] **The person mockup page has three parts that aren't built:** "Draft a message" (to the person, through the existing follow-up drafting), the "Files from <person>" card, and the "Everything with" and "Files" tabs. The owner's rule is that every page with a mockup matches it, so build them, or record a reasoned difference the owner accepts.
+- [ ] [G4c] **The person mockup page has three parts that aren't built** (owner, 2026-11-04, D13: build all three): "Draft a message" (to the person, through the existing follow-up drafting), the "Files from <person>" card, and the "Everything with" and "Files" tabs. The owner's rule is that every page with a mockup matches it, so build them, or record a reasoned difference the owner accepts.
 - [ ] [G1d] The shared `CheckboxGroup` panel's legend sits tight against the panel's top edge (G4a, the person form's "Where they belong").
 - [ ] [G4c] "Add email" and "Add phone" on a person's page: decide whether they become one "Add contact details" (line 452 was left with "separate fields"; that isn't an ending).
 
 ## Found while merging G4b
 
 - [ ] [END] `panes.spec.ts:220` waits for the "By person" radio on Follow-ups at phone width. G1b moved that choice into the Filter sheet, so the spec opens the sheet first.
-- [ ] [OWNER] **Theme and Spacing in the person's menu** (line 53): five rows, one "Appearance" row that opens Settings, or two compact controls inside the menu.
-- [ ] [OWNER] **The "Read by …" line on a project's page** (lines 476, 899): a quiet one-line note, a "Who reads this" disclosure, or shown only when an account outside this computer reads the project.
+- [ ] [G4c] **Theme and Spacing in the person's menu** (line 53). Owner, 2026-11-04 (D11): two compact segmented controls inside the menu, Theme (Day, Night, Auto) and Spacing (Comfortable, Compact).
+- [ ] [G4c] **The "Read by …" line on a project's page** (lines 476, 899). Owner, 2026-11-04 (D12): always shown, as a quiet one-line muted note.

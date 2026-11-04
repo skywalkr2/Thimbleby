@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 337. Three choices in the gate's fix round (2026-11-04; owner)
+
+| Where | Before | Now |
+|---|---|---|
+| The person's menu (7.1) | Theme and Spacing as five rows | Two compact segmented controls (D11), built in G4c |
+| A project's page (6.18, 7.13) | The "Read by" line was open | Always shown, as one quiet line (D12), built in G4c |
+| A person's page (7.13) | "Draft a message", "Files from" and two tabs unbuilt | Built (D13), in G4c |
+
+- **No config key, API or op change in this section;** G4c records its own.
+
 ## 331. Projects, a project's page, Files, Knowledge, Notes, Handover, Quality, Handled by account and the menus (2026-11-04; gate fix batch G4b)
 
 Batch G4b of the gate's fix round (7.12, 7.20, 5.0, 6.20). Project names are ink, Views is one quiet line until a first view exists, a project's page has Add a to-do as its one primary action and no empty details card; Files and Knowledge open on a drop zone or an add row; Handover shows In sync, when it was last looked over and Check now (`last_checked`, `folder_set`, `POST /api/sync/check`); Quality's too-early card leads with the answer at 18px, names the assistant, and two tiles carry a next step (promises found and false alerts; the other two have nothing to do) the week still under way ends today and reads "to now" (`week_end`), the measures with nothing in them are one count with Show them; Handled for you can group by account; the shortcuts list is three labeled groups, the More sheet is grouped with Help last and offers no shortcuts item. Built: `tests/test_handover_screen.py`, `tests/test_quality.py`, `tests/test_handled.py`, `web/src/components/Handover.test.tsx`, `Quality.test.tsx`, `Handled.test.tsx`, `Views.test.tsx`, `RecordPageRecords.test.tsx`, `ScheduleReview.test.tsx`, `web/src/shell/BottomBar.test.tsx`.
