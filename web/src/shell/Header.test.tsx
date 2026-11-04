@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -154,14 +155,14 @@ test("the header carries a search field named for the assistant, which is not a 
   expect(screen.queryByRole("button", { name: "Search or ask" })).toBeNull();
 });
 
-test("Hand something in is the tonal weight, never the filled one, so a screen's own primary is the only filled button; it opens the hand-in", async () => {
+test("Hand something in is the outline weight, never the filled or the tonal one, so a screen's own primary is the only filled button; it opens the hand-in", async () => {
   const user = userEvent.setup();
   const onHandIn = vi.fn();
   show({ handlers: { onHandIn } });
   const button = screen.getByRole("button", { name: "Hand something in" });
-  expect(button).toHaveAttribute("data-variant", "tonal");
-  expect(button).toHaveAttribute("data-weight", "tonal");
-  expect(document.querySelectorAll('header [data-weight="filled"]')).toHaveLength(0);
+  expect(button).toHaveAttribute("data-variant", "secondary");
+  expect(button).toHaveAttribute("data-weight", "outline");
+  expect(document.querySelectorAll('header [data-weight="filled"], header [data-weight="tonal"]')).toHaveLength(0);
   await user.click(button);
   expect(onHandIn).toHaveBeenCalledTimes(1);
 });

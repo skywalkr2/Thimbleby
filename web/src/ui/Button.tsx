@@ -1,6 +1,6 @@
 // The one button (design 7.12): a pill in three weights. Filled (`primary`) is the solid one: the likeliest next step of a
-// screen, and the only filled button in view. Tonal is the soft accent fill, for a standing action that is always there (Hand
-// something in, the phone's +) and must never compete with the screen's own primary. Plain (`quiet`) is text, for a way out or a
+// screen, and the only filled button in view. Tonal is the soft accent fill, for a standing action that is always there (the
+// phone's + for handing something in; the header's Hand something in is the outline) and must never compete with the screen's own primary. Plain (`quiet`) is text, for a way out or a
 // small extra. `secondary`, the default, is the outline: the bordered button for the other visible actions.
 // A row's actions are never solid: inside a row (ui/Row) a primary draws as an outline. `danger` is the filled weight in
 // the danger colour, for a confirm that cannot be undone, never in a row. A disabled button says why (`reason`), beside it

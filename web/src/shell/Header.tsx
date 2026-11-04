@@ -153,7 +153,7 @@ export function Header(props: {
       )}
       {!props.narrow && (
         <div className={styles.end}>
-          <Button variant="tonal" icon="plus" onClick={props.onHandIn}>
+          <Button variant="secondary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>
           <MenuButton groups={helpGroups} trigger={<IconButton icon="help" label={t("header.help")} data-feedback-button="" />} />

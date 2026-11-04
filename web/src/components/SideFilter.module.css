@@ -12,3 +12,5 @@
 .name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .count { flex: none; font-size: var(--text-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .tick { flex: none; width: 18px; height: 18px; display: inline-grid; place-items: center; }
+.inSheet { display: grid; gap: var(--space-1); }
+.sheetCaption { margin: 0; padding: 0 var(--space-2); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); font-weight: var(--weight-semibold); }

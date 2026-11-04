@@ -412,3 +412,9 @@ test("a person with a side but no part is said by the side's name, and one with 
   expect(await row("Cal Person")).toHaveTextContent("my neighbor");
   expect(await row("Dee Person")).toHaveTextContent("Printer");
 });
+
+test("while the people are read the page holds a table's head and rows, so the table does not shift the page when it arrives", () => {
+  fakeApi({ people: () => new Promise(() => undefined), "people/organizations": () => [] });
+  renderApp(<People />);
+  expect(document.querySelector('[data-skeleton="table"]')).not.toBeNull();
+});

@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: The shared parts at the gate, batch G1b of the fix round (section 334)
+
+**Decided:** (main session's brief, from the gate's cold scores; no owner choice needed.) Each fault named on many screens is fixed once in the shared part:
+- **Drawer:** the full height of the window (square at its corner, footer pinned, body scrolling); a disabled primary in it says why beside it.
+- **Header:** the status is a dot and a word with no fill; Hand something in is the outline weight (the phone's + stays tonal).
+- **Offline:** one slim line with no title ("Showing what loaded at 1:41 AM. It reconnects by itself." and Try now); the header status says "Offline" (not "Disconnected · reconnecting"); a failed card draws no Try again while offline.
+- **Segmented control and chips:** an outlined pill track with the chosen segment soft-accent filled; chips and segments at the shared height; calendar chips that do not fit are one "Calendars (n)" button.
+- **Filter sheet:** on a phone Schedule, Follow-ups and To-dos keep their filters behind one "Filter (n)" button (`ui/FilterSheet`); Follow-ups' Group by keeps its words as a caption in the sheet (D5).
+- **Empty state:** a card on the content edge with a display-face title (the display face is now also the empty state's, besides page titles).
+- **Loading:** `Skeleton shape="table"` for People, Projects and Organizations; bars a tone of the text colour; the Schedule's grid skeleton shows entry blocks; the Schedule keeps its subtitle line while loading; the side menu and search field use what the browser last knew until the sides are read (a person with nothing beside Personal when never known).
+- **Entry pane:** level with its entry, with a pointer. A Day is one column at most 56rem wide.
+
+**Why:** the cold scorers named these on most screens, each with one cause in one shared part. **Impact:** `ui/Overlay`, `ui/StatusChip`, `ui/OfflineBanner`, `ui/LoadFailed`, `ui/SegmentedControl`, `ui/FilterSheet` (new), `ui/EmptyState`, `ui/Skeleton`, `ui/ListDetail`, `ui/PageHeader`, `lib/sides`, `shell/Header`, the Schedule; wording keys `state.offline.*`, `live.offline`, `filter.*`, `meeting.add_why_*`. Change log: section 334.
 ## 2026-11-04: Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review, batch G2a of the gate's fix round (section 329)
 
 **Decided:** (the gate's fix round, batch G2a; design by the main session.)

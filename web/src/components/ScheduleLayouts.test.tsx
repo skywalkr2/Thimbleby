@@ -307,7 +307,7 @@ test("a month says its so-what too, and a day's dots are inside the day's one bu
   expect(button.querySelector("[class*='dots']")).not.toBeNull();
 });
 
-test("the calendars are one line that scrolls, and an edge fades where more is out of sight", async () => {
+test("calendars too wide for their line become one \"Calendars (2)\" button that opens the same list", async () => {
   const scroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollWidth");
   const client = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
   Object.defineProperty(HTMLElement.prototype, "scrollWidth", { configurable: true, get: () => 800 });
@@ -315,18 +315,33 @@ test("the calendars are one line that scrolls, and an edge fades where more is o
   try {
     window_({ wide: true });
     await open("week");
-    const row = await waitFor(() => {
-      const found = document.querySelector<HTMLElement>("[data-schedule-legend] ul");
-      expect(found).toHaveAttribute("data-fade", "end");
+    const legend = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>("[data-schedule-legend]");
+      expect(found).toHaveAttribute("data-collapsed");
       return found!;
     });
-    row.scrollLeft = 200;
-    row.dispatchEvent(new Event("scroll"));
-    await waitFor(() => expect(row).toHaveAttribute("data-fade", "both"));
+    const user = userEvent.setup();
+    await user.click(within(legend).getByRole("button", { name: "Calendars (2)" }));
+    const list = await screen.findByRole("list", { name: "Calendars" });
+    expect(within(list).getAllByRole("button")).toHaveLength(2);
   } finally {
     if (scroll) Object.defineProperty(HTMLElement.prototype, "scrollWidth", scroll);
     else delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollWidth;
     if (client) Object.defineProperty(HTMLElement.prototype, "clientWidth", client);
     else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth;
   }
+});
+
+test("on a phone the calendars live in one Filter sheet, so the bar is the moves and the views only", async () => {
+  const user = userEvent.setup();
+  window_({ phone: true });
+  await open("work_week");
+  expect(document.querySelector("[data-schedule-legend]")).toBeNull();
+  await user.click(await screen.findByRole("button", { name: "Filter" }));
+  const sheet = await screen.findByRole("dialog", { name: "Filter" });
+  const list = within(sheet).getByRole("list", { name: "Calendars" });
+  expect(within(list).getAllByRole("button")).toHaveLength(2);
+  await user.click(within(list).getAllByRole("button")[0]);
+  await user.click(within(sheet).getByRole("button", { name: "Close" }));
+  expect(await screen.findByRole("button", { name: "Filter (1)" })).toBeInTheDocument();
 });

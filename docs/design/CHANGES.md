@@ -1027,6 +1027,10 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 334. The shared parts at the gate: drawer, header status, offline bar, segmented control, Filter sheet, empty state, table skeleton (2026-11-04)
+
+Batch G1b of the gate's fix round (7.12, 7.13). The drawer is full height; the header's status has no fill and Hand something in is the outline weight; the offline state is one slim line with the status saying "Offline" and a failed card without a second retry; the segmented control is an outlined track with a filled choice; calendar chips become "Calendars (n)" when they do not fit; one Filter sheet holds a screen's filters on a phone; the empty state is a left-aligned card with a display-face title; tables, grids and the schedule's subtitle keep their shape while they load; the side menu and search words stay as last known until the sides are read; an entry's pane is level with it and points at it.
+
 ## 329. Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review (2026-11-04; gate fix batch G2a)
 
 | Where | Before | Now |

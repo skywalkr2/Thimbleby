@@ -1,9 +1,13 @@
-/* The offline banner: an icon, the words, and Try now; on a narrow window the button drops under the words. The warning edge and
-   tint back up the words and icon, so the state is never colour alone. */
+/* The offline bar: one slim line (an icon, the words, Try now) that fits in a single line wherever the words fit; on a narrow
+   window the words wrap and the button stays at the end. The warning edge and tint back up the words and icon, so the state is
+   never colour alone. */
 .banner {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0;
-  padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: var(--radius-md);
+  display: flex; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0;
+  padding: var(--space-1) var(--space-3); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: var(--radius-md);
   background: var(--warn-soft); color: var(--text);
+  /* The page below moves down by the bar and a small gap, not by the page's usual section gap. */
+  margin-bottom: calc(-1 * var(--space-4));
 }
 .banner svg { flex: none; color: var(--warn); }
-.text { flex: 1 1 16rem; min-width: 0; margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.text { flex: 0 1 auto; min-width: 0; margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.banner > button { flex: none; margin-left: auto; }

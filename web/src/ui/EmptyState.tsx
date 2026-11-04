@@ -1,4 +1,4 @@
-// An empty state (design 7.12): a centred block with a 40px icon, a title, one sentence at most 44 characters wide, and one
+// An empty state (design 7.12): a card on the content edge with a 40px icon, a title, one sentence at most 44 characters wide, and one
 // action. It is used on every list, page and card, so every empty place looks the same. A screen with a single sentence gives
 // `text` alone; a title is for the place that can name what it holds. Controls that need data are not shown while empty. In a
 // rail card (`inline`) it is one line with no icon.

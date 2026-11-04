@@ -72,7 +72,7 @@ export function NewEventDrawer(props: { today: string; accounts: { id: string; l
       footer={
         <>
           <Button onClick={props.onClose}>{t("action.cancel")}</Button>
-          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!ready || busy}>
+          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!ready || busy} reason={busy ? undefined : what.trim() === "" ? t("meeting.add_why_name") : account === "" ? t("calendar.new.why_account") : t("meeting.add_why_times")}>
             {t("calendar.new.go")}
           </Button>
         </>

@@ -25,16 +25,17 @@ const live = (state: "live" | "offline", extra: { retry?: () => void; at?: Date 
   reconnect: () => undefined,
 });
 
-test("the offline banner says the app can't reach its server, when it last heard, and that what is shown stays readable", () => {
+test("the offline bar is one slim line: what is shown was loaded when, that it reconnects by itself, and Try now (the header's chip says Offline)", () => {
   renderApp(
     <ConnectionProvider live={live("offline")}>
       <OfflineBanner />
     </ConnectionProvider>,
   );
   const banner = screen.getByRole("status");
-  expect(banner).toHaveTextContent("You're offline.");
-  expect(banner).toHaveTextContent("The app can't reach its server");
-  expect(banner).toHaveTextContent("stays here to read");
+  expect(banner).toHaveTextContent("Showing what loaded at");
+  expect(banner).toHaveTextContent("It reconnects by itself.");
+  expect(banner).not.toHaveTextContent("You're offline.");
+  expect(banner.querySelectorAll("p")).toHaveLength(1);
   expect(within(banner).getByRole("button", { name: "Try now" })).toBeVisible();
 });
 
@@ -47,7 +48,7 @@ test("a screen can say the offline state in its own words: setup says the answer
   const banner = screen.getByRole("status");
   expect(banner).toHaveTextContent("You're offline.");
   expect(banner).toHaveTextContent("Your answers are kept");
-  expect(banner).not.toHaveTextContent("stays here to read");
+  expect(banner).not.toHaveTextContent("Showing what loaded");
 });
 
 test("Try now asks the connection to look at once", async () => {

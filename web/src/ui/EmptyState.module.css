@@ -1,9 +1,10 @@
-/* One empty state for every list, page and card: a centred block, the 40px icon, the 16px title, one 14px sentence at most 44
-   characters wide, and the one action. */
-.empty { display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-12) var(--space-6); text-align: center; color: var(--text-muted); }
+/* One empty state for every list, page and card: a designed card that starts on the content's left edge (never centred, so it
+   lines up with the title above it), the 40px icon, the title in the display face, one 14px sentence at most 44 characters wide,
+   and the one action. A dashed edge marks the place where something will go. */
+.empty { display: grid; justify-items: start; gap: var(--space-2); padding: var(--space-8) var(--space-6); text-align: left; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); }
 .glyph { width: 40px; height: 40px; display: grid; place-items: center; margin-bottom: var(--space-2); border-radius: var(--radius-lg); background: var(--accent-soft); color: var(--accent-text); }
-.title { margin: 0; color: var(--text); font-size: var(--text-section); line-height: var(--lh-section); font-weight: var(--weight-semibold); }
+.title { margin: 0; color: var(--text); font-family: var(--font-display); font-size: var(--text-section); line-height: var(--lh-section); font-weight: var(--weight-medium); letter-spacing: -0.01em; }
 .text { margin: 0; max-width: 44ch; font-size: var(--text-sm); line-height: var(--lh-sm); }
 .empty > :global([data-variant]), .empty > :global([data-pill]) { margin-top: var(--space-2); }
-.inline { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); text-align: left; justify-items: unset; }
+.inline { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); text-align: left; justify-items: unset; border: 0; border-radius: 0; }
 .inline .text { flex: 1 1 auto; min-width: 0; max-width: none; }

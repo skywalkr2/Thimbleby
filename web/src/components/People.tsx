@@ -119,7 +119,7 @@ export function People() {
         fit={PEOPLE_FIT}
         detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} /> : null}
       >
-        <ListState query={people} failed={t("people.load_failed")}>
+        <ListState query={people} failed={t("people.load_failed")} shape="table" rows={6}>
           {() =>
             all.length === 0 ? (
               side.choice !== "all" ? (

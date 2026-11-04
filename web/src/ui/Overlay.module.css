@@ -1,9 +1,9 @@
 /* The frame of a drawer, a dialog and the sheet they become on a phone. A drawer is 480px wide (640px when wide) from the right
-   edge, as tall as its content up to the window; a dialog is 560px at most in the middle (780px when wide); below the phone width both are a sheet
+   edge, the full height of the window (head at the top, footer pinned at the bottom, the body scrolling between); a dialog is 560px at most in the middle (780px when wide); below the phone width both are a sheet
    from the bottom edge with a handle, as tall as their content up to the window. The surface is raised: a shadow by day, a
    lighter fill and an edge by night. */
 .overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: flex; }
-.overlay.drawer { justify-content: flex-end; align-items: flex-start; }
+.overlay.drawer { justify-content: flex-end; align-items: stretch; }
 .overlay.dialog { justify-content: center; align-items: center; padding: var(--space-4); }
 .overlay[data-entering] { animation: fade var(--dur-base) var(--ease-out); }
 .overlay[data-exiting] { animation: fade var(--dur-base) var(--ease-out) reverse; }
@@ -12,7 +12,7 @@
   background: var(--surface-raised); color: var(--text); border: 1px solid var(--border);
 }
 .modal.drawer {
-  width: var(--drawer-w); max-height: 100%; border-width: 0 0 1px 1px; border-bottom-left-radius: var(--radius-lg);
+  width: var(--drawer-w); height: 100%; max-height: 100%; border-width: 0 0 0 1px; border-radius: 0;
   box-shadow: var(--elev-3), var(--overlay-edge);
 }
 .modal.drawer.wide { width: min(640px, 100%); }
@@ -32,7 +32,7 @@
 .overlay.sheet, :global([data-narrow]) .overlay.drawer, :global([data-narrow]) .overlay.dialog { align-items: flex-end; justify-content: stretch; padding: 0; }
 .modal.sheet, :global([data-narrow]) .modal.drawer, :global([data-narrow]) .modal.dialog, :global([data-narrow]) .modal.drawer.wide {
   --overlay-pad-x: var(--space-4); --overlay-pad-y: var(--space-4);
-  width: 100%; max-height: min(92dvh, 100%); border-width: 1px 0 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 100%; height: auto; max-height: min(92dvh, 100%); border-width: 1px 0 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .modal.sheet { display: block; overflow-y: auto; max-height: 85dvh; box-shadow: var(--elev-3), var(--overlay-edge); padding: 0 var(--overlay-pad-x) calc(var(--overlay-pad-y) + env(safe-area-inset-bottom, 0px)); }
 :global([data-narrow]) .modal.dialog { max-height: 92dvh; }

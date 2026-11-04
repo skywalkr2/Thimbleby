@@ -3,6 +3,7 @@
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
 import styles from "./SegmentedControl.module.css";
 import { countText } from "../lib/counts";
+import { useInFilterSheet } from "./filterSheet";
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -21,7 +22,8 @@ export function SegmentedControl<T extends string>(props: {
   onChange: (value: T) => void;
   className?: string;
 }) {
-  return (
+  const inSheet = useInFilterSheet();
+  const control = (
     <ToggleButtonGroup
       aria-label={props.label}
       selectionMode="single"
@@ -46,5 +48,16 @@ export function SegmentedControl<T extends string>(props: {
         </ToggleButton>
       ))}
     </ToggleButtonGroup>
+  );
+  // In the phone's Filter sheet the control carries its name in words above it.
+  return inSheet ? (
+    <div className={styles.captioned}>
+      <p className={styles.caption} aria-hidden="true">
+        {props.label}
+      </p>
+      {control}
+    </div>
+  ) : (
+    control
   );
 }

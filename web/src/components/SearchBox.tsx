@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { plain } from "../lib/read";
-import { useSides } from "../lib/sides";
+import { useSides, useStableJustMe } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Icon, type IconName } from "../ui/Icon";
 import { Pill } from "../ui/Pill";
@@ -28,7 +28,8 @@ export function SearchBox(props: {
   className?: string;
 }) {
   const { t } = useWords();
-  const { justMe, personal } = useSides();
+  const { personal } = useSides();
+  const justMe = useStableJustMe();
   const base = useId();
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);

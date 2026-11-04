@@ -6,6 +6,8 @@
 .back svg { transform: rotate(180deg); }
 .range { margin: 0; flex: 1 1 12rem; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .views { max-width: 100%; }
+/* The Timeline's range is its own group, set off from the views by a rule, so two switches never read as one row of tabs. */
+.rangeSwitch { display: inline-flex; align-items: center; padding-left: var(--space-4); border-left: 1px solid var(--border-strong); }
 /* On a phone the view switch is one row of segments that share the width, never a second line with one view on it. */
 @media (max-width: 639.98px) {
   .views { display: flex; width: 100%; flex-wrap: nowrap; box-sizing: border-box; }
@@ -14,9 +16,12 @@
   .navRow .nav { flex: none; flex-wrap: nowrap; }
   .range { flex: 1 1 0; min-width: 0; font-size: var(--text-md); line-height: var(--lh-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row { column-gap: var(--space-2); }
+  .rangeSwitch { display: flex; width: 100%; padding-left: 0; border-left: 0; }
   .views > button { flex: 1 1 auto; min-width: 0; padding-inline: var(--space-2); }
 }
 .frame { min-width: 0; touch-action: pan-y; }
+/* One day is one column: it keeps a readable width instead of stretching across a wide window. */
+.frame[data-view="day"] { max-width: 56rem; }
 /* The meeting count stays whole, so it moves to the next line as one piece rather than splitting from its number. */
 .meetings { white-space: nowrap; }
 .none { margin: var(--space-3) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
@@ -79,15 +84,18 @@
 
 /* The calendar toggles: the word, then one pill for each calendar with a tick box in its color; hidden is said in words as well as by
    the empty box. On a phone the pills scroll inside their own row, never cut and never moving the page. */
-.toggles { display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex: 1 1 14rem; min-width: 0; }
+.toggles { position: relative; display: flex; align-items: center; gap: var(--space-2) var(--space-3); flex: 1 1 100%; order: 2; min-width: 0; }
 .togglesLabel { flex: none; font-size: var(--text-meta); line-height: var(--lh-meta); color: var(--text-muted); }
 /* The calendars are one line that scrolls inside its own row, so the controls above stay in two rows at any width; an edge fades
    where more is out of sight. */
 .legend { list-style: none; margin: calc(-1 * var(--space-1)) 0; padding: var(--space-1) 0; display: flex; flex-wrap: nowrap; gap: var(--space-2); flex: 1 1 auto; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
 .legend::-webkit-scrollbar { display: none; }
-.legend[data-fade="end"] { mask-image: linear-gradient(to right, var(--text) calc(100% - 2rem), transparent); }
-.legend[data-fade="start"] { mask-image: linear-gradient(to right, transparent, var(--text) 2rem); }
-.legend[data-fade="both"] { mask-image: linear-gradient(to right, transparent, var(--text) 2rem, var(--text) calc(100% - 2rem), transparent); }
+/* Too wide for its line, the row is not shown: it stays laid out, out of sight, so it can be measured, and one button opens the list. */
+.toggles[data-collapsed] .legend { position: absolute; left: 0; top: 0; width: max-content; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.legendRows { list-style: none; margin: 0; padding: var(--space-1) 0; display: grid; gap: var(--space-2); justify-items: start; }
+.legendRows > li { min-width: 0; max-width: 100%; }
+.legendSheet { display: grid; gap: var(--space-1); }
+.sheetCaption { margin: 0; padding: 0 var(--space-2); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); font-weight: var(--weight-semibold); }
 .legend > li { flex: none; min-width: 0; max-width: 80%; scroll-snap-align: start; }
 .legendButton {
   display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; min-height: var(--btn-h-sm); padding: 0 var(--space-3); font: inherit; font-size: var(--text-meta);
@@ -227,12 +235,13 @@
 .calendarName { display: inline-flex; align-items: center; min-width: 0; }
 
 /* The grid's loading shape: a heading row, then hour rows, a column for each day. */
-.gridSkeleton { display: grid; grid-template-columns: 4rem repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: 4.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
-.gridSkeleton > .skeletonHead { grid-row: 1; height: 2.5rem; margin: var(--space-2); border-radius: var(--radius-sm); background: var(--surface-sunk); animation: skeleton-pulse 1.4s ease-in-out infinite; }
-.skeletonHour { grid-column: 1; align-self: start; width: 2rem; height: 0.75rem; margin: var(--space-2); border-radius: var(--radius-sm); background: var(--surface-sunk); }
+.gridSkeleton { --skeleton: color-mix(in srgb, var(--text) 13%, var(--surface)); display: grid; grid-template-columns: 4rem repeat(var(--cols, 1), minmax(0, 1fr)); grid-auto-rows: 4.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.gridSkeleton > .skeletonHead { grid-row: 1; height: 2.5rem; margin: var(--space-2); border-radius: var(--radius-sm); background: var(--skeleton); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+.skeletonHour { grid-column: 1; align-self: start; width: 2rem; height: 0.75rem; margin: var(--space-2); border-radius: var(--radius-sm); background: var(--skeleton); }
 .skeletonCell { border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
+.skeletonEvent { z-index: 1; margin: var(--space-1) var(--space-2); border-radius: var(--radius-md); border-left: 3px solid var(--border-strong); background: var(--skeleton); animation: skeleton-pulse 1.4s ease-in-out infinite; }
 @keyframes skeleton-pulse { 50% { opacity: 0.55; } }
-@media (prefers-reduced-motion: reduce) { .gridSkeleton > .skeletonHead { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .gridSkeleton > .skeletonHead, .skeletonEvent { animation: none; } }
 
 /* On a phone the chosen day's entries under the month. */
 .dayList { display: grid; gap: var(--space-2); margin-top: var(--space-3); min-width: 0; }

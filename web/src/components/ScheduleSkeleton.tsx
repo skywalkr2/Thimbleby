@@ -16,6 +16,10 @@ export function ScheduleSkeleton(props: { view: "grid" | "month" | "list"; days:
       {Array.from({ length: 8 }, (_, h) => (
         <span key={h} className={styles.skeletonHour} aria-hidden="true" style={{ gridRow: h + 2 }} />
       ))}
+      {/* A block or two in each day, so the page shows where its entries will go. */}
+      {Array.from({ length: columns }, (_, n) => (
+        <span key={`e${n}`} className={styles.skeletonEvent} aria-hidden="true" style={{ gridColumn: n + 2, gridRow: `${(n * 3) % 6 + 2} / span ${(n % 2) + 1}` }} />
+      ))}
       {Array.from({ length: columns * 8 }, (_, n) => (
         <span key={`c${n}`} className={styles.skeletonCell} aria-hidden="true" style={{ gridRow: Math.floor(n / columns) + 2, gridColumn: (n % columns) + 2 }} />
       ))}

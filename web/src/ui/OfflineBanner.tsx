@@ -1,6 +1,6 @@
-// The offline banner (design 7.12, "States"): the app cannot reach its server. What was loaded stays readable and nothing is
-// lost; the banner says so, when the screen was last in touch, and that the app reconnects by itself, with Try now to look at
-// once. It is one banner on every screen, drawn from the one connection state, and it goes away when the connection is back.
+// The offline bar (design 7.12, "States"): the app cannot reach its server. It is one slim line on every screen, drawn from the one
+// connection state: what is shown was loaded at a time and stays readable, the app reconnects by itself, and Try now looks at
+// once. The header's status chip says "Offline", so the bar does not say it again. It goes away when the connection is back.
 import { useConnection } from "../lib/connection";
 import { time } from "../lib/dates";
 import { useWords } from "../lib/wording";
@@ -17,10 +17,10 @@ export function OfflineBanner(props: { words?: { title: string; text: string } }
     <div className={styles.banner} role="status" data-offline-banner="">
       <Icon name="alert" size={16} />
       <p className={styles.text}>
-        <strong>{t(props.words?.title ?? "state.offline.title")}</strong>{" "}
+        {props.words && <strong>{t(props.words.title)} </strong>}
         {props.words ? t(props.words.text) : connection.since ? t("state.offline.text", { time: time(connection.since) }) : t("state.offline.text_unknown")}
       </p>
-      <Button size="sm" icon="refresh" onClick={connection.retry}>
+      <Button size="sm" variant="quiet" icon="refresh" onClick={connection.retry}>
         {t("state.offline.try")}
       </Button>
     </div>

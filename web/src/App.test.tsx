@@ -284,7 +284,7 @@ test("the browser going offline shows in the status chip at once", async () => {
   act(() => {
     window.dispatchEvent(new Event("offline"));
   });
-  expect(await screen.findByRole("button", { name: "App status: Disconnected · reconnecting" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "App status: Offline" })).toBeInTheDocument();
   // The query library pauses its requests while the browser says it is offline; leave it as found.
   act(() => {
     window.dispatchEvent(new Event("online"));

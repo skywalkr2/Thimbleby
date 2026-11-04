@@ -531,6 +531,17 @@ test("a schedule that can't be loaded says so and tries again", async () => {
   await screen.findByRole("heading", { level: 3, name: /^Today · / });
 });
 
+test("the Add drawer's disabled Add says why beside it", async () => {
+  const user = userEvent.setup();
+  await open(() => ({}));
+  await user.click(screen.getByRole("button", { name: /Add to schedule/ }));
+  const drawer = await screen.findByRole("dialog");
+  const add = within(drawer).getByRole("button", { name: "Add" });
+  expect(add).toBeDisabled();
+  expect(drawer).toHaveTextContent("Say what it is first.");
+  expect(add).toHaveAccessibleDescription("Say what it is first.");
+});
+
 describe("an empty calendar and the details pane", () => {
   test("a week or month with nothing on it says so and points to Add to schedule", async () => {
     const user = userEvent.setup();

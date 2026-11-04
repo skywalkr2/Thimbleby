@@ -88,7 +88,7 @@ test.describe("States of the list screens", () => {
       await context.setOffline(true);
       const banner = page.locator("[data-offline-banner]");
       await expect(banner).toBeVisible(LOADED);
-      await expect(banner).toContainText("The app can't reach its server");
+      await expect(banner).toContainText("Showing what loaded");
       await expect(banner.getByRole("button", { name: "Try now" })).toBeVisible();
       // What was loaded is still on the screen.
       await expect(screen.ready(page)).toBeVisible();

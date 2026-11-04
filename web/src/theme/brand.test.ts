@@ -173,7 +173,9 @@ test("the faces: Inter for the interface and Fraunces for titles, both bundled a
   expect(read("ui/Wizard.module.css")).toMatch(/\.stepTitle \{[^}]*font-family: var\(--font-display\)/);
   expect(read("ui/Wizard.module.css")).toMatch(/\.title h1 \{[^}]*font-family: var\(--font-display\)/);
   expect(read("shell/Header.module.css")).toMatch(/\.name \{[^}]*font-family: var\(--font-display\)/);
-  for (const file of ["styles.css", "ui/Row.module.css", "ui/Button.module.css", "ui/EmptyState.module.css", "components/Today.module.css", "components/Quality.module.css"]) {
+  // An empty state is a card whose title is in the display face (the one place besides the page title).
+  expect(read("ui/EmptyState.module.css")).toMatch(/\.title \{[^}]*font-family: var\(--font-display\)/);
+  for (const file of ["styles.css", "ui/Row.module.css", "ui/Button.module.css", "components/Today.module.css", "components/Quality.module.css"]) {
     expect(read(file), file).not.toMatch(/font-display/);
   }
 });

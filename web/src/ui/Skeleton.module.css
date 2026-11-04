@@ -1,17 +1,25 @@
-/* Loading shows the shape of what's coming: rows in the row anatomy, shimmering unless motion is reduced. */
-.region { display: block; }
+/* Loading shows the shape of what's coming: rows in the row anatomy, shimmering unless motion is reduced. The bars are a tone of the
+   text colour over the card, so they show against it by day and by night (the well tone is too near the card). */
+.region { --skeleton: color-mix(in srgb, var(--text) 13%, var(--surface)); display: block; }
 .row { display: grid; grid-template-columns: var(--row-lead-w) minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
 .row:last-child { border-bottom: 0; }
-.bar, .btn, .lead { display: block; border-radius: var(--radius-sm); background: var(--border); } /* a tone that shows on the surface in day and in night; the well tone is too near it */
+.bar, .btn, .lead { display: block; border-radius: var(--radius-sm); background: var(--skeleton); }
 .lead { width: 18px; height: 18px; justify-self: center; border-radius: var(--radius-full); }
 .lines { display: grid; gap: var(--space-2); }
 .bar { height: 14px; width: 60%; }
 .short { width: 36%; height: 12px; }
 .field { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
 .bar.label { width: 28%; height: 12px; }
-.input { display: block; height: var(--btn-h); max-width: 28rem; border-radius: var(--radius-btn); background: var(--border); }
+.input { display: block; height: var(--btn-h); max-width: 28rem; border-radius: var(--radius-btn); background: var(--skeleton); }
 .btn { width: 84px; height: var(--btn-h-sm); border-radius: var(--radius-btn); }
+/* A table: a head of short bars and rows of cells, in the table's own card and column grid. */
+.table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.tr { display: grid; grid-template-columns: 2fr repeat(calc(var(--cols, 4) - 1), minmax(0, 1fr)); column-gap: var(--space-4); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.tr:last-child { border-bottom: 0; }
+.thead { min-height: 0; padding-block: var(--space-2); background: var(--surface-sunk); }
+.th { width: 45%; height: 10px; }
+.td { height: 14px; }
 @media (prefers-reduced-motion: no-preference) {
   .bar, .btn, .lead, .input { animation: shimmer 1.4s ease-in-out infinite; }
-  @keyframes shimmer { 50% { background: var(--surface-sunk); } }
+  @keyframes shimmer { 50% { opacity: 0.55; } }
 }

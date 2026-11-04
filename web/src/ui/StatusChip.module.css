@@ -1,14 +1,15 @@
-/* When the row is tight the detail wraps onto a second line, which the chip's height hides: the dot and the word always
+/* The status is a dot and a word with no fill of its own (never a pill that competes with the buttons beside it); the hover and
+   the focus ring show it can be pressed. When the row is tight the detail wraps onto a second line, which the chip's height hides: the dot and the word always
    show whole, and the chip never draws past its own box. */
 .chip {
   display: inline-flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 0 var(--space-2);
   flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden;
   height: var(--btn-h-sm); padding: 0 var(--space-3);
-  border: 0; border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text-muted);
+  border: 0; border-radius: var(--radius-full); background: transparent; color: var(--text-muted);
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--btn-h-sm); font-weight: var(--weight-regular);
   white-space: nowrap; cursor: pointer;
 }
-.chip:hover { background: var(--border); }
+.chip:hover { background: var(--surface-sunk); }
 .head { display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 1 auto; min-width: 0; }
 .dot { width: 8px; height: 8px; flex: none; border-radius: var(--radius-full); background: var(--ok); }
 .warn .dot { background: var(--warn); }

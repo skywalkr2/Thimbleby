@@ -178,6 +178,12 @@ export function OpenItems() {
             ]}
           />
         }
+        filterSheet={{
+          shown:
+            (!items.isPending && !items.isError && actions.length + questions.length > 0 && filterBarShown(tabHolds, filters.person !== "" || filters.state !== "" || filters.project !== "")) ||
+            (side.offered && filterBarShown(tabHolds, side.picked !== "all")),
+          active: [filters.person, filters.state, filters.project].filter(Boolean).length + (side.picked !== "all" ? 1 : 0),
+        }}
         filters={
           <>
             {!items.isPending && !items.isError && actions.length + questions.length > 0 && filterBarShown(tabHolds, filters.person !== "" || filters.state !== "" || filters.project !== "") && (

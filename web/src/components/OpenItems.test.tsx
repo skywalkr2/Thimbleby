@@ -292,6 +292,25 @@ test("project, person and state each narrow the list, from lists to pick from", 
   expect((await rows())[0]).toHaveTextContent("Tidy the style sheet");
 });
 
+test("on a phone the person, state and project filters are one Filter sheet, with how many are on", async () => {
+  const user = userEvent.setup();
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    api();
+    renderApp(<OpenItems />);
+    await rows();
+    expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    const sheet = await screen.findByRole("dialog", { name: "Filter" });
+    await user.selectOptions(within(sheet).getByRole("combobox", { name: "Project" }), "PRJ-2");
+    await user.click(within(sheet).getByRole("button", { name: "Close" }));
+    expect(await screen.findByRole("button", { name: "Filter (1)" })).toBeVisible();
+    expect(await rows()).toHaveLength(1);
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
+});
+
 test("the state list for questions is its own", async () => {
   const user = userEvent.setup();
   api();

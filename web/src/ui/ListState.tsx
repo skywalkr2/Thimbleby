@@ -26,6 +26,8 @@ export function ListState<T>(props: {
   rows?: number;
   /** What the loaded list starts with (a group's label), drawn above the skeleton so the page does not shift when it loads. */
   above?: ReactNode;
+  /** The skeleton's shape: rows (the default), or a table's head and rows for a screen whose list is a table. */
+  shape?: "rows" | "table";
   /** What to show once there is data. */
   children: (data: T) => ReactNode;
 }) {
@@ -46,7 +48,7 @@ export function ListState<T>(props: {
   return (
     <>
       {props.above}
-      <Skeleton rows={props.rows} />
+      <Skeleton rows={props.rows} shape={props.shape} />
     </>
   );
 }

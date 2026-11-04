@@ -142,6 +142,10 @@ test("the buttons and the menu are separate parts of the row, so a phone can put
   expect(phone).toMatch(/\.row \{[^}]*grid-template-columns: var\(--row-lead-w\) minmax\(0, 1fr\)/);
   expect(phone).toMatch(/\.menu \{[^}]*position: absolute; top: var\(--space-1\); right: var\(--space-1\)/);
   expect(phone).toMatch(/\.buttons \{[^}]*grid-column: 2/);
+  // A list with no marks has one column on a phone, so the buttons (inside the row's actions part, never a direct child of the row) go
+  // under the words in column 1 and the title keeps the row's width.
+  expect(css).toMatch(/> \.row > \.actions > \.buttons \{ grid-column: 1; \}/);
+  expect(css).not.toMatch(/> \.row > \.buttons \{/);
 });
 
 test("a button among a row's actions says it is drawn as an outline when it is a primary, and the row's other buttons keep their own weight", () => {

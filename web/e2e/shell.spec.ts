@@ -649,6 +649,8 @@ test.describe("screen use and the shell", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);
     const links = page.getByRole("navigation", { name: "Views" }).getByRole("link");
+    // The side menu keeps what it last knew of the sides until they are read, so the work views that depend on them come in with the read.
+    await expect(links.filter({ hasText: "Stages" })).toBeVisible();
     const entries = await links.evaluateAll((els) => els.map((a) => ({ href: a.getAttribute("href")!, name: (a.textContent ?? "").trim() })));
     expect(entries.length).toBeGreaterThanOrEqual(10);
     const expected: Record<string, string> = {
@@ -766,12 +768,11 @@ test.describe("screen use and the shell", () => {
     const chip = page.getByRole("button", { name: /^App status: / });
     // Connected: the chip says a state (live, or something to do), not that it is still connecting.
     await expect(chip).not.toContainText("Connecting");
-    await expect(chip).not.toContainText("Disconnected");
+    await expect(chip).not.toContainText("Offline");
     await context.setOffline(true);
-    await expect(chip).toContainText("Disconnected", { timeout: 5000 });
-    await expect(chip).toContainText("reconnecting");
+    await expect(chip).toContainText("Offline", { timeout: 5000 });
     await context.setOffline(false);
-    await expect(chip).not.toContainText("Disconnected", { timeout: 20_000 });
+    await expect(chip).not.toContainText("Offline", { timeout: 20_000 });
   });
 
   test("on a phone the bottom bar is visible, the page does not scroll sideways, and the More sheet lists the views", async ({ page }) => {

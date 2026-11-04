@@ -3,7 +3,9 @@
 // and the filter chips (FilterChip); nothing else is put on the title's row. The title is the page's one h1, and the place
 // the cursor lands when the screen opens, so it can take a ref and be focused.
 import type { ReactNode, Ref } from "react";
+import { useIsNarrow } from "../lib/media";
 import { BackLink } from "./BackLink";
+import { FilterSheet } from "./FilterSheet";
 import styles from "./PageHeader.module.css";
 
 export interface PageHeaderProps {
@@ -35,11 +37,18 @@ export interface PageHeaderProps {
   tabs?: ReactNode;
   /** The filter chips, at the right of the tab strip. */
   filters?: ReactNode;
+  /** On a phone the filters are one "Filter" button and sheet (FilterSheet) instead of a row: `shown` says whether any filter is
+   * on offer now, and `active` how many are on. Left out, the filters stay as they are on every width. */
+  filterSheet?: { shown: boolean; active?: number };
+  /** Keeps the line under the title's place while what it says is still being read, so the page below does not move when it arrives. */
+  reserveSubtitle?: boolean;
   className?: string;
 }
 
 export function PageHeader(props: PageHeaderProps) {
-  const { title, id, level = 1, headingRef, focusable, crumb, back, kind, subtitle, primary, actions, more, actionsLabel, tabs, filters, className } = props;
+  const { title, id, level = 1, headingRef, focusable, crumb, back, kind, subtitle, primary, actions, more, actionsLabel, tabs, filters, filterSheet, reserveSubtitle, className } = props;
+  const phone = useIsNarrow();
+  const drawn = filterSheet && phone ? (filterSheet.shown ? <FilterSheet active={filterSheet.active}>{filters}</FilterSheet> : null) : filters;
   const Heading = `h${level}` as const;
   return (
     <div className={[styles.header, className ?? ""].filter(Boolean).join(" ")} data-page-header="">
@@ -52,7 +61,7 @@ export function PageHeader(props: PageHeaderProps) {
             </Heading>
             {kind}
           </div>
-          {subtitle && <p className={styles.sub}>{subtitle}</p>}
+          {subtitle ? <p className={styles.sub}>{subtitle}</p> : reserveSubtitle ? <p className={styles.sub} aria-hidden="true" data-sub-reserved="">&nbsp;</p> : null}
         </div>
         {more && <div className={styles.more}>{more}</div>}
         {(actions || primary) && (
@@ -62,10 +71,10 @@ export function PageHeader(props: PageHeaderProps) {
           </div>
         )}
       </div>
-      {(tabs || filters) && (
+      {(tabs || drawn) && (
         <div className={[styles.bar, tabs ? styles.ruled : ""].filter(Boolean).join(" ")}>
           {tabs && <div className={styles.tabs} data-header-tabs="">{tabs}</div>}
-          {filters && <div className={styles.chips} data-header-filters="">{filters}</div>}
+          {drawn && <div className={styles.chips} data-header-filters="">{drawn}</div>}
         </div>
       )}
     </div>

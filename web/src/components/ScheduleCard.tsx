@@ -298,7 +298,7 @@ export function MeetingDrawer(props: { today: string; minutes?: number; onClose:
       footer={
         <>
           <Button onClick={props.onClose}>{t("action.cancel")}</Button>
-          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_ || endBad || stopsBad}>
+          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_ || endBad || stopsBad} reason={!what.trim() ? t("meeting.add_why_name") : !day_ ? t("meeting.add_why_day") : t("meeting.add_why_times")}>
             {t("meeting.add")}
           </Button>
         </>

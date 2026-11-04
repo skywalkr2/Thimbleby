@@ -1,4 +1,4 @@
-// A drawer from the right, 480px wide and as tall as its content (design 7.12, 7.13): for forms and hand-in, so the list stays visible. It has a sticky footer for
+// A drawer from the right, 480px wide and the full height of the window (design 7.12, 7.13): for forms and hand-in, so the list stays visible. It has a sticky footer for
 // its actions, closes with Esc, and when it holds unsaved text (`dirty`) Esc or a click outside asks first instead of
 // losing it. Focus returns to what opened it when it closes.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";

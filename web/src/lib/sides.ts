@@ -3,7 +3,7 @@
 // rows carry the side their project is on; one on neither side (the app's own lines, a row filed under no project) shows
 // under every choice.
 import { useQuery } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { api, type S } from "./api";
 import { useWords } from "./wording";
 
@@ -217,4 +217,33 @@ export function useSides(): SidesState {
   };
   const alone = projects.isSuccess && personal !== null && (projects.data ?? []).every((p) => top(p.id) === personal);
   return { justMe: state.isSuccess && sides.length === 0 && alone, personal, sides };
+}
+
+const NAV_KEY = "cockpit:nav:just-me";
+
+function rememberedJustMe(): boolean {
+  try {
+    return window.localStorage.getItem(NAV_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** `justMe` for the shell's own parts (the side menu's groups and the search field's words), which are drawn before anything is
+ * read and while a read fails: until the sides are known it is what this browser last knew (work beside Personal when it has never known), so the menu
+ * and the field do not change when a screen's data arrives or fails to. */
+export function useStableJustMe(): boolean {
+  const { justMe } = useSides();
+  const business = useQuery({ queryKey: ["business"], queryFn: api.business });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const settled = business.isSuccess && projects.isSuccess;
+  useEffect(() => {
+    if (!settled) return;
+    try {
+      window.localStorage.setItem(NAV_KEY, justMe ? "1" : "0");
+    } catch {
+      // Storage can be blocked; the menu is then drawn from what is read.
+    }
+  }, [settled, justMe]);
+  return settled ? justMe : rememberedJustMe();
 }

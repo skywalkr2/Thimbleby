@@ -90,7 +90,7 @@ test("offline shows as soon as the connection is lost, and Refresh asks for ever
   const user = userEvent.setup();
   const refresh = vi.fn();
   show(statusFixture(), {}, { live: "offline", refresh });
-  expect(await chip()).toHaveTextContent("Disconnected · reconnecting");
+  expect(await chip()).toHaveTextContent("Offline");
   const dialog = await open(user);
   await user.click(within(dialog).getByRole("button", { name: "Refresh" }));
   expect(refresh).toHaveBeenCalledTimes(1);

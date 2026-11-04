@@ -9,7 +9,7 @@ import { panelView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { useTodayCount } from "../lib/today";
 import { useWaiting } from "../lib/waiting";
-import { useSides } from "../lib/sides";
+import { useSides, useStableJustMe } from "../lib/sides";
 import { distinctMarks } from "./status";
 import { recordView } from "../lib/views";
 import type { IconName } from "../ui/Icon";
@@ -47,7 +47,8 @@ export function useNav(): NavModel {
   const panels = useQuery({ queryKey: ["panels"], queryFn: () => api.panels() });
   const waiting = useWaiting();
   const needsYou = useTodayCount();
-  const { justMe, personal, sides } = useSides();
+  const { personal, sides } = useSides();
+  const justMe = useStableJustMe();
   const plugin = (tab: string, group: "work" | "records"): NavEntry[] =>
     (panels.data ?? [])
       .filter((p: S["PanelView"]) => p.tab === tab)

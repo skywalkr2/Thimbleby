@@ -8,3 +8,7 @@
 .head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-12); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); border-bottom: 1px solid var(--border); }
 .title { margin: 0; flex: 1; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .body { padding: var(--space-4); min-width: 0; display: grid; gap: var(--space-3); }
+/* A pane anchored to what it describes starts level with it and points at it from its left edge. */
+.pane[data-anchored] { margin-top: var(--anchor-top, 0px); }
+.overlay .pane[data-anchored] { margin-top: 0; top: var(--anchor-top, 0px); }
+.pane[data-anchored]::before { content: ""; position: absolute; left: -7px; top: var(--space-4); width: 12px; height: 12px; transform: rotate(45deg); background: var(--surface); border-left: 1px solid var(--pane-border); border-bottom: 1px solid var(--pane-border); }

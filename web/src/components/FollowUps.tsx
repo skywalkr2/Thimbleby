@@ -250,6 +250,10 @@ export function FollowUps(props: { compact?: boolean }) {
             <TabStrip label={t("followups.filter")} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ value: f, label: t(`followups.filter.${f}`) }))} />
           ) : undefined
         }
+        filterSheet={{
+          shown: (!compact && !justMe && !nothingAnywhere && filterBarShown(tabHolds, group === "project")) || (side.offered && filterBarShown(tabHolds, side.picked !== "all")),
+          active: (group === "project" ? 1 : 0) + (side.picked !== "all" ? 1 : 0),
+        }}
         filters={
           <>
             {!compact && !justMe && !nothingAnywhere && filterBarShown(tabHolds, group === "project") && (

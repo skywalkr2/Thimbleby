@@ -165,7 +165,7 @@ export function Projects() {
         fit={PROJECTS_FIT}
         detail={selected ? <ProjectDetail project={selected} parent={selected.parent ? byId.get(selected.parent) : undefined} total={total} onEdit={() => setEditing(selected)} /> : null}
       >
-        <ListState query={projects} failed={t("projects.load_failed")}>
+        <ListState query={projects} failed={t("projects.load_failed")} shape="table" rows={6}>
           {() =>
             all.length === 0 ? (
               <EmptyState text={t("setup.no_projects")} action={{ label: t("setup.add_project"), onClick: () => setAdding(true) }} />

@@ -3,8 +3,12 @@
 .app {
   --nav-w: var(--sidebar-w);
   display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); grid-template-rows: var(--header-h) minmax(0, 1fr);
-  min-height: 100dvh; background: var(--canvas); color: var(--text);
+  min-height: 100dvh; color: var(--text);
+  /* The side menu's column is painted the whole height of the page (the menu itself stays in view as the page scrolls), so no flat strip
+     of another tone shows under it. */
+  background: linear-gradient(to right, var(--surface) calc(var(--nav-w) - 1px), var(--border) calc(var(--nav-w) - 1px), var(--border) var(--nav-w), var(--canvas) var(--nav-w));
 }
+:global([data-narrow]) .app { background: var(--canvas); }
 .rail { --nav-w: var(--sidebar-w-collapsed); }
 :global([data-narrow]) .app { grid-template-columns: minmax(0, 1fr); }
 .main {

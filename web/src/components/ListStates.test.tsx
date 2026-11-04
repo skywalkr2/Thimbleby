@@ -113,8 +113,12 @@ describe.each(SCREENS)("$name", (entry) => {
   test("offline, what could not be loaded says the app can't reach its server, under the one offline banner", async () => {
     serve(entry, () => new Refuse(500, ""));
     renderApp(offline(entry.view()));
-    expect(await failedWith(entry.failed)).toHaveTextContent("The app can't reach its server.");
-    expect(screen.getByText("You're offline.")).toBeVisible();
+    const failed = await failedWith(entry.failed);
+    expect(failed).toHaveTextContent("The app can't reach its server.");
+    // One cause, one way to retry: the offline bar holds Try now, and the failed card adds no second button.
+    expect(within(failed).queryByRole("button")).toBeNull();
+    expect(screen.getByText(/Showing what loaded/)).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /Try now|Try again/ })).toHaveLength(1);
   });
 });
 
@@ -122,7 +126,7 @@ test("offline, a list that was loaded stays readable under the banner", async ()
   fakeApi({ ...base, "GET notes": () => [{ id: "N-1", text: "Order paper", project: null, project_name: null, side_name: null, created_at: "2026-10-20T09:00:00Z", trust: "trusted" }] });
   renderApp(offline(<Notes />));
   expect(await screen.findByRole("link", { name: "Order paper" })).toBeVisible();
-  expect(screen.getByText("You're offline.")).toBeVisible();
+  expect(screen.getByText(/Showing what loaded/)).toBeVisible();
 });
 
 // ---- filtered to nothing ------------------------------------------------------------------------------------------------

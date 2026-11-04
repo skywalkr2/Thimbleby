@@ -15,6 +15,7 @@ import { useTabCounts, type WaitingScreen } from "../lib/waiting";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { useInFilterSheet } from "../ui/filterSheet";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Sheet } from "../ui/Sheet";
 import styles from "./SideFilter.module.css";
@@ -37,6 +38,7 @@ export function SideFilter(props: {
   const narrow = useIsNarrow();
   const tight = useMediaQuery(SIDE_STRIP_BELOW);
   const [open, setOpen] = useState(false);
+  const inSheet = useInFilterSheet();
   if (!filter.offered) return null;
   if (props.holds !== undefined && !filterBarShown(props.holds, filter.picked !== "all")) return null;
   const option = (value: SideChoice, label: string) => {
@@ -48,6 +50,38 @@ export function SideFilter(props: {
     // A side's views follow it, each named with its side so a choice is never a bare name.
     ...filter.options.flatMap((o) => [option(o.id, o.name), ...filter.views.filter((v) => v.side === o.id).map((v) => option(v.id, t("sides.filter.view", { side: v.sideName, view: v.name })))]),
   ];
+  if (inSheet) {
+    // Inside the Filter sheet the choices are the list itself, so one tap picks and nothing opens over the sheet.
+    return (
+      <div className={styles.inSheet}>
+        <p className={styles.sheetCaption}>{t("sides.filter.label")}</p>
+        <ul className={styles.options} aria-label={t("sides.filter.label")}>
+          {options.map((o) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                className={styles.option}
+                aria-current={o.value === filter.picked ? "true" : undefined}
+                aria-label={o.count ? `${o.label}, ${o.countWords ?? o.count}` : undefined}
+                data-side-option={o.value}
+                onClick={() => filter.set(o.value)}
+              >
+                <span className={styles.name}>{o.label}</span>
+                {o.count ? (
+                  <span className={styles.count} aria-hidden="true">
+                    {countText(o.count)}
+                  </span>
+                ) : null}
+                <span className={styles.tick} aria-hidden="true">
+                  {o.value === filter.picked && <Icon name="check" size={18} />}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   if (narrow || tight) {
     const current = options.find((o) => o.value === filter.picked) ?? options[0];
     return (

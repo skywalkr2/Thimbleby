@@ -16,7 +16,9 @@ import { onSide, useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
+import { FilterSheet } from "../ui/FilterSheet";
 import { ListDetail } from "../ui/ListDetail";
+import { LoadFailed } from "../ui/LoadFailed";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { ScheduleSkeleton } from "./ScheduleSkeleton";
@@ -37,7 +39,6 @@ import { NeedsADate } from "./NeedsADate";
 import { Timeline, type Lane } from "./ScheduleTimeline";
 import styles from "./Schedule.module.css";
 
-import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 /** How far, in pixels, a touch must travel sideways to count as a swipe. */
 const SWIPE_MIN = 60;
@@ -283,6 +284,7 @@ export function Schedule() {
         id="schedule-title"
         title={t("schedule.title")}
         subtitle={subtitle}
+        reserveSubtitle={!isTimeline && page.isPending}
         // Today draws no Schedule card on a day with nothing in it, so adding a meeting is also offered here. On a phone the tab bar's
         // plus hands something in rather than adding to the schedule, so both adds are in the menu at the right of the title's row.
         primary={!phone ? <AddMeeting today={today} minutes={means.event_minutes} primary /> : undefined}
@@ -303,15 +305,32 @@ export function Schedule() {
         </div>
         <div className={styles.row} data-bar-row="">
           <SegmentedControl<CalendarView> label={t("schedule.views")} value={view} onChange={choose} options={options} className={styles.views} />
-          {isTimeline && <SegmentedControl<TimelineRange> label={t("schedule.timeline.range")} value={tl?.range ?? rangeName} onChange={chooseRange} options={rangeOptions} className={styles.views} />}
-          <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
-          <SideFilter />
+          {isTimeline && (
+            <span className={styles.rangeSwitch} data-range-switch="">
+              <SegmentedControl<TimelineRange> label={t("schedule.timeline.range")} value={tl?.range ?? rangeName} onChange={chooseRange} options={rangeOptions} className={styles.views} />
+            </span>
+          )}
+          {phone ? (
+            // On a phone the calendars and the side filter are one Filter sheet, so the bar stays the moves and the views.
+            (calendars.list ?? []).length > 1 || filter.offered ? (
+              <FilterSheet active={(hidden.size > 0 && (calendars.list ?? []).length > 1 ? 1 : 0) + (filter.picked !== "all" ? 1 : 0)}>
+                <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
+                <SideFilter />
+              </FilterSheet>
+            ) : null
+          ) : (
+            <>
+              <ScheduleLegend calendars={calendars} hidden={hidden} onToggle={toggleCalendar} />
+              <SideFilter />
+            </>
+          )}
         </div>
         <ScheduleStale />
       </div>
       <ListDetail
         title={found ? entryTitle(found.entry, t) : ""}
         onClose={close}
+        anchorTo={picked ? `[data-entry-key="${picked.replace(/["\\]/g, "\\$&")}"]` : undefined}
         fit={isTimeline ? TIMELINE_FIT : view === "month" ? PANE_FIT : GRID_FIT}
         detail={found ? <EntryDetails entry={found.entry} date={found.date} calendars={calendars} sideName={sideName} /> : null}
       >
@@ -319,7 +338,7 @@ export function Schedule() {
           timeline.isPending ? (
             <Skeleton />
           ) : timeline.isError || !tl ? (
-            <EmptyState icon="alert" text={t("schedule.timeline.load_failed")} action={{ label: t("action.try_again"), onClick: () => void timeline.refetch() }} />
+            <LoadFailed message={t("schedule.timeline.load_failed")} onRetry={() => void timeline.refetch()} />
           ) : (
             <div className={styles.frame} data-swipe="" data-view={view} data-shown={shown} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
               <Timeline data={tl} lanes={lanes} sideName={(side) => filter.options.find((o) => o.id === side)?.name} selected={picked} onOpen={open} colorOf={(e) => calendars.color(e.source)} />
@@ -328,7 +347,7 @@ export function Schedule() {
         ) : page.isPending ? (
           <ScheduleSkeleton view={view === "month" ? "month" : asList ? "list" : "grid"} days={range.shown.length} />
         ) : page.isError || !data ? (
-          <EmptyState icon="alert" text={t("schedule.load_failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
+          <LoadFailed message={t("schedule.load_failed")} onRetry={() => void page.refetch()} />
         ) : (
           <div className={styles.frame} data-swipe="" data-view={view} data-shown={shown} onTouchStart={swipeStart} onTouchEnd={swipeEnd} onTouchCancel={() => (touch.current = null)}>
             {view === "month" ? (

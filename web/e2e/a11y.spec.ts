@@ -156,7 +156,7 @@ for (const scheme of ["light", "dark"] as const) {
 }
 
 // Day mode (UI/UX review F7) and one filled button a screen (VP04): a row's action is tonal or an outline, so a screen's own content draws
-// at most one filled button (its primary); "Hand something in" is in the header and is the tonal weight, so it never competes with it.
+// at most one filled button (its primary); "Hand something in" is in the header and is the outline weight, so it never competes with it.
 // A filled button is one drawn in the accent color itself. The shared-rules spec counts them over the whole viewport on six screens.
 /** How many buttons in the main content are filled with the accent color. */
 async function filledButtons(page: Page): Promise<number> {
@@ -172,7 +172,7 @@ async function filledButtons(page: Page): Promise<number> {
 
 test.describe("day mode", () => {
   for (const screen of [{ name: "Today", hash: "today" }, { name: "To-dos and questions", hash: "work/open" }, { name: "Follow-ups", hash: "work/followups" }]) {
-    test(`${screen.name} draws at most one filled button in light at 1440px, and the header's Hand something in is the tonal weight`, async ({ page }) => {
+    test(`${screen.name} draws at most one filled button in light at 1440px, and the header's Hand something in is the outline weight`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: "light" });
       await signIn(page);
       await page.setViewportSize({ width: 1440, height: HEIGHT });
@@ -180,7 +180,7 @@ test.describe("day mode", () => {
       expect(await filledButtons(page)).toBeLessThanOrEqual(1);
       if (screen.hash === "today") {
         const handIn = page.getByRole("banner").getByRole("button", { name: "Hand something in" });
-        await expect(handIn).toHaveAttribute("data-weight", "tonal");
+        await expect(handIn).toHaveAttribute("data-weight", "outline");
         await expect(handIn).not.toHaveCSS("background-color", await page.evaluate(() => {
           const probe = document.createElement("span");
           probe.style.backgroundColor = "var(--accent)";

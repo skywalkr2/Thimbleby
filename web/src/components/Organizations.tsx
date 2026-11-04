@@ -51,7 +51,7 @@ export function Organizations() {
         </Button>
       </div>
       {orgs.isPending ? (
-        <Skeleton />
+        <Skeleton shape="table" rows={3} />
       ) : rows.length === 0 ? (
         <EmptyState text={t("setup.no_organizations")} />
       ) : (

@@ -96,7 +96,7 @@
 :where(:not(:has(> .row > .lead:not(:empty)))) > .row > .actions { grid-column: 2; }
 @media (max-width: 639.98px) {
   :where(:not(:has(> .row > .lead:not(:empty)))) > .row { grid-template-columns: minmax(0, 1fr); }
-  :where(:not(:has(> .row > .lead:not(:empty)))) > .row > .buttons { grid-column: 1; }
+  :where(:not(:has(> .row > .lead:not(:empty)))) > .row > .actions > .buttons { grid-column: 1; }
 }
 :global([data-narrow]) :where(:not(:has(> .row > .lead:not(:empty)))) > .row { grid-template-columns: minmax(0, 1fr); }
-:global([data-narrow]) :where(:not(:has(> .row > .lead:not(:empty)))) > .row > .buttons { grid-column: 1; }
+:global([data-narrow]) :where(:not(:has(> .row > .lead:not(:empty)))) > .row > .actions > .buttons { grid-column: 1; }

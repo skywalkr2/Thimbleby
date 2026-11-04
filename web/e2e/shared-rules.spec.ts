@@ -1,6 +1,6 @@
 // The shared rules of the visual standard (the reviewer's VP01 to VP06), held by one browser test over six screens at a desktop and a
 // phone width, so a screen that drifts back to its own version fails here:
-//   VP04  at most one filled button in view: the screen's own primary (the header's Hand something in and the phone's + are tonal);
+//   VP04  at most one filled button in view: the screen's own primary (the header's Hand something in is the outline and the phone's + is tonal);
 //   VP02  every row has the 24px leading slot (none at all, in a list where no row has a mark), and every row title in a list starts at the same x, within 1px;
 //   VP03  every group label is uppercase, 11px, and carries its count in a pill;
 //   VP06  no element shows a focus ring before a key is pressed, and a key then shows it on the row it moves to;
