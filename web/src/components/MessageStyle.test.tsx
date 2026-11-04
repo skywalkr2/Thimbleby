@@ -14,12 +14,10 @@ const items = () => [
 ];
 const posted = (calls: ReturnType<typeof fakeSettings>) => calls.filter((c) => c.route === "POST settings").map((c) => c.body as { changes: Record<string, unknown>; reset: string[] });
 
-test("how messages start and end is a closed section with a preview for each line, with a made-up name and no marker", async () => {
+test("how messages start and end is a drawer with a preview for each line, with a made-up name and no marker, and nothing drawn while it is shut", async () => {
   fakeSettings(items());
-  renderApp(<MessageStyle />);
-  const fold = (await screen.findByText("How your messages start and end")).closest("details") as HTMLDetailsElement;
-  expect(fold.open).toBe(false);
-  await userEvent.setup().click(screen.getByText("How your messages start and end"));
+  renderApp(<MessageStyle open onClose={() => undefined} />);
+  expect(await screen.findByRole("dialog", { name: "How your messages start and end" })).toBeInTheDocument();
   expect(screen.getByText("Hi Ada,")).toBeVisible();
   expect(screen.getByText("Thanks!")).toBeVisible();
   expect(screen.queryByDisplayValue("Hi {first_name},")).toBeNull();
@@ -27,9 +25,9 @@ test("how messages start and end is a closed section with a preview for each lin
 
 test("the pattern is behind Edit the pattern, the preview follows what is typed, and the line is saved when the cursor leaves", async () => {
   const calls = fakeSettings(items());
-  renderApp(<MessageStyle />);
+  renderApp(<MessageStyle open onClose={() => undefined} />);
   const user = userEvent.setup();
-  await user.click(await screen.findByText("How your messages start and end"));
+  await screen.findByRole("dialog", { name: "How your messages start and end" });
   await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages start/ }));
   const box = screen.getByLabelText("How your messages start, the pattern");
   expect(box).toHaveFocus();
@@ -47,9 +45,9 @@ test("the pattern is behind Edit the pattern, the preview follows what is typed,
 
 test("the first name goes in with a button, at the cursor, so nobody types the marker", async () => {
   const calls = fakeSettings(items());
-  renderApp(<MessageStyle />);
+  renderApp(<MessageStyle open onClose={() => undefined} />);
   const user = userEvent.setup();
-  await user.click(await screen.findByText("How your messages start and end"));
+  await screen.findByRole("dialog", { name: "How your messages start and end" });
   await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages start/ }));
   const box = screen.getByLabelText("How your messages start, the pattern");
   await user.clear(box);
@@ -67,9 +65,9 @@ test("the first name goes in with a button, at the cursor, so nobody types the m
 
 test("Reset puts a line back to the default in one save, with its read-back", async () => {
   const calls = fakeSettings([settingItem(GREETING, { value: "Dear {first_name},", default: "Hi {first_name}," }), settingItem(CLOSING, { value: "Thanks!", default: "Thanks!" })]);
-  renderApp(<MessageStyle />);
+  renderApp(<MessageStyle open onClose={() => undefined} />);
   const user = userEvent.setup();
-  await user.click(await screen.findByText("How your messages start and end"));
+  await screen.findByRole("dialog", { name: "How your messages start and end" });
   await user.click(screen.getByRole("button", { name: "Reset: How your messages start" }));
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0].reset).toEqual([GREETING]);
@@ -78,8 +76,8 @@ test("Reset puts a line back to the default in one save, with its read-back", as
 
 test("nothing is shown until the settings are there", async () => {
   fakeSettings([]);
-  renderApp(<MessageStyle />);
-  await waitFor(() => expect(screen.queryByText("How your messages start and end")).toBeNull());
+  renderApp(<MessageStyle open onClose={() => undefined} />);
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
 test("the closing changed while the greeting is still being saved is saved too, after it, not refused as out of date", async () => {
@@ -102,9 +100,9 @@ test("the closing changed while the greeting is still being saved is saved too, 
       return { changes: Object.entries(sent.changes ?? {}).map(([key, after]) => ({ key, before: "", after, was_default: false, is_default: false })), fingerprint: `fp-${n}`, needs_restart: false };
     },
   });
-  renderApp(<MessageStyle />);
+  renderApp(<MessageStyle open onClose={() => undefined} />);
   const user = userEvent.setup();
-  await user.click(await screen.findByText("How your messages start and end"));
+  await screen.findByRole("dialog", { name: "How your messages start and end" });
   await user.click(screen.getByRole("button", { name: /Edit the pattern.*How your messages start/ }));
   const greeting = screen.getByLabelText("How your messages start, the pattern");
   await user.clear(greeting);
@@ -123,9 +121,8 @@ test("the closing changed while the greeting is still being saved is saved too, 
 
 test("the style says what someone only on the own life is opened with while it is the shipped one, and that it opens everyone once it is the person's own", async () => {
   fakeSettings(items());
-  renderApp(<MessageStyle />);
-  const user = userEvent.setup();
-  await user.click(await screen.findByText("How your messages start and end"));
+  renderApp(<MessageStyle open onClose={() => undefined} />);
+  await screen.findByRole("dialog", { name: "How your messages start and end" });
   // Shipped: the friend's opening, from the wording sheet, is the example, so the style shown is never contradicted by a draft.
   const note = document.querySelector("[data-own-life-opening]")!;
   expect(note).toHaveTextContent("People who are only on your own life get an opening that fits how they relate to you, such as: Hey Ada, hope you're doing well.");
@@ -134,8 +131,8 @@ test("the style says what someone only on the own life is opened with while it i
 
 test("once the person set their own opening, the note says it opens every message", async () => {
   fakeSettings([settingItem(GREETING, { value: "Dear {first_name},", default: "Hi {first_name}," }), settingItem(CLOSING, { value: "Thanks!", default: "Thanks!" })]);
-  renderApp(<MessageStyle />);
-  await userEvent.setup().click(await screen.findByText("How your messages start and end"));
+  renderApp(<MessageStyle open onClose={() => undefined} />);
+  await screen.findByRole("dialog", { name: "How your messages start and end" });
   const note = document.querySelector("[data-own-life-opening]")!;
   expect(note).toHaveTextContent("This line opens every message you copy, to people at work and to people on your own life alike.");
   expect(note).not.toHaveTextContent("such as");

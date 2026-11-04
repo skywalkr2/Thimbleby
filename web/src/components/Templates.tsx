@@ -67,8 +67,7 @@ export function OwnKindsOffer() {
   const id = useId();
   return (
     <div className="own-kinds">
-      <p className="hint">{t("own_kinds.context")}</p>
-      <button type="button" className="link-button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+      <button type="button" className="link-button" title={t("own_kinds.context")} aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
         {t("own_kinds.offer")}
       </button>
       <div id={id} hidden={!open}>

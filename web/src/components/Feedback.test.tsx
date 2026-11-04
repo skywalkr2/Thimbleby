@@ -35,7 +35,13 @@ test("the dialog is named, the box has the focus and nothing can go until someth
   expect(screen.getByRole("dialog", { name: "Write feedback" })).toBeInTheDocument();
   expect(message()).toHaveFocus();
   expect(message()).toBeRequired();
-  expect(message()).toHaveAccessibleDescription(/Nothing is sent from here\. Copy your message.*Write a few words to continue\./);
+  expect(message()).toHaveAccessibleDescription("Nothing is sent from here: you send it from your own email app.");
+  // The reason the buttons wait sits with the buttons, not above the box.
+  expect(screen.getByRole("button", { name: "Open in your email app" })).toHaveAccessibleDescription("Write a few words to continue.");
+  // Said once, beside the primary, not again beside Copy.
+  expect(screen.getAllByText("Write a few words to continue.")).toHaveLength(1);
+  // The preview, the subject and the counts are under one closed "What will be sent".
+  expect(screen.getByText("What will be sent").closest("details")).not.toHaveAttribute("open");
   expect(screen.getByRole("button", { name: "Copy" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Open in your email app" })).toBeDisabled();
   expect(screen.queryByRole("link", { name: "Open in your email app" })).toBeNull();

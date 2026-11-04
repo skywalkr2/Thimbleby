@@ -179,8 +179,8 @@ test("the app's own entries follow the calendar events on each day they cover, m
   expect(rowOf("Planning")).toBeLessThan(rowOf("Standup"));
   expect(rowOf("Standup")).toBeLessThan(rowOf("Delivery window"));
   expect(today[rowOf("Delivery window")]).toHaveTextContent("All day");
-  expect(today.filter((row) => row.textContent?.includes("From your notes"))).toHaveLength(1);
-  expect(today[rowOf("Delivery window")]).toHaveTextContent("From your notes");
+  expect(today.filter((row) => row.textContent?.includes("Added by you"))).toHaveLength(1);
+  expect(today[rowOf("Delivery window")]).toHaveTextContent("Added by you");
   expect(within(col).getByText("Tomorrow: 1 entry")).toBeInTheDocument();
 });
 

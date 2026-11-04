@@ -108,8 +108,13 @@ async function handIn(page: Page, c: Case) {
   if (c.pasted) {
     // Someone else's words are the default; what to do with them is the optional line.
     await box.fill(c.pasted);
-    if (c.note) await page.getByLabel(/Anything to do with it/).fill(c.note);
+    if (c.note) {
+      // What to do with it is one of the choices under Options.
+      await page.getByText("Options", { exact: true }).click();
+      await page.getByLabel(/Anything to do with it/).fill(c.note);
+    }
   } else {
+    await page.getByText("Options", { exact: true }).click();
     await page.getByRole("radio", { name: "Mine" }).click();
     await box.fill(c.note ?? "");
   }
@@ -678,14 +683,14 @@ test.describe.serial("acceptance scenario", () => {
     const sections = await getJson<Section[]>(page, "api/followups");
     const target = sections.find((s) => !s.is_pm && s.to_send > 0);
     expect(target, "someone with something to send").toBeTruthy();
-    // The person's line chooses them: their message is in the detail pane beside the list, and the line's Copy copies it.
+    // The person's line chooses them: their message is in the detail pane beside the list, and the Copy in the detail copies it.
     const card = page.getByRole("listitem", { name: target!.name, exact: true });
     await card.getByRole("button", { name: new RegExp(`^${target!.name}`) }).click();
     const box = page.locator("aside[data-detail-pane]").getByRole("textbox").first();
     // Text that would be markup if it were not escaped, added to what is shown.
     const hostile = `<img src=x onerror="window.pasted=1"> & "quoted"`;
     await box.fill(`${target!.message}\n\n${hostile}`);
-    await card.getByRole("button", { name: "Copy message" }).first().click();
+    await page.locator("aside[data-detail-pane]").getByRole("button", { name: "Copy message" }).first().click();
     await expect(page.getByText("Copied", { exact: true })).toBeVisible();
 
     // A document (a rich text area) takes the formatting, and nothing in it is markup the person did not write.
@@ -748,11 +753,10 @@ test.describe.serial("acceptance scenario", () => {
     for (const id of everyone) {
       const s = sections.find((x) => x.person === id)!;
       const { questions, actions } = toSend(s);
-      const card = sectionOf(s.name);
       // The message is on screen before it is copied (design 7.5): choosing the person shows it; Copy puts it on the clipboard.
       await choose(s.name);
       await expect(pane.getByRole("textbox").first()).toBeVisible();
-      await card.getByRole("button", { name: "Copy message" }).first().click();
+      await page.locator("aside[data-detail-pane]").getByRole("button", { name: "Copy message" }).first().click();
       // Copy writes the formatted and the plain message together, which finishes a moment after the click.
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(s.message);
       const copied = await page.evaluate(() => navigator.clipboard.readText());
@@ -772,8 +776,8 @@ test.describe.serial("acceptance scenario", () => {
         expect(copied.indexOf(questions[questions.length - 1].title)).toBeLessThan(copied.indexOf(actions[0].text));
       }
       expect(copied).not.toMatch(/ACT-|Q-\d|PER-|PRJ-/);
-      // Copying changes nothing yet: the card still offers Mark sent, and the server still has all of it to send.
-      await expect(card.getByRole("button", { name: "Mark sent" }).first()).toBeVisible();
+      // Copying changes nothing yet: the detail still offers Mark sent, and the server still has all of it to send.
+      await expect(page.locator("aside[data-detail-pane]").getByRole("button", { name: "Mark sent" }).first()).toBeVisible();
       expect(toSend((await getJson<Section[]>(page, "api/followups")).find((x) => x.person === id)!)).toEqual({ questions, actions });
       // Reload so the next card starts from Copy again.
       await page.reload();
@@ -786,10 +790,10 @@ test.describe.serial("acceptance scenario", () => {
     const card = sectionOf(target.name);
     await choose(target.name);
     await expect(pane.getByRole("textbox").first()).toBeVisible();
-    await card.getByRole("button", { name: "Copy message" }).first().click();
+    await page.locator("aside[data-detail-pane]").getByRole("button", { name: "Copy message" }).first().click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(target.message);
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
-    await card.getByRole("button", { name: "Mark sent" }).first().click();
+    await page.locator("aside[data-detail-pane]").getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toBeVisible();
     // The toast is at the bottom center of the window, never over the navigation.
     const toast = (await page.getByRole("region", { name: "Notifications" }).boundingBox())!;
@@ -814,7 +818,7 @@ test.describe.serial("acceptance scenario", () => {
     // Undo puts it all back to send.
     await page.getByRole("button", { name: "To send", exact: true }).click();
     await page.getByRole("button", { name: "Undo" }).last().click();
-    await expect(card.getByRole("button", { name: "Copy message" }).first()).toBeVisible();
+    await expect(card).toBeVisible();
     expect(toSend((await getJson<Section[]>(page, "api/followups")).find((x) => x.person === target.person)!)).toEqual({ questions, actions });
   });
 
@@ -1344,7 +1348,9 @@ test.describe.serial("acceptance scenario", () => {
     await expect(dialog).toHaveCount(0);
     await expect(opener).toBeFocused();
     const row = page.locator("[data-row-list] > li", { hasText: "short-note.txt" });
-    await expect(row).toContainText("Attachment");
+    // The list holds one kind of file, so no row says its kind.
+    await expect(row).not.toContainText("Attachment");
+    await expect(row).toContainText("Added");
     await expect(row.getByRole("link", { name: /^Open short-note\.txt/ })).toHaveAttribute("target", "_blank");
     await checkAccessibility(page);
 

@@ -354,13 +354,18 @@ test.describe("no browser date, time or list controls (VC05)", () => {
     // To-dos: Add a to-do.
     await load(page, "work/open");
     await heading(page, "To-dos and questions");
-    await page.getByRole("button", { name: "Add a to-do" }).first().click();
+    await page.getByRole("textbox", { name: "Add a to-do" }).fill("Call the printer");
+    await page.getByRole("button", { name: "More options" }).click();
     const todo = page.getByRole("dialog", { name: "Add a to-do" });
     await expect(todo).toBeVisible(LOADED);
+    // How long it takes, who and the repeat are under the form's own More options.
+    await todo.getByText("More options").click();
     await expect(native(page)).toHaveCount(0);
     // Its day is the person's own words, read by rules and said back ("Friday", "next Tuesday"): a text box, not a date control.
     await expect(todo.getByRole("textbox", { name: "Due (optional)" })).toBeVisible();
     await expect(todo.getByRole("combobox", { name: "How long it takes" })).toBeVisible();
+    // The words carried over make the form unsaved; they are cleared so Escape closes it without asking.
+    await todo.getByRole("textbox", { name: "What to do" }).fill("");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: "Add a to-do" })).toHaveCount(0);
 

@@ -72,9 +72,9 @@ const questions = [
   question("Q-2", "Which cover finish?", { state: "yours", to: "P-1", to_name: "Quinn Sample", waiting_days: null, since: "2026-10-10" }),
 ];
 
-function api(extra: Routes = {}, shown: { actions?: S["OpenActionView"][]; questions?: S["OpenQuestionView"][] } = {}) {
+function api(extra: Routes = {}, shown: { actions?: S["OpenActionView"][]; questions?: S["OpenQuestionView"][]; rowsShown?: number } = {}) {
   return fakeApi({
-    "GET open-items": () => ({ actions: shown.actions ?? actions, questions: shown.questions ?? questions, stale_days: 21 }),
+    "GET open-items": () => ({ actions: shown.actions ?? actions, questions: shown.questions ?? questions, stale_days: 21, rows_shown: shown.rowsShown ?? 15 }),
     "GET people": () => [person("P-1", "Quinn Sample"), person("P-2", "Robin Sample"), person("P-3", "Sam Twin")],
     "GET projects": () => [project("PRJ-1", "Harbor"), project("PRJ-2", "Lighthouse")],
     "POST actions/A-1/status": () => ({ ok: "A-1", request: null }),
@@ -159,7 +159,7 @@ test("a to-do's owner, date and source share one meta line on a phone", async ()
   }
 });
 
-test("the add row is the first line of the to-dos on every width, and the header's button still opens the form for details", async () => {
+test("the add row is the first line of the to-dos on every width, and its More options opens the form for details", async () => {
   const user = userEvent.setup();
   api();
   renderApp(<OpenItems />);
@@ -168,8 +168,12 @@ test("the add row is the first line of the to-dos on every width, and the header
   expect(add.closest("li")).toBe(list.firstElementChild);
   // It is not a row of the list: it takes no part in the list's count.
   expect(add.closest("li")).toHaveAttribute("role", "presentation");
-  await user.click(screen.getByRole("button", { name: "Add a to-do" }));
-  expect(await screen.findByRole("textbox", { name: "What to do" })).toBeVisible();
+  // There is no second Add button in the header: the row is the one way in, and More options carries the words over.
+  expect(screen.queryByRole("button", { name: "Add a to-do" })).toBeNull();
+  expect(within(list).queryByRole("button", { name: "More options" })).toBeNull();
+  await user.type(add, "Call the printer");
+  await user.click(within(list).getByRole("button", { name: "More options" }));
+  expect(await screen.findByRole("textbox", { name: "What to do" })).toHaveValue("Call the printer");
 });
 
 test("the established wide to-do layout has no phone-only inline add row", async () => {
@@ -330,7 +334,7 @@ test("Mark done acts at once, with Undo", async () => {
   const [first] = await rows();
   await user.click(within(first).getByRole("button", { name: "Mark done" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/A-1/status")?.body).toEqual({ status: "done" }));
-  expect(await screen.findByText("Marked done.")).toBeInTheDocument();
+  expect(await screen.findByText("Marked done: Send the proof to the printer")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.filter((c) => c.route === "POST actions/A-1/status").pop()?.body).toEqual({ status: "open" }));
 });
@@ -757,11 +761,16 @@ test("the line under the list counts the rows the tab counts, with the noun the 
   expect(await screen.findByText("1 of these 2 questions needs you")).toBeInTheDocument();
 });
 
-test("under the title it says how many to-dos are open and how many of them are overdue, from the rows listed (VS10)", async () => {
+test("under the title it says how many the open tab holds and how many of them are overdue, from the rows listed, and follows the tab (VS10)", async () => {
+  const user = userEvent.setup();
   api();
   renderApp(<OpenItems />);
-  expect(await screen.findByText("7 open")).toBeInTheDocument();
+  expect(await screen.findByText("5 open")).toBeInTheDocument();
   expect(screen.getByText(/· 1 overdue/)).toBeInTheDocument();
+  // The questions tab counts questions, with no to-do figures beside it.
+  await user.click(screen.getByRole("button", { name: /^Questions\b/ }));
+  expect(await screen.findByText("2 open")).toBeInTheDocument();
+  expect(screen.queryByText(/overdue/)).toBeNull();
 });
 
 // ---- The 4.6 `todos` mockup (section 316) ---------------------------------------------------------------------------------
@@ -797,10 +806,10 @@ test("the counts agree: the tab, the line under the title, the groups with the l
   api({}, { actions: mixed, questions });
   renderApp(<OpenItems />);
   await screen.findByRole("list", { name: "Open to-dos" });
-  // 7 to-dos and 2 questions are open; one to-do is overdue and two are due today.
+  // 7 to-dos and 2 questions are open; the line counts the tab shown (the to-dos); one is overdue and two are due today.
   expect(screen.getByRole("button", { name: /^To-dos/ })).toHaveTextContent("7");
   expect(screen.getByRole("button", { name: /^Questions/ })).toHaveTextContent("2");
-  expect(screen.getByText("9 open")).toBeInTheDocument();
+  expect(screen.getByText("7 open")).toBeInTheDocument();
   expect(screen.getByText(/· 1 overdue · 2 due today/)).toBeInTheDocument();
   const grouped = groupLabels().reduce((n, g) => n + Number(g.querySelector("[data-group-count]")?.textContent), 0);
   expect(grouped).toBe(6);
@@ -850,4 +859,23 @@ test("a tab that holds fewer than the filter bar's minimum draws no filter bar, 
   await user.click(screen.getByRole("button", { name: /^Questions/ }));
   await waitFor(() => expect(screen.queryByRole("radio", { name: /Orchard Press/ })).toBeNull());
   expect(screen.queryByRole("combobox", { name: "State" })).toBeNull();
+});
+
+test("a group shows the number of to-dos the setting names, then Show N more, which opens the rest of that group only", async () => {
+  const user = userEvent.setup();
+  const later = Array.from({ length: 9 }, (_, i) => action(`L-${i}`, `Later to-do ${i}`, { due: "2099-12-01" }));
+  const today = Array.from({ length: 3 }, (_, i) => action(`T-${i}`, `Today to-do ${i}`, { due: TODAY_ISO }));
+  api({}, { actions: [...today, ...later], questions: [], rowsShown: 5 });
+  renderApp(<OpenItems />);
+  await rows();
+  // Coming up holds nine and shows five; Today holds three and shows all of them with no button.
+  expect(within(screen.getByRole("list", { name: "Open to-dos" })).getAllByText(/^Later to-do/)).toHaveLength(5);
+  expect(document.querySelector('[data-show-more="today"]')).toBeNull();
+  const more = document.querySelector<HTMLElement>('[data-show-more="coming"]');
+  expect(more).toHaveTextContent("Show 4 more");
+  // The group's count still says all nine.
+  expect(groupLabels().find((g) => g.textContent?.startsWith("Coming up"))).toHaveTextContent("9");
+  await user.click(more!);
+  expect(within(screen.getByRole("list", { name: "Open to-dos" })).getAllByText(/^Later to-do/)).toHaveLength(9);
+  expect(document.querySelector('[data-show-more="coming"]')).toBeNull();
 });

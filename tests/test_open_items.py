@@ -383,3 +383,8 @@ def test_the_rows_flagged_as_needing_the_person_are_the_ones_the_side_menu_count
     assert mine in flagged and theirs not in flagged
     asked = [q for q in found["questions"] if q["state"] == "yours"]
     assert len(flagged) + len(asked) == client.get("/api/waiting").json()["open"]["total"]
+
+
+def test_the_open_view_names_how_many_to_dos_a_group_shows_before_show_more(api):
+    client, _store, cfg = api
+    assert client.get("/api/open-items").json()["rows_shown"] == cfg.ui.open_rows_shown

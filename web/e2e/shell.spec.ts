@@ -658,7 +658,7 @@ test.describe("screen use and the shell", () => {
       "#work/changed": "What changed",
       "#work/handled": "Handled for you",
       "#work/followups": "Follow-ups",
-      "#work/open": "To-dos and questions",
+      "#work/open": "To-dos",
       "#work/stages": "Stages",
       "#records/projects": "Projects",
       "#records/people": "People",
@@ -673,7 +673,9 @@ test.describe("screen use and the shell", () => {
       const fresh = await context.newPage();
       await fresh.goto(new URL(entry!.href, page.url()).toString());
       // Today's heading is the greeting (design 7.7); the others are their names.
-      await expect(fresh.getByRole("heading", { level: 1, ...(fragment === "#today" ? { name: /^Good (morning|afternoon|evening)/ } : { name: title, exact: true }) })).toBeVisible();
+      // The sidebar entry for the to-dos is short; the page keeps its full title.
+      const pageTitle = fragment === "#work/open" ? "To-dos and questions" : title;
+      await expect(fresh.getByRole("heading", { level: 1, ...(fragment === "#today" ? { name: /^Good (morning|afternoon|evening)/ } : { name: pageTitle, exact: true }) })).toBeVisible();
       await expect(fresh.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", entry!.href);
       await fresh.close();
     }
@@ -1017,7 +1019,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     });
   }
 
-  test("Follow-ups: the Message | Table switch shows the table before anything is copied, and it passes the accessibility checks", async ({ page }) => {
+  test("Follow-ups: the menu's Show as a table shows the table before anything is copied, and it passes the accessibility checks", async ({ page }) => {
     const book = `${"https" + "://"}example.com/book`;
     const section = {
       person: "PER-9",
@@ -1038,7 +1040,8 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page, "work/followups");
     // With one person to write to, their follow-ups show in place: nothing to open first.
-    await page.getByRole("radio", { name: "Table" }).click();
+    await page.getByRole("button", { name: "More actions for Robin Sample" }).click();
+    await page.getByRole("menuitem", { name: "Show as a table" }).click();
     const tables = page.getByRole("table");
     await expect(tables).toHaveCount(2);
     await expect(tables.first().getByRole("columnheader")).toHaveText(["Project", "To-do", "Due", "Link", "Your update"]);

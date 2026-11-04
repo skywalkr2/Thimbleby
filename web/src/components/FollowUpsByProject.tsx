@@ -13,8 +13,6 @@ import { useWords } from "../lib/wording";
 import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
 import { shortTitle } from "../lib/title-dates";
-import { Button } from "../ui/Button";
-import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { ItemList, Item } from "../ui/ItemList";
 import { ExpandableRow } from "../ui/Row";
@@ -187,19 +185,19 @@ function ProjectLine(props: { group: Group; choice: ListChoice }) {
  * comes first, under its own heading, with the same button. */
 function ProjectItems(props: { group: Group; soon: Item[]; onOpenPerson: (person: string) => void }) {
   const { t, tn } = useWords();
+  // One anatomy for every line: the words, then who it is with (their name opens their messages) and where it stands.
   const row = (item: Item, soon: boolean) => (
-    <Item row key={item.id}>
+    <Item single key={item.id}>
       <div>
-        <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
         <div className="title">{shortTitle(item.title)}</div>
-        <div className="meta">{[item.name, soon ? item.when : "", item.state].filter(Boolean).join(" · ")}</div>
+        <div className="meta">
+          <button type="button" className="link-button" aria-label={t("followups.by_project.open_named", { name: item.name })} onClick={() => props.onOpenPerson(item.person)}>
+            {item.name}
+          </button>
+          {[t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do"), soon ? item.when : "", item.state].filter(Boolean).map((part) => ` · ${part}`)}
+        </div>
         <OriginLink origin={item.origin} />
       </div>
-      <Actions>
-        <Button aria-label={t("followups.by_project.open_named", { name: item.name })} onClick={() => props.onOpenPerson(item.person)}>
-          {t("followups.by_project.open")}
-        </Button>
-      </Actions>
     </Item>
   );
   return (

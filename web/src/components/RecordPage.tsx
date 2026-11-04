@@ -152,7 +152,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const markDone = () =>
     void act(
       () => api.actionStatus(id, "done"),
-      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(id, "open") }),
+      (result) => ({ message: noted(name ? t("toast.action_done_named", { text: name }) : t("toast.action_done"), result.request), undo: () => api.actionStatus(id, "open") }),
     );
   // A person who is gone is either removed (the record is kept, so Restore brings them back) or was never there.
   const removal = useQuery({ queryKey: ["person-removal", id], queryFn: () => api.personRemoval(id), enabled: kind === "person" && record.isError && record.error instanceof ApiError && record.error.status === 404 });
@@ -334,7 +334,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // A person's page has tabs: the overview, everything open with them, and the whole history.
   const tabbed = isPerson && !isSelf;
   const activity = page.data && (
-    <RecordActivity page={page.data} show={tabbed ? (tab === "open" ? ["completed", "facts", "repeat"] : ["activity"]) : ["repeat", "completed", "facts", "activity"]} shown={tabbed ? (tab === "overview" ? 3 : 20) : undefined} />
+    <RecordActivity page={page.data} show={tabbed ? (tab === "open" ? ["completed", "facts", "repeat"] : ["activity"]) : ["repeat", "completed", "facts", "activity"]} shown={tabbed ? (tab === "overview" ? 3 : 20) : undefined} quietHeading={tabbed && tab === "activity"} />
   );
   // A person's details are a contact card: their initials on the color of their side, how you were last in touch, and Edit.
   const asCard = isPerson && !isSelf;
@@ -371,9 +371,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           <DetailsForm kind={kind} record={data} fields={offered} people={people.data ?? []} projects={projects.data ?? []} onDone={stopEditing} />
         ) : !settled ? (
           <Skeleton />
-        ) : rows.length === 0 ? (
-          <p className="hint">{t("record.no_details")}</p>
-        ) : (
+        ) : rows.length === 0 ? null : (
           <DefinitionList>
             {rows.map((row) => (
               <Definition key={row.name}>
@@ -401,6 +399,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             ))}
           </DefinitionList>
         )}
+        {kind === "action" && <PromiseWhy action={id} quiet omitOrigin skip={["owner", "due"]} title={name} />}
         {settled && folded.length > 0 && !editing && (
           <details className="more-options" data-record-fold="">
             <summary>{t("record.more_details")}</summary>
@@ -527,7 +526,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {record.isError && gone && !isPerson && <EmptyState icon="inbox" text={t("record.not_found")} action={{ label: t("record.not_found.back", { list: t(GONE_BACK[kind]?.[1] ?? "nav.home") }), href: viewHref(GONE_BACK[kind]?.[0] ?? "today"), primary: true }} />}
       {record.isError && !gone && <LoadFailed message={t("record.load_failed")} detail={record.error instanceof ApiError && record.error.detail ? record.error.detail : null} onRetry={() => void record.refetch()} />}
       {data && (
-        <div className="record-grid" data-person-page={asCard ? "" : undefined}>
+        <div className="record-grid" data-person-page={asCard ? "" : undefined} data-todo-page={kind === "action" ? "" : undefined}>
           <div className="record-main">
             {tabbed && (
               <div data-slot="tabs">
@@ -543,7 +542,6 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               />
               </div>
             )}
-            {kind === "action" && <PromiseWhy action={id} quiet omitOrigin skip={["owner", "due"]} />}
             {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
             {kind === "event" && <Attendees fields={data.fields} names={names} />}
             {kind === "event" && <MeetingPrep entry={id} title={heading} />}

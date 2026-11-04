@@ -1031,6 +1031,20 @@ yet follow, that it is *designed*, with its phase.
 
 Batch G1b of the gate's fix round (7.12, 7.13). The drawer is full height; the header's status has no fill and Hand something in is the outline weight; the offline state is one slim line with the status saying "Offline" and a failed card without a second retry; the segmented control is an outlined track with a filled choice; calendar chips become "Calendars (n)" when they do not fit; one Filter sheet holds a screen's filters on a phone; the empty state is a left-aligned card with a display-face title; tables, grids and the schedule's subtitle keep their shape while they load; the side menu and search words stay as last known until the sides are read; an entry's pane is level with it and points at it.
 
+## 333. Follow-ups, To-dos, Questions and the drawers (2026-11-04; gate fix batch G2b)
+
+| Where | Before | Now |
+|---|---|---|
+| Follow-ups lines (7.5) | A Copy button on every line and a fourth in the detail | A line opens the detail, which holds the one Copy; Today's compact list keeps its line Copy |
+| Message or table (7.5) | A Message / Table switch on each card | "Show as a table" / "Show as a message" in the person's menu |
+| Own to-dos, empty state, message style (7.5) | A card shaped like a row; a four-line empty paragraph; a disclosure far below | One plain line; one line and a link to People; a "Message style" drawer from the header |
+| A message (7.5) | Every item listed, a resizable box | The first six and "Show N more", a box sized to its text |
+| To-dos and Questions (7.5; 4 `ui.open_rows_shown`) | A header Add button; the line under the title counted both tabs; every row of a group; "To-dos and questions" in the sidebar | No header button, More options on the add row; the line follows the tab; the first 15 of a group and "Show N more"; "To-dos" in the sidebar |
+| Add and edit a to-do (7.5) | Six fields shown equally; Repeats a box to type in; the edit form inline | What and Due first, the rest under More options; Repeats a list; the edit form a drawer |
+| Hand in, Feedback, Ask (7) | Five questions before the one action; checkboxes, subject and preview on the first view; two help paragraphs | Text and Choose a file, then Options; the box first, then "What will be sent"; one help line; the reason a primary waits beside it |
+| A to-do's page (7.5) | The facts split in two columns; the words repeated under the title; "Promised to: No one in particular" | One card; the words only when they differ from the title; the person's own to-do says nothing of it |
+| Outside these screens | Files showed a kind chip on every row; a person's Activity heading twice; "Nothing filled in yet"; "End them with it"; "From your notes" | The chip only with several kinds; the heading for a screen reader; the line gone; "Remove them too"; "Added by you" |
+
 ## 329. Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review (2026-11-04; gate fix batch G2a)
 
 | Where | Before | Now |

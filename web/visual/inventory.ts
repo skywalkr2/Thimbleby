@@ -68,6 +68,26 @@ async function press(env: Env, name: string | RegExp, why: string): Promise<void
   throw new Unreachable(why);
 }
 
+/** Opens the form to add a to-do the way a person does on a list: the words go in the add row, and More options carries them to the
+ * form (an empty list offers Add a to-do itself). */
+async function openAddTodo(env: Env): Promise<void> {
+  await open(env, "work/open");
+  const row = env.page.getByRole("textbox", { name: "Add a to-do" }).first();
+  if (await row.isVisible().catch(() => false)) {
+    await row.fill("Book the van for the move");
+    await press(env, "More options", "the add row has no More options");
+  } else {
+    await press(env, "Add a to-do", "To-dos has no add row and no Add a to-do button");
+  }
+}
+
+/** Replaces the words in the box with this label. */
+async function typeInto(env: Env, label: string | RegExp, words: string): Promise<void> {
+  const box = env.page.getByRole("textbox", { name: label }).first();
+  await box.waitFor({ timeout: 12_000 });
+  await box.fill(words);
+}
+
 /** Loading: the screen's own reads are held (as in pages.ts). */
 const loading = (hash: string, also?: RegExp) => (env: Env) => holdReads(env, NEUTRAL, hash, also);
 
@@ -532,14 +552,31 @@ function build(): Screen[] {
     s("Work", "followups-by-project", "Follow-ups, by project", FILLED, withChoice("work/followups", /^By project/)),
     s("Work", "followups-empty", "Follow-ups, nobody has one yet", SEEDED, reach("work/followups")),
     ...shared(followups, "work/followups", LISTS),
-    state(followups, "Filtered to nothing", EMPTY, filteredToNothing("work/followups")),
+    state(followups, "Filtered to nothing", FILLED, filteredToNothing("work/followups")),
   );
   const todos = s("Work", "todos", "To-dos", SEEDED, reach("work/open"), { main: true });
   add(
     todos,
     s("Work", "questions", "Questions", SEEDED, withChoice("work/open", /^Questions/)),
     ...shared(todos, "work/open", LISTS),
-    state(todos, "Filtered to nothing", EMPTY, filteredToNothing("work/open")),
+    state(todos, "Filtered to nothing", SEEDED, filteredToNothing("work/open")),
+    state(todos, "Questions, two waiting", SEEDED, async (env) => {
+      // Two questions of the capture's own are added to what the screen reads: one waiting on the person, one sent and unanswered.
+      const handler = async (route: Route) => {
+        if (route.request().method() !== "GET" || !/\/api\/open-items$/.test(new URL(route.request().url()).pathname)) return route.fallback();
+        const response = await route.fetch();
+        const json = await response.json();
+        const base = { version: 1, text: "", kind: "question", to: "PERSON-capture", to_name: "Pat Sample", project_name: "", side_name: null, side: null, views: [], projects: [], chases: 0, held_until: null, origin: null };
+        json.questions = [
+          { ...base, id: "Q-capture-1", title: "Which printer should the proofs go to?", state: "yours", since: new Date().toISOString().slice(0, 10), waiting_days: null },
+          { ...base, id: "Q-capture-2", title: "Can you confirm the delivery window for the flowers?", state: "waiting", since: new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10), waiting_days: 3 },
+        ];
+        return route.fulfill({ response, json });
+      };
+      await env.page.route("**/api/**", handler);
+      env.undo.push(() => env.page.unroute("**/api/**", handler));
+      await withChoice("work/open", /^Questions/)(env);
+    }),
     s("Work", "todos-many", "To-dos, over a hundred", { server: "sides", stage: "bulk" }, reach("work/open")),
   );
   const stages = s("Work", "stages", "Stages", SEEDED, reach("work/stages"));
@@ -678,6 +715,23 @@ function build(): Screen[] {
     s("Records", "todo-edit-details", "A to-do's Edit details", SEEDED, async (env) => {
       await open(env, `records/action/${await firstTodo(env)}`);
       await press(env, "Edit details", "the to-do's page has no Edit details button");
+    }),
+  );
+  // A to-do with a very long title, and one with no day, of the workspace's own: how its page reads at the edges.
+  const todoNamed = async (env: Env, start: string): Promise<string> => {
+    const items = await api<{ actions: Array<{ id: string; text: string }> }>(env.base, env.token, "open-items");
+    const found = items.actions.find((a) => a.text.startsWith(start));
+    if (!found) throw new Unreachable(`the workspace has no to-do starting "${start}"`);
+    return found.id;
+  };
+  add(
+    state(todoPage, "A very long title", SEEDED, async (env) => open(env, `records/action/${await todoNamed(env, "Print, sign")}`)),
+    state(todoPage, "No due day", SEEDED, async (env) => open(env, `records/action/${await todoNamed(env, "Call Pat Sample")}`)),
+    state(todoPage, "Edit details, title blank", SEEDED, async (env) => {
+      await open(env, `records/action/${await firstTodo(env)}`);
+      await press(env, "Edit details", "the to-do's page has no Edit details button");
+      await typeInto(env, "Title", "");
+      await env.page.waitForTimeout(500);
     }),
   );
   add(
@@ -831,8 +885,7 @@ function build(): Screen[] {
       await press(env, "Hand something in", "no Hand something in button");
     }),
     s("Header and menus", "add-todo", "Add a to-do", SEEDED, async (env) => {
-      await open(env, "work/open");
-      await press(env, "Add a to-do", "To-dos has no Add a to-do button");
+      await openAddTodo(env);
     }),
     s("Header and menus", "ask", "Ask", SEEDED, async (env) => {
       await open(env, "today");
@@ -847,6 +900,82 @@ function build(): Screen[] {
       await box.click();
       await box.pressSequentially("Pat", { delay: 80 });
       await env.page.getByRole("list", { name: "Results" }).waitFor({ timeout: 12_000 });
+      await env.page.waitForTimeout(600);
+    }),
+  );
+  // The forms and the ask pane in the states a person meets them in: a blank or unreadable box, a failed save, an answer.
+  const addTodoBase = all.find((x) => x.page === "add-todo" && !x.title)!;
+  const askBase = all.find((x) => x.page === "ask" && !x.title)!;
+  const handInBase = all.find((x) => x.page === "hand-in" && !x.title)!;
+  const typeIn = typeInto;
+  const failing = async (env: Env, path: RegExp) => {
+    const handler = async (route: Route) => (route.request().method() === "POST" && path.test(new URL(route.request().url()).pathname) ? route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "The app couldn't save this." }) }) : route.fallback());
+    await env.page.route("**/api/**", handler);
+    env.undo.push(() => env.page.unroute("**/api/**", handler));
+  };
+  add(
+    state(addTodoBase, "Words too long, more options open", SEEDED, async (env) => {
+      await openAddTodo(env);
+      await typeIn(env, "What to do", "Print, sign and mail the unclaimed property claim forms to the State Treasurer, before the end of the month and keep a copy for the file. ".repeat(3));
+      await env.page.getByText("More options").click();
+      await env.page.waitForTimeout(600);
+    }),
+    state(addTodoBase, "A due day it can't read", SEEDED, async (env) => {
+      await openAddTodo(env);
+      await typeIn(env, "What to do", "Book the van for the move");
+      await typeIn(env, /^Due/, "whenever it suits");
+      await env.page.waitForTimeout(1200);
+    }),
+    state(addTodoBase, "Couldn't save", SEEDED, async (env) => {
+      await openAddTodo(env);
+      await typeIn(env, "What to do", "Book the van for the move");
+      await failing(env, /\/api\/todos$/);
+      await env.page.getByRole("button", { name: "Add", exact: true }).click();
+      await env.page.waitForTimeout(1200);
+    }),
+    state(askBase, "A question typed", SEEDED, async (env) => {
+      await open(env, "today");
+      await openAsk(env);
+      await typeIn(env, "Your question", "What is due this week, and who is waiting on me?");
+      await env.page.waitForTimeout(400);
+    }),
+    state(askBase, "An answer", SEEDED, async (env) => {
+      const body = [
+        {
+          id: "ASK-capture-1",
+          version: 1,
+          question: "What is due this week?",
+          state: "done",
+          created_at: new Date(Date.now() - 600_000).toISOString(),
+          answer: { text: "Two things are due this week: Pay the deposit (today) and Send the headcount (today). Nothing else is dated before Friday.", cites: [{ quote: "Pay the deposit", source: null }] },
+          proposals: [],
+          reports: [],
+          ops: [],
+          reviewed: true,
+          waiting_for_go: false,
+        },
+        { id: "ASK-capture-2", version: 1, question: "Who owes me an answer?", state: "running", created_at: new Date(Date.now() - 60_000).toISOString(), proposals: [], reports: [], ops: [], reviewed: false, waiting_for_go: false },
+      ];
+      const handler = async (route: Route) => (route.request().method() === "GET" && /\/api\/asks$/.test(new URL(route.request().url()).pathname) ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }) : route.fallback());
+      await env.page.route("**/api/**", handler);
+      env.undo.push(() => env.page.unroute("**/api/**", handler));
+      await open(env, "today");
+      await openAsk(env);
+      await env.page.waitForTimeout(800);
+    }),
+    state(askBase, "Couldn't ask", SEEDED, async (env) => {
+      await open(env, "today");
+      await openAsk(env);
+      await typeIn(env, "Your question", "What is due this week?");
+      await failing(env, /\/api\/asks$/);
+      await env.page.getByRole("button", { name: "Ask", exact: true }).click();
+      await env.page.waitForTimeout(1200);
+    }),
+    state(handInBase, "Words typed, options open", SEEDED, async (env) => {
+      await open(env, "today");
+      await press(env, "Hand something in", "no Hand something in button");
+      await typeIn(env, "Paste or type it here", "Hi Avery, the proofs are ready. Can you check page 3 and send them back by Friday? Thanks, Pat");
+      await env.page.getByText("Options", { exact: true }).click();
       await env.page.waitForTimeout(600);
     }),
   );

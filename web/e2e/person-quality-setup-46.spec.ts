@@ -71,6 +71,8 @@ test.describe("A person's page, Quality and setup to the 4.6 mockups", () => {
     await primary.click();
     const dialog = page.getByRole("dialog", { name: "Add a to-do" });
     await expect(dialog.getByRole("textbox", { name: "What to do" })).toBeFocused(LOADED);
+    // Who does it is under the form's own More options.
+    await dialog.getByText("More options").click();
     await expect(dialog.getByRole("combobox", { name: "Who does it" })).toContainText(NAME);
   });
 

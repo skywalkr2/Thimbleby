@@ -18062,6 +18062,12 @@
             "title": "Questions",
             "type": "array"
           },
+          "rows_shown": {
+            "default": 15,
+            "description": "How many to-dos a group shows before Show more (`ui.open_rows_shown`).",
+            "title": "Rows Shown",
+            "type": "integer"
+          },
           "stale_days": {
             "description": "Days with no change before a person's own undated to-do is stale; 0 is off.",
             "title": "Stale Days",

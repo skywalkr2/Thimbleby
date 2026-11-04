@@ -132,7 +132,8 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
         { text: OTHER_LANGUAGES[4], when: dayOffset(1) },
       ];
       // Some of the to-dos belong to a side's project, so the side strip's counts differ from one side to the next.
-      const projects = (env.seed.sideProjects as string[]) ?? [];
+      // The fourth side is left with nothing, so the "filtered to nothing" pictures of the screens read as they do for a person.
+      const projects = ((env.seed.sideProjects as string[]) ?? []).filter((_, i) => i !== 3);
       for (const [n, todo] of todos.entries()) {
         const project = n % 3 === 2 || projects.length === 0 ? undefined : projects[n % projects.length];
         await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [me], project } });
@@ -147,13 +148,16 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
       env.seed.organizations = { long: long.id, short: short.id };
       // To-dos owned by other people are the follow-ups: one overdue, one soon, one with no date, two in a project.
       const people = env.seed.people as { pat: string; long: string; fresh: string };
-      const projects = (env.seed.sideProjects as string[]) ?? [];
+      const projects = ((env.seed.sideProjects as string[]) ?? []).filter((_, i) => i !== 3);
       const owed: Array<{ text: string; when?: string; owner: string; project?: string }> = [
         { text: "Send the proofs back", when: dayOffset(-3), owner: people.pat },
         { text: "Confirm the delivery window", when: dayOffset(2), owner: people.pat, project: projects[0] },
         { text: "Share the guest list", owner: people.fresh, project: projects[0] },
         { text: "Return the signed contract", when: dayOffset(6), owner: people.long, project: projects[1] },
       ];
+      // Enough more, with no date, that the list is long enough to draw its filters and its grouping (a short list has none).
+      const others = [people.pat, people.long, people.fresh];
+      for (let n = 1; n <= 8; n += 1) owed.push({ text: `Return the form (${n})`, owner: others[n % others.length], project: projects[n % Math.max(projects.length, 1)] });
       for (const { owner, ...todo } of owed) await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [owner] } });
       return;
     }

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
@@ -95,4 +95,21 @@ test("changing only the due date sends the due date alone, never the words", asy
     fields: { due: "2026-11-09", due_words: null, due_check: false },
     read_version: 5,
   });
+});
+
+test("the to-do page's editor is a drawer with Cancel and Save in its footer, one label style and the usual repeat list", async () => {
+  const user = userEvent.setup();
+  serve();
+  renderApp(<RecordPage kind="action" id={ID} onBack={() => {}} />);
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  const drawer = await screen.findByRole("dialog", { name: "Edit to-do" });
+  expect(await within(drawer).findByLabelText("Title")).toHaveValue(WORDS);
+  expect(within(drawer).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+  expect(within(drawer).getByRole("button", { name: "Save" })).toBeInTheDocument();
+  // Repeats is a list of the usual ways, not a box to type in.
+  expect(within(drawer).getByRole("combobox", { name: "Repeats" })).toHaveValue("");
+  expect(within(drawer).queryByRole("textbox", { name: "Repeats" })).toBeNull();
+  // Cancel closes it and nothing is sent.
+  await user.click(within(drawer).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit to-do" })).toBeNull());
 });

@@ -59,7 +59,8 @@ test.describe("To-dos", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openTodos(page);
     await expect(page.getByRole("textbox", { name: "Add a to-do" })).toBeVisible();
-    await page.getByRole("button", { name: "Add a to-do" }).first().click();
+    await page.getByRole("textbox", { name: "Add a to-do" }).fill("Call the printer");
+    await page.getByRole("button", { name: "More options" }).click();
     await expect(page.getByRole("textbox", { name: "What to do" })).toBeFocused();
   });
 
@@ -101,7 +102,9 @@ test.describe("To-dos", () => {
     const counts = await page.locator("[data-todo-group] [data-group-count]").allInnerTexts();
     const grouped = counts.reduce((n, c) => n + Number(c), 0);
     expect(grouped + (await needsDateCount(page))).toBe(tabCount);
-    await expect(page.locator("[data-need-count]")).toContainText(`of these ${tabCount} to-dos`);
+    // The footer says how many of them need the person only when that is not all of them.
+    const footer = page.locator("[data-need-count]");
+    if (await footer.count()) await expect(footer).toContainText(`of these ${tabCount} to-dos`);
     // The groups come in the mockup's order.
     const names = (await page.locator("[data-todo-group]").allTextContents()).map((t) => t.replace(/\d+$/, "").trim());
     const order = ["Overdue", "Today", "Coming up", "Waiting on others"];

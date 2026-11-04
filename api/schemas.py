@@ -7588,6 +7588,7 @@ class OpenItemsView(BaseModel):
     actions: list[OpenActionView]
     questions: list[OpenQuestionView]
     stale_days: int = Field(description="Days with no change before a person's own undated to-do is stale; 0 is off.")
+    rows_shown: int = Field(15, description="How many to-dos a group shows before Show more (`ui.open_rows_shown`).")
 
 
 class PriorityThingView(BaseModel):

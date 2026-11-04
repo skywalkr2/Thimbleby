@@ -1,4 +1,4 @@
-// Follow-ups, Message style (design 7.9): how the messages the person copies start and end. Each line shows a live
+// Follow-ups, Message style (design 7.9): how the messages the person copies start and end, in a drawer opened from the header. Each line shows a live
 // preview with a made-up name, and its pattern is behind "Edit the pattern", so the person reads what the message will say
 // and not the marker where the first name goes. Each is saved as it is changed, with the same read-back and Undo as on Settings.
 import { useId, useRef, useState } from "react";
@@ -6,26 +6,36 @@ import type { Item } from "../lib/settings";
 import { useSettingEdits } from "../lib/use-setting-edits";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Drawer } from "../ui/Drawer";
 const GREETING = "language.messages.greeting";
 const CLOSING = "language.messages.closing";
 const FIRST_NAME = "{first_name}";
 
-export function MessageStyle() {
+/** The style of the messages, in a drawer opened from the screen's header (`open`); nothing is drawn while it is shut. */
+export function MessageStyle(props: { open: boolean; onClose: () => void }) {
   const { t } = useWords();
   const edit = useSettingEdits();
   const greeting = edit.item(GREETING);
   const closing = edit.item(CLOSING);
-  if (!edit.ready || !greeting || !closing) return null;
+  if (!props.open || !edit.ready || !greeting || !closing) return null;
   return (
-    <details className="more-options message-style">
-      <summary>{t("followups.style.title")}</summary>
+    <Drawer
+      open
+      title={t("followups.style.title")}
+      onClose={props.onClose}
+      footer={
+        <Button onClick={props.onClose}>
+          {t("action.close")}
+        </Button>
+      }
+    >
       <p className="hint">{t("followups.style.intro")}</p>
       <div className="settings-groups">
         {[greeting, closing].map((item) => (
           <StyleLine key={item.key} item={item} edit={edit} />
         ))}
       </div>
-    </details>
+    </Drawer>
   );
 }
 

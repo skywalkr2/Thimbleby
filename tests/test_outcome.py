@@ -117,6 +117,16 @@ def test_promises_the_assistant_found_are_counted_by_the_week_it_found_them_and_
     assert [(w.week, w.found) for w in found] == [(WEEK_1, 0), (WEEK_2, 2), (WEEK_3, 1)]
 
 
+def test_promises_found_by_the_look_back_or_the_watcher_count_but_the_persons_own_do_not(env):
+    # The look-back and a source's first read file what they find as the engine and the watcher, not as the person: the
+    # figure counts every promise that was not made by the person's own hand, in the week it was filed.
+    cfg, store, clock = env
+    promise(store, clock, day(WEEK_3), by=WriteContext(actor="engine", trust="trusted", op="intake.look_back"))
+    promise(store, clock, day(WEEK_3, 1), by=WriteContext(actor="watcher", trust="untrusted", op="watch.first_read"))
+    promise(store, clock, day(WEEK_3, 2), by=_PM)
+    assert week_row(figures(cfg, store), WEEK_3).found == 2
+
+
 def test_a_found_promise_is_kept_in_the_week_the_person_closed_it_as_done_whichever_week_it_was_found(env):
     cfg, store, clock = env
     early = promise(store, clock, day(WEEK_1, 1))

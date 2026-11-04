@@ -38,7 +38,7 @@ test("Remove is there even though something is filed under the business, and it 
   renderApp(<BusinessSides />);
   const ask = await remove(user, SHOP);
   expect(within(ask).getByRole("button", { name: "Move them to Personal" })).toBeInTheDocument();
-  expect(within(ask).getByRole("button", { name: "End them with it" })).toBeInTheDocument();
+  expect(within(ask).getByRole("button", { name: "Remove them too" })).toBeInTheDocument();
   expect(within(ask).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   await user.click(within(ask).getByRole("button", { name: "Cancel" }));
   expect(screen.queryByRole("group", { name: /What happens to the projects/ })).toBeNull();
@@ -60,9 +60,9 @@ test("ending them with it is the other choice, and it asks again for the next bu
   const user = userEvent.setup();
   const calls = show();
   renderApp(<BusinessSides />);
-  await user.click(within(await remove(user, DAY)).getByRole("button", { name: "End them with it" }));
+  await user.click(within(await remove(user, DAY)).getByRole("button", { name: "Remove them too" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-day/remove")?.body).toEqual({ where: "end", organization: "keep" }));
-  expect(await screen.findByText(`Removed ${DAY}. Its projects and to-dos ended with it.`)).toBeInTheDocument();
+  expect(await screen.findByText(`Removed ${DAY}, with its projects and to-dos.`)).toBeInTheDocument();
   // Nothing is chosen for the next one: it asks.
   const again = await remove(user, SHOP);
   expect(calls.some((c) => c.route === "POST sides/PRJ-shop/remove")).toBe(false);
@@ -95,8 +95,8 @@ test("ending them with a side says a note waits for the yes, and one Undo takes 
     "POST changesets/CS-50/undo": () => ({ restored: [0], skipped: [] }),
   });
   renderApp(<BusinessSides />);
-  await user.click(within(await remove(user, DAY)).getByRole("button", { name: "End them with it" }));
-  expect(await screen.findByText(`Removed ${DAY}. Its projects and to-dos ended with it. A note to Casey Moor is waiting for your yes.`)).toBeInTheDocument();
+  await user.click(within(await remove(user, DAY)).getByRole("button", { name: "Remove them too" }));
+  expect(await screen.findByText(`Removed ${DAY}, with its projects and to-dos. A note to Casey Moor is waiting for your yes.`)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual(["POST changesets/CS-8/undo"]));
 });
@@ -186,7 +186,7 @@ test("the organization is kept unless it is ticked", async () => {
   renderApp(<BusinessSides />);
   const ask = await remove(user, SHOP);
   expect(within(ask).getByRole("checkbox", { name: /Also take .* off your list of organizations/ })).not.toBeChecked();
-  await user.click(within(ask).getByRole("button", { name: "End them with it" }));
+  await user.click(within(ask).getByRole("button", { name: "Remove them too" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST sides/PRJ-shop/remove")?.body).toEqual({ where: "end", organization: "keep" }));
 });
 

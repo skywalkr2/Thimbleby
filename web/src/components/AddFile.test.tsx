@@ -201,8 +201,9 @@ test("where a file belongs is grouped by side: the side's own choice first, then
   const where = await screen.findByRole("combobox", { name: /Where does it belong/ });
   await waitFor(async () => expect(groupNames(await snapshotOf(where))).toEqual(["Orchard Press"]));
   const group = within(await snapshotOf(where)).getByRole("group", { name: "Orchard Press" });
-  expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog"]);
-  expect(within(await snapshotOf(where)).getAllByRole("option").map((o) => o.textContent)).not.toContain("Orchard Press");
+  expect(within(group).getAllByRole("option").map((o) => o.textContent)).toEqual(["Orchard Press", "The spring catalog"]);
+  // The side is one choice, its own, in its group; it is not listed a second time as a project.
+  expect(within(await snapshotOf(where)).getAllByRole("option").filter((o) => o.textContent === "Orchard Press")).toHaveLength(1);
 });
 
 

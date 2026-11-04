@@ -408,7 +408,7 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
       }
     : null;
   const calendarColor = useCalendarColor();
-  const meta = [event.where, ...deliveryDetails(event, t), event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
+  const meta = [event.where, ...deliveryDetails(event, t), event.own ? t("schedule.from_own") : props.source].filter(Boolean).join(" · ");
   const status = deliveryStatusWord(event, t);
   // A meeting of a series shows how many open items wait for it, linking to the series' page; with none, nothing is said.
   const open = event.series && (event.open_items ?? 0) > 0 ? event.open_items! : 0;

@@ -6,7 +6,7 @@ import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp, snapshotOf, groupNames } from "../test-utils";
 import { ProjectPicker } from "./ProjectPicker";
 
-// Where something belongs (design 6.32): each side is a group, its own first choice is "in the side, not in a project", then
+// Where something belongs (design 6.32): each side is a group, its own first choice is the side's name, then
 // its projects. A side is never a plain project choice.
 
 const PERSONAL = project("PRJ-personal", "Personal", { side: true, no_end: true });
@@ -26,17 +26,19 @@ test("the choices are grouped by side, each side's own choice first, then its pr
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
   await waitFor(async () => expect(groupNames(await snapshotOf(select))).toEqual(["Orchard Press", "Personal"]));
   const list = within(await snapshotOf(select));
-  expect(within(list.getByRole("group", { name: "Orchard Press" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Orchard Press, not in a project", "The spring catalog", "The spring catalog › Cover art"]);
-  expect(within(list.getByRole("group", { name: "Personal" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["In Personal, not in a project", "Home"]);
+  expect(within(list.getByRole("group", { name: "Orchard Press" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["Orchard Press", "The spring catalog", "The spring catalog › Cover art"]);
+  expect(within(list.getByRole("group", { name: "Personal" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["Personal", "Home"]);
 });
 
-test("a side is only ever the choice 'in the side, not in a project', never a project choice", async () => {
+test("a side is only ever its own first choice, named plainly and once, never a project choice", async () => {
   show();
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
   await waitFor(async () => expect(groupNames(await snapshotOf(select)).length).toBeGreaterThan(0));
   const names = within(await snapshotOf(select)).getAllByRole("option").map((o) => o.textContent);
-  expect(names).not.toContain("Orchard Press");
-  expect(names).not.toContain("Personal");
+  // The side's own choice is its name, once; it is not offered a second time as a project.
+  expect(names.filter((n) => n === "Orchard Press")).toHaveLength(1);
+  expect(names.filter((n) => n === "Personal")).toHaveLength(1);
+  expect(names).not.toContain("In Orchard Press, not in a project");
   expect(names).toContain("Left over");
 });
 
@@ -46,7 +48,7 @@ test("choosing a side's own choice hands back the side's id; choosing a project 
   show((v) => picked.push(v));
   const select = await screen.findByRole("combobox", { name: "Where does it belong?" });
   await waitFor(async () => expect(groupNames(await snapshotOf(select)).length).toBeGreaterThan(0));
-  await user.selectOptions(select, "In Orchard Press, not in a project");
+  await user.selectOptions(select, "Orchard Press");
   await user.selectOptions(select, "The spring catalog");
   expect(picked).toEqual(["PRJ-firm", "PRJ-book"]);
 });

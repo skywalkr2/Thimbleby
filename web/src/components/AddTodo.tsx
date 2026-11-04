@@ -15,6 +15,7 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { EffortField } from "./EffortField";
+import { RepeatField } from "./RepeatField";
 import { PersonPicker } from "./PersonPicker";
 import { ProjectPicker } from "./ProjectPicker";
 import { FormField } from "../ui/FormField";
@@ -48,6 +49,8 @@ function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string
   const words = text.trim();
   const over = words.length - TODO_TEXT_MAX;
   const ready = !!words && over <= 0 && !!who && dayOk && repeatOk && (!asks || !!project);
+  // Why Add waits, beside it: the first thing missing.
+  const reason = !words ? t("addtodo.reason.text") : over > 0 ? t("addtodo.reason.shorten") : !dayOk ? t("addtodo.day_unclear") : asks && !project ? t("addtodo.reason.place") : !repeatOk ? t("repeat.unclear") : undefined;
   const save = async () => {
     if (!ready) return;
     const body = { text: words, owners: [who], ...(when.trim() ? { when: when.trim() } : {}), ...(project ? { project } : {}), ...(typedRepeat ? { repeat: typedRepeat } : {}), ...(effort ? { effort_minutes: effort } : {}) };
@@ -73,7 +76,7 @@ function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.cancel")}
           </Button>
-          <Button variant="primary" type="submit" form={`${id}-form`} disabled={!ready}>
+          <Button variant="primary" type="submit" form={`${id}-form`} disabled={!ready} reason={reason}>
             {t("addtodo.save")}
           </Button>
         </>
@@ -116,32 +119,18 @@ function AddTodoForm(props: { onClose: () => void; text?: string; owner?: string
             {read?.status === "unclear" && t("addtodo.day_unclear")}
           </p>
         </FormField>
-        <EffortField id={id} value={effort} onChange={setEffort} />
-        <PersonPicker label={t("addtodo.owner")} value={who} suggested={[]} people={active} onChange={setOwner} />
-        {!justMe && (
-          <ProjectPicker
-            label={t(asks ? "addtodo.place" : "addtodo.project")}
-            value={project}
-            empty={t(asks ? "addtodo.choose_place" : "addtodo.no_project")}
-            required={asks}
-            onChange={setProject}
-          />
-        )}
-        <FormField id={`${id}-repeat`} label={t("repeat.label")}>
-          <input
-            id={`${id}-repeat`}
-            type="text"
-            value={repeat}
-            placeholder={t("repeat.placeholder")}
-            aria-describedby={`${id}-repeat-said`}
-            onChange={(e) => setRepeat(e.target.value)}
-          />
-          <p className="hint" id={`${id}-repeat-said`} aria-live="polite">
+        {asks && <ProjectPicker label={t("addtodo.place")} value={project} empty={t("addtodo.choose_place")} required onChange={setProject} />}
+        <details className="more-options" data-add-more="">
+          <summary>{t("addtodo.more")}</summary>
+          <EffortField id={id} value={effort} onChange={setEffort} />
+          <PersonPicker label={t("addtodo.owner")} value={who} suggested={[]} people={active} onChange={setOwner} />
+          {!justMe && !asks && <ProjectPicker label={t("addtodo.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />}
+          <RepeatField id={id} value={repeat} onChange={setRepeat}>
             {readRepeat?.status === "ok" && readRepeat.shape && readRepeat.start && saidRepeat(t, readRepeat.shape, readRepeat.start)}
             {readRepeat?.status === "unclear" && t("repeat.unclear")}
             {readRepeat?.status === "off_start" && readRepeat.start && t("repeat.off_start", { date: day(dayIso), first: day(readRepeat.start) })}
-          </p>
-        </FormField>
+          </RepeatField>
+        </details>
       </form>
     </Drawer>
   );

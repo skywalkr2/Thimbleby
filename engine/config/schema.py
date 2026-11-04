@@ -2850,6 +2850,12 @@ class UiFile(FileModel):
         le=500,
         description="How many rows a group on the Handled for you screen shows before Show more.",
     )
+    open_rows_shown: int = Field(
+        15,
+        ge=5,
+        le=200,
+        description="How many to-dos a group on the To-dos screen (Overdue, Today, Coming up) shows before Show more.",
+    )
 
     narrow_below_px: int = Field(
         640,

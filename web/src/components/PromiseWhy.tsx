@@ -41,7 +41,7 @@ export function useCorrectPromise(action: string) {
 /** The promise's why block. `quiet` leaves a plain to-do alone; `omitQuote` and `omitOrigin` are for a place that already
  * shows the words, or the link to where they came from. `line` is for a list of many: one meta line ("Ana Person · due Fri,
  * Oct 16 · promised to no one") whose parts are each a button that opens a small popover to change it. */
-export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?: boolean; omitOrigin?: boolean; line?: boolean; skip?: Field[] }) {
+export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?: boolean; omitOrigin?: boolean; line?: boolean; skip?: Field[]; title?: string }) {
   const { t } = useWords();
   const found = useQuery({ queryKey: ["promise", props.action], queryFn: () => api.promise(props.action) });
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -54,6 +54,13 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
     if ((await correct(body, view.version)) !== undefined) setEditing(null);
   };
   const names = people.data ?? [];
+  // A to-do the person made for themselves, with no one it is promised to, has no "promised to" to say; the words are not said again
+  // when the page's title already is them.
+  const me = names.find((p) => p.is_pm)?.id;
+  const ownTodo = view.promised_to.length === 0 && view.owners.length > 0 && view.owners.every((o) => o.id === me);
+  const wordsAreTitle = !!props.title && plainDates(view.quote ?? "").trim() === props.title.trim();
+  // Nothing is left to say about a plain to-do of the person's own whose words are its title.
+  if (props.quiet && !props.line && wordsAreTitle && ownTodo && !view.basis && !view.due_words && view.news.length === 0) return null;
   if (props.line) {
     return (
       <section className={styles.line} aria-label={t("promise.why")} data-promise-why={view.action}>
@@ -72,7 +79,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
         ) : (
           <>
             <span>{value}</span>
-            <button type="button" className="link-button" aria-label={t("promise.change_named", { what: label })} onClick={() => setEditing(field)}>
+            <button type="button" className={`link-button ${styles.change}`} aria-label={t("promise.change_named", { what: label })} onClick={() => setEditing(field)}>
               {t("promise.change")}
             </button>
           </>
@@ -83,7 +90,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
   return (
     <section className="promise-why" aria-label={t("promise.why")} data-promise-why={view.action}>
       <DefinitionList>
-        {view.quote && !props.omitQuote && (
+        {view.quote && !props.omitQuote && !wordsAreTitle && (
           <Definition>
             <dt>{t("promise.words")}</dt>
             <dd>
@@ -104,7 +111,7 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
             onCancel={() => setEditing(null)}
           />,
         )}
-        {row(
+        {!ownTodo && row(
           "to",
           t("promise.to"),
           view.promised_to.length > 0 ? view.promised_to.map((p) => p.name).join(", ") : t("promise.no_one"),

@@ -29,17 +29,20 @@ test.describe("Today and the work screens", () => {
 
   test("the to-dos screen counts what its tab counts, in words that name them (X87)", async ({ page }) => {
     await open(page, "work/open");
-    const line = page.locator("[data-need-count]");
-    await expect(line).toBeVisible(LOADED);
-    const said = /^(\d+) of these (\d+) to-dos? needs? you$|^None of these (\d+) to-dos waits on you$/.exec((await line.innerText()).trim());
-    expect(said, await line.innerText()).not.toBeNull();
-    const total = Number(said?.[2] ?? said?.[3]);
+    // The tab's count appears once the list has loaded.
+    await expect(page.getByRole("button", { name: /^To-dos\b/ }).first()).toContainText(/\d/, LOADED);
     const tab = await page.getByRole("button", { name: /^To-dos\b/ }).first().innerText();
-    expect(Number(/(\d+)\s*$/.exec(tab)?.[1])).toBe(total);
-    // The line under the title counts the rows of both tabs, the to-dos and the questions (design 7.7).
-    const questionsTab = await page.getByRole("button", { name: /^Questions\b/ }).first().innerText();
+    const total = Number(/(\d+)\s*$/.exec(tab)?.[1]);
+    // The footer says how many need the person only when that is not all of them.
+    const line = page.locator("[data-need-count]");
+    if (await line.count()) {
+      const said = /^(\d+) of these (\d+) to-dos? needs? you$|^None of these (\d+) to-dos waits on you$/.exec((await line.innerText()).trim());
+      expect(said, await line.innerText()).not.toBeNull();
+      expect(Number(said?.[2] ?? said?.[3])).toBe(total);
+    }
+    // The line under the title counts the rows of the tab shown, the to-dos (design 7.5).
     const opened = await page.getByText(/^\d+ open\b/).first().innerText();
-    expect(Number(/^(\d+)/.exec(opened)?.[1])).toBe(total + Number(/(\d+)\s*$/.exec(questionsTab)?.[1]));
+    expect(Number(/^(\d+)/.exec(opened)?.[1])).toBe(total);
   });
 
   test("setup's count is the seven steps on Today's line and in the walkthrough alike (X87)", async ({ page }) => {

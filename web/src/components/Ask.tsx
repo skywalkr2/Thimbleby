@@ -127,13 +127,13 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.close")}
           </Button>
-          <Button variant="primary" type="submit" disabled={busy || !question.trim()}>
+          <Button variant="primary" type="submit" disabled={busy || !question.trim()} reason={question.trim() ? undefined : t("ask.reason")}>
             {t(busy ? "ask.sending" : "ask.go")}
           </Button>
         </DialogFooter>
       </form>
       <OwnKindsOffer />
-      <section aria-labelledby={`${base}-recent`} className="asks">
+      <section aria-labelledby={`${base}-recent`} className="asks" hidden={asks.isSuccess && asks.data.length === 0}>
         <h3 id={`${base}-recent`} className="what">
           {t("ask.recent")}
         </h3>
@@ -146,9 +146,7 @@ export function Ask(props: { onClose: () => void; initial?: string; reveal?: str
               {t("action.try_again")}
             </Button>
           </p>
-        ) : asks.data.length === 0 ? (
-          <p className="hint">{t("ask.empty")}</p>
-        ) : (
+        ) : asks.data.length === 0 ? null : (
           <RowList>
             {asks.data.slice(0, SHOWN).map((item) => (
               <AskRow key={item.id} revealed={item.id === props.reveal} item={item} onApplied={props.onClose} mailTo={props.feedbackTo} />

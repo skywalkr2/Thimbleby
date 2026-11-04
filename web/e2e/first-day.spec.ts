@@ -137,23 +137,12 @@ test.describe("the first day, read as a person reads it", () => {
     await expect(page.getByRole("combobox", { name: "Organization" })).toHaveCount(0);
   });
 
-  // F6: a fold shows that it is one, and tabs over nothing are not drawn.
-  test("Follow-ups with nothing to follow up draws no tabs, and the message style is a fold with a visible control", async ({ page }) => {
+  // F6: tabs over nothing are not drawn, and neither is the message style; the page is one line and where to go.
+  test("Follow-ups with nothing to follow up draws no tabs and no message style, and says where follow-ups come from", async ({ page }) => {
     await openScreen(page, "work/followups", "Follow-ups");
-    await expect(page.getByText(/A follow-up is a message to someone/)).toBeVisible(LOADED);
-    for (const name of ["By person", "By project", "To send", "Later", "Waiting on them"]) await expect(page.getByRole("button", { name })).toHaveCount(0);
-    const fold = page.locator("summary", { hasText: "How your messages start and end" });
-    await expect(fold).toBeVisible(LOADED);
-    const control = await fold.evaluate((el) => {
-      const before = getComputedStyle(el, "::before");
-      return { content: before.content, width: before.width, listStyle: getComputedStyle(el).display };
-    });
-    expect(control.content).toBe('""');
-    expect(parseFloat(control.width)).toBeGreaterThan(0);
-    // Open, the control turns (a different transform).
-    const closed = await fold.evaluate((el) => getComputedStyle(el, "::before").transform);
-    await fold.click();
-    const opened = await fold.evaluate((el) => getComputedStyle(el, "::before").transform);
-    expect(opened).not.toBe(closed);
+    await expect(page.getByText("No follow-ups yet. They appear when someone else owes you an answer.")).toBeVisible(LOADED);
+    await expect(page.getByRole("link", { name: "Go to People" })).toBeVisible();
+    for (const name of ["By person", "By project", "To send", "Later", "Waiting on them", "Message style"]) await expect(page.getByRole("button", { name })).toHaveCount(0);
+    await expect(page.locator("summary", { hasText: "How your messages start and end" })).toHaveCount(0);
   });
 });

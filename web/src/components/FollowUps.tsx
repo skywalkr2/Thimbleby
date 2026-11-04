@@ -71,7 +71,7 @@ import { SectionRow } from "../ui/SectionRow";
 import { DetailTop } from "../ui/DetailTop";
 import { RowBody } from "../ui/RowBody";
 import { ItemList, Item } from "../ui/ItemList";
-import { ExpandableRow, Row } from "../ui/Row";
+import { ExpandableRow } from "../ui/Row";
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
 const FILTERS: Filter[] = ["send", "later", "waiting"];
@@ -122,6 +122,7 @@ export function FollowUps(props: { compact?: boolean }) {
   useReviewTime("followups", !compact);
   const [filter, setFilter] = useState<Filter>("send");
   const [group, setGroup] = useState<Group>("person");
+  const [styleOpen, setStyleOpen] = useState(false);
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   const latest = useRef(followups.data);
   latest.current = followups.data;
@@ -245,6 +246,13 @@ export function FollowUps(props: { compact?: boolean }) {
         id="followups-title"
         level={compact ? 3 : 1}
         title={t("followups.title")}
+        actions={
+          !compact && !byProject && filter === "send" && !nothingAnywhere ? (
+            <Button variant="quiet" onClick={() => setStyleOpen(true)}>
+              {t("followups.style.open")}
+            </Button>
+          ) : undefined
+        }
         tabs={
           !nothingAnywhere ? (
             <TabStrip label={t("followups.filter")} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ value: f, label: t(`followups.filter.${f}`) }))} />
@@ -271,14 +279,14 @@ export function FollowUps(props: { compact?: boolean }) {
           </>
         }
       />
-      {ownRow && filter === "send" && <OwnTodosRow section={ownRow} />}
+      {ownRow && filter === "send" && !nothingAnywhere && <OwnTodosRow section={ownRow} />}
       <ListState query={followups} failed={t("followups.load_failed")}>
         {() =>
       sections.length === 0 && actRows.length === 0 ? (
         present.length > 0 ? (
           <FilteredEmpty text={t("sides.empty.followups", { side: side.named })} onClear={() => side.set("all")} />
         ) : (
-          <EmptyState text={t("followups.empty")} />
+          <EmptyState icon="send" text={t("followups.empty")} action={{ label: t("followups.empty_people"), href: viewHref("records/people") }} />
         )
       ) : byProject ? (
         projectSections.length === 0 ? (
@@ -326,7 +334,7 @@ export function FollowUps(props: { compact?: boolean }) {
             <RowList as="ol" aria-labelledby={actRows.length > 0 ? "followups-messages-title" : undefined}>
               {phone && reviewable.length > 0 && (
                 <li className="review-start">
-                  <Button variant="primary" onClick={() => setReviewing(true)}>
+                  <Button icon="send" onClick={() => setReviewing(true)}>
                     {t("followups.review.start")}
                   </Button>
                 </li>
@@ -353,7 +361,7 @@ export function FollowUps(props: { compact?: boolean }) {
         <LoadFailed message={t("outgoing.load_failed")} onRetry={() => void acts.refetch()} />
       )}
       {!compact && !byProject && filter === "send" && acts.isSuccess && <SentActs />}
-      {!compact && !byProject && filter === "send" && <MessageStyle />}
+      {!compact && !byProject && filter === "send" && <MessageStyle open={styleOpen} onClose={() => setStyleOpen(false)} />}
     </section>
   );
 }
@@ -367,6 +375,9 @@ function yourCounts(s: S["FollowupSection"], tn: Tn): string {
     .filter(Boolean)
     .join(" · ");
 }
+
+/** How many of a message's items are listed above its box before "Show N more". */
+const LISTED_ITEMS = 6;
 
 /** The width the list needs beside the pane: a name, one line under it and the primary. */
 const FOLLOWUPS_FIT = 420;
@@ -459,8 +470,9 @@ function FollowListRow(props: {
         </>
       }
       expand={{ expanded: choice.chosen === s.person, inert: choice.chosen === s.person, onToggle: () => choice.choose(s.person) }}
+      // The detail holds the one Copy: a line only opens it (its keys still copy), so the same action is never in view twice.
       primary={
-        kind === "send" ? (
+        kind === "send" && props.compact ? (
           <Button variant="primary" onClick={() => toDetail("primary")}>
             {props.copied ? t("followups.mark_sent") : t("followups.copy_message")}
           </Button>
@@ -470,14 +482,15 @@ function FollowListRow(props: {
   );
 }
 
-/** The person's own to-dos, decisions and questions are not follow-ups: one row at the top says how many there are and opens
+/** The person's own to-dos, decisions and questions are not follow-ups: one plain line says how many there are and opens
  * them where they are kept (To-dos and questions). */
 function OwnTodosRow(props: { section: S["FollowupSection"] }) {
   const { t, tn } = useWords();
   return (
-    <RowList as="ul" aria-label={t("followups.own_todos")} data-own-todos="">
-      <Row title={<a href={viewHref("work/open")}>{t("followups.own_todos")}</a>} meta={yourCounts(props.section, tn)} aria-label={t("followups.own_todos")} />
-    </RowList>
+    <p className="own-todos-line" data-own-todos="">
+      <a href={viewHref("work/open")}>{t("followups.own_todos")}</a>
+      <span className="muted">{yourCounts(props.section, tn)}</span>
+    </p>
   );
 }
 
@@ -602,6 +615,8 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const setDraft = (value: string | null) => (shared ? shared.set({ draft: value }) : setOwnDraft(value));
   const setCopied = (value: boolean) => (shared ? shared.set({ copied: value }) : setOwnCopied(value));
   const [view, setView] = useState<"message" | "table">("message");
+  // A message that holds many items lists the first few above the box; the rest are one press away.
+  const [everyItem, setEveryItem] = useState(false);
   // The browser refused the last copy: Mark sent is then offered beside the box, for a message sent some other way.
   const [copyRefused, setCopyRefused] = useState(false);
   const message = draft ?? s.message;
@@ -723,6 +738,8 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const menu: MenuAction[] = [
     { id: "edit", label: t("followups.edit"), run: edit },
     { id: "copy-plain", label: t("followups.copy_plain"), run: () => void (!open ? edit() : view === "table" ? copySheet() : copyPlainText()) },
+    // The table is the same message in rows; it is chosen from the menu, and the message is one choice away.
+    { id: "view-as", label: t(view === "table" ? "followups.view.show_message" : "followups.view.show_table"), run: () => (view === "table" ? edit() : (setOpen(true), setView("table"))) },
     ...(questions.length > 1 ? [hold.messageEntry] : []),
     ...(questions.length > 0 ? [hold.entry] : []),
     { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
@@ -744,15 +761,6 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   );
   const opened = (
     <>
-          <SegmentedControl
-            label={t("followups.view")}
-            value={view}
-            onChange={setView}
-            options={[
-              { value: "message", label: t("followups.view.message") },
-              { value: "table", label: t("followups.view.table") },
-            ]}
-          />
           {view === "table" ? (
             <>
               <div ref={preview}>
@@ -773,16 +781,13 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
             </>
           ) : (
             <>
-              <div className="what" id={`in-${s.person}`}>
-                {t("followups.in_message")}
-              </div>
-              <ul className="plain-list" aria-labelledby={`in-${s.person}`}>
+              <ul className="plain-list" aria-label={t("followups.in_message")}>
                 {questions.map((q) => (
                   <li key={q.id}>
                     <span className="title">{q.title}</span>
                   </li>
                 ))}
-                {actions.map((a) => (
+                {actions.slice(0, everyItem ? actions.length : Math.max(0, LISTED_ITEMS - questions.length)).map((a) => (
                   <li key={a.id}>
                     <span className="title">
                       <NotesTitle notes={a.notes}>{shortTitle(a.text, a.due)}</NotesTitle>
@@ -795,6 +800,11 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                   </li>
                 ))}
               </ul>
+              {!everyItem && questions.length + actions.length > LISTED_ITEMS && (
+                <Button variant="quiet" size="sm" onClick={() => setEveryItem(true)}>
+                  {tn("followups.show_more_items", questions.length + actions.length - LISTED_ITEMS)}
+                </Button>
+              )}
               <div className="message">
                 {(s.limited_out ?? []).map((x) => (
                   <p key={`${x.kind}:${x.id}`} className="hint" data-limited-out="">
@@ -810,7 +820,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 <label className="hint" htmlFor={`msg-${s.person}`}>
                   {t("followups.message_label", { name: s.name })}
                 </label>
-                <textarea id={`msg-${s.person}`} className="msg" ref={area} value={message} onChange={(e) => setDraft(e.target.value)} />
+                <textarea id={`msg-${s.person}`} className="msg" ref={area} rows={Math.min(16, Math.max(6, message.split("\n").length + 1))} value={message} onChange={(e) => setDraft(e.target.value)} />
                 <Actions align="end">
                   <span className="hint">{t("followups.clean_copy")}</span>
                   {draft !== null && (

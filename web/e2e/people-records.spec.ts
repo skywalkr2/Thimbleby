@@ -178,7 +178,8 @@ test.describe("People and record pages", () => {
   test("a to-do that is too long says so beside the field before it is sent", async ({ page }) => {
     await go(page, "work/open");
     await heading(page, "To-dos and questions");
-    await page.getByRole("button", { name: "Add a to-do" }).first().click();
+    await page.getByRole("textbox", { name: "Add a to-do" }).fill("Call the printer");
+    await page.getByRole("button", { name: "More options" }).click();
     const words = page.getByRole("textbox", { name: "What to do" });
     await words.fill("w".repeat(312));
     await expect(page.getByText(/12 characters too long/)).toBeVisible(LOADED);

@@ -55,9 +55,9 @@ test.describe("Late evening", () => {
     // Choosing the person shows the message, Copy puts it on the clipboard, and Mark sent records it.
     await card.getByRole("button", { name: new RegExp(`^${name}`) }).click();
     await expect(page.locator("aside[data-detail-pane]").getByRole("textbox").first()).toBeVisible();
-    await card.getByRole("button", { name: "Copy message" }).first().click();
+    await page.locator("aside[data-detail-pane]").getByRole("button", { name: "Copy message" }).first().click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(sent[0].text);
-    await card.getByRole("button", { name: "Mark sent" }).first().click();
+    await page.locator("aside[data-detail-pane]").getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${name}`)).toBeVisible();
     await expectNoNegativeDays(page);
 

@@ -203,7 +203,7 @@ export function HandIn(props: { onClose: () => void }) {
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.cancel")}
           </Button>
-          <Button variant="primary" type="submit" form="handin-form" disabled={busy || !text.trim()}>
+          <Button variant="primary" type="submit" form="handin-form" disabled={busy || !text.trim()} reason={text.trim() ? undefined : t("handin.reason")}>
             {t("handin.go")}
           </Button>
         </>
@@ -231,9 +231,11 @@ export function HandIn(props: { onClose: () => void }) {
             placeholder={t("handin.box_placeholder")}
           />
         </FormField>
-        <Button type="button" variant="quiet" disabled={fileBusy} onClick={() => fileInput.current?.click()}>
-          {t("handin.file.choose")}
-        </Button>
+        <div className="file-pick">
+          <Button type="button" icon="upload" disabled={fileBusy} onClick={() => fileInput.current?.click()}>
+            {t("handin.file.choose")}
+          </Button>
+        </div>
         <input
           ref={fileInput}
           hidden
@@ -267,61 +269,64 @@ export function HandIn(props: { onClose: () => void }) {
             ))}
           </ul>
         )}
+        <details className="more-options" data-handin-options="">
+          <summary>{t("handin.options")}</summary>
         <FormBlock className="choice">
-          <span aria-hidden="true">{t("handin.whose")}</span>
-          <SegmentedControl
-            label={t("handin.whose")}
-            options={[
-              { value: "others", label: t("handin.whose.others") },
-              { value: "mine", label: t("handin.whose.mine") },
-            ]}
-            value={whose}
-            onChange={setWhose}
-          />
-          <p className="hint">{t(whose === "mine" ? "handin.whose_hint.mine" : "handin.whose_hint.others")}</p>
-        </FormBlock>
-        {whose === "others" && (
-          <FormField id="handin-todo" label={t("handin.todo")}>
-            <input
-              id="handin-todo"
-              type="text"
-              value={todo}
-              onChange={(e) => setTodo(e.target.value)}
-              placeholder={t("handin.todo_placeholder")}
+            <span aria-hidden="true">{t("handin.whose")}</span>
+            <SegmentedControl
+              label={t("handin.whose")}
+              options={[
+                { value: "others", label: t("handin.whose.others") },
+                { value: "mine", label: t("handin.whose.mine") },
+              ]}
+              value={whose}
+              onChange={setWhose}
             />
+            <p className="hint">{t(whose === "mine" ? "handin.whose_hint.mine" : "handin.whose_hint.others")}</p>
+          </FormBlock>
+          {whose === "others" && (
+            <FormField id="handin-todo" label={t("handin.todo")}>
+              <input
+                id="handin-todo"
+                type="text"
+                value={todo}
+                onChange={(e) => setTodo(e.target.value)}
+                placeholder={t("handin.todo_placeholder")}
+              />
+            </FormField>
+          )}
+          <FormField id="handin-sensitivity" label={t("handin.sensitivity")}>
+            <Select
+              id="handin-sensitivity"
+              value={sensitivity}
+              aria-describedby="handin-sensitivity-hint"
+              onChange={(e) => setSensitivity(e.target.value as Sensitivity)}
+            >
+              <option value="">{t("handin.sensitivity.usual")}</option>
+              <option value="internal">{t("handin.sensitivity.internal")}</option>
+              <option value="restricted">{t("handin.sensitivity.restricted")}</option>
+            </Select>
+            <span id="handin-sensitivity-hint" className="hint">
+              {t("handin.sensitivity_hint")}
+            </span>
           </FormField>
-        )}
-        <FormField id="handin-sensitivity" label={t("handin.sensitivity")}>
-          <Select
-            id="handin-sensitivity"
-            value={sensitivity}
-            aria-describedby="handin-sensitivity-hint"
-            onChange={(e) => setSensitivity(e.target.value as Sensitivity)}
-          >
-            <option value="">{t("handin.sensitivity.usual")}</option>
-            <option value="internal">{t("handin.sensitivity.internal")}</option>
-            <option value="restricted">{t("handin.sensitivity.restricted")}</option>
-          </Select>
-          <span id="handin-sensitivity-hint" className="hint">
-            {t("handin.sensitivity_hint")}
-          </span>
-        </FormField>
-        {!justMe && (
-        <FormField id="handin-project" label={t("handin.project")}>
-          <Select
-            id="handin-project"
-            value={project}
-            aria-describedby="handin-project-hint"
-            onChange={(e) => setProject(e.target.value)}
-          >
-            <option value="">{t("handin.project.none")}</option>
-            {placeOptions(projects.data ?? [], t)}
-          </Select>
-          <span id="handin-project-hint" className="hint">
-            {t("handin.project_hint")}
-          </span>
-        </FormField>
-        )}
+          {!justMe && (
+          <FormField id="handin-project" label={t("handin.project")}>
+            <Select
+              id="handin-project"
+              value={project}
+              aria-describedby="handin-project-hint"
+              onChange={(e) => setProject(e.target.value)}
+            >
+              <option value="">{t("handin.project.none")}</option>
+              {placeOptions(projects.data ?? [], t)}
+            </Select>
+            <span id="handin-project-hint" className="hint">
+              {t("handin.project_hint")}
+            </span>
+          </FormField>
+          )}
+        </details>
       </form>
     </Drawer>
   );

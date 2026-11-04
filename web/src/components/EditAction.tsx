@@ -21,11 +21,15 @@ import type { MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
 import { DateField } from "../ui/DateField";
 import { Actions } from "../ui/Actions";
+import { Drawer } from "../ui/Drawer";
 import { FormField } from "../ui/FormField";
+import { RepeatField } from "./RepeatField";
 import { Select } from "../ui/Select";
 type Target = Pick<S["OpenActionView"], "id" | "version" | "text" | "due" | "repeat" | "effort_minutes" | "owners" | "project">;
 
-export function useEditAction(action: Target, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
+/** `drawer` opens the editor as a drawer from the right, with Cancel and Save pinned at its foot (a to-do's own page); without it
+ * the editor opens in place under the row. */
+export function useEditAction(action: Target, onClosed?: () => void, options?: { drawer?: boolean }): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
   const act = useAct();
   const id = useId();
@@ -103,23 +107,15 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
       ? saidRepeat(t, read.shape, read.start)
       : null;
   const entry: MenuAction = { id: "edit-action", label: t("open.edit"), run: start };
-  const form = open ? (
-    <form
-      className="answer-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
-      onKeyDown={(e) => e.key === "Escape" && close()}
-    >
-      <label className="hint" htmlFor={`${id}-text`}>
-        {t("open.edit.text")}
-      </label>
-      <input id={`${id}-text`} type="text" autoFocus value={text} onChange={(e) => setText(e.target.value)} />
-      <label className="hint" htmlFor={`${id}-due`}>
-        {t("open.edit.due")}
-      </label>
-      <DateField id={`${id}-due`} value={due} onChange={(e) => setDue(e.target.value)} />
+  const reason = !words ? t("addtodo.reason.text") : !changed ? t("open.edit.reason.unchanged") : !repeatOk ? t("repeat.unclear") : undefined;
+  const inside = (
+    <>
+      <FormField id={`${id}-text`} label={t("open.edit.text")}>
+        <input id={`${id}-text`} type="text" autoFocus value={text} onChange={(e) => setText(e.target.value)} />
+      </FormField>
+      <FormField id={`${id}-due`} label={t("open.edit.due")}>
+        <DateField id={`${id}-due`} value={due} onChange={(e) => setDue(e.target.value)} />
+      </FormField>
       <EffortField id={id} value={effort} onChange={setEffort} />
       {action.owners.length > 1 && (
         <FormField id={`${id}-from`} label={t("open.reassign.from")}>
@@ -142,18 +138,7 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
       />
       {handOver && !people.data?.find((p) => p.id === owner)?.is_pm && <p className="hint">{t("open.edit.tell_hint", { name: people.data?.find((p) => p.id === owner)?.name ?? "" })}</p>}
       {!justMe && <ProjectPicker label={t("open.edit.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />}
-      <label className="hint" htmlFor={`${id}-repeat`}>
-        {t("repeat.label")}
-      </label>
-      <input
-        id={`${id}-repeat`}
-        type="text"
-        value={repeat}
-        placeholder={t("repeat.placeholder")}
-        aria-describedby={`${id}-said`}
-        onChange={(e) => setRepeat(e.target.value)}
-      />
-      <p className="hint" id={`${id}-said`} aria-live="polite">
+      <RepeatField id={id} value={repeat} onChange={setRepeat}>
         {sayBack}
         {repeatChanged && read?.status === "unclear" && t("repeat.unclear")}
         {repeatChanged && read?.status === "off_start" && read.start && (
@@ -164,16 +149,46 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
             </Button>
           </>
         )}
-      </p>
+      </RepeatField>
+    </>
+  );
+  const submit = (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    void save();
+  };
+  const form = !open ? null : options?.drawer ? (
+    <Drawer
+      open
+      title={t("open.edit.title")}
+      onClose={close}
+      dirty={changed}
+      footer={
+        <>
+          <Button variant="quiet" onClick={close}>
+            {t("action.cancel")}
+          </Button>
+          <Button variant="primary" type="submit" form={`${id}-form`} disabled={!words || !changed || !repeatOk} reason={reason}>
+            {t("open.edit.save")}
+          </Button>
+        </>
+      }
+    >
+      <form id={`${id}-form`} className="answer-form" onSubmit={submit}>
+        {inside}
+      </form>
+    </Drawer>
+  ) : (
+    <form className="answer-form" onSubmit={submit} onKeyDown={(e) => e.key === "Escape" && close()}>
+      {inside}
       <Actions align="end">
         <Button variant="quiet" onClick={close}>
           {t("action.cancel")}
         </Button>
-        <Button variant="primary" type="submit" disabled={!words || !changed || !repeatOk}>
+        <Button variant="primary" type="submit" disabled={!words || !changed || !repeatOk} reason={reason}>
           {t("open.edit.save")}
         </Button>
       </Actions>
     </form>
-  ) : null;
+  );
   return { entry, form };
 }

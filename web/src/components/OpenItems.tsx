@@ -107,12 +107,13 @@ export function OpenItems() {
   const today = todayOn(new Date());
   const dueNow = dueToday(actions, today);
   const openAll = actions.length + questions.length;
+  // The line under the title counts what the open tab holds: the to-dos (and how many are late or due today), or the questions.
   const subtitle =
-    openAll === 0 ? undefined : (
+    openAll === 0 || total === 0 ? undefined : (
       <>
-        <strong>{tn("open.subtitle", openAll)}</strong>
-        {late > 0 && ` · ${t("open.subtitle.overdue", { n: late })}`}
-        {dueNow > 0 && ` · ${t("open.subtitle.today", { n: dueNow })}`}
+        <strong>{tn("open.subtitle", total)}</strong>
+        {tab === "actions" && late > 0 && ` · ${t("open.subtitle.overdue", { n: late })}`}
+        {tab === "actions" && dueNow > 0 && ` · ${t("open.subtitle.today", { n: dueNow })}`}
       </>
     );
 
@@ -160,21 +161,14 @@ export function OpenItems() {
         id="open-title"
         title={t("open.title")}
         subtitle={subtitle}
-        primary={
-          !items.isPending && actions.length + questions.length > 0 ? (
-            <Button variant="primary" icon="plus" onClick={() => addTodo.open()}>
-              {t("addtodo.open")}
-            </Button>
-          ) : undefined
-        }
         tabs={
           <TabStrip
             label={t("open.tabs")}
             value={tab}
             onChange={choose}
             options={[
-              { value: "actions", label: t("open.tab.actions"), count: actions.length },
-              { value: "questions", label: t("open.tab.questions"), count: questions.length },
+              { value: "actions", label: t("open.tab.actions"), count: items.isPending ? undefined : actions.length },
+              { value: "questions", label: t("open.tab.questions"), count: items.isPending ? undefined : questions.length },
             ]}
           />
         }
@@ -211,16 +205,16 @@ export function OpenItems() {
               {shown + (tab === "actions" ? needDate.length : 0) === 0 ? (
                 // A tab with nothing in it says so; "nothing matches" is only for rows the filters hid.
                 total === 0 ? (
-                  <EmptyState icon="check" text={t(`open.empty.${tab}`)} />
+                  <EmptyState icon={tab === "questions" ? "help" : "check"} text={t(`open.empty.${tab}`)} />
                 ) : (
                   <FilteredEmpty text={t("open.none_match")} onClear={() => setFilters(NO_FILTERS)} />
                 )
               ) : tab === "actions" ? (
                 // With no row to list (every to-do waits for a date) what is left is the add row and one line, which are not a list.
-                <RowList aria-label={shownActions.length > 0 ? t("open.list.actions") : undefined} role={shownActions.length > 0 ? undefined : "presentation"} className={styles.todoList}>
+                <RowList aria-label={shownActions.length > 0 ? t("open.list.actions") : undefined} role={shownActions.length > 0 ? undefined : "presentation"}>
                   <InlineAddTodo onDetails={addTodo.open} />
                   {groupActions([...shownActions, ...ticked], today).map(({ group, rows }) => (
-                    <TodoGroupRows key={group} group={group} rows={rows} inlineOrigin={narrow} ticked={new Set(ticked.map((a) => a.id))} onDone={gone} onUndone={undone} />
+                    <TodoGroupRows key={group} group={group} rows={rows} limit={items.data?.rows_shown ?? 15} inlineOrigin={narrow} ticked={new Set(ticked.map((a) => a.id))} onDone={gone} onUndone={undone} />
                   ))}
                   <NeedsADateLine rows={needDate} />
                 </RowList>
@@ -231,7 +225,7 @@ export function OpenItems() {
                   ))}
                 </RowList>
               )}
-              {total > 0 && <p className="hint" data-need-count="">{tn(`open.need.${tab}`, needYou, { total })}</p>}
+              {total > 0 && needYou !== total && <p className="hint" data-need-count="">{tn(`open.need.${tab}`, needYou, { total })}</p>}
             </>
           )
         }
@@ -240,23 +234,36 @@ export function OpenItems() {
   );
 }
 
-/** One group of the to-dos: its label with the count, then its rows. The label is a part of the list, not a row of it. */
-function TodoGroupRows(props: { group: string; rows: OpenAction[]; inlineOrigin: boolean; ticked: Set<string>; onDone: (a: OpenAction) => void; onUndone: (id: string) => void }) {
-  const { t } = useWords();
+/** One group of the to-dos: its label with the count, then its rows (the first `limit`, then "Show N more"; a row just ticked
+ * stays where it was). The label is a part of the list, not a row of it. */
+function TodoGroupRows(props: { group: string; rows: OpenAction[]; limit: number; inlineOrigin: boolean; ticked: Set<string>; onDone: (a: OpenAction) => void; onUndone: (id: string) => void }) {
+  const { t, tn } = useWords();
   const id = useId();
+  const [all, setAll] = useState(false);
+  const open = props.rows.filter((a) => !props.ticked.has(a.id));
+  // Past the limit the rest wait behind one button, except a row just ticked, which keeps its place and its Undo.
+  const hidden = all ? new Set<string>() : new Set(open.slice(props.limit).map((a) => a.id));
+  const rows = props.rows.filter((a) => !hidden.has(a.id));
   return (
     <>
       <li role="presentation" className={styles.groupItem}>
-        <GroupLabel id={id} as="h3" count={props.rows.filter((a) => !props.ticked.has(a.id)).length} tone={props.group === "overdue" ? "danger" : "plain"} data-todo-group={props.group}>
+        <GroupLabel id={id} as="h3" count={open.length} tone={props.group === "overdue" ? "danger" : "plain"} data-todo-group={props.group}>
           {t(`open.group.${props.group}`)}
         </GroupLabel>
       </li>
-      {props.rows.map((a) =>
+      {rows.map((a) =>
         props.ticked.has(a.id) ? (
           <DoneRow key={a.id} action={a} onUndone={props.onUndone} />
         ) : (
           <ActionRow key={a.id} action={a} inlineOrigin={props.inlineOrigin} onDone={props.onDone} />
         ),
+      )}
+      {hidden.size > 0 && (
+        <li role="presentation" className={styles.showMore}>
+          <Button variant="quiet" size="sm" data-show-more={props.group} onClick={() => setAll(true)}>
+            {tn("open.show_more", hidden.size)}
+          </Button>
+        </li>
       )}
     </>
   );
@@ -303,7 +310,7 @@ function ActionRow(props: { action: OpenAction; inlineOrigin: boolean; onDone?: 
         props.onDone?.(a);
         return result;
       },
-      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(a.id, "open") }),
+      (result) => ({ message: noted(t("toast.action_done_named", { text: plainTitle(a.text) }), result.request), undo: () => api.actionStatus(a.id, "open") }),
     );
   const twin = a.duplicate;
   const merge: MenuAction | null = twin

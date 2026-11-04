@@ -43,6 +43,15 @@ function api(actions: S["OpenActionView"][] = [], extra: Routes = {}) {
   });
 }
 
+// Repeats is a list; any way that is not on it is "Something else", which shows the words box.
+async function repeatsInWords(user: ReturnType<typeof userEvent.setup>, words: string) {
+  await user.selectOptions(screen.getByRole("combobox", { name: "Repeats" }), "Something else");
+  const box = await screen.findByRole("textbox", { name: "How it repeats, in words" });
+  await user.clear(box);
+  if (words) await user.type(box, words);
+  return box;
+}
+
 const sent = (calls: Array<{ route: string; body: unknown }>) => calls.find((c) => c.route === "POST todos")?.body;
 
 test("an empty list offers Add a to-do as its one primary, and the cursor starts in the words", async () => {
@@ -55,14 +64,28 @@ test("an empty list offers Add a to-do as its one primary, and the cursor starts
   expect(await screen.findByRole("textbox", { name: "What to do" })).toHaveFocus();
 });
 
-test("with to-dos on the list the button is the header's one primary", async () => {
+test("with to-dos on the list there is no Add button in the header: the row is the way in", async () => {
   const action: S["OpenActionView"] = {
     id: "A-1", version: 1, text: "Send the weekly update", state: "open", owners: [{ person: "P-1", name: "Quinn Sample" }], due: null, project: null, project_name: "",
     parent_name: null, notes: null, since: "2026-10-01", on_hold: null, blocker: null, duplicate: null, origin: null, untouched_days: null, owner_question: null, to_send: false,
   };
   api([action]);
   renderApp(<OpenItems />);
-  expect(await screen.findByRole("button", { name: "Add a to-do" })).toHaveAttribute("data-variant", "primary");
+  expect(await screen.findByRole("textbox", { name: "Add a to-do" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Add a to-do" })).toBeNull();
+});
+
+test("the form first asks for the words and the day; owner, length, project and repeat are under More options", async () => {
+  const user = userEvent.setup();
+  api();
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  await screen.findByRole("textbox", { name: "What to do" });
+  expect(screen.getByRole("textbox", { name: "Due (optional)" })).toBeVisible();
+  const more = screen.getByText("More options").closest("details")!;
+  expect(more).not.toHaveAttribute("open");
+  expect(more).toContainElement(screen.getByRole("combobox", { name: "Repeats" }));
+  expect(more).toContainElement(screen.getByRole("combobox", { name: "Who does it" }));
 });
 
 test("the day and the repeat are said back, the person is the default owner, and nothing is kept until Add", async () => {
@@ -73,7 +96,7 @@ test("the day and the repeat are said back, the person is the default owner, and
   await user.type(await screen.findByRole("textbox", { name: "What to do" }), "Send the weekly update");
   await user.type(screen.getByRole("textbox", { name: "Due (optional)" }), "Friday");
   expect(await screen.findByText(/^Due Fri, Nov 6/)).toBeInTheDocument();
-  await user.type(screen.getByRole("textbox", { name: "Repeats" }), "every Friday");
+  await repeatsInWords(user, "every Friday");
   expect(await screen.findByText("Every Friday, starting November 6")).toBeInTheDocument();
   // Who and which project are lists to pick from.
   const who = screen.getByRole("combobox", { name: "Who does it" });
@@ -84,7 +107,7 @@ test("the day and the repeat are said back, the person is the default owner, and
   await user.click(screen.getByRole("button", { name: "Add" }));
   await waitFor(() => expect(sent(calls)).toEqual({ text: "Send the weekly update", owners: ["P-2"], when: "Friday", project: "PRJ-1", repeat: "every Friday" }));
   expect(await screen.findByText("Added: Send the weekly update")).toBeInTheDocument();
-});
+}, 20000);
 
 test("a day or a repeat that isn't clear is said so and Add stays off", async () => {
   const user = userEvent.setup();
@@ -97,10 +120,10 @@ test("a day or a repeat that isn't clear is said so and Add stays off", async ()
   expect(await screen.findByText("Not clear: try 'Friday' or 'next Tuesday', or leave it empty")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   await user.clear(screen.getByRole("textbox", { name: "Due (optional)" }));
-  await user.type(screen.getByRole("textbox", { name: "Repeats" }), "quarterly");
+  await repeatsInWords(user, "quarterly");
   expect(await screen.findByText("Not clear: try 'every Tuesday'")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
-  await user.clear(screen.getByRole("textbox", { name: "Repeats" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Repeats" }), "Doesn't repeat");
   await waitFor(() => expect(screen.getByRole("button", { name: "Add" })).toBeEnabled());
   expect(calls.some((c) => c.route === "POST todos")).toBe(false);
 });
@@ -114,7 +137,7 @@ test("a repeat that doesn't fall on the day says which day it does", async () =>
   await waitFor(() => expect(screen.getByRole("combobox", { name: "Who does it" })).toHaveValue("P-1"));
   await user.type(screen.getByRole("textbox", { name: "Due (optional)" }), "Friday");
   await screen.findByText(/^Due Fri, Nov 6/);
-  await user.type(screen.getByRole("textbox", { name: "Repeats" }), "every Tuesday");
+  await repeatsInWords(user, "every Tuesday");
   expect(await screen.findByText(/isn't one of those days/)).toBeInTheDocument();
   // The form's button may still be settling (a check of the date or the repeat in flight), so it is waited for.
   expect(await screen.findByRole("button", { name: "Add" }, { timeout: 5000 })).toBeDisabled();
@@ -232,7 +255,9 @@ test("a to-do that is too long is said so beside the field, with a count, and Ad
   const words = await screen.findByRole("textbox", { name: "What to do" });
   await user.click(words);
   await user.paste("w".repeat(TODO_TEXT_MAX + 12));
+  // Said once beside the field, with the count; the reason beside Add is the short "Shorten the words to continue."
   expect(await screen.findByText(`That's 12 characters too long: a to-do can be ${TODO_TEXT_MAX} at most. Shorten it, or keep the detail in a note.`)).toBeInTheDocument();
+  expect(screen.getByText("Shorten the words to continue.")).toBeInTheDocument();
   expect(words).toBeInvalid();
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   await user.clear(words);

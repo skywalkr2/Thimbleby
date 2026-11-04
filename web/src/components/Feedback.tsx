@@ -108,7 +108,6 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const titleId = `${base}-title`;
   const fieldId = `${base}-message`;
   const hintId = `${base}-hint`;
-  const requiredId = `${base}-required`;
   const noteId = `${base}-note`;
   const problemsId = `${base}-problems`;
   const missedId = `${base}-missed`;
@@ -126,7 +125,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
             autoFocus
             required
             value={message}
-            aria-describedby={ready ? hintId : `${hintId} ${requiredId}`}
+            aria-describedby={hintId}
             onChange={(e) => {
               setMessage(e.target.value);
               setBlocked(false);
@@ -135,53 +134,51 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           <span id={hintId} className="hint">
             {t("feedback.message_hint")}
           </span>
-          {!ready && (
-            <span id={requiredId} className="hint">
-              {t("feedback.required")}
-            </span>
-          )}
         </FormField>
-        <label className="check-line">
-          <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} />
-          <span>{t("feedback.include")}</span>
-        </label>
-        {hasMissed && (
-          <>
-            <label className="check-line">
-              <input type="checkbox" checked={withMissed} aria-describedby={missedId} onChange={(e) => setWithMissed(e.target.checked)} />
-              <span>{t("feedback.missed")}</span>
-            </label>
-            <span id={missedId} className="hint">
-              {[t("feedback.missed_hint"), ...missedLines].join(" ")}
-            </span>
-          </>
-        )}
-        {found.length > 0 && (
-          <>
-            <label className="check-line">
-              <input type="checkbox" checked={withProblems} aria-describedby={problemsId} onChange={(e) => setWithProblems(e.target.checked)} />
-              <span>{t("feedback.problems", { count: found.length })}</span>
-            </label>
-            <span id={problemsId} className="hint">
-              {t("feedback.problems_hint")}
-            </span>
-          </>
-        )}
-        <CheckboxGroup legend={t("feedback.preview")}>
-          <FormField id={`${base}-subject`} label={t("feedback.preview_subject")}>
-            <input id={`${base}-subject`} readOnly value={subject} />
-          </FormField>
-          <FormField id={`${base}-body`} label={t("feedback.preview_body")}>
-            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(10, plain.split("\n").length + 1)} value={plain} />
-          </FormField>
-          {details && (
-            <details className="more-options" data-feedback-details="">
-              <summary>{t("feedback.details")}</summary>
-              <p className="hint">{t("feedback.details_hint")}</p>
-              <textarea aria-label={t("feedback.details")} className="short" readOnly rows={Math.min(14, details.split("\n").length + 1)} value={details} />
-            </details>
+        <details className="more-options" data-feedback-sent="">
+          <summary>{t("feedback.sent")}</summary>
+          <label className="check-line">
+            <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} />
+            <span>{t("feedback.include")}</span>
+          </label>
+          {hasMissed && (
+            <>
+              <label className="check-line">
+                <input type="checkbox" checked={withMissed} aria-describedby={missedId} onChange={(e) => setWithMissed(e.target.checked)} />
+                <span>{t("feedback.missed")}</span>
+              </label>
+              <span id={missedId} className="hint">
+                {[t("feedback.missed_hint"), ...missedLines].join(" ")}
+              </span>
+            </>
           )}
-        </CheckboxGroup>
+          {found.length > 0 && (
+            <>
+              <label className="check-line">
+                <input type="checkbox" checked={withProblems} aria-describedby={problemsId} onChange={(e) => setWithProblems(e.target.checked)} />
+                <span>{t("feedback.problems", { count: found.length })}</span>
+              </label>
+              <span id={problemsId} className="hint">
+                {t("feedback.problems_hint")}
+              </span>
+            </>
+          )}
+          <CheckboxGroup legend={t("feedback.preview")}>
+            <FormField id={`${base}-subject`} label={t("feedback.preview_subject")}>
+              <input id={`${base}-subject`} readOnly value={subject} />
+            </FormField>
+            <FormField id={`${base}-body`} label={t("feedback.preview_body")}>
+              <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(10, plain.split("\n").length + 1)} value={plain} />
+            </FormField>
+            {details && (
+              <details className="more-options" data-feedback-details="">
+                <summary>{t("feedback.details")}</summary>
+                <p className="hint">{t("feedback.details_hint")}</p>
+                <textarea aria-label={t("feedback.details")} className="short" readOnly rows={Math.min(14, details.split("\n").length + 1)} value={details} />
+              </details>
+            )}
+          </CheckboxGroup>
+        </details>
         {note && (
           <p id={noteId} className="hint" role="status">
             {note}
@@ -196,7 +193,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           <Button variant="quiet" onClick={props.onClose}>
             {t("action.close")}
           </Button>
-          <Button variant={mailIsMain ? "secondary" : "primary"} disabled={!ready} onClick={() => void copy()}>
+          <Button variant={mailIsMain ? "secondary" : "primary"} disabled={!ready} reason={ready || mailIsMain ? undefined : t("feedback.required")} onClick={() => void copy()}>
             {t("feedback.copy")}
           </Button>
           {mailIsMain &&
@@ -205,7 +202,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
                 {t("feedback.mail")}
               </ButtonLink>
             ) : (
-              <Button variant="primary" disabled>
+              <Button variant="primary" disabled reason={ready ? undefined : t("feedback.required")}>
                 {t("feedback.mail")}
               </Button>
             ))}

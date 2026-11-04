@@ -9,7 +9,6 @@ import type { OpenAction } from "../lib/open-items";
 import { shortTitle } from "../lib/title-dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
 import { DateField } from "../ui/DateField";
 import { Icon } from "../ui/Icon";
 import { GroupLabel } from "../ui/GroupLabel";
@@ -41,6 +40,7 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: 
       <GroupLabel as="h2" id="needs-date-title" count={props.rows.length} className={styles.needsHead}>
         {t("open.needs_date.title")}
       </GroupLabel>
+      <p className="hint">{tn(props.hint ?? "open.needs_date.hint", props.rows.length)}</p>
       <RowList aria-label={t("open.needs_date.list")}>
         {props.rows.map((a) => (
           <Row
@@ -57,7 +57,6 @@ export function NeedsADate(props: { rows: OpenAction[]; first?: boolean; hint?: 
           </Row>
         ))}
       </RowList>
-      <p className="hint">{tn(props.hint ?? "open.needs_date.hint", props.rows.length)}</p>
     </section>
   );
 }
@@ -74,9 +73,9 @@ export function NeedsADateLine(props: { rows: OpenAction[] }) {
       <div className={styles.needsLineRow}>
         <Icon name="calendar" size={16} />
         <span>{tn("open.needs_date.line", props.rows.length)}</span>
-        <Button variant="quiet" size="sm" aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
+        <button type="button" className="link-button" aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
           {t(open ? "open.needs_date.close" : "open.needs_date.open")}
-        </Button>
+        </button>
       </div>
       {open && (
         <div id={body}>

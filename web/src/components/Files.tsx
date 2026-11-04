@@ -100,7 +100,7 @@ export function Files() {
             ) : (
               <RowList>
                 {shown.map((file) => (
-                  <FileRow key={file.id} file={file} project={placeOf(file.project)} side={!!file.project && sides.has(file.project)} choice={choice} />
+                  <FileRow key={file.id} file={file} project={placeOf(file.project)} side={!!file.project && sides.has(file.project)} choice={choice} kinds={new Set(shown.map((f) => f.kind_label)).size > 1} />
                 ))}
               </RowList>
             )
@@ -120,7 +120,8 @@ export function Files() {
   );
 }
 
-function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean; choice: ListChoice }) {
+/** `kinds`: the list holds more than one kind of file, so each row says its own; a list of one kind says nothing on any row. */
+function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean; choice: ListChoice; kinds?: boolean }) {
   const { t } = useWords();
   const size = useSize();
   const { file, choice } = props;
@@ -139,7 +140,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
   ];
   const facts = [
     size(file.size),
-    ...(props.project ? [props.side ? t("place.in_side", { side: props.project }) : t("files.in_project", { project: props.project })] : []),
+    ...(props.project ? [props.side ? t("place.option_side", { side: props.project }) : t("files.in_project", { project: props.project })] : []),
     t("files.added_on", { when: day(file.added_at) }),
   ];
   return (
@@ -147,7 +148,7 @@ function FileRow(props: { file: S["FileView"]; project?: string; side?: boolean;
       ref={ref}
       aria-labelledby={titleId}
       {...choice.rowProps(file.id)}
-      pill={<Pill>{file.kind_label}</Pill>}
+      pill={props.kinds ? <Pill>{file.kind_label}</Pill> : undefined}
       title={file.name}
       titleId={titleId}
       metaLines={[facts.join(" · "), file.description || null, file.origin === "tool" ? <Pill tone="warn">{t("files.untrusted")}</Pill> : null]}

@@ -207,11 +207,41 @@ test("a list of records in a field is never joined into the details: only the pa
   renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
   const details = await screen.findByRole("region", { name: "Details" });
   await within(details).findByText("Harbor");
-  expect(within(details).queryByText(/Upcoming scheduled payment/)).toBeNull();
-  expect(within(details).queryByText("Second note about it")).toBeNull();
+  // The facts are one card: the field list is not joined with the list of records; what was heard is its own part of the card,
+  // under its own heading, and each note is there once.
   expect(within(details).queryByText(/^(Yes|No)$/)).toBeNull();
   expect(within(details).queryByText(/^News$/)).toBeNull();
-  // The page's own section still says what was heard.
-  expect(await screen.findByRole("heading", { name: "What was heard since" })).toBeInTheDocument();
-  expect(screen.getByText(/Upcoming scheduled payment/)).toBeInTheDocument();
+  const heard = await within(details).findByRole("heading", { name: "What was heard since" });
+  expect(heard).toBeInTheDocument();
+  expect(within(details).getAllByText(/Upcoming scheduled payment/)).toHaveLength(1);
+  expect(within(details).getAllByText(/Second note about it/)).toHaveLength(1);
+});
+
+// One card of facts (design 7.5): the words are not said again when they are the title, a to-do the person made for themselves
+// has no "promised to", and a page with nothing else to say has no "nothing filled in" line.
+
+const ownPromise = (extra: Record<string, unknown> = {}) => ({
+  action: "ACT-2", version: 3, text: WORDS, status: "open", quote: WORDS, owners: [{ id: "PER-1", name: "Robin Sample" }], mine: true, promised_to: [],
+  due: null, due_words: null, due_check: false, basis: null, said_by: null, origin: null, news: [], ...extra,
+});
+
+test("the person's own to-do says neither the words again nor who it is promised to, and has no empty-details line", async () => {
+  serve("open", { "GET people": () => [person("PER-1", "Robin Sample", { is_pm: true })], "GET promises/ACT-2": () => ownPromise() });
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  await within(details).findByText("Harbor");
+  expect(within(details).queryByText("The words")).toBeNull();
+  expect(within(details).queryByText("Promised to")).toBeNull();
+  expect(screen.queryByText("Nothing filled in yet.")).toBeNull();
+});
+
+test("a to-do someone else owes shows who it is promised to, and the words when they differ from the title", async () => {
+  serve("open", {
+    "GET people": () => [person("PER-1", "Robin Sample", { is_pm: false })],
+    "GET promises/ACT-2": () => ownPromise({ mine: false, quote: "I'll get you the headcount by Friday", basis: "said", said_by: "Robin Sample" }),
+  });
+  renderApp(<RecordPage kind="action" id="ACT-2" onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  expect(await within(details).findByText("The words")).toBeInTheDocument();
+  expect(within(details).getByText("Promised to")).toBeInTheDocument();
 });

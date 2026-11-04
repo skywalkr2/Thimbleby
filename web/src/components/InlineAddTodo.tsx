@@ -127,6 +127,18 @@ export function InlineAddTodo(props: { onDetails: (words: string) => void }) {
           </Button>
         </span>
       )}
+      {words && (
+        <Button
+          variant="quiet"
+          size="sm"
+          onClick={() => {
+            props.onDetails(words);
+            setText("");
+          }}
+        >
+          {t("open.inline_add.details")}
+        </Button>
+      )}
       {over > 0 && (
         <span id={`${id}-over`} className={styles.over} role="status">
           {t("addtodo.too_long", { n: over, max: TODO_TEXT_MAX })}

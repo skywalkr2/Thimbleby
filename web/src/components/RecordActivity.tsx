@@ -21,11 +21,11 @@ import { RowList } from "../ui/RowList";
 
 type Page = S["RecordPageView"];
 
-function Section(props: { id: string; title: string; count?: number; children: ReactNode }) {
+function Section(props: { id: string; title: string; count?: number; quiet?: boolean; children: ReactNode }) {
   return (
     <section aria-labelledby={props.id} className="record-section">
       <div className="heading">
-        <h2 id={props.id}>{props.title}</h2>
+        <h2 id={props.id} className={props.quiet ? "sr" : undefined}>{props.title}</h2>
         {props.count ? <span className="hint">{props.count}</span> : null}
       </div>
       {props.children}
@@ -61,6 +61,8 @@ export function RecordActivity(props: {
   onSeeAll?: () => void;
   how?: ReadonlyMap<string, string>;
   shown?: number;
+  /** The section's own heading is kept for a screen reader only: a tab already names it. */
+  quietHeading?: boolean;
 }) {
   const { t, tn, has } = useWords();
   const factLine = useFactLine();
@@ -203,7 +205,7 @@ export function RecordActivity(props: {
         </Section>
       )}
       {wants("activity") && page.activity.length > 0 && (
-        <Section id="record-activity" title={t("record.activity")}>
+        <Section id="record-activity" title={t("record.activity")} quiet={props.quietHeading}>
           <ActivityList
             shown={props.shown}
             entries={page.activity.map((e, i) => ({

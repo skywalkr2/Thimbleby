@@ -162,3 +162,15 @@ test("a person's team is a link to the team's page, where its days off are kept"
   const link = await screen.findByRole("link", { name: "Lantern Design" });
   expect(link.getAttribute("href")).toMatch(/team\/TEAM-2$/);
 });
+
+test("the team's days off are mentioned under an empty Time away only when the person has a team", async () => {
+  serve("person", "PER-3", { full_name: "Sam Okoro", away: [] }, []);
+  const first = renderApp(<RecordPage kind="person" id="PER-3" onBack={() => {}} />);
+  const alone = await screen.findByRole("region", { name: "Time away" });
+  expect(within(alone).getByText("No time away.")).toBeInTheDocument();
+  expect(screen.queryByText(/Their team's days off count too/)).toBeNull();
+  first.unmount();
+  serve("person", "PER-3", { full_name: "Sam Okoro", team: "TEAM-2", away: [] }, []);
+  renderApp(<RecordPage kind="person" id="PER-3" onBack={() => {}} />);
+  expect(await screen.findByText("No time away. Their team's days off count too.")).toBeInTheDocument();
+});

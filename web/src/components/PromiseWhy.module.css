@@ -6,3 +6,6 @@
 .button:hover { background: var(--surface-sunk); }
 .flag { color: var(--warn); font-weight: var(--weight-semibold); }
 .content { display: grid; gap: var(--space-2); }
+/* "Change" is a quiet word beside a value, not the loudest thing on the page: muted at rest, underlined when pointed at. */
+button.change { color: var(--text-muted); text-decoration: none; margin-left: var(--space-2); font-weight: var(--weight-regular); }
+button.change:hover, button.change:focus-visible { color: var(--link); text-decoration: underline; }

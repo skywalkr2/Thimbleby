@@ -73,15 +73,16 @@ describe("beside the list", () => {
     expect(chosenId()).toBe("PER-1");
     expect(within(pane).getByRole("textbox", { name: /Message to Ana Person/ })).toHaveValue(sections[0].message);
     expect(within(pane).getByText("Question for Ana Person")).toBeInTheDocument();
-    // The line says who, how many and holds Copy; nothing of the message.
+    // The line says who and how many and only opens the detail, which holds the one Copy; nothing of the message.
     const robin = await line("Robin Sample");
     expect(robin).toHaveTextContent("1 to send");
-    expect(within(robin).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringMatching(/^Robin Sample/), "Copy message"]);
+    expect(within(robin).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringMatching(/^Robin Sample/)]);
+    expect(within(pane).getAllByRole("button", { name: "Copy message" })).not.toHaveLength(0);
     expect(within(robin).queryByRole("textbox")).toBeNull();
     expect(screen.queryByText("Question for Robin Sample")).toBeNull();
   });
 
-  test("a click on a line chooses that person, and Copy on the chosen line copies the message in the detail, after which both say Mark sent", async () => {
+  test("a click on a line chooses that person, and Copy in the detail copies their message, after which the detail says Mark sent", async () => {
     const user = userEvent.setup();
     fakeApi(routes());
     renderApp(<FollowUps />);
@@ -90,73 +91,12 @@ describe("beside the list", () => {
     const pane = await screen.findByRole("complementary", { name: "Robin Sample" });
     expect(within(pane).getByText("Question for Robin Sample")).toBeInTheDocument();
     expect(chosenId()).toBe("PER-2");
-    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy message" }));
+    await user.click(within(pane).getAllByRole("button", { name: "Copy message" }).at(-1)!);
     expect(await navigator.clipboard.readText()).toBe(sections[1].message);
-    expect(within(await line("Robin Sample")).getByRole("button", { name: "Mark sent" })).toBeInTheDocument();
     expect(within(pane).getAllByRole("button", { name: "Mark sent" }).length).toBeGreaterThan(0);
-    // Another person's line is not touched.
-    expect(within(await line("Casey Moor")).getByRole("button", { name: "Copy message" })).toBeInTheDocument();
-  });
-
-  test("Copy on a line whose detail is not shown shows the message first, with the cursor in it, and copies nothing", async () => {
-    const user = userEvent.setup();
-    fakeApi(routes());
-    renderApp(<FollowUps />);
-    await screen.findByRole("complementary", { name: "Ana Person" });
-    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy message" }));
-    const pane = await screen.findByRole("complementary", { name: "Casey Moor" });
-    const box = within(pane).getByRole("textbox", { name: /Message to Casey Moor/ });
-    await waitFor(() => expect(box).toHaveFocus());
-    expect(await navigator.clipboard.readText()).toBe("");
-  });
-
-  test("Copy on a line copies at once when that exact message was opened before, and shows it first when it is new or changed", async () => {
-    const user = userEvent.setup();
-    fakeApi(routes());
-    renderApp(<FollowUps />);
-    await screen.findByRole("complementary", { name: "Ana Person" });
-    // Robin's message is opened by choosing the line; then another line is chosen, so Robin's is not shown.
-    await user.click(await line("Robin Sample"));
-    await screen.findByRole("complementary", { name: "Robin Sample" });
-    await user.click(await line("Casey Moor"));
-    await screen.findByRole("complementary", { name: "Casey Moor" });
-    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy message" }));
-    expect(await navigator.clipboard.readText()).toBe(sections[1].message);
-    expect(within(await line("Robin Sample")).getByRole("button", { name: "Mark sent" })).toBeInTheDocument();
-    // The pane still shows the chosen line: copying at once did not move the choice.
-    expect(chosenId()).toBe("PER-3");
-  });
-
-  test("a message opened before in another wording is shown first, not copied", async () => {
-    const user = userEvent.setup();
-    fakeApi(routes());
-    markMessageSeen("PER-3", "Hi Casey Moor,\n\nAn older question\n\nThanks!");
-    renderApp(<FollowUps />);
-    await screen.findByRole("complementary", { name: "Ana Person" });
-    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy message" }));
-    const pane = await screen.findByRole("complementary", { name: "Casey Moor" });
-    await waitFor(() => expect(within(pane).getByRole("textbox", { name: /Message to Casey Moor/ })).toHaveFocus());
-    expect(await navigator.clipboard.readText()).toBe("");
-  });
-
-  test("with browser storage blocked the page works and Copy on a line shows the message first", async () => {
-    const user = userEvent.setup();
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
-    fakeApi(routes());
-    renderApp(<FollowUps />);
-    await screen.findByRole("complementary", { name: "Ana Person" });
-    await user.click(await line("Robin Sample"));
-    await screen.findByRole("complementary", { name: "Robin Sample" });
-    await user.click(await line("Casey Moor"));
-    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy message" }));
-    const pane = await screen.findByRole("complementary", { name: "Robin Sample" });
-    await waitFor(() => expect(within(pane).getByRole("textbox", { name: /Message to Robin Sample/ })).toHaveFocus());
-    expect(await navigator.clipboard.readText()).toBe("");
+    // No line carries a Copy or a Mark sent of its own.
+    expect(within(await line("Robin Sample")).queryByRole("button", { name: /Copy message|Mark sent/ })).toBeNull();
+    expect(within(await line("Casey Moor")).queryByRole("button", { name: /Copy message|Mark sent/ })).toBeNull();
   });
 
   test("a line to send says since when its oldest ask has been ready, as a weekday for a few days and a date after that, and nothing when it is new", async () => {
@@ -236,6 +176,65 @@ describe("beside the list", () => {
     expect(within(pane).getByRole("button", { name: "Mark their work done" })).toBeInTheDocument();
     expect(within(pane).getByRole("button", { name: "More actions for Is the index final?" })).toBeInTheDocument();
     expect(within(pane).getByRole("button", { name: "More actions for Send the index" })).toBeInTheDocument();
+  });
+});
+
+// On Today the list stands alone, with no pane beside it, so a line keeps its own Copy: it copies at once a message the person has
+// already seen exactly as it is, and shows a new or changed one first, with the cursor in it.
+describe("a line's own Copy on Today", () => {
+  const seenCopy = (name: string) => within(screen.getByRole("listitem", { name })).getByRole("button", { name: "Copy message" });
+
+  test("Copy on a message not seen before shows it first, with the cursor in it, and copies nothing", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes());
+    renderApp(<FollowUps compact />);
+    await line("Casey Moor");
+    await user.click(seenCopy("Casey Moor"));
+    const drawer = await screen.findByRole("dialog", { name: "Casey Moor" });
+    const box = within(drawer).getByRole("textbox", { name: /Message to Casey Moor/ });
+    await waitFor(() => expect(box).toHaveFocus());
+    expect(await navigator.clipboard.readText()).toBe("");
+  });
+
+  test("Copy on the exact message opened before copies at once, and the line then says Mark sent", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes());
+    markMessageSeen("PER-2", sections[1].message);
+    renderApp(<FollowUps compact />);
+    await line("Robin Sample");
+    await user.click(seenCopy("Robin Sample"));
+    expect(await navigator.clipboard.readText()).toBe(sections[1].message);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(screen.getByRole("listitem", { name: "Robin Sample" })).getByRole("button", { name: "Mark sent" })).toBeInTheDocument();
+  });
+
+  test("a message opened before in another wording is shown first, not copied", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes());
+    markMessageSeen("PER-3", "Hi Casey Moor,\n\nAn older question\n\nThanks!");
+    renderApp(<FollowUps compact />);
+    await line("Casey Moor");
+    await user.click(seenCopy("Casey Moor"));
+    const drawer = await screen.findByRole("dialog", { name: "Casey Moor" });
+    await waitFor(() => expect(within(drawer).getByRole("textbox", { name: /Message to Casey Moor/ })).toHaveFocus());
+    expect(await navigator.clipboard.readText()).toBe("");
+  });
+
+  test("with browser storage blocked the line shows the message first", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    fakeApi(routes());
+    renderApp(<FollowUps compact />);
+    await line("Robin Sample");
+    await user.click(seenCopy("Robin Sample"));
+    const drawer = await screen.findByRole("dialog", { name: "Robin Sample" });
+    await waitFor(() => expect(within(drawer).getByRole("textbox", { name: /Message to Robin Sample/ })).toHaveFocus());
+    expect(await navigator.clipboard.readText()).toBe("");
   });
 });
 

@@ -29,7 +29,7 @@ describe("nothing waiting", () => {
   test("the To send tab is Follow-ups' own: nothing is listed to approve and the screen says nobody is waiting", async () => {
     show([]);
     expect(screen.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeInTheDocument();
-    expect(await screen.findByText(/A follow-up is a message to someone/)).toBeInTheDocument();
+    expect(await screen.findByText("No follow-ups yet. They appear when someone else owes you an answer.")).toBeInTheDocument();
     // With nothing on any tab the tabs change nothing, so they are not drawn.
     expect(screen.queryByRole("button", { name: "To send" })).toBeNull();
     expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
@@ -37,7 +37,7 @@ describe("nothing waiting", () => {
 
   test("acts that have gone out or been taken back are not listed", async () => {
     show([actFixture({ status: "sent" }), actFixture({ id: "XACT-2", status: "withdrawn" })]);
-    expect(await screen.findByText(/A follow-up is a message to someone/)).toBeInTheDocument();
+    expect(await screen.findByText("No follow-ups yet. They appear when someone else owes you an answer.")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Waiting to go out" })).toBeNull();
   });
 });
@@ -61,7 +61,8 @@ describe("the To send tab holds what waits to go out with the messages to send",
     expect(within(waiting).getByText("Message to Ana Example")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Waiting to go out" })).toBeInTheDocument();
     const row = await screen.findByRole("listitem", { name: "Robin Sample" });
-    expect(within(row).getByRole("button", { name: "Copy message" })).toBeInTheDocument();
+    // The line opens the person's message; the Copy is in the detail, not on the line.
+    expect(within(row).queryByRole("button", { name: "Copy message" })).toBeNull();
     // Both are in the one tab, and the act is the one chosen beside the list.
     expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByRole("complementary", { name: "Message to Ana Example" })).toBeInTheDocument();

@@ -88,8 +88,13 @@ test("nothing can be handed in with an empty box", async () => {
 test("the choice can be made from the keyboard", async () => {
   const { user, calls } = await setup();
   await user.type(screen.getByLabelText("Paste or type it here"), "my own words");
-  await user.tab(); // Choose a file.
-  await user.tab(); // The choice (a segmented control: arrows move along it, Space chooses).
+  // The choice is under the closed "Options"; open it, then the next stop is the control
+  // (a segmented control: arrows move along it, Space chooses).
+  const options = screen.getByText("Options");
+  expect(options.closest("details")).not.toHaveAttribute("open");
+  await user.click(options);
+  expect(options.closest("details")).toHaveAttribute("open");
+  screen.getByRole("radio", { name: "Someone else's" }).focus();
   await user.keyboard("{ArrowRight} ");
   expect(screen.getByRole("radio", { name: "Mine" })).toBeChecked();
   await user.click(screen.getByRole("button", { name: "Hand in" }));
@@ -317,4 +322,14 @@ test("handing in when nothing waits for Start still says the assistant is on it"
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   expect(await screen.findByText(/is on it/)).toBeInTheDocument();
+});
+
+test("Hand in is off until something is written, and says why beside itself; the choices are under a closed Options", async () => {
+  const { user } = await setup();
+  const go = screen.getByRole("button", { name: "Hand in" });
+  expect(go).toBeDisabled();
+  expect(go).toHaveAccessibleDescription("Paste or type something first.");
+  expect(screen.getByText("Options").closest("details")).not.toHaveAttribute("open");
+  await user.type(screen.getByLabelText("Paste or type it here"), "words");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Hand in" })).toBeEnabled());
 });

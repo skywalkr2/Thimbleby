@@ -88,7 +88,8 @@ textarea, input { width: 100%; border: 1px solid var(--border-strong); border-ra
 input::placeholder, textarea::placeholder { color: var(--text-subtle); }
 textarea { min-height: 120px; resize: vertical; }
 textarea.short { min-height: 64px; }
-textarea.msg { min-height: 220px; }
+/* A message box is as tall as its text (the component sets its rows), and is not dragged to another size. */
+textarea.msg { min-height: 0; resize: none; }
 textarea.drop { border-style: dashed; border-width: 1.5px; min-height: 160px; }
 textarea.big { min-height: 220px; max-width: var(--measure); }
 input:disabled, textarea:disabled { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
@@ -525,6 +526,7 @@ input[data-key-field-state="works"] { border-color: var(--ok); }
 .refreshed-lines li { margin: 0 0 var(--space-1); overflow-wrap: anywhere; }
 /* The offer to keep track of something of your own, under Ask's box. */
 .own-kinds { margin-top: var(--space-3); }
+.own-kinds > .link-button { color: var(--text); }
 
 .time-zone-select {
   position: relative;
@@ -606,3 +608,19 @@ pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pr
 [data-source-sides] .side-chip input, [data-sign-in-sides] .side-chip input { margin: 0; }
 [data-source-sides] .side-chip[data-ticked], [data-sign-in-sides] .side-chip[data-ticked] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); font-weight: var(--weight-semibold); }
 [data-source-sides] .side-chip:has(input:focus-visible), [data-sign-in-sides] .side-chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The person's own to-dos on Follow-ups: one plain line that opens them, never a card of its own. */
+.own-todos-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); margin: 0 0 var(--space-3); min-width: 0; }
+.own-todos-line a { display: inline-flex; align-items: center; min-height: 24px; font-weight: var(--weight-semibold); color: var(--text); }
+.own-todos-line .muted { color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
+
+/* "Send one at a time" on a phone: a row of the list of its own, never a pill laid on the card's edge. */
+.review-start { list-style: none; margin: 0; padding: var(--space-3) var(--row-px); border-bottom: 1px solid var(--border); display: flex; }
+.review-start > button { flex: 1 1 auto; }
+
+/* A to-do's page: on a narrow window its facts come before its activity, as they do beside it on a wide one. */
+@media (max-width: 1099.98px) { .record-grid[data-todo-page] .record-side { order: -1; } }
+
+/* The options a form folds away (hand in, add a to-do): even gaps between its fields once opened, and room around the file button. */
+[data-handin-options] > :not(summary), [data-add-more] > :not(summary) { margin-top: var(--space-4); }
+.file-pick { margin: var(--space-3) 0 var(--space-4); }

@@ -202,8 +202,10 @@ export const ENTRIES: Entry[] = [
     server: "sides",
     stage: "seeded",
     open: async (env) => {
-      await open(env, "work/open");
-      await pickSide(env, "Lantern Row Studio");
+      // The pick is made where the side filter always is (Today): a short list has no filter bar of its own.
+      await open(env, "today");
+      await pickSide(env, (env.seed.sides as string[])[3]);
+      await go(env, "work/open");
     },
   },
   {

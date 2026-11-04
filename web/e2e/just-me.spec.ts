@@ -150,7 +150,7 @@ test.describe('"Just me" sees no work words', () => {
       "What changed",
       "Handled for you",
       "Follow-ups",
-      "To-dos and questions",
+      "To-dos",
       "Personal",
       "People",
       "Files",
@@ -241,9 +241,12 @@ test.describe('"Just me" sees no work words', () => {
     // To-dos: the form to add one, and the menu of a row.
     await go(page, "work/open");
     await expect(page.getByText(seeded.todo.text).first()).toBeVisible(LOADED);
-    await page.getByRole("button", { name: "Add a to-do" }).first().click();
+    await page.getByRole("textbox", { name: "Add a to-do" }).fill("Call the printer");
+    await page.getByRole("button", { name: "More options" }).click();
     await expect(page.getByRole("dialog", { name: "Add a to-do" })).toBeVisible(LOADED);
     await read("Add a to-do");
+    // The words carried over make the form unsaved; they are cleared so Escape closes it without asking.
+    await page.getByRole("dialog", { name: "Add a to-do" }).getByRole("textbox", { name: "What to do" }).fill("");
     await close();
     await expect(page.getByRole("dialog", { name: "Add a to-do" })).toHaveCount(0);
     await page.getByRole("button", { name: new RegExp(`^More actions for ${seeded.todo.text}`) }).first().click();
@@ -357,7 +360,7 @@ test.describe('"Just me" sees no work words', () => {
         await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^To-dos, \d+ needs? you$/ })).toBeVisible(LOADED);
         await page.getByRole("button", { name: "More", exact: true }).click();
       } else {
-        const entry = page.getByRole("link", { name: /^To-dos and questions, \d+ needs? you$/ });
+        const entry = page.getByRole("link", { name: /^To-dos, \d+ needs? you$/ });
         await expect(entry).toBeVisible(LOADED);
         // The figure is drawn and the words are the link's name; nothing waits on What changed here, so it has no count.
         await expect(entry.locator('[class*="count"]')).toHaveText(/^\d+$/);
@@ -365,14 +368,12 @@ test.describe('"Just me" sees no work words', () => {
       await expect(page.getByRole("link", { name: /^Handled for you(?!,)/ })).toBeVisible();
       if (size.width < 1024) await page.keyboard.press("Escape");
 
-      // Follow-ups lists other people only: with nobody else, the person's own decisions and to-dos are the one row at the top,
-      // which opens them where they are kept, and the page says nobody has a follow-up yet (X31).
+      // Follow-ups lists other people only: with nobody else the page is its one empty line (the own to-dos line is left out of it,
+      // and the to-dos are in To-dos), and it says nobody has a follow-up yet (X31).
       await go(page, "work/followups");
       await heading(page, "Follow-ups");
-      const place = page.getByRole("list", { name: "Your own to-dos" });
-      await expect(place).toBeVisible(LOADED);
-      await expect(place.getByText("1 decision · 1 to-do of yours")).toBeVisible();
-      await expect(page.getByText(/Nobody has one yet/)).toBeVisible();
+      const place = page.getByText("No follow-ups yet. They appear when someone else owes you an answer.");
+      await expect(place).toBeVisible();
       await expect(page.getByText(seeded.question.title)).toHaveCount(0);
       await expect(page.locator("[data-detail-pane]")).toHaveCount(0);
       // Nothing is wider than the window.

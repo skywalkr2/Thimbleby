@@ -685,6 +685,7 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   orders, deliveries, sales and so on for mail, else files, pages, calendar entries), `reason` (why it was handled) or
   `sender`; the others are one button away on the screen (7.20). Advanced.
 - `handled_rows_shown` (25): how many rows a group on Handled for you draws before "Show more" (7.20). Advanced.
+- `open_rows_shown` (15): how many to-dos a group on the To-dos screen (Overdue, Today, Coming up) draws before "Show more" (7.5). Advanced.
 - `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add
   (7, Help); the app keeps five times that many app errors in the workspace's private folder (`problems.jsonl`).
 - `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (6: today and the six days after; 0 is today only), `schedule_days` (3; 1 to 7): how many days the schedule gives when a request names none (7.7; the calendar page always names its own), and

@@ -1,4 +1,4 @@
-// The options of a "Where does it belong?" list: each side as a group, its own first choice "In <side>, not in a project",
+// The options of a "Where does it belong?" list: each side as a group, its own first choice the side's name,
 // then its projects (design 6.32). A side is never offered as a project. A project on no side follows the groups.
 // It is a plain function, not a component: the list to pick from (ui/Select) reads the `<option>` elements it is handed, and a
 // component in its place would be a box it can't see into.
@@ -14,7 +14,7 @@ export function placeOptions(projects: S["ProjectView"][], t: T, asParent?: bool
     <>
       {groups.map((g) => (
         <optgroup key={g.id} label={g.name}>
-          <option value={g.id}>{asParent ? g.name : t("place.in_side", { side: g.name })}</option>
+          <option value={g.id}>{asParent ? g.name : t("place.option_side", { side: g.name })}</option>
           {g.projects.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}

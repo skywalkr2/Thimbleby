@@ -59,7 +59,7 @@ const proposal = (summary: string): S["ActionProposalView"] => ({
   expires_at: "2026-10-09T15:00:00Z",
 });
 
-test("a file filed on a side and in none of its projects says it is in the side, not in a project", async () => {
+test("a file filed on a side names the side alone, never \"not in a project\"", async () => {
   fakeApi({
     "GET files": () => [file("FILE-3", "plan.txt", { project: "P-side" })],
     "GET projects": () => [{ ...project, id: "P-side", name: "Orchard Press", side: true }],
@@ -68,7 +68,21 @@ test("a file filed on a side and in none of its projects says it is in the side,
   });
   renderApp(<Files />);
   const row = await screen.findByRole("listitem", { name: "plan.txt" });
-  expect(within(row).getByText(/In Orchard Press, not in a project · Added /)).toBeInTheDocument();
+  expect(within(row).getByText(/Orchard Press · Added /)).toBeInTheDocument();
+});
+
+test("the kind chip is drawn only when the list holds more than one kind", async () => {
+  const api = (files: S["FileView"][]) =>
+    fakeApi({ "GET files": () => files, "GET projects": () => [project], "GET plugin-actions": () => [], "GET plugin-actions?kind=file&id=FILE-1": () => [], "GET plugin-actions?kind=file&id=FILE-2": () => [] });
+  api([file("FILE-1", "a.txt"), file("FILE-2", "b.txt")]);
+  const one = renderApp(<Files />);
+  const row = await screen.findByRole("listitem", { name: "a.txt" });
+  expect(within(row).queryByText("Attachment")).toBeNull();
+  one.unmount();
+  api([file("FILE-1", "a.txt"), file("FILE-2", "b.pdf", { kind_label: "Build" })]);
+  renderApp(<Files />);
+  const mixed = await screen.findByRole("listitem", { name: "a.txt" });
+  expect(within(mixed).getByText("Attachment")).toBeInTheDocument();
 });
 
 test("one row per file, with its facts in words and Open as the one primary action", async () => {

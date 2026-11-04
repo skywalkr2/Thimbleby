@@ -67,19 +67,23 @@ function api(shown: S["OpenActionView"][], extra: Routes = {}) {
   });
 }
 
-async function openEdit(user: ReturnType<typeof userEvent.setup>) {
+async function openEdit(user: ReturnType<typeof userEvent.setup>, whenOpen?: () => Promise<void>) {
   const list = await screen.findByRole("list", { name: "Open to-dos" });
   await user.click(within(list).getByRole("button", { name: /More actions for Send the weekly update/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
-  return screen.findByRole("textbox", { name: "Repeats" });
+  await whenOpen?.();
+  // Repeats is a list; a way that is not on it is "Something else", which brings up the words box.
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Repeats" }), "Something else");
+  return screen.findByRole("textbox", { name: "How it repeats, in words" });
 }
 
 test("the Repeats field says back what was understood, under the field, before anything is kept", async () => {
   const user = userEvent.setup();
   const calls = api([action()]);
   renderApp(<OpenItems />);
-  const field = await openEdit(user);
-  expect(await screen.findByRole("textbox", { name: "Title" })).toHaveFocus();
+  const field = await openEdit(user, async () => {
+    expect(await screen.findByRole("textbox", { name: "Title" })).toHaveFocus();
+  });
   await user.type(field, "Mondays and Thursdays");
   expect(await screen.findByText("Every Monday and Thursday, starting November 2")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST actions/A-1/repeat")).toBe(false);

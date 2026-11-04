@@ -26,6 +26,6 @@ const NONE: Pick<Open, "id" | "version" | "text" | "due" | "repeat" | "effort_mi
 export function useEditDetailsOfTodo(id: string, enabled: boolean, onClosed?: () => void): { entry: MenuAction | null; form: ReactNode } {
   const items = useQuery({ queryKey: ["open-items"], queryFn: api.openItems, enabled });
   const found = enabled ? items.data?.actions.find((a) => a.id === id) : undefined;
-  const edit = useEditAction(found ?? NONE, onClosed);
+  const edit = useEditAction(found ?? NONE, onClosed, { drawer: true });
   return { entry: found ? edit.entry : null, form: found ? edit.form : null };
 }

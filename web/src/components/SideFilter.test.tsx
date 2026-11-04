@@ -257,8 +257,8 @@ test("Follow-ups has the same filter: the person's own rows go by side, and some
   await user.click(screen.getByRole("radio", { name: /^Personal(,|$)/ }));
   await waitFor(() => expect(screen.queryByText("Dana Sample")).toBeNull());
   expect(screen.getAllByText("Robin Sample")[0]).toBeInTheDocument();
-  // The person's own to-dos are one row that says how many there are on this side and opens To-dos and questions; they are not listed here.
-  const own = () => within(screen.getByRole("list", { name: "Your own to-dos" }));
+  // The person's own to-dos are one line that says how many there are on this side and opens To-dos; they are not listed here.
+  const own = () => within(screen.getByRole("link", { name: "Your own to-dos" }).closest("[data-own-todos]") as HTMLElement);
   expect(own().getByRole("link", { name: "Your own to-dos" })).toBeInTheDocument();
   expect(own().getByText("1 decision")).toBeInTheDocument();
   expect(screen.queryByText("Pick the family photo")).toBeNull();

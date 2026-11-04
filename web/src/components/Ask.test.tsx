@@ -63,7 +63,9 @@ test("the dialog is named for the assistant and the question field has the focus
   open([]);
   expect(screen.getByRole("dialog", { name: "Ask Helper" })).toBeInTheDocument();
   expect(screen.getByLabelText("Your question")).toHaveFocus();
-  expect(await screen.findByText("No questions yet.")).toBeInTheDocument();
+  // While nothing has been asked yet the recent list is not drawn at all.
+  await waitFor(() => expect(screen.queryByRole("heading", { name: "Recent questions" })).toBeNull());
+  expect(screen.queryByText("No questions yet.")).toBeNull();
 });
 
 test("a question can start filled in", async () => {
@@ -345,8 +347,9 @@ test("Ask offers to set up kinds of items of your own, listing the starting temp
   }).calls;
   const offer = await screen.findByRole("button", { name: "Keep track of something of your own" });
   expect(offer).toHaveAttribute("aria-expanded", "false");
-  // The link carries a sentence of context: what Ask answers from, and what a list of your own is for.
-  expect(screen.getByText(/Ask answers from what is saved here/)).toBeInTheDocument();
+  // The link carries its context as a tooltip, not as a second paragraph.
+  expect(offer).toHaveAttribute("title", expect.stringMatching(/start a list of your own/));
+  expect(screen.queryByText(/Ask answers from what is saved here/)).toBeNull();
   expect(calls.some((c) => c.route === "GET templates")).toBe(false);
   expect(screen.queryByText("Client requests")).toBeNull();
   await user.click(offer);
@@ -402,7 +405,7 @@ test("the link to a list of your own has a sentence saying what it is for", asyn
   fakeApi({ "GET asks": () => [] });
   renderApp(<Ask onClose={() => undefined} />);
   const link = await screen.findByRole("button", { name: "Keep track of something of your own" });
-  expect(link.parentElement).toHaveTextContent(/start a list of your own/);
+  expect(link).toHaveAttribute("title", expect.stringMatching(/start a list of your own/));
 });
 
 test("asking while Today waits for Start says it waits for Start, with a way to Today", async () => {

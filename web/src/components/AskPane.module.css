@@ -2,7 +2,7 @@
    surface and shadow), under the header, with its own scroll. It never moves the page, and the page behind stays usable, so
    what the person is working on stays in view. */
 .pane {
-  position: fixed; top: var(--header-h); right: 0; bottom: 0; z-index: 50; width: min(var(--drawer-w), 100%); overflow-y: auto;
+  position: fixed; top: var(--header-h); right: 0; max-height: calc(100dvh - var(--header-h)); z-index: 50; width: min(var(--drawer-w), 100%); overflow-y: auto;
   display: grid; gap: var(--space-3); align-content: start; padding: var(--space-4);
   --overlay-pad-x: var(--space-4); --overlay-pad-y: var(--space-4);
   background: var(--surface-raised); color: var(--text); border-left: 1px solid var(--border); box-shadow: var(--elev-3), var(--overlay-edge);

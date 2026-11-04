@@ -57,7 +57,7 @@ export function DaysOff(props: { kind: "person" | "team"; record: S["GenericReco
   return (
     <section className="panel-section" aria-labelledby={`${ids}-title`} data-days-off="">
       <h3 id={`${ids}-title`}>{t(kind === "team" ? "daysoff.team.title" : "daysoff.person.title")}</h3>
-      {periods.length === 0 && editing !== "new" && <p className="hint">{t(kind === "team" ? "daysoff.team.empty" : "daysoff.person.empty")}</p>}
+      {periods.length === 0 && editing !== "new" && <p className="hint">{t(kind === "team" ? "daysoff.team.empty" : record.fields.team ? "daysoff.person.empty_team" : "daysoff.person.empty")}</p>}
       {periods.length > 0 && (
         <RowList aria-label={t(kind === "team" ? "daysoff.team.list" : "daysoff.person.list")}>
           {periods.map((p, i) => (

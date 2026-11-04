@@ -10,6 +10,7 @@ links: [{name: Planning board, address: "https://planning-board.example.com/spri
 feedback_to: feedback@example.com   # where the feedback button writes
 handled_group: kind   # how Handled for you groups what it lists to start with: kind, reason or sender
 handled_rows_shown: 25   # how many rows a group shows before Show more
+open_rows_shown: 15   # how many to-dos a group on the To-dos screen shows before Show more
 feedback_problem_days: 3   # how far back Send feedback offers to add failed work
 feedback_problem_max: 20   # the most failures it offers to add
 today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, schedule_days: 2, stale_after_days: 21, fold_batches_after_days: 3, top_priorities_lines: 4, top_priorities_ahead_days: 10, rail_rows: 4}   # what Today's agenda and what came in cover
