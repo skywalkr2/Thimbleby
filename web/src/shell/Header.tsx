@@ -69,9 +69,9 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
     {
       id: "help",
       entries: [
-        ...(touch ? [] : [{ id: "shortcuts", label: t("help.open"), icon: "grid" as const, run: handlers.onHelp }]),
+        ...(touch ? [] : [{ id: "shortcuts", label: t("help.open"), icon: "keyboard" as const, run: handlers.onHelp }]),
         { id: "guide", label: t("header.help_guide"), icon: "book", run: () => afterClose(handlers.onOpenGuide) },
-        ...(anythingMissed ? [{ id: "missed", label: t("missed.menu"), icon: "search" as const, run: missed }] : []),
+        ...(anythingMissed ? [{ id: "missed", label: t("missed.menu"), icon: "flag" as const, run: missed }] : []),
         { id: "feedback", label: t("feedback.open"), icon: "chat", run: handlers.onFeedback },
       ],
     },

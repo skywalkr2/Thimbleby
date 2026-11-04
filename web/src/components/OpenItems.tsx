@@ -161,14 +161,15 @@ export function OpenItems() {
         id="open-title"
         title={t("open.title")}
         subtitle={subtitle}
+        reserveSubtitle={items.isPending}
         tabs={
           <TabStrip
             label={t("open.tabs")}
             value={tab}
             onChange={choose}
             options={[
-              { value: "actions", label: t("open.tab.actions"), count: items.isPending ? undefined : actions.length },
-              { value: "questions", label: t("open.tab.questions"), count: items.isPending ? undefined : questions.length },
+              { value: "actions", label: t("open.tab.actions"), count: items.data === undefined ? undefined : actions.length },
+              { value: "questions", label: t("open.tab.questions"), count: items.data === undefined ? undefined : questions.length },
             ]}
           />
         }
@@ -192,7 +193,7 @@ export function OpenItems() {
         }
       />
       {addTodo.form}
-      <ListState query={items} failed={t("open.load_failed")}>
+      <ListState query={items} failed={t("open.load_failed")} row={{ action: "menu", framed: true }}>
         {() =>
           actions.length + questions.length === 0 ? (
             side.choice !== "all" ? (

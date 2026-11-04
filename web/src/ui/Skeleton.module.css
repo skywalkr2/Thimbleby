@@ -1,13 +1,21 @@
 /* Loading shows the shape of what's coming: rows in the row anatomy, shimmering unless motion is reduced. The bars are a tone of the
    text colour over the card, so they show against it by day and by night (the well tone is too near the card). */
 .region { --skeleton: color-mix(in srgb, var(--text) 13%, var(--surface)); display: block; }
+/* The frame of a list of rows (RowList): one surface, a hairline edge, rounded, so a list loads in the shape it will have. */
+.framed { background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); overflow: hidden; }
 .row { display: grid; grid-template-columns: var(--row-lead-w) minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
 .row:last-child { border-bottom: 0; }
-.bar, .btn, .lead { display: block; border-radius: var(--radius-sm); background: var(--skeleton); }
+.bar, .btn, .lead, .menu { display: block; border-radius: var(--radius-sm); background: var(--skeleton); }
 .lead { width: 18px; height: 18px; justify-self: center; border-radius: var(--radius-full); }
-.lines { display: grid; gap: var(--space-2); }
+.lines { display: grid; gap: 0; }
+/* The bars sit in line boxes as tall as a real row's title (22px) and meta line (18px), so a row loads at the height it will have. */
 .bar { height: 14px; width: 60%; }
-.short { width: 36%; height: 12px; }
+.short { width: 36%; height: 10px; }
+.lines > .bar, .lines > .short { margin-block: var(--space-1); }
+.noLead { grid-template-columns: minmax(0, 1fr) auto; }
+.noAction { grid-template-columns: var(--row-lead-w) minmax(0, 1fr); }
+.noLead.noAction { grid-template-columns: minmax(0, 1fr); }
+.menu { display: block; width: 24px; height: var(--space-2); border-radius: var(--radius-full); background: var(--skeleton); }
 .field { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
 .bar.label { width: 28%; height: 12px; }
 .input { display: block; height: var(--btn-h); max-width: 28rem; border-radius: var(--radius-btn); background: var(--skeleton); }
@@ -20,6 +28,6 @@
 .th { width: 45%; height: 10px; }
 .td { height: 14px; }
 @media (prefers-reduced-motion: no-preference) {
-  .bar, .btn, .lead, .input { animation: shimmer 1.4s ease-in-out infinite; }
+  .bar, .btn, .lead, .input, .menu { animation: shimmer 1.4s ease-in-out infinite; }
   @keyframes shimmer { 50% { opacity: 0.55; } }
 }

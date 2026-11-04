@@ -64,13 +64,15 @@ export function Button(props: ButtonProps) {
       {children}
     </button>
   );
-  if (!hint) return button;
+  // The wrapper is always there, so the button keeps its place in the tree (and its focus and clicks) when the reason comes and goes.
   return (
-    <span className={styles.wrap} data-reason-wrap="">
+    <span className={hint ? styles.wrap : styles.idle} data-reason-wrap={hint ? "" : undefined}>
       {button}
-      <p id={hintId} className={styles.reason}>
-        {hint}
-      </p>
+      {hint && (
+        <p id={hintId} className={styles.reason}>
+          {hint}
+        </p>
+      )}
     </span>
   );
 }

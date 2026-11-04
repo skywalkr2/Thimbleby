@@ -65,6 +65,17 @@ const CHIP_WORD: Record<StatusKind, string> = {
   live: "status.chip_live",
 };
 
+/** A state's name with a dot, and in words when it needs a look (the dot's colour is never the only sign). */
+function StateName(props: { name: string; warn?: boolean }) {
+  const { t } = useWords();
+  return (
+    <p className={styles.name}>
+      {props.name}
+      {props.warn && <span className={styles.needs}> · {t("status.needs_look")}</span>}
+    </p>
+  );
+}
+
 export function StatusMenu(props: {
   live: { state: LiveState; lastUpdate: Date | null; refresh: () => void };
   demo: boolean;
@@ -116,7 +127,7 @@ export function StatusMenu(props: {
           <ul className={styles.states}>
             {restartShown && (
               <li className={[styles.state, styles.warn].join(" ")} data-state="restart">
-                <p className={styles.name}>{t("status.restart")}</p>
+                <StateName name={t("status.restart")} warn />
                 {restart.phase === "idle" ? (
                   <>
                     <p className={`${styles.text} ${styles.full}`}>{t(status.data?.can_restart ? "restart.needed" : "restart.needed_manual")}</p>
@@ -140,7 +151,7 @@ export function StatusMenu(props: {
             )}
             {assistantShown && alive && (
               <li className={[styles.state, alive.tone === "ok" ? "" : styles.warn].join(" ")} data-state="alive" data-tone={alive.tone}>
-                <p className={styles.name}>{t("alive.name")}</p>
+                <StateName name={t("alive.name")} warn={alive.tone !== "ok"} />
                 <p className={`${styles.text} ${styles.full}`}>
                   <span className={styles.sayIcon}>
                     <Icon name={alive.icon} size={16} label={t(`alive.icon.${alive.tone}`)} />
@@ -156,7 +167,7 @@ export function StatusMenu(props: {
             )}
             {wait && wait.count > 0 && (
               <li className={[styles.state, styles.warn].join(" ")} data-state="network">
-                <p className={styles.name}>{t("status.network")}</p>
+                <StateName name={t("status.network")} warn />
                 <p className={`${styles.text} ${styles.full}`}>
                   {tn("status.network_waiting", wait.count, { time: whenText(wait.since) })}
                 </p>
@@ -165,7 +176,7 @@ export function StatusMenu(props: {
             )}
             {ai && ai.state !== "ok" && (
               <li className={[styles.state, styles.warn].join(" ")} data-state="assistant" data-ai-state={ai.state}>
-                <p className={styles.name}>{t("status.assistant")}</p>
+                <StateName name={t("status.assistant")} warn />
                 <p className={`${styles.text} ${styles.full}`}>{t(`ai.${ai.state}.title`)}</p>
                 <p className={styles.note}>{aiText}</p>
                 <p className={styles.note}>{t(`ai.${ai.state}.todo`)}</p>
@@ -176,7 +187,7 @@ export function StatusMenu(props: {
             )}
             {b && (
               <li className={[styles.state, b.needs_attention ? styles.warn : ""].join(" ")} data-state="backup">
-                <p className={styles.name}>{t("status.backup")}</p>
+                <StateName name={t("status.backup")} warn={b.needs_attention} />
                 <p className={styles.text}>{backupText(b, t)}</p>
                 {b.configured ? (
                   <Button size="sm" onClick={backupNow}>
@@ -191,7 +202,7 @@ export function StatusMenu(props: {
             )}
             {found && (
               <li className={[styles.state, styles.wide, kind === "connection_failed" || kind === "connection_signed_out" || kind === "connection_retrying" ? styles.warn : ""].join(" ")} data-state="connections">
-                <p className={styles.name}>{t("status.connections")}</p>
+                <StateName name={t("status.connections")} warn={kind === "connection_failed" || kind === "connection_signed_out" || kind === "connection_retrying"} />
                 <CoverageRows without={["unread"]} className={`${styles.full} ${styles.coverageRows}`} />
                 {accounts.length > 0 && (
                   <RowList className={`${styles.full} ${styles.accounts}`} aria-label={t("account.list")} data-accounts="">
@@ -208,7 +219,7 @@ export function StatusMenu(props: {
               </li>
             )}
             <li className={[styles.state, props.live.state === "offline" ? styles.warn : ""].join(" ")} data-state="updates">
-              <p className={styles.name}>{t("status.updates")}</p>
+              <StateName name={t("status.updates")} warn={props.live.state === "offline"} />
               <p className={styles.text}>{updates}</p>
               <Button size="sm" icon="refresh" onClick={props.live.refresh}>
                 {t("status.refresh")}
@@ -216,7 +227,7 @@ export function StatusMenu(props: {
             </li>
             {spend && (
               <li className={[styles.state, spend.near ? styles.warn : ""].join(" ")} data-state="spend" data-spend>
-                <p className={styles.name}>{t("status.spend")}</p>
+                <StateName name={t("status.spend")} warn={spend.near} />
                 <p className={`${styles.text} ${styles.full}`}>{spend.text}</p>
               </li>
             )}

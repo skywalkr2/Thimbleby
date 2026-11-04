@@ -6,7 +6,16 @@ import type { CSSProperties, ReactNode } from "react";
 import { useWords } from "../lib/wording";
 import styles from "./Skeleton.module.css";
 
-export function Skeleton(props: { rows?: number; className?: string; shape?: "rows" | "form" | "frame" | "table"; columns?: number; style?: CSSProperties; children?: ReactNode; kind?: string }) {
+/** What a skeleton row draws, as the loaded row does: `lead` is the leading slot (a check or an icon; none for a list whose rows have no lead),
+ * `action` the end of the row (a button, the "..." menu, or nothing). */
+export interface SkeletonRow {
+  lead?: boolean;
+  action?: "button" | "menu" | "none";
+  /** The rows sit in the list's own frame (one surface with a hairline edge), as a loaded list of rows does. */
+  framed?: boolean;
+}
+
+export function Skeleton(props: { rows?: number; row?: SkeletonRow; className?: string; shape?: "rows" | "form" | "frame" | "table"; columns?: number; style?: CSSProperties; children?: ReactNode; kind?: string }) {
   const { t } = useWords();
   if (props.shape === "frame") {
     // A frame the caller fills with its own shapes (a time grid): the region and its accessible name are the same.
@@ -50,16 +59,19 @@ export function Skeleton(props: { rows?: number; className?: string; shape?: "ro
       </div>
     );
   }
+  const lead = props.row?.lead ?? true;
+  const action = props.row?.action ?? "button";
   return (
-    <div role="status" aria-busy="true" aria-label={t("loading")} className={[styles.region, props.className ?? ""].filter(Boolean).join(" ")} data-skeleton="">
+    <div role="status" aria-busy="true" aria-label={t("loading")} className={[styles.region, props.row?.framed ? styles.framed : "", props.className ?? ""].filter(Boolean).join(" ")} data-skeleton="">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className={styles.row} aria-hidden="true">
-          <span className={styles.lead} />
+        <div key={i} className={`${styles.row} ${lead ? "" : styles.noLead} ${action === "none" ? styles.noAction : ""}`} aria-hidden="true">
+          {lead && <span className={styles.lead} />}
           <span className={styles.lines}>
             <span className={styles.bar} />
             <span className={`${styles.bar} ${styles.short}`} />
           </span>
-          <span className={styles.btn} />
+          {action === "button" && <span className={styles.btn} />}
+          {action === "menu" && <span className={styles.menu} />}
         </div>
       ))}
     </div>

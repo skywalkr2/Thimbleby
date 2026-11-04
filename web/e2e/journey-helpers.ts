@@ -257,9 +257,17 @@ export async function widerThanWindow(page: Page, label: string): Promise<string
     const out = await page.evaluate(() => {
       const limit = document.documentElement.clientWidth;
       const cut: string[] = [];
+      // What sits inside a box that scrolls sideways within the window (a phone's one row of tabs) does not widen the page.
+      const inScroller = (el: Element, limit: number): boolean => {
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+            const ox = getComputedStyle(p).overflowX;
+            if ((ox === "auto" || ox === "scroll") && p.getBoundingClientRect().right <= limit + 1) return true;
+          }
+          return false;
+        };
       for (const el of Array.from(document.querySelectorAll("main *"))) {
         const box = el.getBoundingClientRect();
-        if (box.width > 0 && box.height > 0 && box.right > limit + 1 && getComputedStyle(el).position !== "fixed" && !Array.from(el.children).some((c) => c.getBoundingClientRect().right > limit + 1)) {
+        if (box.width > 0 && box.height > 0 && box.right > limit + 1 && getComputedStyle(el).position !== "fixed" && !inScroller(el, limit) && !Array.from(el.children).some((c) => c.getBoundingClientRect().right > limit + 1)) {
           cut.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} reaches ${Math.round(box.right)} (width ${Math.round(box.width)}, ${(el.textContent ?? "").trim().slice(0, 30)})`);
         }
       }

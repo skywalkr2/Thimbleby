@@ -33,8 +33,8 @@ export function Notes(props: { onHandIn?: () => void }) {
   const shown = everything.filter((n) => onSide(sideOf(n.project), side.choice));
   return (
     <section className="panel-section" aria-labelledby="notes-title">
-      <PageHeader id="notes-title" title={t("notes.title")} subtitle={everything.length > 0 ? t("notes.sub") : undefined} filters={<SideFilter holds={everything.length} />} />
-      <ListState query={notes} failed={t("notes.load_failed")}>
+      <PageHeader id="notes-title" title={t("notes.title")} subtitle={everything.length > 0 ? t("notes.sub") : undefined} reserveSubtitle={notes.isPending} filters={<SideFilter holds={everything.length} />} />
+      <ListState query={notes} failed={t("notes.load_failed")} row={{ lead: false, action: "none", framed: true }}>
         {() =>
           everything.length === 0 ? (
             <EmptyState text={t("notes.empty")} action={props.onHandIn ? { label: t("notes.write"), onClick: props.onHandIn, primary: true } : null} />

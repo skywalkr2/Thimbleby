@@ -26,6 +26,17 @@ const SHAPES = {
   folder: <path d="M3 6h6l2 2h10v11H3z" />,
   archive: <path d="M3 4h18v4H3z M5 8v12h14V8 M10 12h4" />,
   book: <path d="M4 5a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2z M4 19a2 2 0 0 0 2 2h14v-4" />,
+  /** Keys: for the list of keyboard shortcuts. */
+  keyboard: (
+    <>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <path d="M6.5 10h.01 M10 10h.01 M14 10h.01 M17.5 10h.01 M7 14h10" />
+    </>
+  ),
+  /** A sheet with a folded corner and lines: a note (Notes), never the open book of Knowledge. */
+  note: <path d="M6 3h9l4 4v14H6z M15 3v4h4 M9 12h7 M9 16h7" />,
+  /** A flag on a pole: "Missed something?". */
+  flag: <path d="M5 21V4 M5 4h12l-2 4 2 4H5" />,
   rss: (
     <>
       <path d="M4 11a9 9 0 0 1 9 9 M4 4a16 16 0 0 1 16 16" />

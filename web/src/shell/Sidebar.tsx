@@ -54,13 +54,14 @@ function Entry(props: { entry: NavEntry; current: View; rail: boolean; sub?: boo
       data-view={entry.view}
     >
       {entry.icon ? <Icon name={entry.icon} /> : <span className={styles.glyph} aria-hidden="true">{entry.glyph}</span>}
-      <span className={styles.label} title={props.rail ? undefined : entry.label}>
+      <span className={styles.label}>
         {entry.label}
       </span>
       <NavCount entry={entry} className={styles.count} />
     </Link>
   );
-  return props.rail ? <Tooltip text={entry.label} placement="right">{link}</Tooltip> : link;
+  // The whole name shows on hover and on focus whenever the label may be cut short.
+  return <Tooltip text={entry.label} placement="right">{link}</Tooltip>;
 }
 
 export function Sidebar(props: { current: View; expanded: boolean; onToggle: () => void }) {

@@ -24,6 +24,8 @@
 @media (max-width: 639.98px) { .warn, .danger { background: var(--state-tint); } .warn:hover, .danger:hover { background: var(--state-tint); } }
 
 .lead { grid-column: 1; align-self: center; justify-self: stretch; width: var(--row-lead-w); height: var(--row-lead-w); min-width: 0; display: grid; place-items: center; overflow: visible; }
+/* A row with a meta line has two lines or more: its lead sits on the title's line (the icon centred on it), not at the middle of the row. */
+.row:has(> .main > .meta) > .lead { align-self: start; margin-top: var(--row-lead-nudge); }
 /* The mark after the title's words: it wraps with them and never draws over them. */
 .mark { margin-left: var(--space-2); vertical-align: 1px; }
 .mark > :global([data-pill]) { max-width: 100%; height: auto; min-height: var(--pill-h); white-space: normal; overflow-wrap: anywhere; text-align: left; }

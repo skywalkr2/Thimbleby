@@ -1,12 +1,12 @@
 /* One segmented control for two to four choices: an outlined pill track, the chosen segment filled with the soft accent and the
-   accent's own text. It reads as a control (an outline, a filled choice), never as the tab strip (an underline, no outline) or as a
+   accent's own text. The segments share the track's width equally, one line each. It reads as a control (an outline, a filled choice), never as the tab strip (an underline, no outline) or as a
    filter chip (one outlined button with a caret). Same height and radius as the chips and buttons beside it. */
-.track { display: inline-flex; flex-wrap: wrap; align-items: center; max-width: 100%; gap: var(--space-1); padding: calc(var(--space-1) / 2); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-btn); }
+.track { display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); align-items: stretch; max-width: 100%; gap: var(--space-1); padding: calc(var(--space-1) / 2); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-btn); }
 .segment {
   display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 0 var(--space-3);
   border: 0; border-radius: var(--radius-btn); background: transparent; color: var(--text-muted); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); white-space: nowrap;
-  max-width: min(100%, 24ch); /* a long name is cut at about 24 characters, and never makes the control wider than the window */
+  min-width: 0; /* every segment is as wide as the widest, so the chosen one fills its own share of the track, and a long name is cut with an ellipsis rather than making the control wider than the window */
 }
 .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .count { margin-left: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunk); font-size: var(--text-xs); line-height: var(--lh-xs); font-variant-numeric: tabular-nums; }

@@ -262,3 +262,20 @@ test("the Schedule is the open view when it is shown, and Today is not", async (
   expect(screen.getByRole("link", { name: /^Today/ })).not.toHaveAttribute("aria-current");
   expect(schedule).toHaveAttribute("href", expect.stringMatching(/#schedule$/));
 });
+
+test("Notes and Knowledge have icons of their own, so two destinations never look the same in the list", async () => {
+  show();
+  const view = await screen.findByRole("link", { name: "Notes" });
+  const icon = (name: string) => within(nav()).getByRole("link", { name }).querySelector("[data-icon]")?.getAttribute("data-icon");
+  expect(view).toBeInTheDocument();
+  expect(icon("Notes")).toBe("note");
+  expect(icon("Knowledge")).toBe("book");
+});
+
+test("a long name in the side menu shows whole on focus, as a tooltip", async () => {
+  const user = userEvent.setup();
+  show();
+  const link = await screen.findByRole("link", { name: "Notes" });
+  while (document.activeElement !== link) await user.tab();
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("Notes");
+});

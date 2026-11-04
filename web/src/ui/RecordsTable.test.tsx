@@ -53,3 +53,41 @@ test("a group heading with nothing under it shows no number", () => {
   expect(screen.getByRole("rowgroup", { name: "Has rows" })).toHaveTextContent("Has rows · 2");
   expect(screen.getByRole("rowgroup", { name: "Has none" })).toHaveTextContent(/^Has none$/);
 });
+
+test("the column picker sits in the head row's last cell, never in a band of its own above the table", () => {
+  const { container } = renderApp(
+    <RecordsTable<Row>
+      label="Things"
+      name={{ header: "Name", cell: (r) => r.name }}
+      columns={[
+        { id: "status", header: "Status", cell: (r) => r.status, core: true },
+        { id: "owner", header: "Owner", cell: (r) => r.owner },
+      ]}
+      groups={[{ id: "all", title: "All", rows }]}
+      rowKey={(r) => r.id}
+      actions={() => <span>menu</span>}
+      actionsHeader="Actions"
+    />,
+  );
+  const picker = screen.getByRole("button", { name: "Choose columns" });
+  expect(picker.closest("th")).not.toBeNull();
+  expect(picker.closest("thead")).not.toBeNull();
+  expect(container.querySelector("[class*='tools']")).toBeNull();
+});
+
+test("a table of names alone has no picker, no band, and a head that stays for a screen reader only", () => {
+  const { container } = renderApp(
+    <RecordsTable<Row>
+      label="Things"
+      name={{ header: "Name", cell: (r) => r.name }}
+      columns={[{ id: "owner", header: "Owner", cell: (r) => r.owner, core: true }]}
+      groups={[{ id: "all", title: "All", rows }]}
+      rowKey={(r) => r.id}
+      actions={() => <span>menu</span>}
+    />,
+  );
+  expect(screen.queryByRole("button", { name: "Choose columns" })).toBeNull();
+  expect(container.querySelector("[class*='tools']")).toBeNull();
+  expect(container.querySelector("thead")!.className).toMatch(/headHidden/);
+  expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+});

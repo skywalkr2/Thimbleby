@@ -73,6 +73,7 @@
   --bottombar-h: 64px;         /* phone bottom bar */
   --gutter: 24px;              /* between panes and grid columns */
   --page-pad: 24px;            /* inside the content area */
+  --section-gap: var(--space-6); /* between a page's sections (a heading with its list, card or form is one section): one rhythm on every page */
   --rail-w: clamp(320px, 22vw, 440px);     /* Today context rail, list detail panes */
   --detail-w: clamp(420px, 26vw, 600px);   /* inspector pane (>= 1680px) */
   --drawer-w: 480px;                       /* a drawer from the right edge (a sheet from the bottom on a phone) */
@@ -137,6 +138,7 @@
   --input-h: 40px;
   --row-h: 48px;
   --row-lead-w: var(--target-min);   /* a row's leading slot: always this wide, whatever it holds (a check, an icon, a dot), so titles share one edge */
+  --row-lead-nudge: calc((var(--lh-md) - var(--row-lead-w)) / 2);   /* how far a row's lead sits above its slot's top so its centre is the title's line's centre */
   --row-py: 10px; --row-px: var(--space-4); --row-gap: var(--space-3);
   /* The row the cursor is on, or that is open in a pane: a soft tint and a 2px bar at its left edge. Its buttons stay the same weight. */
   --row-selected-bg: color-mix(in srgb, var(--accent-soft) 55%, transparent); --row-selected-bar: inset 2px 0 0 var(--accent);

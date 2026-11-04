@@ -280,7 +280,7 @@ export function FollowUps(props: { compact?: boolean }) {
         }
       />
       {ownRow && filter === "send" && !nothingAnywhere && <OwnTodosRow section={ownRow} />}
-      <ListState query={followups} failed={t("followups.load_failed")}>
+      <ListState query={followups} failed={t("followups.load_failed")} row={{ lead: false, framed: true }}>
         {() =>
       sections.length === 0 && actRows.length === 0 ? (
         present.length > 0 ? (

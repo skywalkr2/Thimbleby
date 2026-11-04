@@ -15,8 +15,8 @@
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); font-size: var(--text-sm); line-height: var(--lh-sm);
 }
 .icon { display: inline-grid; place-items: center; flex: none; }
-/* The words keep a readable width: with several buttons the buttons wrap under them rather than squeeze them. */
-.message { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
+/* The words keep a readable width: with several buttons the buttons wrap under them rather than squeeze them, but the one close button always stays on the words' row. */
+.message { flex: 1 1 8rem; min-width: 0; overflow-wrap: anywhere; }
 .action {
   min-height: var(--btn-h-sm); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-btn); background: transparent; color: inherit; cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: underline; text-underline-offset: 3px;

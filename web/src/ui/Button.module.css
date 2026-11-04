@@ -1,6 +1,7 @@
 /* The one button (design 7.12): pills in three weights, filled (primary), tonal and plain (quiet), with the outline (secondary) as
    the bordered default. Same height, radius (a pill; an icon-only button is a circle) and type on all of them, so a row of
    mixed buttons lines up. */
+.idle { display: contents; }
 .wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); max-width: 100%; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
@@ -34,9 +35,10 @@
 .btn:disabled, .btn:disabled:hover {
   background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; transform: none;
 }
-/* A disabled primary reads as disabled (a sunken fill, a firm edge, the subtle text), never as the tonal weight it would otherwise be
-   mistaken for; the reason it waits is written beside it. */
-.primary:disabled, .primary:disabled:hover { background: var(--surface-sunk); border-color: var(--border-strong); color: var(--text-subtle); }
+/* A disabled primary keeps the filled shape, lowered: the accent mixed half into the surface with the label on it, so it still reads as
+   the screen's primary, and the reason it waits is written beside it (or above, in a footer). The cursor, the disabled state and the
+   reason say it is off; the look is never the only sign. */
+.primary:disabled, .primary:disabled:hover { background: color-mix(in srgb, var(--accent) 55%, var(--surface)); border-color: transparent; color: var(--text-on-accent); }
 .tonal:disabled, .tonal:disabled:hover { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); }
 .quiet:disabled, .quiet:disabled:hover { background: transparent; border-color: transparent; color: var(--text-subtle); }
 .loading { cursor: progress; }

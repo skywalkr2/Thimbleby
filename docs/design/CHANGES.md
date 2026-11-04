@@ -1027,6 +1027,33 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 339. The shared parts, second pass: what the screen batches handed back (2026-11-04; gate fix batch G1d)
+
+Batch G1d of the gate's fix round (7.12, 7.14). Every change is in `web/src/ui/`, the shell or the shared style sheet, so every screen that uses the part moves together; the design text is the "shared parts again" entry of 7.12.
+
+| Where | Before | Now |
+|---|---|---|
+| Disabled primary (7.12) | A sunken well with a firm edge, which read as a secondary; its reason beside it | The filled shape lowered (the accent half-mixed into the surface, the same label); in a drawer's footer the reason is the first line above the buttons. Built: `web/src/ui/Button.test.tsx` |
+| Drawer body (7.12) | No sign that a long form continues | A soft shadow at the edge where it continues. Built: `web/src/ui/sharedLook.test.tsx` |
+| Page header (7.12) | No gap between the title and the line under it | 8px. Built: `web/src/ui/sharedLook.test.tsx` |
+| Segmented control (7.12) | Content-sized segments in a track that could be wider; wrapped on a phone | Equal segments on one line, the chosen one filling its share. Built: `web/src/ui/sharedLook.test.tsx` |
+| Tabs on a phone (7.12) | Two rows | One row that scrolls in its box. Built: `web/src/ui/sharedLook.test.tsx` |
+| Side filter (6.32, 7.8) | A strip at any width above 1100px, names cut at 24 characters | A strip only for four short choices; otherwise the Side button and its sheet. Built: `web/src/components/SideFilterSheet.test.tsx` |
+| Icons (7.12) | Notes and Knowledge shared the book; the shortcuts used the grid; "Missed something?" the magnifier | Note, keyboard and flag. Built: `web/src/shell/Sidebar.test.tsx`, `web/src/shell/Header.test.tsx` |
+| Records table (7.14) | A band above the head held a lone grid icon; a one-column table had a head | The picker sits in the head's last cell; no picker and a head for a screen reader only when no column shows. Built: `web/src/ui/RecordsTable.test.tsx` |
+| Rows (7.14) | The lead sat at the middle of a tall row | On the title's line when the row has a meta line. Built: `web/src/ui/sharedLook.test.tsx` |
+| Skeletons (7.12) | The same row for every list, with a button and no frame | A row as the loaded row is (lead, end, frame, height); tab counts wait for the list. Built: `web/src/ui/sharedLook.test.tsx`, `web/src/components/OpenItems.test.tsx` |
+| Offline bar (7.12) | With no time known: "Showing what loaded earlier" | "Waiting for the connection. It reconnects by itself." Built: `web/src/ui/states.test.tsx` |
+| Status popover (7.1) | Names at 12px with a dot; Refresh could sit under the end of the box | 13px names with "needs a look" in words; the Updates row stays at the bottom edge. Built: `web/src/shell/StatusMenu.test.tsx`, `web/src/ui/sharedLook.test.tsx` |
+| Empty state (7.12) | A card the full width of the page for one sentence | As wide as its words need, at least 24rem |
+| Page sections (7.13) | 12px between sections on a record page | One `--section-gap` of 24px |
+| Small parts | A checkbox group's legend on the panel's edge; two focus rings on the search box; the spending sentence's Change link semibold | Legend padded; one ring; the sentence's weight. Built: `web/src/ui/sharedLook.test.tsx` |
+| Button reason (7.12) | The button was a new element when its reason came or went | One element throughout. Built: `web/src/ui/Button.test.tsx` |
+| Side menu (7.1) | A long name was cut with a tooltip on hover only (rail) | A tooltip on hover and focus for every entry. Built: `web/src/shell/Sidebar.test.tsx` |
+| Toast (7.6) | The close button wrapped under the words on a phone | The words yield width first. Built: `web/src/ui/sharedLook.test.tsx` |
+
+- **No config key, API or op change in this section.**
+
 ## 338. Settings, part two: Your business, Connections, Add a connection, Lists, Files, Add-ons and an add-on's page (2026-11-04; gate fix batch G5b)
 
 | Where | Before | Now |

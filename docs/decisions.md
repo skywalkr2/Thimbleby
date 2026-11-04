@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: The shared parts, second pass (batch G1d of the fix round)
+
+**Decided:** (design by the main session, within D7; no owner choice needed.)
+- A disabled primary keeps its filled shape, lowered, because the sunken look G1b chose read as a secondary on every form the cold scorers saw; its reason goes above the buttons in a drawer's footer.
+- A side strip is for four short choices at most; more, or a long name, are the one Side button and its sheet at every width, so no name is cut short.
+- A toast has no countdown: one that offers Undo or an action stays until put away and a plain note follows the configured time, so a countdown cue would be motion with nothing to count (D7).
+- The setup line on Today keeps the step's own words ("Say who you are") and the guide keeps its screen names ("You"); making them one is an owner choice (below).
+
+**Why:** the screens' cold scores named these parts on many pages; each is fixed once, in the shared part.
+
+**Impact:** `web/src/ui/`, `web/src/shell/`, `web/src/styles.css`, `web/src/theme/tokens.css`, `web/src/wording/en.json`. Change log: section 339.
+
 ## 2026-11-04: Settings, part two (Your business, Connections, Add a connection, Lists, Files, Add-ons and an add-on's page), batch G5b of the fix round
 
 **Decided:** (the gate's fix round, batch G5b; design by the main session, within D1, D7 and D10; no owner choice needed.)

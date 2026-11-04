@@ -15,10 +15,11 @@ const sides = [
   { project: "PRJ-b", kind: "job", name: LONG },
 ];
 
-function show(narrow: { phone?: boolean; tight?: boolean }) {
+function show(narrow: { phone?: boolean; tight?: boolean; short?: boolean }) {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width:\s*1100px/.test(query) && !!narrow.tight, media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
   if (narrow.phone) document.documentElement.setAttribute("data-narrow", "");
-  fakeApi({ "GET setup/business": () => ({ business: true, name: "Northwind Clinic", personal: "PRJ-personal", sides, chosen: "work" }), "GET views": () => [] });
+  const shown = narrow.short ? sides.slice(0, 1) : sides;
+  fakeApi({ "GET setup/business": () => ({ business: true, name: "Northwind Clinic", personal: "PRJ-personal", sides: shown, chosen: "work" }), "GET views": () => [] });
   renderApp(<SideFilter />);
 }
 
@@ -29,10 +30,16 @@ afterEach(() => {
   setSideChoice("all");
 });
 
-test("wide, the choices are a strip", async () => {
-  show({});
+test("wide, a few short choices are a strip", async () => {
+  show({ short: true });
   expect(await screen.findByRole("radiogroup", { name: "Show" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^Side: / })).toBeNull();
+});
+
+test("wide, a choice with a long name is the one button and its sheet, so no name is cut short in a strip", async () => {
+  show({});
+  expect(await screen.findByRole("button", { name: "Side: All" })).toBeInTheDocument();
+  expect(screen.queryByRole("radiogroup", { name: "Show" })).toBeNull();
 });
 
 test.each([

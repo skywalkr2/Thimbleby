@@ -1,4 +1,9 @@
 .strip { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
+/* On a phone the tabs are one row that scrolls sideways inside its own box (never two rows, never a wider page); the row's ends are
+   not cut off by the page, and a tab is never narrower than its words. */
+:global([data-narrow]) .strip { flex-wrap: nowrap; gap: var(--space-4); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+:global([data-narrow]) .strip::-webkit-scrollbar { display: none; }
+:global([data-narrow]) .tab { flex: none; top: 0; white-space: nowrap; scroll-snap-align: start; }
 .tab {
   display: inline-flex; align-items: center; gap: var(--space-2); position: relative; top: 1px; padding: var(--space-2) 0; min-height: var(--target-min);
   border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; cursor: pointer;

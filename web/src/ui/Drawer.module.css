@@ -3,6 +3,19 @@
 .dialog { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; outline: none; }
 .head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-12); padding: 0 var(--space-2) 0 var(--space-4); border-bottom: 1px solid var(--border); flex: none; }
 .title { margin: 0; flex: 1; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
-.body { --overlay-pad-x: var(--space-4); --overlay-pad-y: var(--space-4); flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--overlay-pad-y) var(--overlay-pad-x); }
+.body {
+  --overlay-pad-x: var(--space-4); --overlay-pad-y: var(--space-4); flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--overlay-pad-y) var(--overlay-pad-x);
+  /* Where the form continues above or below, a soft shadow at that edge says so (the head and the footer are lines, the shadow is the cue). */
+  --cover: var(--surface-raised); --clear: color-mix(in srgb, var(--surface-raised) 0%, transparent); --edge: color-mix(in srgb, var(--text) 18%, transparent);
+  background:
+    linear-gradient(var(--cover) 30%, var(--clear)) center top / 100% 32px no-repeat local,
+    linear-gradient(var(--clear), var(--cover) 70%) center bottom / 100% 32px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--edge), transparent) center top / 100% 8px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--edge), transparent) center bottom / 100% 8px no-repeat scroll,
+    var(--surface-raised);
+}
 .footer { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); background: var(--surface-raised); }
+.footer [data-reason-wrap] { display: contents; }
+/* A disabled button's reason is the footer's first line, full width and at the buttons' end, above them, never squeezed beside them. */
+.footer [data-reason-wrap] > p { order: -1; flex: 1 1 100%; max-width: none; text-align: end; }
 .guard { margin: 0; flex: 1 1 100%; color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }

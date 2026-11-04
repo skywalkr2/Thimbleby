@@ -444,6 +444,8 @@ input[data-key-field-state="works"] { border-color: var(--ok); }
 .verdict:empty { display: none; }
 .spend { padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunk); }
 .spend-line { margin: 0; }
+/* The Change link ends a sentence, so it reads as a link in running text: the same weight as the words, underlined like every link. */
+.spend-line .link-button { font-weight: inherit; }
 .money-field { display: inline-flex; align-items: center; gap: var(--space-1); }
 
 /* Rows of the rail's panels (design 7.7): the agenda, the person's own list and the mail that came in. */
@@ -521,9 +523,11 @@ input[data-key-field-state="works"] { border-color: var(--ok); }
 .restart-mark { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-full); background: var(--warn-soft); color: var(--warn); }
 
 /* A record's page (design 7.14): what is going on beside the record's details; stacked below 1100px, so the side is never a squeezed strip. */
-.record-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); align-items: start; min-width: 0; }
+.record-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--section-gap) var(--gutter); align-items: start; min-width: 0; }
 @media (min-width: 1100px) { .record-grid { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); } }
 .record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
+/* The sections of a page sit one section gap apart; what is inside a section (a heading and its list) keeps the tighter gap. */
+.record-main { gap: var(--section-gap); }
 .record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--pane-border); box-shadow: var(--pane-edge); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
 /* A person's page: the rail is their contact card, then the box to ask about them. Where the columns stack (a narrow window, a

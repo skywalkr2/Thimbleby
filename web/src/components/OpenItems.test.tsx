@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
-import { fakeApi, renderApp, type Routes, snapshotOf, typeMoment } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes, snapshotOf, typeMoment } from "../test-utils";
 import { todayOn } from "../lib/dates";
 import { chooseFilters } from "../lib/open-items";
 import { FILTER_BAR_MIN, setFilterBarMin } from "../lib/filterbar";
@@ -878,4 +878,12 @@ test("a group shows the number of to-dos the setting names, then Show N more, wh
   await user.click(more!);
   expect(within(screen.getByRole("list", { name: "Open to-dos" })).getAllByText(/^Later to-do/)).toHaveLength(9);
   expect(document.querySelector('[data-show-more="coming"]')).toBeNull();
+});
+
+test("while the list could not be loaded the tabs show no count, never a false 0 beside the error", async () => {
+  api({ "GET open-items": () => new Refuse(500, "no") });
+  renderApp(<OpenItems />);
+  await screen.findByText(/To-dos and questions didn't load/);
+  expect(screen.getByRole("button", { name: /^To-dos/ })).not.toHaveTextContent(/\d/);
+  expect(screen.getByRole("button", { name: /^Questions/ })).not.toHaveTextContent(/\d/);
 });

@@ -147,13 +147,35 @@ test("the weights are drawn as pills in the style sheet: filled solid, tonal the
   expect(readFileSync(join(__dirname, "..", "theme", "tokens.css"), "utf8")).toMatch(/--radius-btn: var\(--radius-full\)/);
 });
 
-test("a disabled primary reads as disabled: a sunken fill, a firm edge and the subtle text, never the tonal weight's soft accent", async () => {
+test("a disabled primary keeps the filled shape, lowered: the accent mixed into the surface, never the sunken well or the tonal soft accent", async () => {
   const { readFileSync } = await import("node:fs");
   const { join } = await import("node:path");
   const css = readFileSync(join(__dirname, "Button.module.css"), "utf8");
   const rule = css.match(/\.primary:disabled, \.primary:disabled:hover \{([^}]*)\}/)![1];
-  expect(rule).toMatch(/background: var\(--surface-sunk\)/);
-  expect(rule).toMatch(/border-color: var\(--border-strong\)/);
-  expect(rule).toMatch(/color: var\(--text-subtle\)/);
-  expect(rule).not.toMatch(/accent-soft/);
+  expect(rule).toMatch(/background: color-mix\(in srgb, var\(--accent\) \d+%, var\(--surface\)\)/);
+  expect(rule).toMatch(/color: var\(--text-on-accent\)/);
+  expect(rule).not.toMatch(/surface-sunk|accent-soft/);
+});
+
+test("a footer puts a disabled button's reason on its own line above the buttons", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const css = readFileSync(join(__dirname, "Drawer.module.css"), "utf8");
+  expect(css).toMatch(/\.footer \[data-reason-wrap\] \{ display: contents; \}/);
+  expect(css).toMatch(/\.footer \[data-reason-wrap\] > p \{[^}]*order: -1; flex: 1 1 100%/);
+});
+
+test("the button stays the same element when its reason comes and goes, so a click and its focus are not lost", async () => {
+  const user = userEvent.setup();
+  const onClick = vi.fn();
+  const { rerender } = render(<Button onClick={onClick}>Go</Button>);
+  const before = screen.getByRole("button", { name: "Go" });
+  before.focus();
+  rerender(<Button disabled reason="Wait">Go</Button>);
+  expect(screen.getByRole("button", { name: "Go" })).toBe(before);
+  rerender(<Button onClick={onClick}>Go</Button>);
+  const after = screen.getByRole("button", { name: "Go" });
+  expect(after).toBe(before);
+  await user.click(after);
+  expect(onClick).toHaveBeenCalledTimes(1);
 });

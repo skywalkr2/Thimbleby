@@ -87,9 +87,17 @@ const overflow = (page: Page) =>
   page.evaluate(() => {
     const limit = window.innerWidth;
     const cut: string[] = [];
+    // What sits inside a box that scrolls sideways within the window (a phone's one row of tabs) does not widen the page.
+    const inScroller = (el: Element, limit: number): boolean => {
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const ox = getComputedStyle(p).overflowX;
+        if ((ox === "auto" || ox === "scroll") && p.getBoundingClientRect().right <= limit + 1) return true;
+      }
+      return false;
+    };
     for (const el of Array.from(document.querySelectorAll("main *"))) {
       const box = el.getBoundingClientRect();
-      if (box.width > 0 && box.height > 0 && box.right > limit + 1 && getComputedStyle(el).position !== "fixed") {
+      if (box.width > 0 && box.height > 0 && box.right > limit + 1 && getComputedStyle(el).position !== "fixed" && !inScroller(el, limit)) {
         cut.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} reaches ${Math.round(box.right)}`);
       }
     }

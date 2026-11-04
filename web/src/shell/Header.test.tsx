@@ -186,6 +186,14 @@ test("Help is a menu: shortcuts, the setup guide, Missed one, feedback and the v
   expect(onFeedback).toHaveBeenCalledTimes(1);
 });
 
+test("each Help entry has an icon of its own: keys for the shortcuts, a book for the guide, a flag for what was missed, a bubble for feedback", async () => {
+  const user = userEvent.setup();
+  show({ handlers: { onHelp: vi.fn(), onFeedback: vi.fn(), onOpenGuide: vi.fn() } });
+  await user.click(screen.getByRole("button", { name: "Help" }));
+  const icons = screen.getAllByRole("menuitem").map((i) => i.querySelector("[data-icon]")?.getAttribute("data-icon") ?? null);
+  expect(icons.slice(0, 4)).toEqual(["keyboard", "book", "flag", "chat"]);
+});
+
 test("the person's initials open the user menu, where theme and density are saved for this device", async () => {
   const user = userEvent.setup();
   initAppearance({ brand_color: null, theme: "system", density: "comfortable" });

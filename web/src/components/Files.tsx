@@ -94,7 +94,7 @@ export function Files() {
         fit={FILES_FIT}
         detail={selected ? <FileDetail file={selected} project={placeOf(selected.project)} side={!!selected.project && sides.has(selected.project)} earlier={everything.find((f) => f.id === selected.replaces)?.name} /> : null}
       >
-        <ListState query={files} failed={t("files.load_failed")}>
+        <ListState query={files} failed={t("files.load_failed")} row={{ lead: false, framed: true }}>
           {() =>
             everything.length === 0 ? (
               <div className={styles.empty} data-empty="">

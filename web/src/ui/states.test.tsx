@@ -72,13 +72,14 @@ test("the offline banner is not drawn while the connection is up", () => {
   expect(screen.queryByRole("status")).toBeNull();
 });
 
-test("with no time known the offline banner still says it, without a made-up time", () => {
+test("with no time known the offline banner claims nothing was loaded, and makes up no time", () => {
   renderApp(
     <ConnectionProvider live={live("offline", { at: null })}>
       <OfflineBanner />
     </ConnectionProvider>,
   );
-  expect(screen.getByRole("status")).toHaveTextContent("loaded earlier");
+  expect(screen.getByRole("status")).toHaveTextContent("Waiting for the connection.");
+  expect(screen.getByRole("status")).not.toHaveTextContent(/loaded|showing/i);
 });
 
 test("a failed save names what was not saved, says nothing is lost, and Try again runs it again", async () => {

@@ -31,14 +31,27 @@ const go = (page: Page, hash: string) =>
 async function choose(page: Page, choice: "all" | Side) {
   const name = choice === "all" ? "All" : seeded.sides[choice].name;
   const radio = page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`) });
+  // Four short choices are a strip; more, or a long name, are the one Side button and its sheet (at every width).
+  const button = page.getByRole("button", { name: /^Side: / }).first();
+  const pickInSheet = async () => {
+    await button.click();
+    await page.getByRole("dialog", { name: "Show one side" }).locator("[data-side-option]").filter({ hasText: new RegExp(`^${name}`) }).first().click();
+  };
   // A short list has no filter bar (a list of fewer than a dozen rows has nothing worth narrowing), but the pick is the app's one,
   // remembered in this window: it is made where the bar is (Today) and the screen is then read under it.
-  if (!(await radio.isVisible().catch(() => false))) {
+  const offered = (await radio.isVisible().catch(() => false)) || (await button.isVisible().catch(() => false));
+  if (!offered) {
     const here = await page.evaluate(() => window.location.hash.replace(/^#/, ""));
     await go(page, "today");
-    await radio.click();
+    await expect(button.or(radio)).toBeVisible(LOADED);
+    if (await button.isVisible().catch(() => false)) await pickInSheet();
+    else await radio.click();
     await go(page, here);
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+    return;
+  }
+  if (await button.isVisible().catch(() => false)) {
+    await pickInSheet();
     return;
   }
   await radio.click();
@@ -173,9 +186,17 @@ test.describe("The side filter changes what the screens show", () => {
     await expect(main.getByText(views.todo)).toBeVisible(LOADED);
     const pickView = async (view: string) => {
       const name = new RegExp(`^${`${sides.job.name}: ${view}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(,|$)`);
-      // The views are in the filter bar, which a short list draws only while a side is picked.
-      if (!(await page.getByRole("radio", { name }).isVisible().catch(() => false))) await choose(page, "job");
-      await page.getByRole("radio", { name }).click();
+      // The views are in the filter bar, which a short list draws only while a side is picked; with many choices they are in the Side sheet.
+      const button = page.getByRole("button", { name: /^Side: / }).first();
+      const radio = page.getByRole("radio", { name });
+      if (!(await button.isVisible().catch(() => false)) && !(await radio.isVisible().catch(() => false))) await choose(page, "job");
+      await expect(button.or(radio)).toBeVisible(LOADED);
+      if (await button.isVisible().catch(() => false)) {
+        await button.click();
+        await page.getByRole("dialog", { name: "Show one side" }).locator("[data-side-option]").filter({ hasText: `${sides.job.name}: ${view}` }).first().click();
+        return;
+      }
+      await radio.click();
       await expect(page.getByRole("radio", { name, checked: true })).toBeVisible();
     };
     // Under All the shared project's to-do carries a tag for each view it is in.

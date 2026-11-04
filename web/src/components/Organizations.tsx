@@ -51,7 +51,7 @@ export function Organizations() {
           {t("setup.add_organization")}
         </Button>
       </div>
-      <ListState query={orgs} failed={t("orgs.load_failed")} rows={3}>
+      <ListState query={orgs} failed={t("orgs.load_failed")} rows={3} row={{ action: "menu", framed: true }}>
         {() =>
           rows.length === 0 ? (
             <EmptyState text={t("setup.no_organizations")} />

@@ -99,6 +99,7 @@ export function People() {
         id="people-title"
         title={t("setup.people")}
         subtitle={summary}
+        reserveSubtitle={people.isPending}
         filters={
           <>
             <SideFilter holds={(people.data ?? []).length} />
@@ -117,7 +118,7 @@ export function People() {
         fit={PEOPLE_FIT}
         detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} /> : null}
       >
-        <ListState query={people} failed={t("people.load_failed")} rows={6}>
+        <ListState query={people} failed={t("people.load_failed")} rows={4} row={{ action: "menu", framed: true }}>
           {() =>
             all.length === 0 ? (
               side.choice !== "all" ? (

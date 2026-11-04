@@ -77,26 +77,29 @@ export function RecordsTable<T>(props: {
     "--cols-mid": shares - hidden(2),
     "--cols-small": shares - hidden(2) - hidden(3),
   } as CSSProperties;
+  // The column picker sits in the head row's last cell (never a band of its own above the table), and is offered only when the table
+  // has more than one column to choose between and shows one now (a table whose columns are all empty has nothing to pick).
+  const picker = optional && props.columns.length > 1 && visible.length > 0 && (
+    <MenuButton
+      trigger={<IconButton icon="grid" size="sm" label={t("table.choose_columns")} />}
+      groups={[
+        {
+          id: "columns",
+          title: t("table.columns"),
+          checked: props.columns.filter(shown).map((c) => c.id),
+          entries: props.columns.map((c) => ({ id: c.id, label: c.header, run: () => setPicked((was) => ({ ...was, [c.id]: !shown(c) })) })),
+        },
+      ]}
+    />
+  );
+  // A table of one column (the names alone) needs no head to say what its rows are: the head stays for a screen reader only.
+  const headHidden = visible.length === 0;
   return (
     <div className={styles.wrap}>
-      {optional && (
-        <div className={styles.tools}>
-          <MenuButton
-            trigger={<IconButton icon="grid" size="sm" label={t("table.choose_columns")} />}
-            groups={[
-              {
-                id: "columns",
-                title: t("table.columns"),
-                checked: props.columns.filter(shown).map((c) => c.id),
-                entries: props.columns.map((c) => ({ id: c.id, label: c.header, run: () => setPicked((was) => ({ ...was, [c.id]: !shown(c) })) })),
-              },
-            ]}
-          />
-        </div>
-      )}
+      {picker && !props.actions && <div className={styles.tools}>{picker}</div>}
       <table className={styles.table} style={widths}>
         <caption className="sr">{props.label}</caption>
-        <thead>
+        <thead className={headHidden ? styles.headHidden : undefined}>
           <tr>
             <th scope="col">{props.name.header}</th>
             {visible.map((c) => (
@@ -107,6 +110,7 @@ export function RecordsTable<T>(props: {
             {props.actions && (
               <th scope="col" className={styles.acts}>
                 <span className="sr">{props.actionsHeader}</span>
+                {picker && <span className={styles.actsInner}>{picker}</span>}
               </th>
             )}
           </tr>

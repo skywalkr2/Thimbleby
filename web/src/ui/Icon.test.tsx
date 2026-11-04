@@ -15,7 +15,7 @@ test("an icon is hidden from screen readers unless it has a label", () => {
 test("the set has every icon the app needs, each with something to draw", () => {
   const needed = [
     "home", "inbox", "book", "send", "upload", "layers", "grid", "users", "folder", "rss", "puzzle", "gear", "search", "plus", "more",
-    "help", "chevron", "chat", "close", "alert", "check", "refresh", "sun", "moon", "monitor", "menu", "panel-left",
+    "help", "chevron", "chat", "close", "alert", "check", "refresh", "sun", "moon", "monitor", "menu", "panel-left", "keyboard", "note", "flag",
   ];
   expect(ICON_NAMES).toEqual(expect.arrayContaining(needed));
   for (const name of ICON_NAMES) {

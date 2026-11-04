@@ -4,7 +4,7 @@
 // remembered on this browser. A screen that has something waiting for the person passes it as `waiting`, and each choice
 // then says how many wait in it, in words for a screen reader. A screen with tabs passes `counts` (what the open tab holds) and
 // `holds` (what it holds in all), so the numbers match the list and a short list has no bar.
-// On a phone, and below 1100px of window where a row of choices with long names would take several lines, there is no strip:
+// On a phone, below 1100px of window, and wherever the choices are more than four or have a long name (a strip would cut it), there is no strip:
 // one button in the page header names the pick and opens a sheet with the choices as a list to pick from.
 import { useState } from "react";
 import { useIsNarrow, useMediaQuery } from "../lib/media";
@@ -22,6 +22,10 @@ import styles from "./SideFilter.module.css";
 
 /** The window width below which the strip gives way to the button and its sheet. */
 export const SIDE_STRIP_BELOW = "(max-width: 1100px)";
+/** The most choices, and the longest name, a strip draws at any width: a segmented control is for a few short choices, so more
+ * than this (or a name longer than this) is the one button and its sheet, where no name is ever cut. */
+export const SIDE_STRIP_MAX_CHOICES = 4;
+export const SIDE_STRIP_MAX_NAME = 18;
 
 export function SideFilter(props: {
   waiting?: WaitingScreen;
@@ -82,7 +86,8 @@ export function SideFilter(props: {
       </div>
     );
   }
-  if (narrow || tight) {
+  const crowded = options.length > SIDE_STRIP_MAX_CHOICES || options.some((o) => o.label.length > SIDE_STRIP_MAX_NAME);
+  if (narrow || tight || crowded) {
     const current = options.find((o) => o.value === filter.picked) ?? options[0];
     return (
       <>

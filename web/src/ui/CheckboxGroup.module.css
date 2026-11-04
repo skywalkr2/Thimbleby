@@ -2,4 +2,7 @@
 .group { border: 0; margin: 0 0 var(--space-4); padding: 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .legend { display: block; width: 100%; padding: 0; margin: 0 0 var(--space-2); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); color: var(--text); }
 .hint { margin: 0; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); max-width: var(--measure); }
-.panel { background: var(--surface-sunk); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+/* A legend is drawn on its fieldset's top edge and ignores the fieldset's top padding, so on a panel the legend carries the panel's top padding
+   itself and the panel keeps none at the top: the legend never touches the panel's edge. */
+.panel { background: var(--surface-sunk); border-radius: var(--radius-md); padding: 0 var(--space-4) var(--space-3); }
+.panel > .legend { padding-top: var(--space-3); }

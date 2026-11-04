@@ -7,7 +7,7 @@ import { ApiError } from "../lib/api";
 import { useConnection } from "../lib/connection";
 import { useWords } from "../lib/wording";
 import { LoadFailed } from "./LoadFailed";
-import { Skeleton } from "./Skeleton";
+import { Skeleton, type SkeletonRow } from "./Skeleton";
 
 /** The parts of a query this reads; any `useQuery` result has them. */
 export interface QueryLike<T> {
@@ -28,6 +28,8 @@ export function ListState<T>(props: {
   above?: ReactNode;
   /** The skeleton's shape: rows (the default), or a table's head and rows for a screen whose list is a table. */
   shape?: "rows" | "table";
+  /** What a skeleton row draws, as the loaded rows do (a lead, an end action). */
+  row?: SkeletonRow;
   /** What to show once there is data. */
   children: (data: T) => ReactNode;
 }) {
@@ -48,7 +50,7 @@ export function ListState<T>(props: {
   return (
     <>
       {props.above}
-      <Skeleton rows={props.rows} shape={props.shape} />
+      <Skeleton rows={props.rows} shape={props.shape} row={props.row} />
     </>
   );
 }
