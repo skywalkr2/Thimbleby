@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: Thimbleby Corp, a company edition, recorded as an idea (owner; section 346)
+
+**Decided:** the owner's idea is recorded as roadmap phase E and design 11.10. Thimbleby Corp is the same core, locked by
+a managed-settings layer that the company's IT sets, with Microsoft enterprise connections only, the company's own AI
+accounts and a corporate pack set. It is not in 1.0.
+
+**Why:** so that what is built now keeps it possible. Settings stay in the one layered loader, and the core keeps no
+vendor or customer code.
+
+**Impact:** roadmap and design text only. Change log: section 346.
+
 ## 2026-11-04: A low-cost hosted service is an open question in design 11.9 (owner; section 345)
 
 **Decided:** the owner's ideas for a future hosted service are recorded as an open question in design 11.9, each checked

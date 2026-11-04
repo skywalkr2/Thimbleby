@@ -225,3 +225,32 @@ that what is built now doesn't rule it out. Each idea was checked against the co
 - The second choice touches the worker, the lease (5.0), settings that apply at once (`LIVE_KEYS`) and restarts (11.7).
 - Decide it together with the organization install (11.8).
 
+## 11.10 Open question: Thimbleby Corp, a company edition (not in 1.0)
+
+The owner's idea (2026-11-04), recorded so that what is built now doesn't rule it out. The plan is roadmap phase E.
+Corp is the same core with a policy and a set of packs, never special-cased code: the boundary rules hold (no vendor
+name outside adapters and plugins; the core never imports a plugin).
+
+- **The core feature it needs: a managed-settings layer.**
+  - Settings already come in layers: the defaults, the workspace's files, environment variables, flags and profiles
+    (4.0).
+  - A managed layer, set by IT in a policy file or through the installer, would sit above all of them and lock what it
+    names.
+  - A locked setting shows read-only in Settings, with "set by your organization".
+  - The person can't change it, and neither can an add-on.
+  - The deploy checks (11.5) would refuse a policy that contradicts itself.
+  - Any install could use it, not only Corp.
+- **The policy can restrict what can be added:**
+  - which add-ons may be installed (for Corp, the Microsoft mail and calendar add-on, signing in through the company's
+    directory, and the company's chosen packs);
+  - which AI accounts and services may be used (the company's own, for example its own hosted models);
+  - the data levels each may receive (5.1);
+  - whether catalogs other than the company's are offered.
+- **The packs** are the corporate set: the planned business analyst and project manager packs, and others like them.
+  They are installed and enabled by policy.
+- **The people** are the organization install of 11.8: members, roles, and approvals by role.
+- **Installation** is by IT: the phase I Windows installer, run silently with the policy file, through the company's
+  device management. The data stays on the company's machines, or in its own tenant when hosted (11.9).
+- **What it means today:** settings keep going through the one layered loader (never read around it), so a managed
+  layer can be added on top later without touching every setting.
+

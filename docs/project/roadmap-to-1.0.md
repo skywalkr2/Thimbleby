@@ -1207,6 +1207,23 @@ Google's Testing status (M7) serves testers and founding members. The items belo
   before they are added, marked by origin, "from outside" in packets. Test: a gallery template whose help text tries to
   change routing changes nothing and reaches packets marked "from outside".
 
+## Phase E: Thimbleby Corp (an idea for after 1.0, only if the owner goes ahead)
+
+The owner's idea (2026-11-04): the same core for companies, set up by the company's IT and locked so people can't
+change it. Design 11.10 holds the details. It's a product layer on the one core, like Thimbleby+ (phase T), never a
+fork:
+- **A managed-settings layer** (a generic core feature): settings that IT sets in a policy file or through the
+  installer, above the person's own, which lock what they name. A locked setting is shown read-only, as set by the
+  organization.
+- **Microsoft enterprise connections only, by policy:** the Microsoft mail and calendar add-on, with sign-in through the
+  company's directory. The core keeps no Microsoft-specific code.
+- **The company's own approved AI accounts only, by policy.**
+- **A corporate pack set:** the planned business analyst and project manager packs, and others that suit companies.
+- **Many people with roles:** the organization install (design 11.8).
+- **Deployed by IT:** the Windows installer of phase I, made to install silently with its policy file. The data stays
+  on the company's machines or in its own tenant.
+
+
 ## Phase C: the writing pack in the owner's workspace
 
 Re-sequenced on 2026-10-15 (the owner: the writing pack is finished completely before any other pack starts). Phase C is
