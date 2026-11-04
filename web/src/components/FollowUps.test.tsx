@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { actFixture } from "../lib/acts-fixtures";
 import { nextMonday } from "../lib/dates";
+import { FILTER_BAR_MIN, setFilterBarMin } from "../lib/filterbar";
 import { besidePane, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { DecisionRow, FollowUps } from "./FollowUps";
 
@@ -1176,14 +1177,14 @@ test("an item with no project is gathered under Not in a project, after the proj
   expect(screen.queryByText("No project")).toBeNull();
 });
 
-test("an item filed on a side and in none of its projects is grouped as the side, not in a project, never as a project", async () => {
+test("an item filed on a side and in none of its projects is grouped as Not in a project under the side, never as a project", async () => {
   const user = userEvent.setup();
   const onSide = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "", side_name: "Orchard Press" }] }, sections[2]];
   fakeApi({ "GET followups": () => onSide, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("radio", { name: "By project" }));
   const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
-  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Orchard Press: not in a project"]);
+  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Not in a project"]);
 });
 
 test("by project the lines are grouped by side first, each side under its name, then by project", async () => {
@@ -1211,7 +1212,7 @@ test("by project the lines are grouped by side first, each side under its name, 
   const personal = await screen.findByRole("list", { name: "Personal" });
   expect(within(personal).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Garden"]);
   const side = screen.getByRole("list", { name: "Orchard Press" });
-  expect(within(side).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Cider", "Orchard Press: not in a project"]);
+  expect(within(side).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Cider", "Not in a project"]);
   const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
   expect(headings.indexOf("Personal")).toBeLessThan(headings.indexOf("Orchard Press"));
   expect(screen.queryByText("No project")).toBeNull();
@@ -1552,4 +1553,24 @@ test("a draft with no mailbox to name says nothing about one", async () => {
   const pane = await findPane();
   expect(within(pane).queryByText(/Send it from/)).toBeNull();
   expect(within(pane).queryByRole("combobox", { name: /Send to/ })).toBeNull();
+});
+
+test("a tab that holds nothing shows no side counts and no grouping switch, and a short list has no filter bar", async () => {
+  setFilterBarMin(FILTER_BAR_MIN);
+  const user = userEvent.setup();
+  const orchard = { project: "PRJ-orchard", kind: "business", name: "Orchard Press" };
+  fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    "GET setup/business": () => ({ business: true, name: orchard.name, personal: "PRJ-personal", sides: [orchard], chosen: "work" }),
+    "GET waiting": () => ({ changed: { total: 0 }, followups: { total: 4, sides: [{ side: "PRJ-orchard", count: 4 }] }, handled: { total: 0 }, open: { total: 0 } }),
+    "GET projects": () => [],
+  });
+  renderApp(<FollowUps />);
+  await screen.findByRole("button", { name: /^To send/ });
+  // The few follow-ups on the first tab are fewer than the bar's minimum, so no side counts and no grouping switch are drawn.
+  expect(screen.queryByRole("radio", { name: /Orchard Press/ })).toBeNull();
+  expect(screen.queryByRole("radio", { name: "By project" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: /^Later/ }));
+  expect(screen.queryByRole("radio", { name: /waiting/ })).toBeNull();
 });

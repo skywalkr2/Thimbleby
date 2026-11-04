@@ -28,6 +28,7 @@ import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
+import { LoadFailed } from "../ui/LoadFailed";
 type Form = S["DataFormView"];
 type DataFile = S["DataFile"];
 
@@ -97,7 +98,7 @@ function FormFiles(props: { form: Form; project: string }) {
       {files.isPending ? (
         <Skeleton />
       ) : files.isError ? (
-        <EmptyState icon="alert" text={t("dataform.load_failed")} action={{ label: t("action.try_again"), onClick: () => void files.refetch() }} />
+        <LoadFailed message={t("dataform.load_failed")} onRetry={() => void files.refetch()} />
       ) : files.data.length === 0 ? (
         <EmptyState text={t("dataform.none")} />
       ) : (

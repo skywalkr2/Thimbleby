@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import userEvent from "@testing-library/user-event";
 import { configure, waitFor } from "@testing-library/react";
 import { closeEveryEditor } from "./lib/one-editor";
+import { setFilterBarMin } from "./lib/filterbar";
 
 // A loaded machine can take longer than the default second to render a screen's first data; waiting longer costs
 // nothing when it renders sooner.
@@ -10,6 +11,10 @@ window.scrollTo = () => undefined;
 
 // What a screen keeps as a draft in the tab never carries from one test to the next.
 beforeEach(() => window.sessionStorage.clear());
+
+// A test of a screen's filters uses a short list; the bar is drawn over it unless the test asks for the real minimum
+// (`setFilterBarMin(FILTER_BAR_MIN)`, in the tests of the rule itself).
+beforeEach(() => setFilterBarMin(0));
 
 // And an editor one test left open is not open in the next.
 beforeEach(() => closeEveryEditor());

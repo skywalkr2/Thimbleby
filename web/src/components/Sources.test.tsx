@@ -88,6 +88,7 @@ function open(
   const calls = fakeApi({
     "GET watch": () => sources,
     "GET watch/kinds": () => KINDS,
+    "GET sign-ins": () => [],
     "GET settings": () => stored(sources.map((s) => ({ id: s.id, settings: { path: `${s.id}-folder` } }))),
     "GET projects": () => [],
     "GET watch/authors": () => [],
@@ -273,6 +274,7 @@ test("a failing source's problem is announced when the screen opens, and not aga
   let sources = [source("a", { last: run({ outcome: "failed" }), failures: 1, problem: "Can't reach it." })];
   fakeApi({
     "GET watch": () => sources,
+    "GET sign-ins": () => [],
     // Reading a also finds that a second source has started failing.
     "POST watch/a/read": () => {
       sources = [...sources, source("b", { last: run({ outcome: "failed" }), failures: 1, problem: "Gone missing." })];

@@ -1413,7 +1413,9 @@ function QueueRow(props: {
   const metaNode: ReactNode = !d.meta && !sideMark ? undefined : sideMark ? (typeof d.meta === "string" || !d.meta ? <>{d.meta ? <span className={styles.mp}>{d.meta}</span> : null}<span className={styles.mp}>{sideMark}</span></> : <>{d.meta}<span className={styles.mp}>{sideMark}</span></>) : d.meta;
   // What marks the line in its 24px slot: the kind of line as an icon, or, for a line with none, the color of its side.
   const icon = leadIcon(line);
-  const lead: ReactNode = icon ? <Icon name={icon} /> : slot !== null ? <MarkDot kind="side" slot={slot} /> : undefined;
+  // The queue's groups are lists of their own, and their titles start on one edge across them: a line with no mark keeps its slot
+  // (an empty span) so a group of plain lines does not give up the width the next group's icons need.
+  const lead: ReactNode = icon ? <Icon name={icon} /> : slot !== null ? <MarkDot kind="side" slot={slot} /> : <span aria-hidden="true" />;
   // The first Decide line carries the screen's one filled button; a review that is open has it instead.
   const filled = props.emphasis && !props.demote && !!d.primary;
   const state = line.group === "risk" ? "danger" : props.emphasis ? "decide" : undefined;

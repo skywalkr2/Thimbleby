@@ -12,6 +12,7 @@ import { Pill } from "../ui/Pill";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { LoadFailed } from "../ui/LoadFailed";
 import { Select } from "../ui/Select";
 import { RowList } from "../ui/RowList";
 import { RowBody } from "../ui/RowBody";
@@ -29,9 +30,9 @@ export function ValueLists(props: { level?: 2 | 3; place?: ListsPlace }) {
   const lists = useValueLists();
   const { justMe, sides } = useSides();
   const place = props.place ?? "lists";
-  // Nothing is shown until the lists have loaded; a failure says so quietly.
+  // Nothing is shown until the lists have loaded.
   if (lists.isPending) return null;
-  if (lists.isError) return <p className="hint">{t("lists.load_failed")}</p>;
+  if (lists.isError) return <LoadFailed message={t("lists.load_failed")} onRetry={() => void lists.refetch()} />;
   const shown = listsOn(lists.data, place, { sides: sides.length > 0, justMe });
   if (lists.data.length === 0 || (place === "business" && shown.length === 0)) return null;
   const Heading = props.level === 2 ? "h2" : "h3";

@@ -17,6 +17,8 @@ export interface PopoverProps {
   size?: "sm" | "md";
   /** Set the items of the list inside in two columns (they fall to one when the window is narrow). */
   columns?: 1 | 2;
+  /** Dim the page behind it, so what lies under the panel does not show through (a panel that holds a list of states). */
+  scrim?: boolean;
   /** Added to the dialog inside, for the caller's own layout of its content. */
   className?: string;
   children: ReactNode | ((close: () => void) => ReactNode);
@@ -25,7 +27,7 @@ export interface PopoverProps {
 export function Popover(props: PopoverProps) {
   const { size = "md", columns = 1 } = props;
   return (
-    <AriaPopover placement={props.placement ?? "bottom end"} offset={6} className={styles.popover} data-size={size} data-columns={columns}>
+    <AriaPopover placement={props.placement ?? "bottom end"} offset={6} className={styles.popover} data-size={size} data-scrim={props.scrim ? "" : undefined} data-columns={columns}>
       <Dialog aria-label={props.label} className={[styles.dialog, props.className ?? ""].filter(Boolean).join(" ")}>
         {({ close }) => (typeof props.children === "function" ? props.children(close) : props.children)}
       </Dialog>

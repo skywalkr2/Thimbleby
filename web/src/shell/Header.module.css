@@ -3,10 +3,11 @@
    Ask field gives up width first. The Ask field becomes an icon below 1024px, and on a phone one row remains with the logo,
    the status chip and the user menu. Below 1440px the chip shows only its word; width is given up by the Ask field first,
    then, below 1024px, by the workspace's name. The chip's word and every button keep their size. */
+/* The header never grows wider than the window (overflow-x: clip), and the search results drop below it (overflow-y: visible). */
 .header {
   grid-column: 1 / -1; position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; flex-wrap: nowrap; gap: var(--space-3);
-  height: var(--header-h); padding: 0 var(--space-4); overflow: hidden;
+  height: var(--header-h); padding: 0 var(--space-4); overflow-x: clip; overflow-y: visible;
   background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .brand {

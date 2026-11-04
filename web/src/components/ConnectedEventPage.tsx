@@ -8,7 +8,6 @@ import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { Attendees } from "./Attendees";
 import { SafeLink } from "./SafeText";
-import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Pill } from "../ui/Pill";
@@ -59,11 +58,7 @@ export function ConnectedEventPage(props: { id: string; onBack: () => void }) {
         id="record-title"
         title={event?.title ?? t("schedule.event.kind")}
         kind={<Pill tone="neutral">{t("schedule.event.kind")}</Pill>}
-        crumb={
-          <Button variant="quiet" size="sm" onClick={props.onBack}>
-            {t("record.back")}
-          </Button>
-        }
+        back={{ label: t("record.back"), onClick: props.onBack }}
       />
       {found.isPending && <Skeleton />}
       {found.isError && <EmptyState text={t("schedule.event.gone")} />}

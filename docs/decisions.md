@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-03: Shared rows, filter bars, tables, toasts, unknown addresses and the shell, batch G1 of the gate's fix round (section 327)
+
+**Decided:** (the gate's fix round, batch G1; design by the main session.) Each rule that shows on many screens is fixed once, in the shared part:
+- **Rows:** a list in which no row has a mark (check, icon, dot) takes no width for the leading slot, so titles start at the row's padding; one mark anywhere keeps the 24px slot on every row of that list. Held lines (restart, a failing account, a folder) each have the icon of their kind.
+- **Place chips:** a row shows a project chip only when it has a project. Nothing reads "<side>: not in a project" on a row; a group of a side's own items is "Not in a project" under that side's heading.
+- **Filter bars:** a side filter's counts are what the open tab holds, so a count never contradicts the empty state under it, and a list that holds fewer than 12 rows draws no filter bar (a filter that is on keeps its bar so it can be taken off). Follow-ups' grouping switch follows the same rule. The minimum is a constant of the web app (`FILTER_BAR_MIN`), not a setting: it is a layout rule of the visual standard, not something a person tunes.
+- **Tables:** a column empty for every row is not drawn; a group heading with nothing under it says no number; a group heading spans the row on a phone (it was a 30% column); "0 projects" is not shown above rows.
+- **Toasts:** what was done is said at once, then the screens read again (the toast no longer waits for every open screen's reads); every failure or block toast is a warning, with the alert icon and its words.
+- **Unknown addresses:** `#nonsense`, an unknown Settings section and a malformed record or panel address open a "Not here" page with Back to Today, never another screen. A record page that is gone offers the list its kind belongs to.
+- **Shell:** the section picker of Settings on a phone is one full-width row naming the section (the section's own heading is read, not drawn, below 1100px); the setup guide's content starts under its header on a phone and its footer is two rows with a full-width primary; a disabled primary reads as disabled (sunken fill, firm edge) with its reason beside it; one chevron (a mask in the text color, `--chevron-mask`) draws every fold; Settings' group labels are the shared 11px uppercase muted label; the status popover lists what was checked as rows; the way back is one shared control (`BackLink`, the page header's `back`).
+- **The capture** takes a whole page in a window as tall as the page, so what is fixed to the window (the phone's bottom bar) sits at the foot and the side menu and rail run the page's full height; a business's page uses the side project's id; a Lists, Compare and Add-ons screen use the demo workspace; the guide's Welcome is opened from its list of steps.
+
+**Why:** the cold scorers named these on most screens, and each is one cause in one shared part. **Impact:** `ui/Row`, `ui/RecordsTable`, `ui/PageHeader`, `ui/BackLink`, `ui/Button`, `ui/Wizard`, `lib/act`, `lib/views`, `lib/filterbar`, `components/SideFilter`, Settings, the status popover, held lines, the capture tool; wording keys `not_here.*`, `record.not_found.back`, `settings.picker_label`; no config key, API or op change. Change log: section 327.
+
 ## 2026-11-03: The gate's fix round takes everything, and ten design choices (owner; section 326)
 
 **Decided:** (owner, after the first cold score of every screen and the audit of the tracking sheet's open rows.) Everything

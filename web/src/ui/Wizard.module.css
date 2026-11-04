@@ -13,6 +13,9 @@
   padding: var(--space-8) var(--page-pad) calc(var(--space-12) * 3); width: 100%; max-width: 1100px; margin: 0 auto; align-items: start;
 }
 .layout[data-no-rail] { grid-template-columns: minmax(0, 680px); }
+/* The layout is the page's last row, taller than its content: its own rows keep their height and the content starts at the top (a
+   stretched empty rail row above the step was the blank band on a phone). */
+.layout { align-content: start; }
 
 /* The rail: a circle for each step. */
 .rail { display: grid; gap: var(--space-2); align-content: start; position: sticky; top: var(--space-4); min-width: 0; }
@@ -80,6 +83,8 @@
 :global([data-narrow]) .footerButtons { grid-column: 1; flex-wrap: wrap; row-gap: var(--space-1); }
 /* A waiting primary button's reason goes on a line of its own above the row, so the buttons stay in one row: Back and the primary
    on the column's edges. */
+/* Two rows at most: the way back and the later choice on the first, the primary across the whole width (a touch target tall) on the second. */
+:global([data-narrow]) .footerButtons > :global([data-variant="primary"]), :global([data-narrow]) .footerButtons > :global([data-reason-wrap]) > :global([data-variant="primary"]) { order: 3; flex: 1 0 100%; min-height: var(--tap-min); justify-content: center; }
 :global([data-narrow]) .footerButtons > :global([data-reason-wrap]) { display: contents; }
 :global([data-narrow]) .footerButtons > :global([data-reason-wrap]) > p { order: -1; flex: 1 0 100%; max-width: none; }
 @media (max-width: 1023.98px) {

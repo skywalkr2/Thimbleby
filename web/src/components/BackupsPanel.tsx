@@ -14,11 +14,11 @@ import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
+import { LoadFailed } from "../ui/LoadFailed";
 import { restoreFocus } from "./ModalPanel";
 import { RestoreDialog } from "./RestoreDialog";
 import { WelcomeBackup } from "./WelcomeBackup";
 
-import { EmptyState } from "../ui/EmptyState";
 import { Actions } from "../ui/Actions";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
@@ -88,7 +88,7 @@ export function BackupsPanel(props: { local: boolean }) {
     }
   };
 
-  if (!found.data) return found.isError ? <EmptyState text={t("settings.failed")} /> : <Skeleton rows={2} />;
+  if (!found.data) return found.isError ? <LoadFailed message={t("settings.failed")} onRetry={() => void found.refetch()} /> : <Skeleton shape="form" rows={2} />;
   const view: S["BackupsView"] = found.data;
   const there = view.targets.length > 0;
   return (

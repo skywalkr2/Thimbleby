@@ -89,8 +89,8 @@
   padding: var(--space-2) var(--row-px); border: 0; background: none; color: var(--text); font: inherit; font-weight: var(--weight-semibold);
   text-align: left; cursor: pointer;
 }
-.foldToggle::before { content: "▸"; color: var(--text-subtle); }
-.foldToggle[aria-expanded="true"]::before { content: "▾"; }
+.foldToggle::before { content: ""; flex: none; display: inline-block; width: var(--chevron-size); height: var(--chevron-size); background: currentColor; clip-path: var(--chevron-clip); color: var(--text-subtle); align-self: center; }
+.foldToggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .foldSummary { color: var(--text-muted); font-weight: var(--weight-regular); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .pluginPanels { display: grid; gap: var(--space-2); grid-column: 1 / -1; min-width: 0; }
 .railNothing { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }

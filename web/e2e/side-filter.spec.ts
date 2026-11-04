@@ -30,8 +30,20 @@ const go = (page: Page, hash: string) =>
 /** Picks a choice of the side filter by the name it shows. */
 async function choose(page: Page, choice: "all" | Side) {
   const name = choice === "all" ? "All" : seeded.sides[choice].name;
-  await page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`) }).click();
-  await expect(page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`), checked: true })).toBeVisible();
+  const radio = page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`) });
+  // A short list has no filter bar (a list of fewer than a dozen rows has nothing worth narrowing), but the pick is the app's one,
+  // remembered in this window: it is made where the bar is (Today) and the screen is then read under it.
+  if (!(await radio.isVisible().catch(() => false))) {
+    const here = await page.evaluate(() => window.location.hash.replace(/^#/, ""));
+    await go(page, "today");
+    await radio.click();
+    await go(page, here);
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+    return;
+  }
+  await radio.click();
+  // Choosing All on a short list takes the bar away with the pick, so only a side is read back as checked.
+  if (choice !== "all") await expect(page.getByRole("radio", { name: new RegExp(`^${name}(,|$)`), checked: true })).toBeVisible();
 }
 
 const heading = (page: Page, name: string | RegExp) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);
@@ -39,7 +51,8 @@ const heading = (page: Page, name: string | RegExp) => expect(page.getByRole("he
 /** What a screen shows under each choice: for every choice, the words that must be there and the ones that must not. Whatever
  * is on no side is in `always`, and shows under every choice. */
 async function expectUnder(page: Page, region: ReturnType<Page["locator"]>, shown: Record<"all" | Side, string[]>, hidden: Record<"all" | Side, string[]>) {
-  for (const choice of ["all", ...SIDES] as const) {
+  // The sides first and All last: a side that is picked keeps the filter bar on a short list, and All takes it away.
+  for (const choice of [...SIDES, "all"] as const) {
     await choose(page, choice);
     for (const text of shown[choice]) await expect(region.getByText(text).first(), `${choice} shows "${text}"`).toBeVisible(LOADED);
     for (const text of hidden[choice]) await expect(region.getByText(text), `${choice} hides "${text}"`).toHaveCount(0, LOADED);
@@ -113,6 +126,8 @@ test.describe("The side filter changes what the screens show", () => {
       [seeded.todos.none],
     );
     await expectUnder(page, main, todos.shown, todos.hidden);
+    // All took the filter bar away (a short list); a side is picked again, where the bar is always drawn, before the other tab opens.
+    await choose(page, "personal");
     await main.getByRole("button", { name: /^Questions/ }).click();
     const questions = bySide({ personal: [seeded.questions.personal], job: [seeded.questions.job], business: [seeded.questions.business] });
     await expectUnder(page, main, questions.shown, questions.hidden);
@@ -120,6 +135,9 @@ test.describe("The side filter changes what the screens show", () => {
 
   test("Follow-ups: only other people are listed, and the promises they made are under their side", async ({ page }) => {
     test.setTimeout(120_000);
+    // The pick is the app's one and is made where the bar is always drawn (Today): a side that is picked keeps the bar on a short list,
+    // so the tab chosen below is not lost to a trip back to Today.
+    await choose(page, "personal");
     await go(page, "work/followups");
     await heading(page, "Follow-ups");
     const main = page.locator("main");
@@ -155,6 +173,8 @@ test.describe("The side filter changes what the screens show", () => {
     await expect(main.getByText(views.todo)).toBeVisible(LOADED);
     const pickView = async (view: string) => {
       const name = new RegExp(`^${`${sides.job.name}: ${view}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(,|$)`);
+      // The views are in the filter bar, which a short list draws only while a side is picked.
+      if (!(await page.getByRole("radio", { name }).isVisible().catch(() => false))) await choose(page, "job");
       await page.getByRole("radio", { name }).click();
       await expect(page.getByRole("radio", { name, checked: true })).toBeVisible();
     };

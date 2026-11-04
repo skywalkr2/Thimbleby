@@ -11,6 +11,7 @@ import { day, dayAndTime } from "../lib/dates";
 import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button, ButtonLink } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
@@ -175,6 +176,7 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
   return (
     <Row
       as="li"
+      lead={<Icon name="archive" size={18} />}
       title={text}
       meta={
         <>

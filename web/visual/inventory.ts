@@ -100,12 +100,13 @@ const couldntLoad = (hash: string, also?: RegExp) => async (env: Env) => {
   } else {
     await go(env, hash);
   }
-  await env.page.waitForTimeout(1800);
+  await env.page.waitForTimeout(3500);
 };
 
 /** Filtered to nothing: the fourth side has nothing in this workspace, so a screen that honors the side filter says so. */
 const filteredToNothing = (hash: string) => async (env: Env) => {
-  await open(env, hash);
+  // The pick is the app's one and is made where the side filter always is (Today): a short list has no filter bar of its own.
+  await open(env, hash === "today" ? hash : "today");
   const side = (env.seed.sides as string[])[3];
   const button = env.page.getByRole("button", { name: /^Side: / }).first();
   const list = env.page.getByRole("combobox", { name: "Show" }).first();
@@ -120,12 +121,26 @@ const filteredToNothing = (hash: string) => async (env: Env) => {
     await group.getByRole("radio", { name: new RegExp(`^${side.slice(0, 12)}`) }).click();
   }
   await env.page.waitForTimeout(800);
+  if (hash !== "today") {
+    await go(env, hash);
+    await settle(env.page);
+  }
 };
 
 /** A step of the setup guide, opened from the list of steps (see pages.ts: the first screen is left through Start). */
 async function setupScreen(env: Env, name: string | RegExp | null): Promise<void> {
   await open(env, "setup");
-  if (name === null) return;
+  if (name === null) {
+    // The server keeps the screen the guide is on, so each capture starts it again at Welcome the way a first run does.
+    await api(env.base, env.token, "setup/walkthrough", { method: "POST", body: { step: "welcome" } });
+    await env.page.goto("about:blank");
+    await env.page.goto(`${env.base}?token=${env.token}#setup`);
+    await env.page.getByRole("button", { name: "Start", exact: true }).first().waitFor({ timeout: 15_000 }).catch(() => {
+      throw new Unreachable("the guide did not open at Welcome");
+    });
+    await env.page.waitForTimeout(500);
+    return;
+  }
   const start = env.page.getByRole("button", { name: "Start", exact: true });
   if ((await start.count()) > 0 && (await start.first().isVisible())) {
     await start.first().click();
@@ -180,6 +195,7 @@ const FRESH: Where = { server: "accounts", stage: "fresh" };
 const SEEDED: Where = { server: "sides", stage: "seeded" };
 const FILLED: Where = { server: "sides", stage: "filled" };
 const EMPTY: Where = { server: "sides", stage: "empty" };
+const DEMO: Where = { server: "demo", stage: "demo" };
 
 const s = (group: string, page: string, label: string, where: Where, open: Screen["open"], more: Partial<Screen> = {}): Screen => ({ group, page, label, ...where, open, ...more });
 const state = (base: Screen, title: string, where: Where, open: Screen["open"], more: Partial<Screen> = {}): Screen => ({ group: base.group, page: base.page, label: base.label, title, ...where, open, ...more });
@@ -264,7 +280,7 @@ function build(): Screen[] {
     projects,
     ...shared(projects, "records/projects", LISTS),
     s("Records", "project-page", "A project's page", SEEDED, (env) => open(env, `records/project/${encodeURIComponent((env.seed.sideProjects as string[])[0])}`)),
-    s("Records", "side-page", "A business's page, with a long name", SEEDED, (env) => open(env, `records/project/${encodeURIComponent((env.seed.sides as string[])[1])}`)),
+    s("Records", "side-page", "A business's page, with a long name", SEEDED, (env) => open(env, `records/project/${encodeURIComponent((env.seed.sideProjects as string[])[1])}`)),
     s("Records", "project-missing", "A page that no longer exists", SEEDED, reach("records/project/NOT-THERE")),
   );
   const people = s("Records", "people", "People", SEEDED, reach("records/people"), { main: true });
@@ -321,7 +337,7 @@ function build(): Screen[] {
   );
 
   // ---- Settings
-  const sections: Array<[string, string, Where]> = [
+  const sections: Array<[string, string, Where, string?]> = [
     ["you", "You", SIGNED],
     ["ai", "AI and spending", SIGNED],
     ["today", "Notices", SIGNED],
@@ -329,21 +345,38 @@ function build(): Screen[] {
     ["appearance", "Appearance", SIGNED],
     ["links", "Quick links", SIGNED],
     ["business", "Your business", SEEDED],
-    ["lists", "Lists", SEEDED],
+    // Lists is a section only where an add-on (or a core kind) has a list that is not a project's; Files only where an add-on
+    // provides forms. The demo workspace has the first; no workspace made for a capture has the second (see settings-files below).
+    ["lists", "Lists", DEMO],
     ["connections", "Connections", SIGNED],
     ["addons", "Add-ons", SIGNED],
-    ["files", "Files", SIGNED],
+    ["files", "Files", SIGNED, "no workspace made for a capture has an add-on that provides forms, and Settings then has no Files section (it opens another section instead of this one)"],
     ["advanced", "Advanced", SIGNED],
   ];
-  for (const [id, label, where] of sections) {
-    const base = s("Settings", `settings-${id}`, `Settings, ${label}`, where, reach(`settings/${id}`), { main: id === "connections" });
+  // What each section reads to draw itself, held or refused for its loading and couldn't-load pictures: the shell's own reads are
+  // known, and the section's own are not, so without these the picture is the loaded page.
+  const OWN_READS: Record<string, RegExp> = {
+    you: /\/api\/(settings|me|people|setup|watch)/,
+    ai: /\/api\/(settings|ai|accounts|usage|spend|endpoints|models)/,
+    connections: /\/api\/(settings|watch|accounts|sources|packs)/,
+    business: /\/api\/(settings|lists|business|setup|projects|views)/,
+  };
+  for (const [id, label, where, why] of sections) {
+    const base = s("Settings", `settings-${id}`, `Settings, ${label}`, where, reach(`settings/${id}`), { main: id === "connections", ...(why ? { undrivable: why } : {}) });
     add(base);
-    if (["you", "ai", "connections", "business"].includes(id)) add(...shared(base, `settings/${id}`));
+    if (["you", "ai", "connections", "business"].includes(id)) add(...shared(base, `settings/${id}`, OWN_READS[id]));
   }
+  // The add-ons screen with an add-on installed: the demo workspace has one (the accounts workspace's catalog is not reachable).
+  add(state(s("Settings", "settings-addons", "Settings, Add-ons", DEMO, reach("settings/addons")), "With an add-on installed", DEMO, withChoice("settings/addons", /^Installed/)));
   add(
-    s("Settings", "settings-ai-compare", "Settings, Compare AI accounts", SIGNED, reach("settings/ai-compare")),
+    // Two accounts to compare: the demo workspace has a second stand-in account.
+    s("Settings", "settings-ai-compare", "Settings, Compare AI accounts", DEMO, reach("settings/ai-compare")),
+    // The menu and the search: on a window with the side list, a search typed (its results); on a phone, the section picker open.
     s("Settings", "settings-menu", "Settings, the menu and search", SIGNED, async (env) => {
       await open(env, "settings");
+      // The same search at every width (the phone has the box above its section picker).
+      await env.page.getByRole("searchbox", { name: /Search settings/ }).fill("name");
+      await env.page.waitForTimeout(800);
     }),
     s("Settings", "settings-addon-page", "An add-on's page", SIGNED, async (env) => {
       await open(env, "settings/addons");
@@ -378,8 +411,25 @@ function build(): Screen[] {
     step("ai", "Your AI account", /^Your AI account/, FRESH),
     step("mail", "Mail and calendar", /^Mail and calendar/, SIGNED),
     step("promises", "Your promises", /^Your promises/, FRESH),
+    // The step with an AI account chosen: the demo-like workspace of the sides server has one, so the step reads its promises.
+    state(step("promises", "Your promises", /^Your promises/, SEEDED), "Promises found", SEEDED, (env) => setupScreen(env, /^Your promises/)),
     step("backup", "Backups", /^Backups/, FRESH),
-    step("people", "People", /^People/, FRESH),
+    // Added people shown as rows: the form is filled and sent three times (the empty form is the picture the step opens on).
+    s("Setup", "setup-people", "Setup, People", FRESH, async (env) => {
+      await setupScreen(env, /^People/);
+      for (const name of ["Pat Sample", "Robin Placeholder", "Sam Twin"]) {
+        const field = env.page.getByRole("textbox", { name: /^Name/ }).first();
+        if (!(await field.isVisible().catch(() => false))) throw new Unreachable("the People step has no Name box");
+        await field.fill(name);
+        const who = env.page.getByRole("combobox", { name: /Who they are/ }).first();
+        if ((await who.count()) > 0) {
+          await who.click();
+          await env.page.getByRole("option").first().click();
+        }
+        await env.page.getByRole("button", { name: /^Add$/ }).first().click();
+        await env.page.waitForTimeout(700);
+      }
+    }),
     step("done", "Done", /^(Done|Where things stand)/, FRESH),
     s("Setup", "setup-ai-other", "Setup, Your AI account, Something else", FRESH, async (env) => {
       await setupScreen(env, /^Your AI account/);
@@ -402,10 +452,17 @@ function build(): Screen[] {
     s("Header and menus", "help-menu", "The help menu", SIGNED, async (env) => {
       await open(env, "today");
       const help = env.page.getByRole("button", { name: "Help", exact: true });
-      if ((await help.count()) === 0 || !(await help.first().isVisible())) throw new Unreachable("the Help menu is in the More sheet on a phone (see the More sheet)");
-      await help.first().click();
+      if ((await help.count()) > 0 && (await help.first().isVisible())) {
+        await help.first().click();
+      } else {
+        // On a phone the help items are the last group of the More sheet: it is opened and scrolled to them.
+        await env.page.getByRole("button", { name: "More", exact: true }).click();
+        const sheet = env.page.getByRole("dialog", { name: "More" });
+        await sheet.waitFor({ timeout: 12_000 });
+        await sheet.getByRole("button", { name: /^Write feedback/ }).scrollIntoViewIfNeeded();
+      }
       await env.page.waitForTimeout(700);
-    }, { widths: [1440, 1024] }),
+    }),
     s("Header and menus", "more-sheet", "The phone's More sheet", SIGNED, async (env) => {
       await open(env, "today");
       await env.page.getByRole("button", { name: "More", exact: true }).click();
@@ -415,7 +472,7 @@ function build(): Screen[] {
     s("Header and menus", "shortcuts", "Keyboard shortcuts", SIGNED, async (env) => {
       await open(env, "today");
       await openHelpItem(env, /^Show keyboard shortcuts/);
-    }, { widths: [1440, 1024] }),
+    }),
     s("Header and menus", "feedback", "Write feedback", SIGNED, async (env) => {
       await open(env, "today");
       await openHelpItem(env, /^Write feedback/);
@@ -436,8 +493,12 @@ function build(): Screen[] {
       await open(env, "today");
       const field = env.page.getByRole("banner").getByRole("searchbox");
       if (!(await field.isVisible().catch(() => false))) await env.page.getByRole("button", { name: "Search", exact: true }).first().click();
-      await env.page.getByRole("searchbox").first().fill("Pat");
-      await env.page.waitForTimeout(1200);
+      // Typed as a person types it (a click, then keys), so the field has the cursor and opens its results; they are waited for.
+      const box = env.page.getByRole("searchbox").first();
+      await box.click();
+      await box.pressSequentially("Pat", { delay: 80 });
+      await env.page.getByRole("list", { name: "Results" }).waitFor({ timeout: 12_000 });
+      await env.page.waitForTimeout(600);
     }),
   );
   return all;

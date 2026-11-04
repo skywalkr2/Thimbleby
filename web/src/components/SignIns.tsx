@@ -11,6 +11,7 @@ import { problemText } from "../lib/problem";
 import { useSignInWindow } from "../lib/sign-in-window";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { LoadFailed } from "../ui/LoadFailed";
 import { ModalPanel, DialogFooter, restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
@@ -38,9 +39,8 @@ export function SignIns(props: {
 }) {
   const { t } = useWords();
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
-  // A list that didn't load says so quietly.
   if (signIns.isPending) return null;
-  if (signIns.isError) return <p className="hint">{t("sign_in.load_failed")}</p>;
+  if (signIns.isError) return <LoadFailed message={t("sign_in.load_failed")} onRetry={() => void signIns.refetch()} />;
   // Until an add-on signs in to a service there is nothing to list; the way to turn one on is offered instead.
   if (signIns.data.length === 0) {
     return (

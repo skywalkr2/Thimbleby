@@ -27,6 +27,7 @@ import {
 } from "../lib/ai-routing";
 import { useMoney, useSmallMoney } from "../lib/money";
 import { useWords } from "../lib/wording";
+import { LoadFailed } from "../ui/LoadFailed";
 import { Button } from "../ui/Button";
 import { FormField } from "../ui/FormField";
 import { PackTiers } from "./PackTiers";
@@ -59,7 +60,7 @@ export function AiRouting() {
   const endpoints = useQuery({ queryKey: ["ai-endpoints"], queryFn: api.endpoints });
   // With no account there is nothing to choose between; the accounts list above says so.
   if (view.isPending || accounts.isPending || !accounts.data?.length) return null;
-  if (view.isError) return <p className="hint">{t("ai_routing.load_failed")}</p>;
+  if (view.isError) return <LoadFailed message={t("ai_routing.load_failed")} onRetry={() => void view.refetch()} />;
   return <Part view={view.data} accounts={accounts.data} kinds={endpoints.data ?? []} />;
 }
 

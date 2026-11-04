@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useQuery } from "@tanstack/react-query";
 import { vi } from "vitest";
 import { fakeApi, renderApp } from "../test-utils";
 import { ApiError } from "./api";
@@ -52,4 +53,27 @@ test("a signed-out failure says so and offers no Try again, since a retry cannot
   await user.click(screen.getByRole("button", { name: "Do it" }));
   expect(await within(region()).findByText(/You're signed out/)).toBeInTheDocument();
   expect(within(region()).queryByRole("button", { name: "Try again" })).toBeNull();
+});
+
+test("a failed action's toast is a warning (not a check), and a done one's toast is said at once, before the screens have read again", async () => {
+  const user = userEvent.setup();
+  renderApp(<Doer run={() => Promise.reject(new ApiError(500, "No."))} />);
+  await user.click(screen.getByRole("button", { name: "Do it" }));
+  const failed = (await within(region()).findByText(/That didn't work/)).closest("[data-toast]") as HTMLElement;
+  expect(failed.querySelector("[data-tone]")).toHaveAttribute("data-tone", "warn");
+});
+
+test("the toast for what was done does not wait for the open screens' reads", async () => {
+  const user = userEvent.setup();
+  let release: () => void = () => undefined;
+  const slow = new Promise<string>((resolve) => (release = () => resolve("late")));
+  function Slow() {
+    useQuery({ queryKey: ["slow"], queryFn: () => slow });
+    return <Doer run={() => Promise.resolve("the note")} />;
+  }
+  renderApp(<Slow />);
+  await user.click(screen.getByRole("button", { name: "Do it" }));
+  // The read of the other screen is still pending, and the toast is already up.
+  expect(await within(region()).findByText("Made the note.")).toBeInTheDocument();
+  release();
 });

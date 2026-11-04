@@ -163,7 +163,7 @@ export function People() {
           }
         </ListState>
       </ListDetail>
-      {!justMe && <Organizations />}
+      {!justMe && !people.isError && <Organizations />}
       {adding && <PersonDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}
       {editing && <PersonDrawer person={editing} onClose={() => setEditing(null)} />}
     </section>

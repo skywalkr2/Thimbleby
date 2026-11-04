@@ -130,8 +130,10 @@ test("on a phone the sections are behind one line that names the open section, a
     api([...ITEMS, item("ui.theme", { group: "ui" })], BUSINESS);
     open();
     const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-    const summary = await within(nav).findByText("Section: You");
+    const summary = await within(nav).findByLabelText("Section: You");
     const fold = summary.closest("details") as HTMLDetailsElement;
+    // One row names the section; "Section:" is for a screen reader only.
+    expect(summary).toHaveTextContent(/^You$/);
     expect(fold.open).toBe(false);
     await user.click(summary);
     expect(fold.open).toBe(true);
@@ -149,7 +151,7 @@ test("the window turning narrow while Settings is open keeps the page drawn (the
   document.documentElement.setAttribute("data-narrow", "");
   try {
     const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-    expect(await within(nav).findByText("Section: You")).toBeInTheDocument();
+    expect(await within(nav).findByLabelText("Section: You")).toBeInTheDocument();
     expect(screen.getByLabelText("The display name.")).toBeInTheDocument();
   } finally {
     document.documentElement.removeAttribute("data-narrow");
@@ -1809,8 +1811,9 @@ test("the theme and the spacing apply at once when saved, show what this device 
 test("an address naming a page Settings doesn't have here says so and shows the You page, not a silent swap", async () => {
   api();
   renderApp(<Settings section="files" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
-  const note = await screen.findByText(/Add-on files isn't in Settings here, so this is You instead\./);
+  const note = await screen.findByText(/There is no Add-on files page in this workspace\. This is You\./);
   expect(note).toHaveAttribute("data-not-available");
+  expect(within(note).getByRole("link", { name: "Back to Today" })).toHaveAttribute("href", expect.stringMatching(/#today$/));
   expect(screen.getByLabelText("The display name.")).toBeInTheDocument();
 });
 
@@ -1950,4 +1953,23 @@ test("a setting saved with Enter can be reset at once after, each save going out
   await user.click(await screen.findByRole("button", { name: "Reset: The display name." }));
   await waitFor(() => expect(posted(calls)).toHaveLength(2));
   expect(posted(calls)[1]).toEqual({ changes: {}, reset: ["demo.title"], fingerprint: "fp-2" });
+});
+
+test("a settings page that could not load is the shared error card with Try again, and while it loads the page is shaped like a form", async () => {
+  const user = userEvent.setup();
+  let ok = false;
+  fakeApi({ "GET settings": () => (ok ? { items: ITEMS, search_words: {} } : new Refuse(500, "no")) });
+  renderApp(<Settings section="you" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("The settings didn't load.");
+  ok = true;
+  await user.click(within(alert).getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+});
+
+test("while the settings load the page is a form-shaped skeleton and the side list is already there", () => {
+  fakeApi({ "GET settings": () => new Promise(() => undefined) });
+  renderApp(<Settings section="you" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  expect(document.querySelector('[data-skeleton="form"]')).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Appearance" })).toBeInTheDocument();
 });

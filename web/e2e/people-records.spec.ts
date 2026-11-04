@@ -187,6 +187,26 @@ test.describe("People and record pages", () => {
     await expect(page.getByText(/characters too long/)).toHaveCount(0);
   });
 
+  // Y05: Remove and Add another are never under the 24px floor a control may be, at a desktop and at a phone width.
+  for (const width of [1440, 390]) {
+    test(`Remove and Add another on a person's contact details are at least 24px high at ${width}px`, async ({ page, request }) => {
+      test.setTimeout(120_000);
+      const made = await request.post("api/people", { headers: { Authorization: "Bearer e2e-token" }, data: { full_name: `Ivo Rennick ${width}`, how_to_reach: { email: [`ivo.rennick${width}@example.com`] } } });
+      const person = (await made.json()) as { id: string };
+      await page.setViewportSize({ width, height: 900 });
+      await go(page, `records/person/${encodeURIComponent(person.id)}`);
+      await expect(page.getByText(`ivo.rennick${width}@example.com`).first()).toBeVisible(LOADED);
+      const remove = page.getByRole("button", { name: new RegExp(`^Remove ivo\\.rennick${width}@example\\.com`) }).first();
+      const another = page.getByRole("button", { name: /^Add another/ }).first();
+      for (const control of [remove, another]) {
+        await expect(control).toBeVisible(LOADED);
+        const box = (await control.boundingBox())!;
+        expect(box.height, await control.innerText()).toBeGreaterThanOrEqual(23.5);
+        expect(box.width).toBeGreaterThanOrEqual(23.5);
+      }
+    });
+  }
+
   test("Notes is a screen of its own, reached from the side menu", async ({ page }) => {
     await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Notes", exact: true }).click();
     await heading(page, "Notes");

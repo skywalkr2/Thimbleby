@@ -13,6 +13,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
 import { Pill } from "../ui/Pill";
+import { LoadFailed } from "../ui/LoadFailed";
 type SilentClose = S["SilentCloseView"];
 
 export function AssistantCloses() {
@@ -28,7 +29,7 @@ export function AssistantCloses() {
       {found.isPending ? (
         <Skeleton />
       ) : found.isError ? (
-        <EmptyState icon="alert" text={t("sources.silent.load_failed")} action={{ label: t("action.try_again"), onClick: () => void found.refetch() }} />
+        <LoadFailed message={t("sources.silent.load_failed")} onRetry={() => void found.refetch()} />
       ) : (
         <>
           {found.data.measure.total > 0 ? (

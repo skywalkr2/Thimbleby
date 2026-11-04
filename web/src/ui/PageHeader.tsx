@@ -3,6 +3,7 @@
 // and the filter chips (FilterChip); nothing else is put on the title's row. The title is the page's one h1, and the place
 // the cursor lands when the screen opens, so it can take a ref and be focused.
 import type { ReactNode, Ref } from "react";
+import { BackLink } from "./BackLink";
 import styles from "./PageHeader.module.css";
 
 export interface PageHeaderProps {
@@ -16,6 +17,8 @@ export interface PageHeaderProps {
   focusable?: boolean;
   /** A way back or up, above the title. */
   crumb?: ReactNode;
+  /** The way back to the page this one was opened from: the one shared control (BackLink), shown where a crumb would be. */
+  back?: { label: string; onClick: () => void; name?: string };
   /** What kind of page this is, drawn beside the title (a Pill). */
   kind?: ReactNode;
   /** One line under the title. */
@@ -36,11 +39,11 @@ export interface PageHeaderProps {
 }
 
 export function PageHeader(props: PageHeaderProps) {
-  const { title, id, level = 1, headingRef, focusable, crumb, kind, subtitle, primary, actions, more, actionsLabel, tabs, filters, className } = props;
+  const { title, id, level = 1, headingRef, focusable, crumb, back, kind, subtitle, primary, actions, more, actionsLabel, tabs, filters, className } = props;
   const Heading = `h${level}` as const;
   return (
     <div className={[styles.header, className ?? ""].filter(Boolean).join(" ")} data-page-header="">
-      {crumb && <div className={styles.crumb}>{crumb}</div>}
+      {back ? <div className={styles.crumb}><BackLink {...back} /></div> : crumb && <div className={styles.crumb}>{crumb}</div>}
       <div className={styles.top}>
         <div className={styles.titles}>
           <div className={styles.titleLine}>

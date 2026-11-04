@@ -4,7 +4,7 @@ import { project } from "../lib/records-fixtures";
 import { fakeApi, renderApp } from "../test-utils";
 import { ProjectTag } from "./ProjectTag";
 
-// An item's place as a tag (design 6.32): its project, or the side it is filed on directly as "<side>: not in a project".
+// An item's place as a tag (design 6.32): its project, and nothing for an item with none (no chip says "not in a project").
 
 function show(justMe = false) {
   const personal = project("PRJ-me", "Personal", { side: true });
@@ -26,10 +26,10 @@ test("a project shows its name, and its parent before it", () => {
   expect(screen.getByText("Spring catalog › Cover art")).toBeInTheDocument();
 });
 
-test("an item filed on a side and in no project shows the side as not in a project, never as a project", async () => {
+test("an item filed on a side and in no project shows nothing: a chip is for a project only", async () => {
   show();
   renderApp(<ProjectTag name="" side="Orchard Press" parent={null} />);
-  expect(await screen.findByText("Orchard Press: not in a project")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText(/not in a project/)).toBeNull());
   expect(screen.queryByText("Orchard Press")).toBeNull();
 });
 
@@ -42,8 +42,6 @@ test("nothing is shown when the item has neither a project nor a side", () => {
 test("with nothing beside Personal, what is on Personal alone has no tag", async () => {
   show(true);
   const { container, client } = renderApp(<ProjectTag name="" side="Personal" parent={null} />);
-  // Once the sides are known the tag stays away.
   await waitFor(() => expect(client.isFetching()).toBe(0));
-  expect(client.getQueryData(["business"])).toBeDefined();
   expect(container.textContent).toBe("");
 });

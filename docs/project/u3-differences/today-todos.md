@@ -65,6 +65,14 @@ Change log: section 316. Tracking rows: VS05, VS10, VC01 (VS11 is the Stages emp
 | todos | The panel's width of 880px | The list is limited to 55rem on a wide window; the tab strip and header are not |
 | todos | A filled "Add a to-do" in the header | Kept so the form is reachable for a day, an owner or a repeat; it is the screen's one filled button |
 
+## Changed in the gate's fix round, batch G1 (change log 327)
+
+| Page | Difference found | What was done |
+|---|---|---|
+| todos, today | Every row began with an empty 24px slot and its gap | A list in which no row has a mark takes no width for the slot (`Row`); the titles start at the row's padding |
+| todos | A grey chip "<business>: not in a project" on most rows | A row shows a project chip only when it has a project |
+| todos | The side counts were the whole screen's (8 on a tab with 0 questions), and the filter bar showed over 8 rows | The counts are the open tab's, and a tab of fewer than 12 rows has no filter bar |
+
 ## Checks
 
 The unit tests for each piece are named in change log 316. The browser tests are written (`web/e2e/today-todos-46.spec.ts`, in the `layout`

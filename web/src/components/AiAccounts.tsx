@@ -509,7 +509,7 @@ function AccountRow(props: {
     for (const prev of replaced) {
       const prevName = accountName(prev.account, props.kindOf(prev.account), t);
       if (prev.failed || prev.plan.length === 0) {
-        if (prev.failed) push({ message: t("ai_accounts.main_made_not_kept", { name, previous: prevName }) });
+        if (prev.failed) push({ message: t("ai_accounts.main_made_not_kept", { name, previous: prevName }), tone: "warn" });
         continue;
       }
       try {

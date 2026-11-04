@@ -39,7 +39,7 @@ import { useVersionActs } from "./SameDocument";
 import { ProjectKnows } from "./ProjectKnows";
 import { SideInside } from "./SideInside";
 import { useSideOf, useSides } from "../lib/sides";
-import { recordView, viewHref } from "../lib/views";
+import { recordView, viewHref, type View } from "../lib/views";
 import { PromiseWhy } from "./PromiseWhy";
 import { useNoted } from "./NoteBox";
 import { ProjectDrawer } from "./ProjectForm";
@@ -80,6 +80,16 @@ function repeatLines(value: { every?: string; until?: string | null } | null, t:
   if (!value?.every) return [];
   return [value.until ? t("record.repeat_until", { how: t(`meeting.repeat.${value.every}`), date: dayText(value.until) }) : t(`meeting.repeat.${value.every}`)];
 }
+
+/** Where a page that is gone sends the person: the list its kind belongs to (the view and the name of that list), else Today. */
+const GONE_BACK: Record<string, [View, string]> = {
+  project: ["records/projects", "nav.projects"],
+  organization: ["records/people", "nav.people"],
+  person: ["records/people", "nav.people"],
+  action: ["work/open", "nav.open"],
+  note: ["records/notes", "nav.notes"],
+  file: ["records/files", "nav.files"],
+};
 
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t, has } = useWords();
@@ -429,7 +439,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       <PageHeader
         id="record-title"
         title={heading || (gone ? t("record.not_found.title") : heading)}
-        kind={!isSide && !isSelf ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
+        kind={!isSide && !isSelf && !gone ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
         subtitle={isPerson && person && !isSelf ? whoTheyAre(person, personal, sides, t) || undefined : undefined}
         crumb={
           isPerson ? (
@@ -438,12 +448,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               <span aria-hidden="true">›</span>
               <span>{heading}</span>
             </>
-          ) : (
-            <Button variant="quiet" size="sm" onClick={props.onBack}>
-              {t("record.back")}
-            </Button>
-          )
+          ) : undefined
         }
+        back={isPerson ? undefined : { label: t("record.back"), onClick: props.onBack }}
         primary={
           data && message.options ? (
             <Button variant="primary" onClick={() => message.ask("reply")}>
@@ -517,7 +524,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {record.isError && gone && isPerson && removal.data?.state !== "removed" && !removal.isPending && (
         <EmptyState icon="alert" title={t("person.gone_title")} text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people") }} />
       )}
-      {record.isError && gone && !isPerson && <EmptyState icon="alert" text={t("record.not_found")} />}
+      {record.isError && gone && !isPerson && <EmptyState icon="inbox" text={t("record.not_found")} action={{ label: t("record.not_found.back", { list: t(GONE_BACK[kind]?.[1] ?? "nav.home") }), href: viewHref(GONE_BACK[kind]?.[0] ?? "today"), primary: true }} />}
       {record.isError && !gone && <LoadFailed message={t("record.load_failed")} detail={record.error instanceof ApiError && record.error.detail ? record.error.detail : null} onRetry={() => void record.refetch()} />}
       {data && (
         <div className="record-grid" data-person-page={asCard ? "" : undefined}>

@@ -31,7 +31,7 @@ test.describe("Long names of sides", () => {
       test.setTimeout(120_000);
       await page.setViewportSize({ width, height: 900 });
       await page.goto("?token=e2e-token");
-      for (const view of ["today", "schedule", "work/changed", "work/followups"]) {
+      for (const view of ["today", "schedule", "work/changed", "work/handled"]) {
         await go(page, view);
         // Up to 1100px of window the filter is one button that opens a sheet; wider, a strip of choices.
         const filter = width <= 1100 ? page.getByRole("button", { name: /^Side: / }) : page.getByRole("radiogroup", { name: "Show" });

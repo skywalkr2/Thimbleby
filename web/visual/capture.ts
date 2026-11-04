@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, type Browser, type BrowserContext } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { differencesMarkdown, writeSideBySide, type Result } from "./compose.ts";
 import { settle, Unreachable, type Env } from "./drive.ts";
 import { DEFAULT_REF, Mockups, type Section } from "./mockups.ts";
@@ -92,6 +92,11 @@ async function startServer(servers: Servers, name: ServerName, offset: number): 
     const info = (await (await fetch(`${fakeBase}/__e2e/info`)).json()) as { token: string };
     return { running: { base: `http://127.0.0.1:${app}/`, token: info.token, fake: fakeBase, seed: {} }, cleanup: () => removeStateFolder(state) };
   }
+  if (name === "demo") {
+    const demoPort = PORT_BASE + 5 + offset;
+    await servers.start("demo", "tests.e2e_server", ["--port", String(demoPort), "--base-path", "/", "--standin-account", "--plain-stages"], `http://127.0.0.1:${demoPort}/api/health`);
+    return { running: { base: `http://127.0.0.1:${demoPort}/`, token: "e2e-token", fake: null, seed: {} }, cleanup: () => undefined };
+  }
   if (name === "clear") {
     // Every counted setup step done and nothing waiting: Today's "Nothing needs you" card (tests/e2e_server.py --all-clear).
     const clearPort = PORT_BASE + 4 + offset;
@@ -122,6 +127,34 @@ interface Taken {
   firstScreen: boolean;
 }
 
+/** The tallest picture the browser takes in one piece. */
+const MOST_HEIGHT = 16_000;
+
+/** The whole page in one picture, as it looks to a person who has scrolled to each part: the window is made as tall as the page, so
+ * what is fixed to the window (the phone's bottom bar) sits at the page's foot and what is as tall as the window (the side menu, the
+ * rail) runs the page's full height, instead of stopping where the first screen ended. */
+async function wholePage(page: Page, file: string, size: Size): Promise<void> {
+  const height = () => page.evaluate(() => Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)));
+  let tall = await height();
+  if (tall <= size.height || tall > MOST_HEIGHT) {
+    await page.screenshot({ path: file, fullPage: true });
+    return;
+  }
+  try {
+    await page.setViewportSize({ width: size.width, height: tall });
+    await page.waitForTimeout(400);
+    // The page may be a different height now that the window is tall (a block as high as the window): the picture is of the new height.
+    tall = Math.min(MOST_HEIGHT, Math.max(tall, await height()));
+    if (tall !== page.viewportSize()?.height) {
+      await page.setViewportSize({ width: size.width, height: tall });
+      await page.waitForTimeout(300);
+    }
+    await page.screenshot({ path: file, fullPage: true });
+  } finally {
+    await page.setViewportSize({ width: size.width, height: size.height });
+  }
+}
+
 /** Opens one entry in a window of this size and takes its pictures; throws what went wrong. */
 async function takeOne(context: BrowserContext, running: Running, entry: Entry, size: Size, out: string, firstScreens = true): Promise<Taken[]> {
   const page = await context.newPage();
@@ -145,7 +178,8 @@ async function takeOne(context: BrowserContext, running: Running, entry: Entry, 
       for (const el of Array.from(document.querySelectorAll<HTMLElement>("*"))) if (el.scrollTop > 0) el.scrollTop = 0;
     });
     await page.waitForTimeout(300);
-    await page.screenshot({ path: join(out, file), fullPage: !(entry as Screen).window });
+    if ((entry as Screen).window) await page.screenshot({ path: join(out, file) });
+    else await wholePage(page, join(out, file), size);
     taken.push({ file, firstScreen: false });
     return taken;
   } finally {
@@ -180,7 +214,7 @@ async function main(): Promise<number> {
   try {
     browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined });
     const offset = portOffset();
-    for (const name of ["accounts", "sides", "clear"] as ServerName[]) {
+    for (const name of ["accounts", "sides", "clear", "demo"] as ServerName[]) {
       const mine = entries.filter((e) => e.server === name);
       if (mine.length === 0) continue;
       const last = Math.max(...mine.map((e) => STAGE_ORDER[name].indexOf(e.stage)));

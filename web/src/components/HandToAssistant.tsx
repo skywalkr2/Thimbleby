@@ -32,7 +32,7 @@ function HandedLine(props: { handed: S["HandedActionView"]; onReview: (version: 
   const copy = async (version: string) => {
     const review = await api.textReview(version);
     if ((await copyMessage(review.pending_text)) === "blocked") {
-      push({ message: t("work.hand.copy_blocked") });
+      push({ message: t("work.hand.copy_blocked"), tone: "warn" });
       return;
     }
     await api.workCopied(handed.action);

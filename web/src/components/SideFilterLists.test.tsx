@@ -75,11 +75,11 @@ test("To-dos has the filter beside its heading, and a side shows its own to-dos 
   expect(await screen.findByText("Water the beans")).toBeInTheDocument();
   const heading = screen.getByRole("heading", { name: "To-dos and questions" });
   expect(heading.closest("[data-page-header]")).toContainElement(await screen.findByRole("radiogroup", { name: "Show" }));
-  await user.click(screen.getByRole("radio", { name: "Personal" }));
+  await user.click(screen.getByRole("radio", { name: /^Personal(,|$)/ }));
   await waitFor(() => expect(screen.queryByText("Quote the sofa")).toBeNull());
   expect(screen.getByText("Water the beans")).toBeInTheDocument();
   expect(screen.getByText("Renew the licence")).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: SHOP_NAME }));
+  await user.click(screen.getByRole("radio", { name: new RegExp(`^${SHOP_NAME}(,|$)`) }));
   expect(await screen.findByText("Quote the sofa")).toBeInTheDocument();
   expect(screen.queryByText("Water the beans")).toBeNull();
 });
@@ -106,7 +106,7 @@ test("People has the filter, and a side shows its people and those on no known s
   renderApp(<People />);
   expect(await screen.findByRole("link", { name: "Ben Person" })).toBeInTheDocument();
   expect(await screen.findByRole("radiogroup", { name: "Show" })).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: "Personal" }));
+  await user.click(screen.getByRole("radio", { name: /^Personal(,|$)/ }));
   await waitFor(() => expect(screen.queryByRole("link", { name: "Ben Person" })).toBeNull());
   expect(screen.getByRole("link", { name: "Ana Person" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Cy Person" })).toBeInTheDocument();
@@ -256,7 +256,7 @@ test("What changed shows a side's own changes and those on no side, and an empty
   renderApp(<WhatChanged />);
   await waitFor(() => expect(shown("Water the beans")).toBe(true));
   expect(shown("Quote the sofa")).toBe(true);
-  await user.click(screen.getByRole("radio", { name: "Personal" }));
+  await user.click(screen.getByRole("radio", { name: /^Personal(,|$)/ }));
   await waitFor(() => expect(shown("Quote the sofa")).toBe(false));
   expect(shown("Water the beans")).toBe(true);
   expect(shown("Renew the licence")).toBe(true);

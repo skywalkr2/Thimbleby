@@ -39,11 +39,7 @@ export function RuleReview(props: { onBack: () => void }) {
         headingRef={heading}
         focusable
         title={t("rules_review.title")}
-        crumb={
-          <Button size="sm" variant="quiet" onClick={props.onBack}>
-            {t("rules_review.back")}
-          </Button>
-        }
+        back={{ label: t("rules_review.back"), onClick: props.onBack }}
       />
       {review.isError ? (
         <LoadFailed message={t("rules_review.load_failed")} onRetry={() => void review.refetch()} />

@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import { beforeEach } from "vitest";
 import type { S } from "../lib/api";
+import { FILTER_BAR_MIN, setFilterBarMin } from "../lib/filterbar";
 import { setSideChoice } from "../lib/sides";
 import { waitingUnder } from "../lib/waiting";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
@@ -53,4 +54,30 @@ test("a count under a choice is all of them under All, else that side's (none fo
   expect(waitingUnder(c, SHOP)).toBe(4);
   expect(waitingUnder(c, DAY)).toBe(0);
   expect(waitingUnder(undefined, "all")).toBe(0);
+});
+
+test("a screen's own counts replace the screen-wide ones, so a count never contradicts the tab under it", async () => {
+  // The server says 5 wait on the screen; the open tab holds 1 under Example Works and nothing under the others.
+  fakeApi({ ...business, "GET waiting": () => waiting(count(5, { [PERSONAL]: 2, [SHOP]: 4 })) });
+  renderApp(<SideFilter waiting="followups" counts={(choice) => (choice === "all" || choice === SHOP ? 1 : 0)} />);
+  expect(await screen.findByRole("radio", { name: "All, 1 waiting" })).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "Example Works, 1 waiting" })).toBeInTheDocument();
+  // An empty choice has no number, and an empty tab shows none at all.
+  expect(screen.getByRole("radio", { name: "Personal" })).toBeInTheDocument();
+});
+
+test("a list with fewer rows than the filter bar's minimum draws no bar, unless a side is picked", async () => {
+  setFilterBarMin(FILTER_BAR_MIN);
+  fakeApi({ ...business, "GET waiting": () => waiting(count(0, {})) });
+  const short = renderApp(<SideFilter counts={() => 0} holds={FILTER_BAR_MIN - 1} />);
+  await waitFor(() => expect(short.client.isFetching()).toBe(0));
+  expect(screen.queryByRole("radio", { name: "Personal" })).toBeNull();
+  cleanup();
+  renderApp(<SideFilter counts={() => 0} holds={FILTER_BAR_MIN} />);
+  expect(await screen.findByRole("radio", { name: "Personal" })).toBeInTheDocument();
+  cleanup();
+  // A pick that is on keeps the bar, so the person can take it off.
+  setSideChoice(PERSONAL);
+  renderApp(<SideFilter counts={() => 0} holds={1} />);
+  expect(await screen.findByRole("radio", { name: "Personal" })).toBeInTheDocument();
 });

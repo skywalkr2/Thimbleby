@@ -421,3 +421,28 @@ test("moving to another screen clears a note that offers nothing to do, and keep
   expect(within(region()).getByText("Plain")).toBeInTheDocument();
   clock.mockRestore();
 });
+
+// A failure shown with a check reads as success: every toast that says something did not work or was blocked draws the warning tone.
+test("every toast that reports a failure or a block names the warning tone", async () => {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const root = join(__dirname, "..");
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) files.push(path);
+    }
+  };
+  walk(root);
+  const missing: string[] = [];
+  for (const file of files) {
+    readFileSync(file, "utf8")
+      .split("\n")
+      .forEach((line, i) => {
+        if (/push\(\{ message: t\(["'`A-Za-z_.? :=-]*(blocked|not_kept|_failed|couldnt)/.test(line) && !/tone: /.test(line)) missing.push(`${file.slice(root.length)}:${i + 1}`);
+      });
+  }
+  expect(missing, "a failure toast without the warning tone").toEqual([]);
+});

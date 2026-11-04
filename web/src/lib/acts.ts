@@ -290,7 +290,7 @@ export function useOutgoing() {
       });
       if (!approved) return undefined;
       const result = await copyMessage(copyText(a, t));
-      push({ message: t(result === "blocked" ? "outgoing.toast.copy_blocked" : "outgoing.toast.copied") });
+      push({ message: t(result === "blocked" ? "outgoing.toast.copy_blocked" : "outgoing.toast.copied"), tone: result === "blocked" ? "warn" : undefined });
       return result;
     },
     [run, push, t],

@@ -219,9 +219,15 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .settings-side { display: grid; gap: var(--space-3); min-width: 0; }
 .settings-side [data-field] { margin-bottom: 0; }
 .settings-nav-group { display: grid; gap: var(--space-1); min-width: 0; }
-.settings-picker > summary { min-height: var(--target-min); display: flex; align-items: center; font-weight: var(--weight-semibold); }
-.settings-picker[open] > .settings-nav-group { margin-top: var(--space-2); }
-.settings-nav-group > h3 { margin: 0; padding-inline: var(--space-3); color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+/* The section picker (a phone, and below 1100px): one full-width row that names the open section, with the one chevron at its end. */
+.settings-picker { margin: 0; }
+.settings-picker > summary { min-height: var(--tap-min); box-sizing: border-box; display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center; padding: 0 var(--space-3); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.settings-picker[open] > .settings-nav-group:first-of-type { margin-top: var(--space-2); }
+/* The picker names the section, so the section's own heading is not drawn a second time; it stays for a screen reader and for the cursor. */
+@media (max-width: 1100px) {
+  .settings-content [data-section-heading] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.settings-nav-group > [data-group-label] { padding-inline: var(--space-3); }
 .settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .settings-nav-sublist { list-style: none; margin: 0 0 0 var(--space-3); padding: 0; border-inline-start: 1px solid var(--border); }
 .settings-nav-sublist a { padding-inline-start: var(--space-4); font-size: var(--text-sm); }
@@ -243,8 +249,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .settings-topic > [role="group"][hidden] { display: none; }
 .settings-topic h3 { margin: 0; }
 .topic-toggle { display: flex; align-items: center; gap: var(--space-2); width: 100%; border: 0; background: none; padding: var(--space-3) 0; font-weight: var(--weight-semibold); font-size: var(--text-md); text-align: left; cursor: pointer; }
-.topic-toggle::before { content: "\25B8"; color: var(--text-muted); }
-.topic-toggle[aria-expanded="true"]::before { content: "\25BE"; }
+.topic-toggle::before { content: ""; flex: none; display: inline-block; width: var(--chevron-size); height: var(--chevron-size); background: currentColor; clip-path: var(--chevron-clip); color: var(--text-muted); }
+.topic-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .setting { display: grid; gap: var(--space-1) var(--space-5); border-top: 1px solid var(--border); padding-top: var(--space-3); min-width: 0; }
 .setting-main { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
 .setting-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
@@ -253,6 +259,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .merged-controls [data-ui="select"] { width: auto; max-width: 100%; }
 .setting-label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 .save-status { min-height: 1.5em; margin: 0 0 var(--space-2); }
+/* Below 1100px the page's own content is what the window is for: the line that says "Saving…" keeps no room while it says nothing. */
+@media (max-width: 1100px) { .save-status:empty { min-height: 0; margin: 0; } }
 .setting-changed { font-size: var(--text-sm); color: var(--text-muted); white-space: nowrap; }
 .setting-changed .link-button { font-size: var(--text-sm); }
 .setting-help { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
@@ -298,8 +306,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .list-accordion-item:last-child { border-bottom: 0; }
 .list-accordion > summary { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0 var(--space-2); min-height: var(--row-h); padding: var(--row-py) var(--row-px); cursor: pointer; list-style: none; }
 .list-accordion > summary::-webkit-details-marker { display: none; }
-.list-accordion > summary::before { content: "\25B8"; color: var(--text-muted); }
-.list-accordion[open] > summary::before { content: "\25BE"; }
+.list-accordion > summary::before { content: ""; flex: none; display: inline-block; width: var(--chevron-size); height: var(--chevron-size); background: currentColor; clip-path: var(--chevron-clip); color: var(--text-muted); }
+.list-accordion[open] > summary::before { transform: rotate(90deg); }
 .list-accordion > summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .list-accordion-title { grid-column: 2; font-weight: var(--weight-semibold); }
 .list-accordion-meta { grid-column: 2; color: var(--text-muted); font-size: var(--text-sm); }
@@ -354,8 +362,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 /* A fold shows it is one: a chevron before its title, pointing right when closed and down when open (the flex layout above takes
    the browser's own marker away, so the control is drawn here). */
 .more-options > summary::-webkit-details-marker { display: none; }
-.more-options > summary::before { content: ""; flex: none; width: 0.5em; height: 0.5em; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
-.more-options[open] > summary::before { transform: rotate(45deg); }
+.more-options > summary::before { content: ""; flex: none; display: inline-block; width: var(--chevron-size); height: var(--chevron-size); background: currentColor; clip-path: var(--chevron-clip); }
+.more-options[open] > summary::before { transform: rotate(90deg); }
 .key-step { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
 .key-step h4 { margin: 0; font-size: var(--text-sm); }
 .check-row .hint { margin: 0; }

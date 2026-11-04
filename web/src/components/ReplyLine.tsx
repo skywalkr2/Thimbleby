@@ -47,7 +47,7 @@ export function useReplyChoices(line: Line, onClosed?: () => void): ReplyChoices
   const draft = line.reply ?? "";
   const copy = async () => {
     if ((await copyMessage(draft)) === "blocked") {
-      push({ message: t("toast.copy_blocked") });
+      push({ message: t("toast.copy_blocked"), tone: "warn" });
       return;
     }
     // The copy is kept as it was copied, so the message that is sent can be matched to it; a failure to keep it never

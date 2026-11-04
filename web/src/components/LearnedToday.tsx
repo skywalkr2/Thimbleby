@@ -20,6 +20,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./Learned.module.css";
 
 import { EmptyState } from "../ui/EmptyState";
+import { LoadFailed } from "../ui/LoadFailed";
 type List = "daily" | "catch_up";
 
 /** The kinds of queue line this draws: what was learned, and the catch-up list. */
@@ -94,7 +95,7 @@ function ReviewDrawer(props: { list: List; onClose: () => void }) {
         {found.isPending ? (
           <Skeleton />
         ) : found.isError ? (
-          <EmptyState icon="alert" text={t("learned.load_failed")} action={{ label: t("action.try_again"), onClick: () => void found.refetch() }} />
+          <LoadFailed message={t("learned.load_failed")} onRetry={() => void found.refetch()} />
         ) : rows.length === 0 ? (
           <EmptyState icon="check" text={t("learned.review.empty")} />
         ) : (

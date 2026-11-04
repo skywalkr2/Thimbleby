@@ -87,7 +87,9 @@ const todos: Routes = {
   }),
 };
 
-const choose = async (name: RegExp | string) => userEvent.setup().click(await screen.findByRole("radio", { name }));
+// A choice may carry the count of what the open tab holds ("All, 3 waiting"): it is found by its name first.
+const named = (name: RegExp | string) => (typeof name === "string" ? new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(,|$)`) : name);
+const choose = async (name: RegExp | string) => userEvent.setup().click(await screen.findByRole("radio", { name: named(name) }));
 
 test("the filter lists the person's views under their side, each named with its side", async () => {
   fakeApi(routes);
@@ -147,9 +149,9 @@ test("a stored choice that names a view that is gone falls back to All, and one 
   setSideChoice(viewChoice("VIEW-gone"));
   renderApp(<OpenItems />);
   expect(await screen.findByText("Book the dentist")).toBeInTheDocument();
-  expect(await screen.findByRole("radio", { name: "All", checked: true })).toBeInTheDocument();
+  expect(await screen.findByRole("radio", { name: named("All"), checked: true })).toBeInTheDocument();
   await choose("Personal");
-  expect(await screen.findByRole("radio", { name: "Personal", checked: true })).toBeInTheDocument();
+  expect(await screen.findByRole("radio", { name: named("Personal"), checked: true })).toBeInTheDocument();
   expect(screen.queryByText("Draft the shared plan")).toBeNull();
 });
 

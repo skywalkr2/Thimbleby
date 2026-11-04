@@ -41,6 +41,7 @@ const VIEW_LABEL: Record<CoreView, string> = {
   handover: "handover.title",
   quality: "quality.open",
   styleguide: "nav.styleguide",
+  "not-here": "not_here.title",
 };
 
 /** The name of the screen as the person sees it: the tab's name, a plugin panel's title, or a general name for a record page. */

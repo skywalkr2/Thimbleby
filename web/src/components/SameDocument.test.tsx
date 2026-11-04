@@ -133,7 +133,8 @@ test("a file that is not in a watched folder offers neither choice", async () =>
   const user = userEvent.setup();
   open({ "GET versions/SRC-a": () => ({ applicable: false }) });
   const header = await screen.findByRole("button", { name: new RegExp(`^${REASON} · 1$`) });
-  await user.click(header);
+  // The only group there is opens by itself.
+  if (header.getAttribute("aria-expanded") !== "true") await user.click(header);
   await user.click(await screen.findByRole("button", { name: "More actions for Plan.md" }));
   expect(screen.queryByRole("menuitem", { name: "Same document as…" })).not.toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Not the same document" })).not.toBeInTheDocument();

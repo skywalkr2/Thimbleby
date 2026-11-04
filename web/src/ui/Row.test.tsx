@@ -107,6 +107,22 @@ test("the slot's width is the one token, so no row can draw it another width", (
   expect(css).toMatch(/\.lead \{[^}]*width: var\(--row-lead-w\)/s);
 });
 
+test("a list in which no row has a mark takes no width for the slot; one mark anywhere keeps the slot on every row", () => {
+  const css = readFileSync(join(__dirname, "Row.module.css"), "utf8");
+  // The rule is written on the list: it holds only while no row's slot has content.
+  expect(css).toMatch(/:where\(:not\(:has\(> \.row > \.lead:not\(:empty\)\)\)\) > \.row > \.lead \{ display: none; \}/);
+  expect(css).toMatch(/> \.row \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/);
+  render(
+    <ul>
+      <Row title="Plain" />
+      <Row title="Marked" lead={<span data-icon="x" />} />
+    </ul>,
+  );
+  const [plain, marked] = screen.getAllByRole("listitem");
+  expect(plain.querySelector("[data-row-lead]")).toBeEmptyDOMElement();
+  expect(marked.querySelector("[data-row-lead]")).not.toBeEmptyDOMElement();
+});
+
 test("the buttons and the menu are separate parts of the row, so a phone can put the menu at the top right and the buttons under the words", () => {
   render(
     <ul>

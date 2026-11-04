@@ -4,8 +4,8 @@ import type { BrowserContext } from "playwright-core";
 import { api, LONG } from "./drive.ts";
 import { chromiumSignIn } from "./signin.ts";
 
-export type ServerName = "accounts" | "sides" | "clear";
-export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "filled" | "bulk" | "done";
+export type ServerName = "accounts" | "sides" | "clear" | "demo";
+export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "filled" | "bulk" | "done" | "demo";
 
 export const STAGE_ORDER: Record<ServerName, Stage[]> = {
   // fresh: nothing signed in, the walkthrough closed so the app's own menus are there; signed-in: three accounts read;
@@ -15,6 +15,9 @@ export const STAGE_ORDER: Record<ServerName, Stage[]> = {
   sides: ["empty", "seeded", "filled", "bulk"],
   // done: setup finished and nothing waiting (the server's own seed; nothing is added here).
   clear: ["done"],
+  // demo: the browser tests' own demo workspace with a second stand-in account: it has add-on lists, an installed add-on and two
+  // AI accounts to compare, which the other servers (a workspace made by `cockpit init`) do not.
+  demo: ["demo"],
 };
 
 export interface StageEnv {

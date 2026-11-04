@@ -55,7 +55,7 @@ export const sectionItems = (items: Item[], section: SettingsSection): Item[] =>
  * one, Lists where a list is left to show there, Connections and Add-ons, the add-on files where there are some, Advanced,
  * then one for each add-on that has settings. AI accounts, Connections and Add-ons are always there: they hold lists of
  * their own rather than settings. Quick links is there wherever the app keeps the person's list of them. */
-export function navSections(items: Item[], has: { business: boolean; lists: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
+export function navSections(items: Item[], has: { business: boolean; lists: boolean; files: boolean; keyed?: string[]; loading?: boolean }): SettingsSection[] {
   const present = new Set(items.filter(isListed).map(sectionOfItem));
   // An add-on that needs keys has a section for them even when it has no settings of its own.
   for (const plugin of has.keyed ?? []) present.add(`addon/${plugin}`);
@@ -65,6 +65,8 @@ export function navSections(items: Item[], has: { business: boolean; lists: bool
       id === "ai" ||
       id === "connections" ||
       id === "addons" ||
+      // Until the settings have loaded the list is the one a typical install has, so it does not jump when they arrive.
+      (has.loading && id !== "lists" && id !== "files") ||
       (id === "links"
         ? items.some((i) => i.key === "ui.links")
         : id === "business"

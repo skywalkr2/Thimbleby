@@ -240,12 +240,13 @@ test("a note filed on a side and in none of its projects says so, never that it 
   expect(screen.queryByText(/under Orchard Press/)).toBeNull();
 });
 
-test("an action filed on a side shows the side as not in a project in its meta line", async () => {
+test("an action filed on a side shows no not-in-a-project chip in its meta line", async () => {
   const base = change("REQ-9");
   const op = { ...base.changeset!.ops[0], op: "action.add", title: "Send the proof", evidence: null, meta: { owners: ["Robin Sample"], project: null, side_name: "Orchard Press", action_status: "open" } };
   fakeApi({ "GET changes": () => [{ ...base, changeset: { ...base.changeset!, ops: [op] } }] });
   renderApp(<WhatChanged />);
-  expect(await screen.findByText("Robin Sample · Orchard Press: not in a project")).toBeInTheDocument();
+  expect(await screen.findByText("Robin Sample")).toBeInTheDocument();
+  expect(screen.queryByText(/not in a project/)).toBeNull();
 });
 
 const PERSONAL_ONLY = {

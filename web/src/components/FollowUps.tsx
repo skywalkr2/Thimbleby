@@ -35,6 +35,7 @@ import { NoteBox, useNoted } from "./NoteBox";
 import { NudgeLeftOut } from "./NudgeLeftOut";
 import { OriginLink } from "./Origin";
 import { OutsideStep } from "./OutsideStep";
+import { filterBarShown } from "../lib/filterbar";
 import { usePlaceText } from "../lib/place";
 import { ProjectTag } from "./ProjectTag";
 import { ViewTags } from "./ViewTags";
@@ -159,6 +160,10 @@ export function FollowUps(props: { compact?: boolean }) {
   const actRows = !compact && !byProject && filter === "send" ? (acts.data ?? []) : [];
   // With nothing to follow up on any tab (and nothing waiting to go out), the choices between tabs and groupings change nothing, so
   // they are not drawn until there is something. The side choice is the screen's own and stays.
+  // What the open tab holds under a side choice, so a count on the side choices is the list's own and an empty tab shows none.
+  const rowsHeld = (r: S["FollowupSection"]) => r.questions.length + r.actions.length + (r.later ?? []).length;
+  const tabCount = (choice: SideChoice) => present.reduce((n, p) => n + rowsHeld(rowsOnTab(rowsOnSide(p, choice), filter)), 0) + (choice === "all" ? actRows.length : 0);
+  const tabHolds = tabCount("all");
   const nothingAnywhere = followups.isSuccess && present.length === 0 && (compact || (!acts.isPending && (acts.data ?? []).length === 0));
   // What waits to go out leads the list, so no row is chosen as the first until it has been read: the messages below may be
   // here sooner, and the first row would then be one of them.
@@ -247,7 +252,7 @@ export function FollowUps(props: { compact?: boolean }) {
         }
         filters={
           <>
-            {!compact && !justMe && !nothingAnywhere && (
+            {!compact && !justMe && !nothingAnywhere && filterBarShown(tabHolds, group === "project") && (
               <SegmentedControl
                 label={t("followups.group")}
                 value={group}
@@ -258,7 +263,7 @@ export function FollowUps(props: { compact?: boolean }) {
                 ]}
               />
             )}
-            <SideFilter waiting="followups" />
+            <SideFilter counts={tabCount} holds={tabHolds} />
           </>
         }
       />
@@ -340,7 +345,7 @@ export function FollowUps(props: { compact?: boolean }) {
       )
         }
       </ListState>
-      {!compact && !byProject && filter === "send" && acts.isError && (
+      {!compact && !byProject && filter === "send" && acts.isError && !followups.isError && (
         <LoadFailed message={t("outgoing.load_failed")} onRetry={() => void acts.refetch()} />
       )}
       {!compact && !byProject && filter === "send" && acts.isSuccess && <SentActs />}
@@ -624,7 +629,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
         area.current?.focus();
         area.current?.select();
       }, 0);
-      push({ message: t("toast.copy_blocked") });
+      push({ message: t("toast.copy_blocked"), tone: "warn" });
       return;
     }
     markMessageSeen(s.person, message);
@@ -666,7 +671,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
       window.getSelection()?.removeAllRanges();
       window.getSelection()?.addRange(range);
     }
-    push({ message: t("toast.copy_blocked") });
+    push({ message: t("toast.copy_blocked"), tone: "warn" });
   };
   /** Copies the table as HTML (with the tab-separated cells as its plain text), for mail and chat. */
   const copyTable = async () => {
@@ -989,7 +994,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
       setCopied(false);
       area.current?.focus();
       area.current?.select();
-      push({ message: t("toast.copy_blocked") });
+      push({ message: t("toast.copy_blocked"), tone: "warn" });
       return;
     }
     setCopied(true);

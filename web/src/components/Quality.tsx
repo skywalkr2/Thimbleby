@@ -375,15 +375,7 @@ export function Quality(props: { onBack: () => void }) {
         headingRef={heading}
         focusable
         title={t("quality.open")}
-        crumb={
-          <>
-            <Button size="sm" variant="quiet" aria-label={t("quality.back")} onClick={props.onBack}>
-              {t("quality.crumb")}
-            </Button>
-            <span aria-hidden="true">›</span>
-            <span aria-hidden="true">{t("quality.open")}</span>
-          </>
-        }
+        back={{ label: t("quality.crumb"), name: t("quality.back"), onClick: props.onBack }}
       />
       {page.isPending ? (
         <Skeleton />

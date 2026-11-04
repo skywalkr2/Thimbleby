@@ -1,0 +1,3 @@
+/* The way back: a quiet button whose chevron points back, at the title's own left edge (the button takes no side padding). */
+.back { display: inline-flex; margin-inline-start: calc(var(--space-2) * -1); }
+.back :global([data-icon]) { transform: scaleX(-1); }

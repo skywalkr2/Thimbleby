@@ -6,6 +6,7 @@ import { person, project } from "../lib/records-fixtures";
 import { fakeApi, renderApp, type Routes, snapshotOf, typeMoment } from "../test-utils";
 import { todayOn } from "../lib/dates";
 import { chooseFilters } from "../lib/open-items";
+import { FILTER_BAR_MIN, setFilterBarMin } from "../lib/filterbar";
 import { dateAndTime } from "./ReminderLine";
 import { OpenItems } from "./OpenItems";
 
@@ -531,7 +532,7 @@ test("with a side the filters keep Project and No owner", async () => {
 
 const BUSINESS = () => ({ business: true, name: "Orchard Press", personal: "PRJ-personal", sides: [{ project: "PRJ-side", kind: "business", name: "Orchard Press" }], chosen: "work" });
 
-test("a to-do filed on a side and in none of its projects shows the side as not in a project, and the project filter lists real projects only", async () => {
+test("a to-do filed on a side and in none of its projects shows no project chip, and the project filter lists real projects only", async () => {
   const user = userEvent.setup();
   api(
     { "GET setup/business": BUSINESS, "GET projects": () => [project("PRJ-personal", "Personal", { side: true }), project("PRJ-side", "Orchard Press", { side: true }), project("PRJ-1", "Harbor", { parent: "PRJ-side" }), project("PRJ-2", "Lantern", { parent: "PRJ-side" })] },
@@ -540,7 +541,8 @@ test("a to-do filed on a side and in none of its projects shows the side as not 
   renderApp(<OpenItems />);
   const [first, second] = await rows();
   expect(first).toHaveTextContent("Harbor");
-  expect(second).toHaveTextContent("Orchard Press: not in a project");
+  expect(second).not.toHaveTextContent("not in a project");
+  expect(second).not.toHaveTextContent("Orchard Press");
   const choice = screen.getByRole("combobox", { name: "Project" });
   expect(within(await snapshotOf(choice)).getAllByRole("option").map((o) => o.textContent)).toEqual(["All projects", "Harbor", "Lantern"]);
   await user.selectOptions(choice, "PRJ-1");
@@ -814,4 +816,19 @@ test("a question has no check box or round tick: only a to-do can be marked done
   expect(within(list).queryByRole("button", { name: "Mark done" })).toBeNull();
   expect(within(list).queryByRole("checkbox")).toBeNull();
   for (const q of Array.from(list.querySelectorAll("[data-row-lead]"))) expect(q.children).toHaveLength(0);
+});
+
+test("a tab that holds fewer than the filter bar's minimum draws no filter bar, and the side counts are the tab's own", async () => {
+  setFilterBarMin(FILTER_BAR_MIN);
+  const user = userEvent.setup();
+  const many = Array.from({ length: FILTER_BAR_MIN }, (_, i) => action(`A-${i + 10}`, `To-do number ${i + 1}`, { side: "PRJ-side" }));
+  api({ "GET setup/business": BUSINESS, "GET waiting": () => ({ changed: { total: 0 }, followups: { total: 0 }, handled: { total: 0 }, open: { total: 14, sides: [{ side: "PRJ-side", count: 14 }] } }) }, { actions: many, questions: [question("Q-1", "Which cover finish?", { side: "PRJ-side" })] });
+  renderApp(<OpenItems />);
+  // The to-dos tab holds twelve: the bar is drawn, and its count is the to-dos' own (not the screen's 14).
+  expect(await screen.findByRole("radio", { name: "Orchard Press, 12 waiting" })).toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "State" })).toBeInTheDocument();
+  // The questions tab holds one: no filter bar over it, so no count can disagree with it.
+  await user.click(screen.getByRole("button", { name: /^Questions/ }));
+  await waitFor(() => expect(screen.queryByRole("radio", { name: /Orchard Press/ })).toBeNull());
+  expect(screen.queryByRole("combobox", { name: "State" })).toBeNull();
 });

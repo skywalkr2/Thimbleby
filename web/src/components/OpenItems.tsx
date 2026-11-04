@@ -27,7 +27,8 @@ import {
 import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
 import { openOnToday } from "./AnswerOnToday";
-import { onSide, useSideFilter, useSides } from "../lib/sides";
+import { filterBarShown } from "../lib/filterbar";
+import { onSide, useSideFilter, useSides, type SideChoice } from "../lib/sides";
 import { useSideSlot } from "../lib/marks";
 import { recordView, toHash, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -90,6 +91,12 @@ export function OpenItems() {
   const actions = (items.data?.actions ?? []).filter((a) => onSide(a.side, side.picked, a.views, !!a.project_name));
   const questions = (items.data?.questions ?? []).filter((q) => onSide(q.side, side.picked, q.views, (q.projects ?? []).length > 0));
 
+  // What the open tab holds under a side choice (the side filter's own counts), and before any filter: a short tab has no filter bar.
+  const tabCount = (choice: SideChoice) =>
+    tab === "actions"
+      ? (items.data?.actions ?? []).filter((a) => onSide(a.side, choice, a.views, !!a.project_name)).length
+      : (items.data?.questions ?? []).filter((q) => onSide(q.side, choice, q.views, (q.projects ?? []).length > 0)).length;
+  const tabHolds = tabCount("all");
   // How many of the rows the open tab counts wait on the person: worked out from those rows, so the tab's number, the list and this
   // line never disagree (the side menu counts the same rows, of both tabs, under the same side choice).
   const needYou = tab === "actions" ? actions.filter((a) => a.needs_you).length : questions.filter((q) => q.state === "yours").length;
@@ -173,14 +180,14 @@ export function OpenItems() {
         }
         filters={
           <>
-            {!items.isPending && !items.isError && actions.length + questions.length > 0 && (
+            {!items.isPending && !items.isError && actions.length + questions.length > 0 && filterBarShown(tabHolds, filters.person !== "" || filters.state !== "" || filters.project !== "") && (
               <>
                 <Choice id={`${ids}-person`} label={t("open.filter.person")} value={filters.person} onChange={(v) => set({ person: v })} none={t("person.everyone")} options={personChoices.map((p) => [p.id, p.name])} />
                 <Choice id={`${ids}-state`} label={t("open.filter.state")} value={filters.state} onChange={(v) => set({ state: v })} none={t("open.filter.any_state")} options={states.map((s) => [s, t(`open.${tab === "actions" ? "state" : "qstate"}.${s}`)])} />
                 <Choice id={`${ids}-project`} label={t(justMe ? "open.filter.area" : "open.filter.project")} value={filters.project} onChange={(v) => set({ project: v })} none={t(justMe ? "open.filter.all_areas" : "open.filter.all_projects")} options={projectChoices.map((p) => [p.id, p.name])} />
               </>
             )}
-            <SideFilter waiting="open" />
+            <SideFilter counts={tabCount} holds={tabHolds} />
           </>
         }
       />

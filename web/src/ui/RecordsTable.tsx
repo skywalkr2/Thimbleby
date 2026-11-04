@@ -2,7 +2,7 @@
 // page and the row's menu at the end. A row opens its detail pane by a click, by Enter on the row or by its name; there is
 // no button of its own for that. Columns drop out as the window narrows (their `rank`: 1 always, 2 from 1280px, 3 from
 // 1024px) and stack on a phone, so the table is never wider than the window. While a pane stands beside the table only the
-// columns marked `core` stay; the column picker shows or hides any column. No word is ever broken: a value too long for its
+// columns marked `core` stay; the column picker shows or hides any column. A column empty for every row is not drawn. No word is ever broken: a value too long for its
 // column ends in an ellipsis, with the whole value as its title.
 import { useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { useRowKeys } from "../lib/keys";
@@ -59,7 +59,11 @@ export function RecordsTable<T>(props: {
   const hasCore = props.columns.some((c) => c.core);
   const standard = (c: TableColumn<T>) => !squeezed || !hasCore || !!c.core;
   const shown = (c: TableColumn<T>) => picked[c.id] ?? standard(c);
-  const visible = props.columns.filter((c) => narrow || shown(c));
+  // A column that is empty for every row has nothing to say, so it is not drawn (at rest, beside a pane and on a phone alike) unless
+  // the person asked for it in the picker; the table shows what its rows hold.
+  const allRows = props.groups.flatMap((g) => g.rows);
+  const emptyForAll = (c: TableColumn<T>) => allRows.every((row) => !hasContent(c.cell(row)));
+  const visible = props.columns.filter((c) => (narrow || shown(c)) && (picked[c.id] || !emptyForAll(c)));
   const span = visible.length + 1 + (props.actions ? 1 : 0);
   // A column the person asked for stays whatever the window width; the others drop out by rank.
   const rank = (c: TableColumn<T>) => (picked[c.id] ? "" : c.rank === 2 ? styles.rank2 : c.rank === 3 ? styles.rank3 : "");
@@ -112,7 +116,9 @@ export function RecordsTable<T>(props: {
             {(props.groups.length > 1 || props.groupHead?.(group) !== undefined) && (
               <tr className={styles.group}>
                 <th colSpan={span} scope="colgroup">
-                  {props.groupHead?.(group) ?? group.title} <span className={styles.groupCount}>· {group.rows.length}</span>
+                  {props.groupHead?.(group) ?? group.title}
+                  {/* A heading with nothing under it says no number: "0" beside a name reads as a fault. */}
+                  {group.rows.length > 0 && <span className={styles.groupCount}> · {group.rows.length}</span>}
                 </th>
               </tr>
             )}

@@ -29,7 +29,7 @@
   padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: var(--weight-semibold);
   text-align: left; cursor: pointer;
 }
-.foldToggle::before { content: "▸"; color: var(--text-subtle); }
-.foldToggle[aria-expanded="true"]::before { content: "▾"; }
+.foldToggle::before { content: ""; flex: none; display: inline-block; width: var(--chevron-size); height: var(--chevron-size); background: currentColor; clip-path: var(--chevron-clip); color: var(--text-subtle); align-self: center; }
+.foldToggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 
 .reopen { margin: 0; }

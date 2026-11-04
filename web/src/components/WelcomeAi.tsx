@@ -645,7 +645,7 @@ export function WelcomeAi(props: {
                 const prevBad = await acts.failing(prev.name, prevPlan, step(prev.name));
                 setAccountCheck(prev.name, null);
                 if (prevBad) {
-                  push({ message: t("ai_accounts.main_made_not_kept", { name: shown, previous: prevName }) });
+                  push({ message: t("ai_accounts.main_made_not_kept", { name: shown, previous: prevName }), tone: "warn" });
                 } else {
                   await acts.save(
                     (fingerprint) => api.changeAccount(prev.name, { fingerprint, backup: Object.fromEntries(prevPlan) }),

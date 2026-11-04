@@ -13,6 +13,7 @@ import { useMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { BackLink } from "../ui/BackLink";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { LoadFailed } from "../ui/LoadFailed";
@@ -225,11 +226,9 @@ export function AiCompare(props: { onBack: () => void }) {
           </div>
         )}
       </div>
-      <p className={styles.back}>
-        <Button size="sm" variant="quiet" onClick={props.onBack}>
-          {t("ai_compare.back")}
-        </Button>
-      </p>
+      <div className={styles.back}>
+        <BackLink label={t("ai_compare.back")} onClick={props.onBack} />
+      </div>
       {skills.data && <p className={styles.sub}>{t("ai_compare.sub", { percent: percent(skills.data.min_score) })}</p>}
       {known && (
         <p className={styles.sub} id="ai-compare-cost-note">

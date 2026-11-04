@@ -146,3 +146,14 @@ test("the weights are drawn as pills in the style sheet: filled solid, tonal the
   expect(css).toMatch(/\.quiet \{[^}]*background: transparent/);
   expect(readFileSync(join(__dirname, "..", "theme", "tokens.css"), "utf8")).toMatch(/--radius-btn: var\(--radius-full\)/);
 });
+
+test("a disabled primary reads as disabled: a sunken fill, a firm edge and the subtle text, never the tonal weight's soft accent", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const css = readFileSync(join(__dirname, "Button.module.css"), "utf8");
+  const rule = css.match(/\.primary:disabled, \.primary:disabled:hover \{([^}]*)\}/)![1];
+  expect(rule).toMatch(/background: var\(--surface-sunk\)/);
+  expect(rule).toMatch(/border-color: var\(--border-strong\)/);
+  expect(rule).toMatch(/color: var\(--text-subtle\)/);
+  expect(rule).not.toMatch(/accent-soft/);
+});

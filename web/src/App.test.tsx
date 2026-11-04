@@ -167,6 +167,16 @@ test("an address names the view it opens, and the sidebar marks it", async () =>
   expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Follow-ups", current: "page" })).toBeInTheDocument();
 });
 
+test.each(["#nonsense", "#settings/nonsense"])("an address nobody knows (%s) opens the Not here page with the way back, never another screen", async (hash) => {
+  window.location.hash = hash;
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Not here" })).toBeInTheDocument();
+  expect(screen.getByText(/There is no page at this address/)).toBeInTheDocument();
+  await userEvent.setup().click(screen.getByRole("button", { name: "Back to Today" }));
+  expect(await screen.findByRole("heading", { level: 1, name: /Today|Good/ })).toBeInTheDocument();
+});
+
 test("the old address of Waiting to go out opens Follow-ups on its To send tab, and the address says so", async () => {
   window.location.hash = "#work/outgoing";
   fakeApi({ ...quiet, "GET acts": () => ({ acts: [actFixture()] }) });

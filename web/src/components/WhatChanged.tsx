@@ -847,7 +847,7 @@ export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: 
   const factLine = useFactLine();
   const readable = useReadable();
   const { justMe } = useSides();
-  const meta = metaLine(op, t, labelOf, !justMe);
+  const meta = metaLine(op, t, labelOf);
   return (
     <Item row ref={ref}>
       <div>
@@ -1026,17 +1026,15 @@ function setValue(value: unknown): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? day(text) : text;
 }
 
-function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string, place: boolean): string {
+function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string): string {
   const bits: string[] = [];
   const m = op.meta;
   if (m.owners?.length) bits.push(m.owners.join(", "));
   if (m.to_send) bits.push(t("action.to_send"));
   if (m.to) bits.push(t("op.meta.to", { name: m.to }));
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
-  if (op.op !== "note") {
-    if (m.project) bits.push(m.project);
-    else if (m.side_name && place) bits.push(t("side.not_in_project", { side: m.side_name }));
-  }
+  // A project shows only when the item has one: no chip says "not in a project".
+  if (op.op !== "note" && m.project) bits.push(m.project);
   if (m.field) bits.push(t("op.meta.set", { field: labelOf(m.field), value: setValue(m.value) }));
   if (m.said_by && m.as_of) bits.push(day(m.as_of));
   if (m.role) bits.push(t("op.meta.role", { role: t(`role.${m.role}`) }));

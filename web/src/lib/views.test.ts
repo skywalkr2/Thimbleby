@@ -27,7 +27,8 @@ test("every view's fragment names it, and Today is the empty fragment's view", (
   }
   expect(fromHash("")).toBe("today");
   expect(fromHash("#")).toBe("today");
-  expect(fromHash("#nonsense")).toBe("today");
+  // An address nobody knows is the Not here page, never a silent fallback to Today.
+  expect(fromHash("#nonsense")).toBe("not-here");
 });
 
 test("fragments from earlier versions still open the matching view", () => {
@@ -81,12 +82,14 @@ test("a core view parses as one", () => {
   expect(parseView("work/changed")).toEqual({ type: "core", view: "work/changed" });
 });
 
-test("a fragment that names nothing is Today", () => {
-  expect(fromHash("#work/panel/")).toBe("today");
-  expect(fromHash("#panel:")).toBe("today");
-  expect(fromHash("#record:demo%2Fchapter")).toBe("today");
-  expect(fromHash("#records/person")).toBe("today");
-  expect(fromHash("#records/%E0%A4%A/x")).toBe("today");
+test("a fragment that names nothing known is the Not here page, which has a fragment of its own and parses as a core view", () => {
+  expect(fromHash("#work/panel/")).toBe("not-here");
+  expect(fromHash("#panel:")).toBe("not-here");
+  expect(fromHash("#record:demo%2Fchapter")).toBe("not-here");
+  expect(fromHash("#records/person")).toBe("not-here");
+  expect(fromHash("#records/%E0%A4%A/x")).toBe("not-here");
+  expect(parseView("not-here")).toEqual({ type: "core", view: "not-here" });
+  expect(fromHash("#not-here")).toBe("not-here");
 });
 
 test("a view's link keeps this page's path and query, so it works in a new tab", () => {
@@ -117,8 +120,8 @@ test("Settings without a section, the grid of what accounts can do, and a sectio
   expect(settingsSectionOf("settings")).toBeNull();
   expect(settingsSectionOf("settings/ai-compare")).toBeNull();
   expect(parseView("settings")).toEqual({ type: "core", view: "settings" });
-  expect(fromHash("#settings/nonsense")).toBe("settings");
-  expect(fromHash("#settings/addon/")).toBe("settings");
+  expect(fromHash("#settings/nonsense")).toBe("not-here");
+  expect(fromHash("#settings/addon/")).toBe("not-here");
 });
 
 test("the page of a connected calendar's event survives the address, with the date it names", () => {

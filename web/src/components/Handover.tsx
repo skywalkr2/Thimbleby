@@ -16,6 +16,7 @@ import styles from "./Handover.module.css";
 import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { Actions } from "../ui/Actions";
+import { LoadFailed } from "../ui/LoadFailed";
 type Side = S["HandoverSideView"];
 type Which = S["HandoverChoice"]["which"];
 
@@ -49,18 +50,12 @@ export function Handover(props: { onBack?: () => void }) {
         id="handover-title"
         title={t("handover.title")}
         subtitle={t("handover.intro")}
-        crumb={
-          props.onBack ? (
-            <Button size="sm" variant="quiet" onClick={props.onBack}>
-              {t("quality.back")}
-            </Button>
-          ) : undefined
-        }
+        back={props.onBack ? { label: t("quality.back"), onClick: props.onBack } : undefined}
       />
       {page.isPending ? (
         <Skeleton />
       ) : page.isError || !view ? (
-        <EmptyState icon="alert" text={t("handover.failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
+        <LoadFailed message={t("handover.failed")} onRetry={() => void page.refetch()} />
       ) : view.state === "clear" ? (
         <EmptyState text={t("handover.clear")} />
       ) : view.state === "elsewhere" ? (

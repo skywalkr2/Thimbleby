@@ -24,9 +24,41 @@ import { IconButton } from "../ui/IconButton";
 import { MenuButton } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
 import { StateMark } from "../ui/StateMark";
-import { Row } from "../ui/Row";
+import { Icon, type IconName } from "../ui/Icon";
+import { Row, type RowProps } from "../ui/Row";
 import { AccountMoveLine, ModelMovedLine, ModelWatchLine } from "./ModelLines";
 import styles from "./HeldLines.module.css";
+
+/** The icon in each held line's 24px slot: what kind of thing holds the assistant's work (a restart, a failure, a paused account, a
+ * folder, a message to send), so no held line has an empty slot while the others in its list have a mark. */
+const HELD_ICON: Record<string, IconName> = {
+  restart: "refresh",
+  stuck: "alert",
+  paused: "alert",
+  borrow: "users",
+  credential: "alert",
+  offline: "alert",
+  handover: "archive",
+  account_check: "alert",
+  switch_failed: "alert",
+  identity: "users",
+  work_access: "alert",
+  sent_folder: "folder",
+  folder_rename: "folder",
+  extractor: "alert",
+  source_unread: "inbox",
+  catch_up_go: "inbox",
+  intake_go: "inbox",
+  rule_review: "book",
+  pack_tier: "puzzle",
+  no_account: "alert",
+};
+
+/** A held line's row: the shared row with the icon of its kind in the leading slot. */
+function HeldRow(props: RowProps & { "data-queue-line": string }) {
+  const icon = HELD_ICON[props["data-queue-line"]] ?? "alert";
+  return <Row lead={<Icon name={icon} />} {...props} />;
+}
 
 type Line = S["QueueLineView"];
 
@@ -108,7 +140,7 @@ function RestartLine(props: { line: Line }) {
   // While a restart is under way its own words replace the explanation, so the line follows the same flow as the header.
   const sub = progress && restart.phase !== "asking" ? progress : t(status.data && !canRestart ? "queue.restart.manual" : "queue.restart.sub");
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.restart.label")}
       data-queue-line="restart"
@@ -135,7 +167,7 @@ function StuckLine(props: { line: Line }) {
   const canRestart = !!status.data?.can_restart;
   const time = props.line.waiting_since ? wallWhen(props.line.waiting_since) : "";
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.stuck.label")}
       data-queue-line="stuck"
@@ -162,7 +194,7 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const credit = noReset(line.until);
   const label = tn(credit ? "queue.paused_credit" : "queue.paused", line.count, { account: nameOf(line.account ?? ""), time: line.until && !credit ? wallWhen(line.until) : "" });
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.paused.label")}
       data-queue-line="paused"
@@ -211,7 +243,7 @@ function BorrowLine(props: { line: Line }) {
     setBusy(null);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.borrow.label")}
       data-queue-line="borrow"
@@ -247,7 +279,7 @@ function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const label = t(signIn ? "queue.credential.sign_in_label" : "queue.credential.label");
   const also = signIn ? t(`queue.credential.sign_in.also.${past ? "past" : "soon"}`, { date }) : t("queue.credential.also");
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={label}
       data-queue-line="credential"
@@ -280,7 +312,7 @@ function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
           <p className="hint">{t("queue.credential.only")}</p>
         )}
         {problem && <p className="problem-note">{problem}</p>}
-          </Row>
+          </HeldRow>
   );
 }
 
@@ -289,7 +321,7 @@ function OfflineLine(props: { line: Line }) {
   const { line } = props;
   const label = tn("queue.offline", line.count, { time: line.waiting_since ? wallWhen(line.waiting_since) : "" });
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.offline.label")}
       data-queue-line="offline"
@@ -317,7 +349,7 @@ function HandoverLine(props: { line: Line; onOpen: () => void }) {
   // Once a copy is chosen the one thing left is the restart, and only the person's click restarts.
   const canRestart = state === "chosen" && !!status.data?.can_restart;
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.handover.label")}
       data-queue-line="handover"
@@ -363,7 +395,7 @@ function AccountCheckLine(props: { line: Line }) {
     setChecking(false);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.account_check.label")}
       data-queue-line="account_check"
@@ -413,7 +445,7 @@ function SwitchFailedLine(props: { line: Line }) {
     setBusy(null);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.switch_failed.label")}
       data-queue-line="switch_failed"
@@ -438,7 +470,7 @@ function SwitchFailedLine(props: { line: Line }) {
             ))}
           </ul>
         )}
-          </Row>
+          </HeldRow>
   );
 }
 
@@ -455,7 +487,7 @@ function IdentityLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   if (line.state === "level") {
     const levels = (line.names ?? []).map((level) => t(`changes.level.${level}`)).join(", ");
     return (
-      <Row
+      <HeldRow
         as="section"
         aria-label={t("queue.identity.label")}
         data-queue-line="identity"
@@ -481,7 +513,7 @@ function IdentityLine(props: { line: Line; onOpenAiAccounts: () => void }) {
     setBusy(false);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.identity.label")}
       data-queue-line="identity"
@@ -519,7 +551,7 @@ function WorkAccessLine(props: { line: Line }) {
     setBusy(false);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.work_access.label")}
       data-queue-line="work_access"
@@ -562,7 +594,7 @@ function SentFolderLine(props: { line: Line; onOpen?: () => void }) {
       }),
     );
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.sent_folder.label")}
       data-queue-line="sent_folder"
@@ -614,7 +646,7 @@ function FolderRenameLine(props: { line: Line }) {
       () => ({ message: t("queue.folder_rename.kept", { old }), undo: () => api.keepFolderNameUndo(which) }),
     );
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.folder_rename.label")}
       data-queue-line="folder_rename"
@@ -643,7 +675,7 @@ function ExtractorLine(props: { line: Line }) {
   const kind = line.file_kind ?? "";
   const named = has(`queue.extractor.kind.${kind}`) ? t(`queue.extractor.kind.${kind}`) : kind;
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.extractor.label")}
       data-queue-line="extractor"
@@ -663,7 +695,7 @@ function SourceUnreadLine(props: { line: Line; onOpen?: () => void }) {
   const key = line.problem_kind && has(kind) ? kind : "queue.source_unread.other";
   const since = line.waiting_since ? whenWords(line.waiting_since, new Date(), t, true) : "";
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.source_unread.label")}
       data-queue-line="source_unread"
@@ -680,7 +712,7 @@ function SourceUnreadLine(props: { line: Line; onOpen?: () => void }) {
       }
     >
         {line.text && <p className="hint">{line.text}</p>}
-          </Row>
+          </HeldRow>
   );
 }
 
@@ -705,7 +737,7 @@ function CatchUpGoLine(props: { line: Line }) {
     setBusy(false);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.catch_up_go.label")}
       data-queue-line="catch_up_go"
@@ -747,7 +779,7 @@ function IntakeGoLine(props: { line: Line }) {
     setBusy(false);
   };
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.intake_go.label")}
       data-queue-line="intake_go"
@@ -779,7 +811,7 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void; onOpenKnowledg
       undo: () => api.ruleReviewNotNowUndo(put.signal),
     }));
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.rule_review.label")}
       data-queue-line="rule_review"
@@ -823,7 +855,7 @@ function PackTierLine(props: { line: Line; onOpen: () => void }) {
   const tierName = useTierName();
   const { line } = props;
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.pack_tier.label")}
       data-queue-line="pack_tier"
@@ -845,7 +877,7 @@ function PackTierLine(props: { line: Line; onOpen: () => void }) {
 function NoAccountLine(props: { line: Line; onAdd: () => void }) {
   const { t } = useWords();
   return (
-    <Row
+    <HeldRow
       as="section"
       aria-label={t("queue.no_account.label")}
       data-queue-line="no_account"

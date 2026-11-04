@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 327. Shared rows, filter bars, tables, toasts, unknown addresses and the shell (2026-11-03; gate fix batch G1)
+
+| Where | Before | Now |
+|---|---|---|
+| Row (7.14) | Every row had a 24px slot and its gap before the title, empty or not | A list in which no row has a mark takes no width for the slot; one mark keeps it on every row of that list; held lines each have an icon of their kind |
+| Place on a row (6.32, 7.14) | "<side>: not in a project" as a chip on a row, and as a group heading under the side's own heading | A project chip only when the row has a project; a side's own items are "Not in a project" under that side's heading |
+| Filter bar (7.12) | Side counts were the whole screen's; the bar was drawn over any list | Counts are the open tab's; a list under 12 rows has no bar (a filter that is on keeps it) |
+| Tables (7.13) | A column empty for every row was drawn at rest; a heading with nothing under it said "· 0"; a phone's group heading was a 30% column; "0 projects" under the rows | An empty column is not drawn; no number for an empty heading; the heading spans the row; no count under rows of sides only |
+| Toasts (7.9) | The toast waited for every open screen to read again; some failures drew a check | The toast is shown as the save is made; every failure or block is a warning with the alert icon |
+| Addresses (7.1) | An unknown address opened Today or Settings | A "Not here" page with Back to Today; a record page that is gone offers its list |
+| Settings and setup on a phone (7.1, 7.15) | "Section: X" disclosure, a blank band, the section heading twice; a blank band above the setup step and a three-row footer | One picker row naming the section; the heading is read and not drawn below 1100px; the step starts under the header; the footer is two rows with a full-width primary |
+| Disabled primary (7.12) | The soft accent, like the tonal weight | A sunken fill and a firm edge, with the reason beside it |
+| Folds and group labels (7.12) | Four glyphs and one border chevron; Settings' group labels at the body size | One chevron (`--chevron-mask`); the shared 11px uppercase muted label |
+| Status popover (7.1) | A run-on line of what was checked | One row for each fact |
+| Way back (7.12) | A crumb or a bare Back, by page | `BackLink`, the page header's `back` (a person's page keeps its People › name crumb) |
+
+- **No config key, API or op change.** Wording: `not_here.title`, `not_here.text`, `not_here.back`, `record.not_found.back`, `settings.picker_label`; `settings.picker` is the section's name alone.
+
 ## 326. The gate's fix round: scope and ten design choices (2026-11-03; owner)
 
 | Where | Before | Now |

@@ -30,6 +30,7 @@ import { ItemList, Item } from "../ui/ItemList";
 import { Row } from "../ui/Row";
 import { Pill } from "../ui/Pill";
 import { RowBody } from "../ui/RowBody";
+import { LoadFailed } from "../ui/LoadFailed";
 type Shown = "board" | "list";
 const KEPT = "stages.view";
 
@@ -89,7 +90,7 @@ export function Stages() {
         </section>
       ) : records.isError ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <EmptyState icon="alert" text={t("stages.load_failed")} action={{ label: t("action.try_again"), onClick: () => void records.refetch() }} />
+          <LoadFailed message={t("stages.load_failed")} onRetry={() => void records.refetch()} />
         </section>
       ) : groups.size === 0 ? (
         <section className="panel-section" aria-labelledby="stages-title">

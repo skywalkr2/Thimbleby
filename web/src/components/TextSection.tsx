@@ -17,6 +17,7 @@ import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
+import { LoadFailed } from "../ui/LoadFailed";
 type Review = (version: string, returnTo?: () => HTMLElement | null | undefined) => void;
 
 /** Words by who wrote them. The three kinds are never folded together. */
@@ -92,7 +93,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
       {props.help && !blank && <p className="hint">{props.help}</p>}
       {text.isPending && <Skeleton />}
       {text.isError && (
-        <EmptyState icon="alert" text={t("text.load_failed")} action={{ label: t("action.try_again"), onClick: () => void text.refetch() }} />
+        <LoadFailed message={t("text.load_failed")} onRetry={() => void text.refetch()} />
       )}
       {data &&
         (editing ? (

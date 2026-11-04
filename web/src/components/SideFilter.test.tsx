@@ -254,7 +254,7 @@ test("Follow-ups has the same filter: the person's own rows go by side, and some
   showFollowUps();
   await screen.findByRole("radiogroup", { name: "Show" });
   expect(await screen.findByText("Dana Sample")).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: "Personal" }));
+  await user.click(screen.getByRole("radio", { name: /^Personal(,|$)/ }));
   await waitFor(() => expect(screen.queryByText("Dana Sample")).toBeNull());
   expect(screen.getAllByText("Robin Sample")[0]).toBeInTheDocument();
   // The person's own to-dos are one row that says how many there are on this side and opens To-dos and questions; they are not listed here.
@@ -265,7 +265,7 @@ test("Follow-ups has the same filter: the person's own rows go by side, and some
   expect(screen.queryByText("Approve the invoice run")).toBeNull();
   // Robin's one message still covers both of the rows it was made from.
   expect(screen.getAllByRole("button", { name: "Copy message" }).length).toBeGreaterThan(0);
-  await user.click(screen.getByRole("radio", { name: BUSINESS }));
+  await user.click(screen.getByRole("radio", { name: new RegExp(`^${BUSINESS}(,|$)`) }));
   expect(await screen.findByText("Dana Sample")).toBeInTheDocument();
   expect(own().getByText("1 decision")).toBeInTheDocument();
   expect(screen.queryByText("Approve the invoice run")).toBeNull();

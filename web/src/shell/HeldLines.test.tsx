@@ -1036,3 +1036,11 @@ test("Keep the old name ends the offer for good, with Undo, and the workspace fo
   await waitFor(() => expect(calls.some((c) => c.route === "POST folder-offers/workspace/keep")).toBe(true));
   expect(await screen.findByText("Okay. The folder keeps the name 'Cockpit', and you won't be asked again.")).toBeInTheDocument();
 });
+
+test("every held line has the icon of its kind in its leading slot, so none leaves the slot empty beside the others", async () => {
+  show([line("restart"), paused(), line("stuck", { key: "stuck:1" })]);
+  await screen.findByRole("region", { name: "Restart needed" });
+  const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-held-lines] [data-queue-line]"));
+  expect(rows.length).toBeGreaterThanOrEqual(2);
+  for (const row of rows) expect(row.querySelector(":scope > [data-row-lead] [data-icon]"), `the ${row.getAttribute("data-queue-line")} line's slot`).not.toBeNull();
+});

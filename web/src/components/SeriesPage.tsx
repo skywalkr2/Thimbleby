@@ -11,13 +11,13 @@ import { AgendaSection } from "./AgendaList";
 import { RecordConversation } from "./RecordConversation";
 import { Pill } from "../ui/Pill";
 import { Row, RowItem } from "../ui/Row";
+import { BackLink } from "../ui/BackLink";
 import { Skeleton } from "../ui/Skeleton";
 import { shortTitle } from "../lib/title-dates";
-import { Button } from "../ui/Button";
-import { EmptyState } from "../ui/EmptyState";
 import { PageHeader } from "../ui/PageHeader";
 import { RowList } from "../ui/RowList";
 import { DefinitionList, Definition } from "../ui/DefinitionList";
+import { LoadFailed } from "../ui/LoadFailed";
 type Page = S["SeriesPageView"];
 
 export function SeriesPage(props: { id: string; onBack: () => void }) {
@@ -27,13 +27,11 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
   return (
     <section className="panel-section record-page" aria-labelledby="series-title">
       <div>
-        <Button variant="quiet" size="sm" onClick={props.onBack}>
-          {t("record.back")}
-        </Button>
+        <BackLink label={t("record.back")} onClick={props.onBack} />
       </div>
       {page.isPending && <Skeleton />}
       {page.isError && (
-        <EmptyState icon="alert" text={t("record.load_failed")} action={{ label: t("action.try_again"), onClick: () => void page.refetch() }} />
+        <LoadFailed message={t("record.load_failed")} onRetry={() => void page.refetch()} />
       )}
       {data && (
         <>

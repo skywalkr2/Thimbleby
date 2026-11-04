@@ -179,7 +179,8 @@ export function BackupKey() {
   };
   const copy = async () => {
     // A key is copied as plain text only.
-    push({ message: t((await copyPlain(made ?? "")) === "blocked" ? "toast.copy_blocked" : "backup_key.copied") });
+    const blocked = (await copyPlain(made ?? "")) === "blocked";
+    push({ message: t(blocked ? "toast.copy_blocked" : "backup_key.copied"), tone: blocked ? "warn" : undefined });
   };
   return (
     <section className="kept-secrets" aria-labelledby={`${base}-title`}>

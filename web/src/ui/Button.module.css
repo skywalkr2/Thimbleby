@@ -34,8 +34,9 @@
 .btn:disabled, .btn:disabled:hover {
   background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; transform: none;
 }
-/* A disabled primary keeps its colour family, softened, so it still reads as the region's main action; its reason is beside it. */
-.primary:disabled, .primary:disabled:hover { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent-text); }
+/* A disabled primary reads as disabled (a sunken fill, a firm edge, the subtle text), never as the tonal weight it would otherwise be
+   mistaken for; the reason it waits is written beside it. */
+.primary:disabled, .primary:disabled:hover { background: var(--surface-sunk); border-color: var(--border-strong); color: var(--text-subtle); }
 .tonal:disabled, .tonal:disabled:hover { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); }
 .quiet:disabled, .quiet:disabled:hover { background: transparent; border-color: transparent; color: var(--text-subtle); }
 .loading { cursor: progress; }

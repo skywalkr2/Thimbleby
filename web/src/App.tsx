@@ -330,6 +330,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <Quality onBack={() => setView("today")} />;
       case "styleguide":
         return styleGuideShown(rc) ? <StyleGuide /> : <NotAvailable title={t("nav.styleguide")} onBack={() => setView("today")} />;
+      case "not-here":
+        return <NotAvailable title={t("not_here.title")} text={t("not_here.text")} back={t("not_here.back")} onBack={() => setView("today")} />;
       default:
         return null;
     }

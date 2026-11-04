@@ -1,7 +1,7 @@
 // The shared rules of the visual standard (the reviewer's VP01 to VP06), held by one browser test over six screens at a desktop and a
 // phone width, so a screen that drifts back to its own version fails here:
 //   VP04  at most one filled button in view: the screen's own primary (the header's Hand something in and the phone's + are tonal);
-//   VP02  every row has the 24px leading slot, and every row title in a list starts at the same x, within 1px;
+//   VP02  every row has the 24px leading slot (none at all, in a list where no row has a mark), and every row title in a list starts at the same x, within 1px;
 //   VP03  every group label is uppercase, 11px, and carries its count in a pill;
 //   VP06  no element shows a focus ring before a key is pressed, and a key then shows it on the row it moves to;
 //   VP01  no screen scrolls sideways, and a screen's header, tabs, lists and rail share the content area's left and right edges;
@@ -47,6 +47,9 @@ const SCREENS: Screen[] = [
   { name: "Follow-ups", hash: "work/followups", ready: (page) => heading(page, "Follow-ups") },
   { name: "Schedule", hash: "schedule", ready: (page) => heading(page, "Schedule") },
   { name: "Connections", hash: "settings/connections", ready: (page) => heading(page, /^Settings$/) },
+  // Settings' own pages and the footers inside them (VP01: the list footers inside panels, Settings' layout).
+  { name: "Settings, You", hash: "settings/you", ready: (page) => expect(page.getByRole("navigation", { name: "Settings sections" })).toBeVisible(LOADED) },
+  { name: "Settings, AI and spending", hash: "settings/ai", ready: (page) => expect(page.getByRole("navigation", { name: "Settings sections" })).toBeVisible(LOADED) },
 ];
 
 /** The filled (primary-weight) buttons in the window: those that name their weight, and anything else drawn in the accent color. */
@@ -83,7 +86,13 @@ const rowEdges = (page: Page) =>
       const lead = row.querySelector(":scope > [data-row-lead]");
       if (!lead) continue;
       const slot = lead.getBoundingClientRect();
-      if (Math.abs(slot.width - 24) > 0.5 || Math.abs(slot.height - 24) > 0.5) slots.push(`${Math.round(slot.width)}x${Math.round(slot.height)} "${(row.textContent ?? "").trim().slice(0, 24)}"`);
+      const name = (row.textContent ?? "").trim().slice(0, 24);
+      // A list in which no row has a mark takes no width for the slot (an empty lead wider than nothing fails); a list in which one
+      // row has one keeps a 24px slot on every row.
+      const listHasMark = Array.from(row.parentElement?.children ?? []).some((r) => r.querySelector(":scope > [data-row-lead]:not(:empty)"));
+      if (listHasMark) {
+        if (Math.abs(slot.width - 24) > 0.5 || Math.abs(slot.height - 24) > 0.5) slots.push(`${Math.round(slot.width)}x${Math.round(slot.height)} "${name}"`);
+      } else if (slot.width > 0.5) slots.push(`an empty lead ${Math.round(slot.width)}px wide, in a list with no mark "${name}"`);
       const title = row.querySelector(":scope > * > [data-row-title]");
       if (!title || !visible(title)) continue;
       const left = Math.round(row.getBoundingClientRect().left);
@@ -183,7 +192,7 @@ test.describe("the shared rules hold on every main screen", () => {
 
         // VP02: a 24px leading slot on every row, and titles on one edge.
         const rows = await rowEdges(page);
-        expect(rows.slots, "a row's leading slot is not 24px").toEqual([]);
+        expect(rows.slots, "a row's leading slot is not 24px, or is empty and takes width").toEqual([]);
         expect(rows.ragged, "titles of one list do not start on one edge").toEqual([]);
         // The rule is read on real rows: the screens that list things draw rows with a slot and a title.
         if (screen.groups) expect(rows.rows, "the screen draws rows with the shared row").toBeGreaterThan(0);
@@ -254,6 +263,71 @@ test.describe("the shared rules hold on every main screen", () => {
     expect((await ringsShown(page)).found).toEqual([]);
   });
 });
+
+// VP04: the setup guide's steps and an open dialog have one filled button too (they sit over the whole window, so the count is the window's).
+for (const size of SIZES) {
+  test(`the setup guide at ${size.name}: one filled button in view, and a footer that is at most two rows tall on a phone`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await load(page, "setup");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(LOADED);
+    await expect(page.locator("[data-step-footer]").first()).toBeVisible(LOADED);
+    const filled = await filledInView(page);
+    expect(filled.length, `filled buttons in view: ${filled.join(" | ")}`).toBeLessThanOrEqual(1);
+    // VP01: the footer's bar and each of its buttons keep to the window's edges (a footer inside a panel is the same rule).
+    const bar = (await page.locator("[data-step-footer]").first().boundingBox())!;
+    expect(bar.x).toBeGreaterThanOrEqual(-1);
+    expect(bar.x + bar.width).toBeLessThanOrEqual(size.width + 1);
+    for (const button of await page.locator("[data-step-footer] button").all()) {
+      const box = await button.boundingBox();
+      if (box) expect(box.x >= 0 && box.x + box.width <= size.width + 1, "a footer button keeps to the window").toBe(true);
+    }
+    if (size.width < 640) {
+      // The blank band before the step is gone: the step's first line is within the header's reach, not centred in the window.
+      const title = await page.getByRole("heading", { level: 2 }).first().boundingBox();
+      const top = Math.round(title?.y ?? 9999);
+      expect(top, "the step starts under the header on a phone").toBeLessThan(160);
+      const foot = await page.locator("[data-step-footer]").first().boundingBox();
+      expect(foot!.height, "the footer is one or two rows").toBeLessThanOrEqual(120);
+    }
+  });
+
+  test(`an open dialog at ${size.name} has one filled button in view`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await load(page, "work/open");
+    await heading(page, "To-dos and questions");
+    await page.getByRole("button", { name: /^Hand something in|Hand in/ }).first().click().catch(() => page.getByRole("button", { name: "Add a to-do" }).first().click());
+    await expect(page.getByRole("dialog")).toBeVisible(LOADED);
+    const filled = await filledInView(page);
+    expect(filled.length, `filled buttons in view: ${filled.join(" | ")}`).toBeLessThanOrEqual(1);
+  });
+}
+
+// VC02: the way back from a page is one control on every page that has one: the same shape and size, at the title's left edge.
+for (const size of SIZES) {
+  test(`the way back is the same control on every page that has one, at ${size.name}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+    await page.setViewportSize({ width: size.width, height: size.height });
+    const found: string[] = [];
+    for (const hash of ["handover", "quality", "records/rules-review", "settings/ai-compare"]) {
+      await load(page, hash);
+      await expect(page.getByRole("heading").first()).toBeVisible(LOADED);
+      const back = page.locator("[data-back-link] button");
+      await expect(back, `${hash} has one way back`).toHaveCount(1, LOADED);
+      const box = (await back.boundingBox())!;
+      const head = (await page.getByRole("heading", { level: 1 }).first().boundingBox()) ?? box;
+      found.push(`${Math.round(box.height)}x${Math.round(box.x - head.x)}`);
+      // A sub-page of Settings draws it under the title, inside its content column; the others at the title's edge.
+      if (hash !== "settings/ai-compare") expect(box.x, `${hash}: the way back starts at or left of the title`).toBeLessThanOrEqual(head.x + 1);
+    }
+    // One height and one place against the title on every page.
+    expect(new Set(found.map((f) => f.split("x")[0])).size, `heights ${found.join(", ")}`).toBe(1);
+  });
+}
 
 // VC05: the browser's own date, time and list controls ("mm/dd/yyyy", "--:-- --", the grey select) are gone from every screen
 // and form. A date is a text box with a calendar button, a time a text box with a list of times, a list a button that opens a

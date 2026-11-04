@@ -95,6 +95,27 @@ export function CoverageLine(props: { as?: "p" | "span"; without?: Part["kind"][
   );
 }
 
+/** The same facts as a list, one row for each part (the header's status popover: a run-on line of several clauses is not read there). */
+export function CoverageRows(props: { without?: Part["kind"][]; className?: string }) {
+  const found = useCoverage();
+  if (!found) return null;
+  return <PartRows found={found} without={props.without} className={props.className} />;
+}
+
+function PartRows(props: { found: Coverage; without?: Part["kind"][]; className?: string }) {
+  const parts = useParts(props.found).filter((part) => !props.without?.includes(part.kind));
+  if (parts.length === 0) return null;
+  return (
+    <ul className={props.className} data-coverage-rows="">
+      {parts.map((part) => (
+        <li key={part.key} data-coverage={part.kind}>
+          {part.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** What the heading says when nothing needs the person: "nothing needs you" only when every source was read. */
 export function useNoneText(): string {
   const { t } = useWords();

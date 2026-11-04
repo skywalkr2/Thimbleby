@@ -107,6 +107,12 @@ test("each row says the act and its reason in the assistant's voice, with the qu
   expect(replied).toHaveTextContent("Closed “Tell the shop when the proofs ship”: you replied on");
 });
 
+test("every row has a glyph in its leading slot, as its loading rows do", async () => {
+  open([CLOSED, MOVED]);
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  for (const row of rows()) expect(row.querySelector("[data-row-lead] svg")).not.toBeNull();
+});
+
 test("a date in a row's words reads as a day, never in its raw form", async () => {
   open([entry({ act: "added", title: "Send the revised budget by 2026-11-05.", quote: "I will send the revised budget", by_you: true })]);
   await screen.findByRole("list", { name: "What changed since yesterday" });

@@ -26,7 +26,9 @@
 .row[data-selected] { background: var(--row-selected-bg); box-shadow: var(--row-selected-bar); }
 .group th { background: var(--surface-sunk); color: var(--text); font-weight: var(--weight-semibold); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .groupCount { color: var(--text-muted); font-weight: var(--weight-regular); }
-.table th:first-child, .name { width: 30%; }
+.table thead th:first-child, .name { width: 30%; }
+/* A group's heading spans the whole row: it takes the row's width, on a phone as on a desk. */
+.group th { width: auto; }
 .name { font-weight: var(--weight-semibold); font-size: var(--text-md); line-height: var(--lh-md); }
 .name a { color: var(--text); text-decoration: none; }
 .name a:hover { text-decoration: underline; text-underline-offset: 2px; }

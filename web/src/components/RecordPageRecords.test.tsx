@@ -667,6 +667,24 @@ test("a page for a record that isn't there says so with a title, and offers no T
   expect(screen.queryByText("This page didn't load.")).toBeNull();
 });
 
+test("a project page that is gone says so and offers the list it belongs to as its one next step, with no kind tag beside the title", async () => {
+  fakeApi({
+    "GET record?kind=project&id=PRJ-9": () => new Refuse(404, "project PRJ-9 doesn't exist"),
+    "GET kinds/project": () => ({ kind: "project", fields: [] }),
+    "GET record-pages/PRJ-9?kind=project": () => new Refuse(404, "no"),
+    "GET people": () => [],
+    "GET projects": () => [],
+    "GET settings": () => ({ fingerprint: "fp", items: [] }),
+    "GET lists": () => [],
+    "GET organizations": () => [],
+  });
+  renderApp(<RecordPage kind="project" id="PRJ-9" onBack={() => {}} />);
+  expect(await screen.findByText(/This page isn't here any more/)).toBeInTheDocument();
+  const heading = screen.getByRole("heading", { name: "Not here" });
+  expect(heading.closest("[data-page-header]")?.querySelector("[data-pill]")).toBeNull();
+  expect(screen.getByRole("link", { name: "Go to Projects" })).toHaveAttribute("href", expect.stringMatching(/#records\/projects$/));
+});
+
 test("a page for a person who was removed says so and when, and Restore brings them back with Undo", async () => {
   const calls: string[] = [];
   fakeApi({

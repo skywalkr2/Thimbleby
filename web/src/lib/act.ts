@@ -19,7 +19,9 @@ export function useAct() {
     ): Promise<T | undefined> {
       try {
         const result = await run();
-        await client.invalidateQueries();
+        // What was done is said at once; the screens then read again. The toast never waits for every open screen's reads (which
+        // is what made it trail the save, so a toast named a setting that was already another value).
+        const refresh = client.invalidateQueries();
         if (after) {
           const toast = after(result);
           const undo = toast.undo;
@@ -33,6 +35,7 @@ export function useAct() {
               : undefined,
           });
         }
+        await refresh;
         return result;
       } catch (err) {
         if (onError) {
@@ -44,6 +47,7 @@ export function useAct() {
         // A failure offers to run the same call again, except a signed-out one, which no retry can fix.
         push({
           message: signedOut ? t("error.signed_out") : t("error.failed", { detail }),
+          tone: "warn",
           action: signedOut ? undefined : { label: t("action.try_again"), run: () => act(run, after) },
         });
         return undefined;

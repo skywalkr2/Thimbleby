@@ -4,7 +4,7 @@
   color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm);
 }
 .chip:focus-within { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
-.chip::after { content: "▾"; position: absolute; right: var(--space-3); top: 50%; transform: translateY(-50%); color: var(--text-subtle); pointer-events: none; }
+.chip::after { content: ""; position: absolute; right: var(--space-3); top: 50%; width: var(--chevron-size); height: var(--chevron-size); background: currentColor; clip-path: var(--chevron-clip); transform: translateY(-50%) rotate(90deg); color: var(--text-subtle); pointer-events: none; }
 .name { flex: none; color: var(--text-muted); }
 /* The chip draws the caret and the box; the select inside is bare. */
 .chip .select { width: auto; min-width: 0; max-width: 22ch; height: 100%; min-height: 0; font-size: inherit; line-height: inherit; margin: 0; padding: 0; border: 0; background: transparent; background-image: none; color: var(--text); font: inherit; appearance: none; cursor: pointer; text-overflow: ellipsis; }

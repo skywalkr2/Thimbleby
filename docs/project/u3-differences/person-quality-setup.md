@@ -77,6 +77,14 @@ Change log: section 317. Tracking rows: VS01, VS03, VS13, VS15, VC10, VC11, VC12
 | setup | Checking, offline and accepted states with the stand-in service | The capture drives "Another service", so the accepted line reads "Another service: Works…"; the mockup's key is Anthropic's |
 | setup | A key valid but no credit | The stand-in service never answers that; not driven |
 
+## Changed in the gate's fix round, batch G1 (change log 327)
+
+| Page | Difference found | What was done |
+|---|---|---|
+| setup | 150 to 260px of blank space above "STEP n OF 7" on a phone | The layout's rows keep their height and start at the top (`align-content: start`), so the step starts under the header |
+| setup | The footer took three rows on a phone, with a faint cream primary | Two rows: the way back and later on the first, the primary across the width, 44px tall; a disabled primary is a sunken fill with a firm edge, with its reason beside it |
+| quality | "Today ›" crumb with a bare button | The shared way back (`BackLink`) with a chevron, named "Back to Today" |
+
 ## Checks
 
 The unit tests for each piece are named in change log 317. The browser tests are written (`web/e2e/person-quality-setup-46.spec.ts`, in

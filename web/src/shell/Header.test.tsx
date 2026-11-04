@@ -349,3 +349,11 @@ test("Missed one shows once the assistant has been given anything it could have 
   await user.click(await screen.findByRole("button", { name: "Help" }));
   expect(await screen.findByRole("menuitem", { name: "Missed something?" })).toBeInTheDocument();
 });
+
+test("the header clips what is wider than the window but lets the search results drop below it", () => {
+  const css = readFileSync(join(__dirname, "Header.module.css"), "utf8");
+  const header = css.slice(css.indexOf(".header {"), css.indexOf("}", css.indexOf(".header {")));
+  expect(header).toMatch(/overflow-x: clip/);
+  expect(header).toMatch(/overflow-y: visible/);
+  expect(header).not.toMatch(/overflow: hidden/);
+});

@@ -241,6 +241,15 @@ test("an assistant with no account says so and what to do, with a button, and no
   await waitFor(() => expect(onOpenGuide).toHaveBeenCalledWith("ai"));
 });
 
+test("an assistant with no account is said once, and every action in the popover is the same small button", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { ai: { state: "not_set_up", detail: null } }));
+  const dialog = await open(user);
+  expect(dialog.querySelectorAll("[data-state='alive'], [data-state='assistant']").length).toBe(1);
+  expect(dialog).not.toHaveTextContent("No AI account yet");
+  for (const button of Array.from(dialog.querySelectorAll("li > button"))) expect(button.className).not.toMatch(/primary/);
+});
+
 test("the stand-in assistant is a line in the popover, not a banner", async () => {
   const user = userEvent.setup();
   show(statusFixture({}, { ai: { state: "stand_in", detail: null } }));
@@ -353,6 +362,11 @@ test("the popover holds what was checked: how many connections were read and whe
   const dialog = await open(user);
   await waitFor(() => expect(within(dialog).getByText(/Checked 1 connection/)).toBeInTheDocument());
   expect(within(dialog).getByText(/Mail from before .* has not been read yet/)).toBeInTheDocument();
+  // What was checked is a list with a row for each fact, never one run-on line of clauses.
+  const rows = dialog.querySelector("[data-coverage-rows]")!;
+  expect(rows.tagName).toBe("UL");
+  expect(Array.from(rows.children).map((li) => li.getAttribute("data-coverage"))).toEqual(["read", "looked"]);
+  expect(dialog.querySelector("[data-coverage-line]")).toBeNull();
 });
 
 // With several accounts one failing account must not make the others look broken, nor be told once for each of its sources.
@@ -417,4 +431,34 @@ test("an account that is signed out is not read, so the chip is not all good and
   const row = await within(dialog).findByRole("listitem", { name: "alex@example.com" });
   expect(row).toHaveAttribute("data-state", "warn");
   expect(row).toHaveTextContent(/Signed out since/);
+});
+
+test("the popover is one column, the most urgent section first, each section a dot and its name", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({ restart_needed: "A setting changed.", can_restart: true }, { backup: { configured: false, age_hours: null, needs_attention: true } }));
+  await chipIs("restart");
+  const dialog = await open(user);
+  const order = Array.from(dialog.querySelectorAll("li[data-state]")).map((li) => li.getAttribute("data-state"));
+  expect(order[0]).toBe("restart");
+  expect(order.indexOf("backup")).toBeGreaterThan(order.indexOf("restart"));
+  expect(order.indexOf("updates")).toBeGreaterThan(order.indexOf("backup"));
+  // One column: the popover does not ask for two.
+  expect(dialog.closest("[data-columns]")).toHaveAttribute("data-columns", "1");
+  // Every section names itself first, then says its words, then acts.
+  for (const li of Array.from(dialog.querySelectorAll("li[data-state]"))) expect(li.firstElementChild!.tagName).toBe("P");
+});
+
+test("on a phone the states are a sheet from the bottom edge with a title and a Close, and Close puts it away", async () => {
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    const user = userEvent.setup();
+    show(statusFixture({ restart_needed: "A setting changed.", can_restart: true }));
+    const dialog = await open(user);
+    expect(dialog.closest("[data-overlay]")).toHaveAttribute("data-overlay", "sheet");
+    expect(within(dialog).getByRole("heading", { name: "Status" })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Status" })).toBeNull());
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
 });

@@ -48,6 +48,7 @@ import { Actions } from "../ui/Actions";
 import { FormBlock } from "../ui/FormBlock";
 import { Pill } from "../ui/Pill";
 import { StateMark, needsYou } from "../ui/StateMark";
+import { LoadFailed } from "../ui/LoadFailed";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -282,7 +283,7 @@ export function Sources(props: {
       {sources.isPending ? (
         <Skeleton />
       ) : sources.isError ? (
-        <EmptyState icon="alert" text={t("sources.load_failed")} action={{ label: t("action.try_again"), onClick: () => void sources.refetch() }} />
+        <LoadFailed message={t("sources.load_failed")} onRetry={() => void sources.refetch()} />
       ) : cards.length === 0 ? (
         // Asking how to add one needs an AI account; with none, the way on is choosing one, not a question that can't be answered.
         noAi ? (

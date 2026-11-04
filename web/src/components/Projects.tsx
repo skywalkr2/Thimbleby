@@ -20,7 +20,6 @@ import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
 import { RecordsTable, type TableColumn, type TableGroup } from "../ui/RecordsTable";
 import { ListState } from "../ui/ListState";
-import { Skeleton } from "../ui/Skeleton";
 import { ProjectDrawer } from "./ProjectForm";
 import { RecordConversation } from "./RecordConversation";
 import { RecordPage } from "./RecordPage";
@@ -96,7 +95,8 @@ export function ProjectsOrPersonal(props: { onBack: () => void }) {
   const { justMe, personal } = useSides();
   const business = useQuery({ queryKey: ["business"], queryFn: api.business });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  if (business.isPending || projects.isPending) return <Skeleton />;
+  // The list's own page draws its title and Add button while it loads and says so when it could not.
+  if (business.isPending || projects.isPending) return <Projects />;
   if (justMe && personal) return <RecordPage key={`project:${personal}`} kind="project" id={personal} onBack={props.onBack} />;
   return <Projects />;
 }
@@ -207,13 +207,13 @@ export function Projects() {
                 actionsHeader={t("people.col.actions")}
                 actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
               />
-              <p className="hint">{tn("projects.count", real.length)}</p>
+              {real.length > 0 && <p className="hint">{tn("projects.count", real.length)}</p>}
             </>
             )
           }
         </ListState>
       </ListDetail>
-      <Views />
+      {!projects.isError && <Views />}
       <Unfiled />
       {adding && <ProjectDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}
       {editing && <ProjectDrawer project={editing} onClose={() => setEditing(null)} />}

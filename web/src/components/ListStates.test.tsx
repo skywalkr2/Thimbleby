@@ -165,3 +165,27 @@ test("the to-dos narrowed by the screen's own filters to nothing say so, and Cle
   await user.click(screen.getByRole("button", { name: "Clear filter" }));
   expect(await screen.findByText("Send the proof to the printer")).toBeVisible();
 });
+
+// One couldn't-load card for a screen however many of its reads fail (every route but the business one answers 404 here).
+test("Follow-ups with every read failing shows one error card with one Try again", async () => {
+  fakeApi({ ...business });
+  renderApp(<FollowUps />);
+  await failedWith("Follow-ups didn't load.");
+  expect(document.querySelectorAll('[role="alert"]').length).toBe(1);
+  expect(screen.getAllByRole("button", { name: "Try again" }).length).toBe(1);
+});
+
+test("People that did not load do not say there are no organizations", async () => {
+  fakeApi({ ...business });
+  renderApp(<People />);
+  await failedWith("The people couldn't be loaded.");
+  expect(screen.queryByText(/No organizations yet/)).toBeNull();
+  expect(document.querySelectorAll('[role="alert"]').length).toBe(1);
+});
+
+test("Projects that did not load do not say there are no views", async () => {
+  fakeApi({ ...business });
+  renderApp(<Projects />);
+  await failedWith("The projects couldn't be loaded.");
+  expect(screen.queryByText(/No views yet/)).toBeNull();
+});

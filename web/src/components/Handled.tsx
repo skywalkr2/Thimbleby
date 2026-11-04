@@ -15,6 +15,7 @@ import { useSideFilter, useSides } from "../lib/sides";
 import { useLookedAt } from "../lib/waiting";
 import { recordView, toHash } from "../lib/views";
 import { useHandedToast, useWaitsForStart } from "../lib/handed-toast";
+import { filterBarShown } from "../lib/filterbar";
 import { useWords } from "../lib/wording";
 import { SearchField } from "../ui/SearchField";
 import { Icon } from "../ui/Icon";
@@ -125,7 +126,9 @@ export function Handled() {
       <p className="hint">{t(`handled.explain.${tab}`)}</p>
       {list.data && <p className="hint">{tn("handled.kept", list.data.kept_days)}</p>}
       {/* With nothing in the list (and nothing typed to narrow it) there is nothing to search or group, so the controls wait. */}
-      {!(list.isSuccess && list.data.groups.length === 0 && !query && !typed && !item) && (
+      {/* A short list (fewer than the filter bar's minimum) has nothing worth searching or grouping either, unless something is typed or a
+          grouping other than the first is on, so the person can always take it off. */}
+      {!(list.isSuccess && list.data.groups.length === 0 && !query && !typed && !item) && !(list.isSuccess && !filterBarShown(list.data.groups.reduce((n, g) => n + g.count, 0), !!query || !!typed || !!item || shownGroup !== GROUPS[0])) && (
         <div className={styles.bar}>
           <SearchField id={`${ids}-search`} label={t("handled.search")} className={styles.search} value={typed} onChange={setTyped} />
           <SegmentedControl label={t("handled.group")} options={GROUPS.map((name) => ({ value: name, label: t(`handled.group.${name}`) }))} value={shownGroup} onChange={setGroup} />
@@ -155,8 +158,9 @@ export function Handled() {
             {data.groups.map((g, index) => {
               const key = `${tab}|${shownGroup}|${item ?? ""}|${g.key}`;
               const limit = pageRows + (more[key] ?? 0);
-              // A search shows the mail it found, so its groups are open.
-              const open = !!query || opened.has(key);
+              // A search shows the mail it found, so its groups are open; so is the only group there is (opening it is a press, not a need).
+              const openByDefault = !!query || data.groups.length === 1;
+              const open = openByDefault ? !!query || !opened.has(key) : opened.has(key);
               const name =
                 g.label ??
                 (g.key.startsWith("kind:")

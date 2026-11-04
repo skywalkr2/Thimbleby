@@ -1,6 +1,6 @@
 // Follow-ups grouped by side, then by project (design 7.5, 7.13): the same open questions and to-dos as the groups by person,
 // one line per project under the side it is on; choosing it shows that project's items in the detail, with who each is with
-// and where it stands. An item filed on a side and in no project of it is "<side>: not in a project". With one group
+// and where it stands. An item filed on a side and in no project of it is "Not in a project" under that side's heading. With one group
 // only, its items show in place. An item's button goes to that person's group, where Copy, Mark sent and Record reply are.
 import { useRef } from "react";
 import type { S } from "../lib/api";
@@ -112,7 +112,8 @@ export function groupBySide(sections: Section[], sideOrder: Array<{ id: Side; na
         .sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)))
         .map(([project, items]) => ({
           key: `${id}|${project}`,
-          title: project || (place.sideName ? w.t("side.not_in_project", { side: place.sideName }) : w.t("followups.by_project.unplaced")),
+          // The side is the heading above the group (when there are several), so the group is not worded with it again.
+          title: project || w.t("followups.by_project.unplaced"),
           items: [...items].sort((a, b) => a.name.localeCompare(b.name) || a.title.localeCompare(b.title)),
         })),
     }));

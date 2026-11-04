@@ -646,7 +646,8 @@ test("Handled for you, a rule's closes on the set-aside tab and the assistant's 
   });
   const view = renderApp(<Handled />);
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  await user.click(await screen.findByRole("button", { name: "only spacing changed · 1", expanded: false }));
+  // The only group there is opens by itself.
+  await screen.findByRole("button", { name: "only spacing changed · 1", expanded: true });
   await screen.findByText("Spacing change in the style sheet");
   sweep(view.container);
   await user.click(screen.getByRole("radio", { name: "Read, nothing to do · 0" }));

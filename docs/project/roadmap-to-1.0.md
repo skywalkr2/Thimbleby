@@ -34,7 +34,8 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   passed none at 4.0, and the audit of the tracking sheet found about 40 rows and 47 P2 items still open. The owner chose
   to fix everything first (section 326). **The one list for this round is `docs/project/u3-gate/items.md`:** about 570
   issues from the scores and 95 audit rows, each tagged with its batch, G1 to G6. Batches tick their items; the re-score
-  confirms them. The scores, the audit and the batch briefs sit beside it.
+  confirms them. **Progress (2026-11-04):** G1 and G1c merged (scored 3.6 to 4.1 on their 22 screens; the rest of each screen's
+  findings are with its own batch); G3 in review with G3b finishing; G2, G4, G5, G6, G1b and T1 next. The scores, the audit and the batch briefs sit beside it.
 - **Next, in order:**
   1. **U3:** finish G1 to G6. Then the full suites, a fresh capture, and both cold scorers on every screen. The owner looks
      at the side-by-sides and the scores, and says when to send.
@@ -98,8 +99,8 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
     - *Gate before the hand-back* (owner, 2026-11-03: "every time we send back and re-run the UI/UX takes a lot of effort, so let's make sure we are happy with what we are turning in before we do that"): (1) every exit criterion E1 to E12 of the re-sweep checked by us with its evidence; (2) captures of every inventory screen, not only the mockup pages, by day, night, 1024 and 390, with the state sheets; (3) a cold score of those captures by two independent reviewers who see neither each other's scores nor our notes, by the reviewer's own method (PATH-TO-4.6 section 6), the lower counting; (4) everything they find fixed and re-scored until every screen is at least 4.0 with no point under 3.5 and the mockup pages at the 4.6 bar; (5) the owner looks at the side-by-sides and the scores and says to send. Nothing is handed back before (5).
     - *A visual batch is done when it scores, not when it matches* (lesson of the first gate score, 2026-11-03: the screens had been built to the mockups and checked side by side, but they scored 3.3 to 3.7 cold, and the screens without a mockup had never been scored): every visual batch ends with a cold score of the screens it touched, by the same rubric, before it is called done. Matching a mockup or passing a guard is not the bar. The order inside a batch (owner, 2026-11-03): fix, run the batch's own tests, capture its screens, a cold score of them, fix what the score finds, and only then merge, run the full suites and push to CI. The look is checked before the long CI wait, not after it.
     - *The gate's fix round* (owner, 2026-11-03: everything goes in; ten choices D1 to D10, section 326). The first cold score of 82 inventory screens (scratchpad `gate-score/`) passed none at 4.0. The audit of the tracking sheet's open rows found about 40 rows and 47 P2 items still open. Six batches, two at a time, each fixing its area's score findings and audit items, each with a test per fix and a cold score of the screens it touched:
-      - [ ] G1 shared rows and shell, plus the capture faults
-      - [ ] G1c G1's own findings from its cold score (scorer C): one couldn't-load card with Try again, the status popover, form skeletons, three capture faults; then G1 merges
+      - [x] G1 shared rows and shell, plus the capture faults (merged; tests: Row, RecordsTable, toasts, act, views, PageHeader, HeldLines, StatusMenu, ListStates, Settings, shared-rules.spec)
+      - [x] G1c G1's own findings from its cold score (scorer C): one couldn't-load card with Try again, the status popover, form skeletons, three capture faults; then G1 merges
       - [ ] G1b the shared components other batches named: the drawer, the segmented control, chips, the header's controls
       - [ ] G2 Today and the work screens
       - [ ] G3 Schedule (G3b finishes the lines G3 left open)

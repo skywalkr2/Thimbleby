@@ -403,7 +403,7 @@ function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
   // Copying only puts the report on the clipboard; the person sends it outside the app, then marks it sent.
   const copy = async () => {
     if ((await copyMessage(mailText(r.title, r.text))) === "blocked") {
-      push({ message: t("ask.copy_blocked") });
+      push({ message: t("ask.copy_blocked"), tone: "warn" });
       return;
     }
     setShared(true);

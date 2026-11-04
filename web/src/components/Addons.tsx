@@ -45,6 +45,7 @@ import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
 import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
+import { LoadFailed } from "../ui/LoadFailed";
 import { ConfirmRemove } from "./ConfirmRemove";
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
@@ -254,7 +255,7 @@ function Loaded(props: {
   if (query.isPending) return <Skeleton />;
   if (query.isError || !query.data) {
     return (
-      <EmptyState icon="alert" text={t("addons.load_failed")} action={{ label: t("action.try_again"), onClick: () => void query.refetch() }} />
+      <LoadFailed message={t("addons.load_failed")} onRetry={() => void query.refetch()} />
     );
   }
   return <>{props.children(query.data)}</>;

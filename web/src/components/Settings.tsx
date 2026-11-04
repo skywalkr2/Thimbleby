@@ -58,6 +58,7 @@ import { useSides } from "../lib/sides";
 import { applyAppearanceChanges, useAppearance } from "../lib/theme";
 import { useSettingWordsFromCache } from "../lib/setting-words";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
+import { GroupLabel } from "../ui/GroupLabel";
 import { useIsNarrow, useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
@@ -80,6 +81,7 @@ import { YourName } from "./YourName";
 import { ValueLists } from "./ValueLists";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
+import { LoadFailed } from "../ui/LoadFailed";
 import { WelcomeAi } from "./WelcomeAi";
 import { restoreFocus } from "./ModalPanel";
 import { Button } from "../ui/Button";
@@ -144,7 +146,7 @@ export function SettingsNav(props: {
         const headingId = `settings-nav-${group.key}`;
         return (
           <section className="settings-nav-group" aria-labelledby={headingId} key={group.key}>
-            <h3 id={headingId}>{t(group.label)}</h3>
+            <GroupLabel id={headingId}>{t(group.label)}</GroupLabel>
             <ul className="settings-nav">
               {sections.map((id) => (
                 <li key={id}>
@@ -168,7 +170,9 @@ export function SettingsNav(props: {
     <nav aria-label={t("settings.sections")}>
       {narrow ? (
         <details className="more-options settings-picker" open={picking} onToggle={(e) => setPicking(e.currentTarget.open)}>
-          <summary>{props.current ? t("settings.picker", { section: label(props.current) }) : t("settings.picker_none")}</summary>
+          <summary aria-label={props.current ? t("settings.picker_label", { section: label(props.current) }) : undefined}>
+            {props.current ? t("settings.picker", { section: label(props.current) }) : t("settings.picker_none")}
+          </summary>
           {groups}
         </details>
       ) : (
@@ -203,6 +207,7 @@ export function useSettingsSections() {
     lists: onListsPage.length > 0,
     files: (forms.data?.length ?? 0) > 0,
     keyed: (keyed.data ?? []).filter((a) => a.secrets.length > 0).map((a) => a.plugin),
+    loading: settings.data === undefined,
   });
   return { settings, forms, keyed, sides, justMe, everything, listed };
 }
@@ -923,9 +928,9 @@ export function Settings(props: {
           </p>
         )}
         {settings.isPending ? (
-          <Skeleton />
+          <Skeleton shape="form" rows={3} />
         ) : settings.isError ? (
-          <EmptyState text={t("settings.failed")} />
+          <LoadFailed message={t("settings.failed")} onRetry={() => void settings.refetch()} />
         ) : query.trim() ? (
           results()
         ) : (
@@ -936,7 +941,8 @@ export function Settings(props: {
             <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
             {loaded && wanted !== section && (
               <p className="hint" role="status" data-not-available="">
-                {t("settings.not_available", { page: label(wanted), shown: label(section) })}
+                {t("settings.not_available", { page: label(wanted), shown: label(section) })}{" "}
+                <a href={viewHref("today")}>{t("settings.not_available_back")}</a>
               </p>
             )}
             {body()}

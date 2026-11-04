@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Button } from "./Button";
 import { FilterChip } from "./FilterChip";
@@ -115,4 +115,26 @@ test("the one primary action is the last of the header's actions, and a tonal or
   expect(document.querySelectorAll('[data-weight="filled"]')).toHaveLength(1);
   expect(screen.getByRole("button", { name: "Add a person" })).toHaveAttribute("data-weight", "filled");
   expect(screen.getByRole("button", { name: "Import" })).toHaveAttribute("data-weight", "tonal");
+});
+
+test("the way back is one shared control in the crumb's place, with a chevron and the page's own label, and it asks nothing but a press", async () => {
+  const back = vi.fn();
+  render(<PageHeader title="A page" back={{ label: "Back to Today", name: "Back to Today", onClick: back }} />);
+  const control = screen.getByRole("button", { name: "Back to Today" });
+  expect(control.closest("[data-back-link]")).not.toBeNull();
+  expect(control.querySelector("[data-icon]")).not.toBeNull();
+  await userEvent.setup().click(control);
+  expect(back).toHaveBeenCalledTimes(1);
+});
+
+test("no screen draws its own bare Back in a header's crumb: the way back is the page header's `back`", () => {
+  const dir = join(__dirname, "..", "components");
+  const found: string[] = [];
+  for (const name of readdirSync(dir)) {
+    if (!/\.tsx$/.test(name) || /\.test\.tsx$/.test(name)) continue;
+    const text = readFileSync(join(dir, name), "utf8");
+    // A crumb that holds a button which goes back.
+    if (/crumb=\{[^}]*onClick=\{props\.onBack\}/s.test(text)) found.push(name);
+  }
+  expect(found).toEqual([]);
 });

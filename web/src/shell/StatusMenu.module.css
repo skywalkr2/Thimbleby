@@ -1,12 +1,38 @@
+/* One column, the most urgent first (a restart, a failure, then what is fine); one pattern for every section: a dot and its name, the
+   words, then the action. The popover keeps to the window's height and scrolls inside. */
+.dialog {
+  max-height: min(80vh, 640px); overflow-y: auto; overscroll-behavior: contain;
+  /* Where there is more above or below, a fade says so: the covers follow the content, the shadows stay at the edges. */
+  --fade: color-mix(in srgb, var(--surface-raised) 0%, transparent);
+  --edge: color-mix(in srgb, var(--text) 20%, transparent);
+  background:
+    linear-gradient(var(--surface-raised) 30%, var(--fade)) center top / 100% 32px no-repeat local,
+    linear-gradient(var(--fade), var(--surface-raised) 70%) center bottom / 100% 32px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--edge), transparent) center top / 100% 10px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--edge), transparent) center bottom / 100% 10px no-repeat scroll,
+    var(--surface-raised);
+  padding-bottom: var(--space-4);
+}
+/* On a phone the same states are the shared sheet's content. */
+.sheet { max-height: 100%; }
 .states { list-style: none; margin: 0; padding: 0; display: grid; }
 .state { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
 .state:last-child { border-bottom: 0; }
-.name { grid-column: 1 / -1; margin: 0; color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.name { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
 .text { margin: 0; min-width: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
-.warn .text { color: var(--warn); font-weight: var(--weight-semibold); }
+.warn .text { color: var(--text); font-weight: var(--weight-semibold); } /* the warning colour is the dot's; the words stay the text colour */
 .full { grid-column: 1 / -1; }
+/* Every action is the same small button, under what it acts on, at the start of the row. */
+.state > :is(button, a) { grid-column: 1 / -1; justify-self: start; }
 .note { margin: 0; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); overflow-wrap: anywhere; }
 .sayIcon { margin-inline-end: var(--space-1); vertical-align: middle; }
 .wide { grid-column: 1 / -1; }
+/* What was read and what waits, one row each, in the popover's own text size and never in italics. */
+.coverageRows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); font-size: var(--text-sm); line-height: var(--lh-sm); font-style: normal; color: var(--text); }
+.coverageRows > li { min-width: 0; overflow-wrap: anywhere; font-style: normal; }
 /* The accounts' rows sit in the popover with its own width and no frame of their own. */
 .accounts { margin: 0; border: 0; border-radius: var(--radius-md); }
+
+.name::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--ok); }
+.warn > .name::before { background: var(--warn); }
+.state { padding-block: var(--space-3); }

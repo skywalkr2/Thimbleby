@@ -7,8 +7,11 @@
 .lines { display: grid; gap: var(--space-2); }
 .bar { height: 14px; width: 60%; }
 .short { width: 36%; height: 12px; }
+.field { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
+.bar.label { width: 28%; height: 12px; }
+.input { display: block; height: var(--btn-h); max-width: 28rem; border-radius: var(--radius-btn); background: var(--border); }
 .btn { width: 84px; height: var(--btn-h-sm); border-radius: var(--radius-btn); }
 @media (prefers-reduced-motion: no-preference) {
-  .bar, .btn, .lead { animation: shimmer 1.4s ease-in-out infinite; }
+  .bar, .btn, .lead, .input { animation: shimmer 1.4s ease-in-out infinite; }
   @keyframes shimmer { 50% { background: var(--surface-sunk); } }
 }

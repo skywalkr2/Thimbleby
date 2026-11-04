@@ -41,11 +41,13 @@ The same stand-in servers the browser tests use, each in its own process group, 
 - **sides:** the long-name fixtures (`tests/e2e_server.py --many-sides`): Personal beside four sides, three with long names. Stages:
   `empty`, `seeded` (three people, one with a very long name, and eight to-dos, one with a very long title and one in another
   script) and `bulk` (120 more to-dos with titles in several scripts). Records are added through the app's own API.
+- **demo:** the browser tests' own demo workspace with a second stand-in account (`tests/e2e_server.py --standin-account`): it has an add-on's list (so Settings has a Lists section), an installed add-on and two AI accounts to compare.
+- **clear:** every counted setup step done and nothing waiting.
 
 ## What it writes
 
 ```
-<out>/<page>[-<state>]-<theme>-<width>.png            the build, full page
+<out>/<page>[-<state>]-<theme>-<width>.png            the build, the whole page in a window as tall as the page (the phone's bottom bar at its foot, the side menu its full height)
 <out>/<page>[-<state>]-<theme>-390-screen.png         the first screen on a phone (the window, not the whole page)
 <out>/side-by-side/<same name>                        the mockup on the left, the build on the right, at the same width
 <out>/differences.md                                  one section per page and state, an empty table to fill in, and the states not driven

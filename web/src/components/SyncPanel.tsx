@@ -13,13 +13,13 @@ import { restoreFocus } from "./ModalPanel";
 import { useTextReview } from "./TextReview";
 import { Skeleton } from "../ui/Skeleton";
 import { Button, ButtonLink } from "../ui/Button";
-import { EmptyState } from "../ui/EmptyState";
 import { Row } from "../ui/Row";
 import { FormField } from "../ui/FormField";
 import { FormBlock } from "../ui/FormBlock";
 import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
+import { LoadFailed } from "../ui/LoadFailed";
 // ---- synced folder -------------------------------------------------------------------------------------------------
 
 const SYNC_FOLDER = "storage.sync.folder";
@@ -214,11 +214,11 @@ export function SyncPanel() {
       {settings.isPending || (folderSet && sync.isPending) ? (
         <Skeleton />
       ) : settings.isError ? (
-        <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void settings.refetch() }} />
+        <LoadFailed message={t("setup.sync_failed")} onRetry={() => void settings.refetch()} />
       ) : !folderSet ? (
         <SyncUnset />
       ) : sync.isError || !data ? (
-        <EmptyState icon="alert" text={t("setup.sync_failed")} action={{ label: t("action.try_again"), onClick: () => void sync.refetch() }} />
+        <LoadFailed message={t("setup.sync_failed")} onRetry={() => void sync.refetch()} />
       ) : !data.folder ? (
         // A folder saved after the app started: the running app keeps what it started with until it restarts.
         <div className="sync-body">

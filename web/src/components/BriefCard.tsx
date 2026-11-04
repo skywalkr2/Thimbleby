@@ -452,7 +452,7 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
     });
   const copy = async (text: string, accept: boolean) => {
     if ((await copyMessage(text)) === "blocked") {
-      push({ message: t("brief.message.copy_blocked") });
+      push({ message: t("brief.message.copy_blocked"), tone: "warn" });
       return;
     }
     if (accept) await act(() => api.briefMessageCopied(), () => ({ message: t("brief.message.copied") }));
