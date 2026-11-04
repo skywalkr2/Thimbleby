@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: G6's scope; the keyboard walk, screenshot comparisons and the product file wait (owner; section 343)
+
+**Decided:**
+- G6 is motion (D7) and the shared leftovers.
+- The keyboard walk (VP10) waits.
+- D8's screenshot comparisons in CI are deferred until the design settles at the end of the review round.
+- The product file (VP16) moves into phase I with the rename to Thimbleby.
+
+**Why:** stored pictures would need redoing after every round while screens still change, and the product file would otherwise be done twice.
+
+**Impact:** D8 is postponed, not withdrawn. Change log: section 343.
+
 ## 2026-11-04: A file records the person it came from (batch G4d of the fix round)
 
 **Decided:** (design by the main session; no owner choice needed.) The file record gets `from_person`, a person id, instead of the person page guessing from a details key. It is set by a file added from a person's page, a hand-in that names a person and `file.add`, always through the store's transaction and ledger.

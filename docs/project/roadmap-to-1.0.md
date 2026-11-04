@@ -109,7 +109,11 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - *G3c held by the owner (2026-11-04: "skip g3c and DO the small ones after it"):* the Schedule-to-its-mockup batch waits until after the owner's test (its lines stay open in `u3-gate/items.md`). G4d, T1 and G6 go ahead after G1d and G2c.
       - *Review point (owner, 2026-11-04: "do not do final build after T1 until we review where we are"):* after T1, nothing more starts (no G6, no end-of-round full run, no push) until the owner and the main session review where things stand.
       - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
-      - [ ] G6 motion (D7), the keyboard walk, screenshot comparisons in CI (D8), the product file and the brand moments
+      - [ ] G6 (scope set by the owner, 2026-11-04): motion (D7: the mark at first launch and at the end of setup, nothing under reduced motion, hover, pressed and focus on every shared control) and the shared leftovers (G1e lines in `u3-gate/items.md`). Starts after the review point.
+      - *Moved out of G6 (owner, 2026-11-04):*
+        - the keyboard walk (VP10) waits;
+        - the screenshot comparisons in CI (D8, VP15) wait until the design settles at the end of the review round, so the stored pictures aren't redone every round;
+        - the product file (VP16) moves into phase I with the rename.
       Then the full suites, a fresh inventory and mockup capture, and both cold scorers on every screen.
 
 0c. **U4 The functional designer's lessons of 2026-11-03, after the U3 hand-back and before the gate week** (P118 to P123; size: about two and a half days)

@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 343. G6's scope (2026-11-04; owner)
+
+| Where | Before | Now |
+|---|---|---|
+| Screenshot comparisons in CI (14) | D8: six screens at two widths on every push | Deferred until the design settles at the end of the review round |
+| The product file (VP16) | In G6 | Moved to phase I, with the rename |
+| The keyboard walk (VP10) | In G6 | Waits |
+
+- **No config key, API or op change.**
+
 ## 341. A file records the person it came from (2026-11-04; gate fix batch G4d)
 
 Batch G4d of the gate's fix round (5.3, 5.1, 7.14). The person page's Files card and tab read no real files, because nothing recorded whose a file was; they read an ad-hoc details key. Now the `file` record has **from_person** (a reference to a person), written by `engine.files.add_file` and by `file.add`, checked to exist, and shown in the files list (`FileView.from_person`).
