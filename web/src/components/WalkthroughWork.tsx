@@ -30,6 +30,8 @@ import { Row } from "../ui/Row";
 import { Icon } from "../ui/Icon";
 import { TickCard } from "./TickCard";
 import styles from "./WalkthroughWork.module.css";
+import { RowMenu } from "./RowMenu";
+import { useConnection } from "../lib/connection";
 type Side = S["SideView"];
 /** A group of what a business works on: its name and which of the typed lines are in it. */
 type Group = { name: string; picked: string[] };
@@ -463,8 +465,12 @@ export function SavedSide(props: {
   /** "setup": Remove at once while nothing is filed under the side, and asking what happens to what is filed when something
    * is. "ask": always asking what happens to its projects and to-dos. */
   removal?: "setup" | "ask";
+  /** The page of Settings: Rename and Remove are in the row's menu (one place for a row's actions), the meta is one line
+   * ("Job · 2 items"), and nothing can be changed while the app is offline. */
+  inMenu?: boolean;
 }) {
   const { t, tn } = useWords();
+  const offline = useConnection().offline;
   const { side } = props;
   const { push } = useToasts();
   const [renaming, setRenaming] = useState(false);
@@ -576,7 +582,10 @@ export function SavedSide(props: {
         )
       }
       titleId={renaming ? undefined : `${base}-name`}
-      metaLines={[
+      metaLines={props.inMenu ? [
+        [t(`walkthrough.work.kind.${side.kind}`), (side.filed ?? 0) > 0 ? tn("walkthrough.work.filed_short", side.filed ?? 0) : t("walkthrough.work.empty_short")].join(" · "),
+        props.inside.length > 0 ? t("walkthrough.work.projects", { names: props.inside.join(", ") }) : null,
+      ] : [
         t(`walkthrough.work.kind.${side.kind}`),
         props.inside.length > 0
           ? t("walkthrough.work.projects", { names: props.inside.join(", ") })
@@ -585,9 +594,28 @@ export function SavedSide(props: {
             : null,
         (side.filed ?? 0) > 0 ? tn("walkthrough.work.filed", side.filed ?? 0) : null,
       ]}
+      menu={
+        props.inMenu && !renaming ? (
+          <RowMenu
+            label={side.name}
+            actions={[
+              {
+                id: "rename",
+                label: t("walkthrough.work.rename"),
+                disabled: offline,
+                run: () => {
+                  setName(side.name);
+                  setRenaming(true);
+                },
+              },
+              { id: "remove", danger: true, label: t("walkthrough.work.remove"), disabled: busy || offline, run: () => (ask ? setAsking((on) => !on) : void remove()) },
+            ]}
+          />
+        ) : undefined
+      }
       actions={
         <>
-          {renaming ? (
+          {props.inMenu && !renaming ? null : renaming ? (
             <>
               <Button variant="primary" size="sm" disabled={busy || !name.trim()} onClick={() => void rename()}>
                 {t("walkthrough.work.rename_save")}

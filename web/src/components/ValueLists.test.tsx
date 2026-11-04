@@ -329,3 +329,18 @@ test("adding a value the list already offers says so, by its name, instead of do
   expect(calls.some((c) => c.route.startsWith("POST lists/project-status"))).toBe(false);
   expect(box).toHaveValue("at risk");
 });
+
+test("each folded list says how many choices it holds, so nothing has to be opened to know", async () => {
+  api();
+  renderApp(<ValueLists />);
+  expect((await screen.findByText("Project status")).closest("summary")).toHaveTextContent("2 choices");
+  expect(screen.getByText("Project group").closest("summary")).toHaveTextContent("No choices yet");
+  expect(screen.getByText("Stages").closest("summary")).toHaveTextContent("1 choice");
+});
+
+test("on the business page the lists have no second intro line", async () => {
+  api({ "GET setup/business": () => ({ business: true, name: "Shop", personal: "PRJ-1", sides: [{ project: "PRJ-2", kind: "business", name: "Shop", removable: false, filed: 0 }], chosen: null }) });
+  renderApp(<ValueLists place="business" level={3} />);
+  await screen.findByText("Project status");
+  expect(screen.queryByText(/Lists provide choices/)).toBeNull();
+});

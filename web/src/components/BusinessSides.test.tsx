@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { project } from "../lib/records-fixtures";
+import { ConnectionProvider } from "../lib/connection";
 import { fakeApi, Refuse, renderApp } from "../test-utils";
 import { BusinessSides } from "./BusinessSides";
 
@@ -28,7 +29,9 @@ function show() {
 
 async function remove(user: ReturnType<typeof userEvent.setup>, name: string) {
   const row = await screen.findByRole("listitem", { name });
-  await user.click(within(row).getByRole("button", { name: `Remove ${name}` }));
+  // Rename and Remove are in the row's one menu.
+  await user.click(within(row).getByRole("button", { name: `More actions for ${name}` }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   return within(row).findByRole("group", { name: `What happens to the projects and to-dos in ${name}?` });
 }
 
@@ -309,4 +312,57 @@ test("adding a business with nothing connected closes at once and asks nothing m
   await user.click(within(dialog).getByRole("button", { name: "Add the business" }));
   expect(await screen.findByText("Added Quarry Studio.")).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+test("Add a business is the one filled button, and a row's Rename and Remove are in its one menu", async () => {
+  const user = userEvent.setup();
+  show();
+  renderApp(<BusinessSides />);
+  const row = await screen.findByRole("listitem", { name: SHOP });
+  expect(screen.getByRole("button", { name: "Add a business" })).toHaveAttribute("data-weight", "filled");
+  expect(screen.getByRole("button", { name: "Add a job" })).toHaveAttribute("data-weight", "outline");
+  expect(within(row).getAllByRole("button")).toHaveLength(1);
+  await user.click(within(row).getByRole("button", { name: `More actions for ${SHOP}` }));
+  await user.click(await screen.findByRole("menuitem", { name: "Rename" }));
+  expect(within(row).getByRole("textbox", { name: `New name for ${SHOP}` })).toBeInTheDocument();
+});
+
+test("a row's one meta line says its kind and what is under it in few words", async () => {
+  fakeApi({
+    "GET setup/business": () => ({ business: true, name: SHOP, personal: "PRJ-personal", sides: [{ ...sides[0], filed: 2 }, sides[1]], chosen: "work" }),
+    "GET projects": () => [],
+  });
+  renderApp(<BusinessSides />);
+  const row = await screen.findByRole("listitem", { name: SHOP });
+  expect(row).toHaveTextContent("Business · 2 items");
+  expect(row).not.toHaveTextContent("filed under it");
+});
+
+test("while the sides load the add buttons wait, and a load that fails is one card with Try again in place of the list", async () => {
+  fakeApi({ "GET setup/business": () => { throw new Error("down"); }, "GET projects": () => [] });
+  renderApp(<BusinessSides />);
+  expect(await screen.findByText("Your jobs and businesses didn't load.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+});
+
+test("while the app is offline nothing can be added or changed", async () => {
+  show();
+  renderApp(
+    <ConnectionProvider live={{ state: "offline", lastUpdate: null, refresh: () => undefined, reconnect: () => undefined }}>
+      <BusinessSides />
+    </ConnectionProvider>,
+  );
+  const row = await screen.findByRole("listitem", { name: SHOP });
+  expect(screen.getByRole("button", { name: "Add a business" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Add a job" })).toBeDisabled();
+  await userEvent.setup().click(within(row).getByRole("button", { name: `More actions for ${SHOP}` }));
+  expect(await screen.findByRole("menuitem", { name: "Rename" })).toHaveAttribute("aria-disabled", "true");
+});
+
+test("while the sides load, the add buttons wait and the list is a skeleton", async () => {
+  fakeApi({ "GET setup/business": () => new Promise(() => undefined), "GET projects": () => [] });
+  renderApp(<BusinessSides />);
+  expect(await screen.findByRole("status", { name: "Loading…" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add a business" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Add a job" })).toBeDisabled();
 });

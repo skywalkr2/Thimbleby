@@ -125,13 +125,16 @@ test("a source shows its kind, how often it is read and its last read in words",
   expect(item).toHaveTextContent("2 new, 1 changed");
 });
 
-test("connections are cards: a folder or feed is a row in the shared card, with a privacy pill and a readable status", async () => {
+test("connections are cards: a folder or feed is a row in the shared card, with its privacy as words and a readable status", async () => {
   open([source("a", { data_level: "internal", last: run({ new: 2 }) })]);
   const list = await screen.findByRole("list", { name: "Connections" });
   expect(within(list).queryByRole("table")).toBeNull();
   const card = within(list).getByRole("region", { name: "Folders and feeds" });
   const item = within(card).getByRole("listitem", { name: "Source a" });
-  expect(within(item).getByText("Confidential").closest("[data-pill]")).not.toBeNull();
+  // The privacy is plain words in the row's meta line, never a bordered tag.
+  expect(within(item).getByText("Confidential")).toBeInTheDocument();
+  expect(item.querySelector("[data-privacy]")).not.toBeNull();
+  expect(item.querySelector("[data-pill]")).toBeNull();
   expect(item.querySelector("[data-state-mark]")).toBeInTheDocument();
   expect(within(item).getByText(/2 new/)).toBeInTheDocument();
   expect(item.querySelector("[data-state-mark]")).toHaveTextContent(/^Read /);
@@ -142,11 +145,34 @@ test("adding a connection is a two-step drawer", async () => {
   open([]);
   await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
   const drawer = await screen.findByRole("dialog");
-  expect(within(drawer).getByRole("heading", { name: "Choose what to read" })).toBeInTheDocument();
+  // One title for the drawer, a step counter under it and one question: no second heading that says the same.
+  expect(within(drawer).getByRole("heading", { name: "Add mail, calendar or folder" })).toBeInTheDocument();
+  expect(within(drawer).queryByRole("heading", { name: "Choose what to read" })).toBeNull();
+  expect(within(drawer).getByText("Step 1 of 2")).toBeInTheDocument();
+  // Nothing is chosen at first, so Continue waits for a choice.
+  expect(within(drawer).getByRole("button", { name: "Continue" })).toBeDisabled();
   await user.click(within(drawer).getByRole("radio", { name: /A folder/ }));
   await user.click(within(drawer).getByRole("button", { name: "Continue" }));
-  expect(within(drawer).getByRole("heading", { name: "Connection details" })).toBeInTheDocument();
+  expect(within(drawer).getByText("Step 2 of 2")).toBeInTheDocument();
   expect(within(drawer).getByLabelText("Name")).toBeInTheDocument();
+});
+
+test("every kind is a card with a title and a line, the groups are labels, and none is chosen at first", async () => {
+  const user = userEvent.setup();
+  const kinds = [
+    kind("folder", "A folder", null, [field("path", "text")]),
+    { ...kind("demo/mail", "Example mail", "demo", [field("folder", "text")]), reads: ["mail"] },
+    { ...kind("demo/cal", "Example calendar", "demo", [field("address", "text")]), reads: ["calendar"] },
+  ];
+  open([], { "GET watch/kinds": () => kinds });
+  await user.click(await screen.findByRole("button", { name: "Add mail, calendar or folder" }));
+  const drawer = await screen.findByRole("dialog");
+  for (const radio of await within(drawer).findAllByRole("radio")) expect(radio).not.toBeChecked();
+  // An add-on's kind with no line of its own says what it reads.
+  expect(within(drawer).getByRole("radio", { name: /Example mail/ }).closest("label")).toHaveTextContent("Your mail, only read, never changed or sent.");
+  expect(within(drawer).getByRole("radio", { name: /Example calendar/ }).closest("label")).toHaveTextContent("Your calendar events, only read.");
+  // One group label for each group, drawn as the shared label.
+  expect(drawer.querySelectorAll("[data-group-label]")).toHaveLength(2);
 });
 
 test("on the second step Escape and the close button close the drawer at once, with nothing typed to lose; typed text asks first", async () => {

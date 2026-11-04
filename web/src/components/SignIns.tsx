@@ -22,6 +22,9 @@ import { FormBlock } from "../ui/FormBlock";
 import { Actions } from "../ui/Actions";
 import { RowList } from "../ui/RowList";
 import { Row } from "../ui/Row";
+import { Icon } from "../ui/Icon";
+import { useConnection } from "../lib/connection";
+import { Skeleton } from "../ui/Skeleton";
 import { ItemList, Item } from "../ui/ItemList";
 import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
 type SignIn = S["SignInView"];
@@ -39,12 +42,12 @@ export function SignIns(props: {
 }) {
   const { t } = useWords();
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
-  if (signIns.isPending) return null;
+  if (signIns.isPending) return <Skeleton rows={1} className="connections-accounts" />;
   if (signIns.isError) return <LoadFailed message={t("sign_in.load_failed")} onRetry={() => void signIns.refetch()} />;
   // Until an add-on signs in to a service there is nothing to list; the way to turn one on is offered instead.
   if (signIns.data.length === 0) {
     return (
-      <section className="panel-section" aria-labelledby="sign-ins-title">
+      <section className={["panel-section", props.accountsIn === "cards" ? "connections-accounts" : ""].filter(Boolean).join(" ")} aria-labelledby="sign-ins-title">
         <div className="heading">
           <h3 id="sign-ins-title">{t("sign_in.title")}</h3>
         </div>
@@ -58,7 +61,7 @@ export function SignIns(props: {
     );
   }
   return (
-    <section className="panel-section" aria-labelledby="sign-ins-title">
+    <section className={["panel-section", props.accountsIn === "cards" ? "connections-accounts" : ""].filter(Boolean).join(" ")} aria-labelledby="sign-ins-title">
       <div className="heading">
         <h3 id="sign-ins-title">{t("sign_in.title")}</h3>
       </div>
@@ -86,6 +89,8 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
   // The paste form: open by itself on a row with no registration yet, until the person closes it; elsewhere only when asked for.
   const [formChoice, setFormChoice] = useState<boolean | null>(null);
   const { item } = props;
+  // Signing in or out, choosing what to read and the rest all need the network.
+  const offline = useConnection().offline;
   const base = `sign-in-${item.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   const signedIn = item.status === "signed_in";
 
@@ -99,6 +104,7 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
   const busy = starting || signingOut;
+  const held = busy || offline;
   const problem = startProblem || outProblem;
 
   const askToSignOut = (account: Account | null) => setConfirming({ account });
@@ -195,17 +201,17 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
   const chooseAt = (item.accounts ?? []).length === 1 ? ((item.accounts ?? [])[0].address ?? undefined) : (item.account ?? undefined);
   const actions: MenuAction[] = [];
   if (signedIn && notReading.length > 0) {
-    actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name), undefined, chooseAt), disabled: busy });
+    actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name), undefined, chooseAt), disabled: held });
   }
   if (signedIn && !several) {
-    actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => askToSignOut(null), disabled: busy });
-    actions.push({ id: "sign-in-again", label: t("sign_in.sign_in_again"), run: () => void start(), disabled: busy || !item.ready });
+    actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => askToSignOut(null), disabled: held });
+    actions.push({ id: "sign-in-again", label: t("sign_in.sign_in_again"), run: () => void start(), disabled: held || !item.ready });
   }
   if (item.can_paste && !formOpen && !pasted && (item.app === "add-on" || item.app === "none")) {
-    actions.push({ id: "use-own", label: t("sign_in.own.use"), run: openForm, disabled: busy });
+    actions.push({ id: "use-own", label: t("sign_in.own.use"), run: openForm, disabled: held });
   }
-  if (pasted) actions.push({ id: "stop", label: t("sign_in.own.stop"), run: stopUsing, disabled: busy });
-  if (item.set_aside && !pasted) actions.push({ id: "bring-back", label: t("sign_in.own.bring_back"), run: bringBack, disabled: busy });
+  if (pasted) actions.push({ id: "stop", label: t("sign_in.own.stop"), run: stopUsing, disabled: held });
+  if (item.set_aside && !pasted) actions.push({ id: "bring-back", label: t("sign_in.own.bring_back"), run: bringBack, disabled: held });
 
   const callbackField = (
     <FormField id={`${base}-callback`} label={t("sign_in.callback")}>
@@ -227,6 +233,7 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
     <Row
       aria-labelledby={`${base}-title`}
       className="connection-account"
+      lead={<Icon name="inbox" />}
       state={needsYou(statusTone) ? statusTone : undefined}
       title={item.label}
       titleId={`${base}-title`}
@@ -245,7 +252,7 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
         <Button
           variant="primary"
           data-key="primary"
-          disabled={busy || notReady}
+          disabled={held || notReady}
           aria-label={named}
           aria-describedby={describedBy || undefined}
           onClick={() =>
@@ -276,7 +283,7 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
                     <Actions as="span">
                       {a.status === "expired" && (
                         <Button variant="quiet"
-                          disabled={busy || !item.ready}
+                          disabled={held || !item.ready}
                           aria-label={t("sign_in.sign_in_again_account", { account: who })}
                           onClick={() => void start()}
                         >
@@ -297,9 +304,9 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
             </ItemList>
           )}
           {several && accounts.length > 0 && (
-            <Actions align="end">
-              <Button variant="quiet"
-                disabled={busy || !item.ready}
+            <Actions>
+              <Button icon="plus"
+                disabled={held || !item.ready}
                 aria-label={t("sign_in.add_account_named", { label: item.label })}
                 onClick={() => void start()}
               >
@@ -331,7 +338,7 @@ export function SignInRow(props: { item: SignIn; accountsIn?: "row" | "cards"; o
               </p>
               <Actions align="end">
                 <Button
-                  disabled={busy || !item.ready}
+                  disabled={held || !item.ready}
                   aria-label={t("sign_in.sign_in_again_named", { label: item.label })}
                   aria-describedby={`${base}-missing`}
                   onClick={() => void start()}

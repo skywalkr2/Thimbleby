@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: Settings, part two (Your business, Connections, Add a connection, Lists, Files, Add-ons and an add-on's page), batch G5b of the fix round
+
+**Decided:** (the gate's fix round, batch G5b; design by the main session, within D1, D7 and D10; no owner choice needed.)
+- **D10 applied:** an add-on to get says, before Install, that installing needs a restart the person chooses; the app never restarts on its own.
+- **A failure is said once:** a catalog that could not be read is one failed card with the one Try again; its reason ("Offline: ...") is under Catalog. Connections that cannot be loaded are one card, not one for the accounts too.
+- **An add-on's page is never blank:** its state, version and purpose, then its settings and keys, or "Nothing to set here" with the way to Connections.
+- **Connections:** a first read still to come is said once for the account, with Read now; privacy is plain words (D1's one scale); offline holds every action of a connection, since each needs the network.
+- **Your business:** one filled button (Add a business), the row's actions in one menu, one meta line.
+- **No new motion (D7):** the loading shapes are static.
+
+**Not changed:** the radio card's check mark, the button's reason hint that remounts the button, the side menu's tooltips on cut names (shared parts, G1d); the demo workspace's own brand colour on Lists (the person's brand may override); each list showing on one page only (by design).
+
+**Why:** the cold scorers named these on each screen. **Impact:** `web/src/components/` (Addons, AddonPage, Settings, Sources, ConnectionCard, SignIns, WalkthroughWork, BusinessSides, ValueLists), `web/src/styles.css`, `web/src/wording/en.json`, `engine/packs.py`, `web/visual/inventory.ts`. Change log: section 338.
+
 ## 2026-11-04: Three choices during the gate's fix round (owner; section 337)
 
 **Decided:** the owner chose the recommended answer on three open choices that the fix batches raised.

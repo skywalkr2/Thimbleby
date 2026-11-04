@@ -387,10 +387,13 @@ test("'Signs in to' names each sign-in by the label its add-on gives it, never a
 });
 
 test("a catalog that couldn't be read is not described as having no packs, and says why", async () => {
-  open(view({ feeds: [feed({ error: "couldn't read it: the site isn't answering", read_at: null })] }));
-  expect(await screen.findByText("The catalog couldn't be read: no add-ons are listed. Check the reason below, then refresh.")).toBeInTheDocument();
+  open(view({ feeds: [feed({ error: "Offline: there is no internet connection", read_at: null })] }));
+  // One failed card with its one Try again, and the reason said once, in the Catalog.
+  expect(await screen.findByText("No add-ons are listed: the catalog couldn't be reached. The reason is under Catalog.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   expect(screen.queryByText("No add-ons are listed yet.")).toBeNull();
-  expect(screen.getByText("This catalog couldn't be read: couldn't read it: the site isn't answering")).toBeInTheDocument();
+  expect(screen.getAllByText(/Offline: there is no internet connection/)).toHaveLength(1);
+  expect(document.body.textContent ?? "").not.toMatch(/couldn't read it/);
 });
 
 test("a catalog served from this computer is named for that, never by its number", async () => {
@@ -415,7 +418,7 @@ test("each catalog shows its domain and when it was read, an error in words, and
     }),
   );
   expect(await screen.findByText(`${HOST} · not read yet`)).toBeInTheDocument();
-  expect(screen.getByText("This catalog couldn't be read: It could not be reached")).toBeInTheDocument();
+  expect(screen.getByText("It could not be reached")).toBeInTheDocument();
   expect(screen.getByText(/^more\.example\.com · read /)).toBeInTheDocument();
   const summary = screen.getByText("2 notes");
   const details = summary.closest("details")!;
@@ -921,7 +924,7 @@ test("on Installed, Remove is offered for an add-on the app installed that is of
 test("the introduction says installing happens here and that the app never takes payment", async () => {
   open(view());
   const intro = await screen.findByText(/Add-ons add a kind of work, such as publishing or social posts/);
-  expect(intro).toHaveTextContent("Installing one from the list happens here");
+  expect(intro).toHaveTextContent("then install it here");
   expect(intro).toHaveTextContent("never takes payment");
   expect(intro).not.toHaveTextContent("never installs");
 });
@@ -1283,4 +1286,28 @@ test("Remove asks first, says what stays, and only removes when the person goes 
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   await user.click(await screen.findByRole("button", { name: "Remove it" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
+});
+
+test("an add-on to get says before Install that installing needs a restart, and an installed one shows its version", async () => {
+  const { user } = open(
+    view({
+      available: [pack("fresh", { installable: true })],
+      installed: [{ name: "kept", description: "What kept does", enabled: true, state: "enabled", reason: null, version: "2.3.1", removable: false, what: summary() }],
+    }),
+  );
+  const fresh = await row("Name of fresh");
+  expect(fresh).toHaveTextContent("Installing needs a restart, which you choose");
+  expect(within(fresh).getByRole("button", { name: "Install Name of fresh" })).toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "Installed" }));
+  expect((await screen.findAllByText(/Version 2\.3\.1/)).length).toBeGreaterThan(0);
+});
+
+test("when no catalog could be read the page shows one failed card with Try again that reads the catalogs again", async () => {
+  const { calls, user } = open(view({ feeds: [feed({ error: "Offline: there is no internet connection", read_at: null })] }), {
+    "POST packs/refresh": () => view({ available: [pack("back")] }),
+  });
+  await screen.findByText("No add-ons are listed: the catalog couldn't be reached. The reason is under Catalog.");
+  await user.click(screen.getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST packs/refresh")).toBe(true));
+  expect(await screen.findByText("Name of back")).toBeInTheDocument();
 });

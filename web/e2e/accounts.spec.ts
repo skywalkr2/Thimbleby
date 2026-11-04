@@ -172,6 +172,25 @@ test.describe.serial("several accounts", () => {
     await expect(sides.getByRole("checkbox", { name: "Personal" })).toBeChecked();
   });
 
+  test("G5b. the business page puts a section's gap under its buttons and a small one under the label of its rows; Connections stands the accounts a section's gap below its last card", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`?token=${info.token}#settings/business`);
+    const label = page.getByRole("heading", { level: 3, name: "What it is called" });
+    await expect(label).toBeVisible(LOADED);
+    const buttons = (await page.getByRole("button", { name: "Add a job" }).boundingBox())!;
+    const words = (await label.boundingBox())!;
+    const rows = (await page.locator("[data-side]").first().boundingBox())!;
+    // Measured: 32px (a section's gap) under the buttons, at most 12px between the label and its first row.
+    expect(words.y - (buttons.y + buttons.height)).toBeGreaterThanOrEqual(28);
+    expect(rows.y - (words.y + words.height)).toBeLessThanOrEqual(12);
+    await go(page, "settings/connections");
+    const accounts = page.locator("#sign-ins-title");
+    await expect(accounts).toBeVisible(LOADED);
+    const last = (await page.locator("[data-connection-card]").last().boundingBox())!;
+    const heading = (await accounts.boundingBox())!;
+    expect(heading.y - (last.y + last.height)).toBeGreaterThanOrEqual(28);
+  });
+
   test("X80. under the business filter Today leaves out what is only Personal: the first account's mail, and a clash that is not on the business", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto(`?token=${info.token}`);

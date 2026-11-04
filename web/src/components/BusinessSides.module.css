@@ -1,3 +1,6 @@
 /* The page's own words and its two Add buttons, with room before the list of what is already there. */
 .top { display: grid; gap: var(--space-3); justify-items: start; margin-bottom: var(--space-4); }
 .top p { margin: 0; }
+
+/* The label of the list under the buttons: close above its own rows, a section's gap below the buttons. */
+.sides { margin: var(--space-8) 0 var(--space-2); }

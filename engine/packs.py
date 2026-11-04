@@ -226,6 +226,12 @@ def _why_unread(kind: str) -> str:
     return _UNREAD_WORDS.get(kind, "the site didn't answer in a way the app could use")
 
 
+def _unread_line(kind: str) -> str:
+    """The reason a catalog has no copy, said once: the word for the state (Offline) and the reason."""
+    why = _why_unread(kind)
+    return f"Offline: {why}" if kind == "offline" else why[:1].upper() + why[1:]
+
+
 def read_feeds(
     urls: list[str],
     cache_dir: Any,
@@ -266,7 +272,7 @@ def read_feeds(
                     )
                     feeds.append(feed)
                 else:
-                    feeds.append(Feed(url, error=f"couldn't read it: {_why_unread(err.kind)}"))
+                    feeds.append(Feed(url, error=_unread_line(err.kind)))
                 continue
             finally:
                 if web_for is None:

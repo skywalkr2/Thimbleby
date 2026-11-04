@@ -237,8 +237,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 }
 .settings-nav-group > [data-group-label] { padding-inline: var(--space-3); }
 .settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.settings-nav-sublist { list-style: none; margin: 0 0 0 var(--space-3); padding: 0; border-inline-start: 1px solid var(--border); }
-.settings-nav-sublist a { padding-inline-start: var(--space-4); font-size: var(--text-sm); }
+.settings-nav-sublist { list-style: none; margin: 0; padding: 0; }
+.settings-nav .settings-nav-sublist a { padding-inline-start: var(--space-6); font-size: var(--text-sm); }
 .settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; min-height: var(--target-min); box-sizing: border-box; }
 .settings-nav a:hover { background: var(--surface-sunk); }
 .settings-nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
@@ -342,11 +342,16 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
   .list-accordion-meta { align-self: start; }
 }
 
+/* An add-on's own page of Settings: its state and what it is for above its settings */
+.addon-page { display: grid; gap: var(--space-4); min-width: 0; }
+.addon-page-head { display: grid; gap: var(--space-2); }
+.addon-page-about { max-width: var(--measure, 62ch); }
+
 /* Add-ons: tabs, pack rows, the install dialog and the catalog lines */
 .addon-tabs { display: grid; gap: var(--space-4); }
-.tablist { display: flex; flex-wrap: wrap; gap: var(--space-1); background: var(--surface-sunk); padding: var(--space-1); border-radius: var(--radius-md); justify-self: start; }
-.tab { padding: var(--space-1) var(--space-4); border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; }
-.tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--elev-1); border-bottom-color: var(--accent); }
+.tablist { display: flex; flex-wrap: wrap; gap: var(--space-4); border-bottom: 1px solid var(--border); }
+.tab { padding: var(--space-2) 0; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 .tab[data-focus-visible] { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); }
 .tab-panel { display: grid; gap: var(--space-4); }
 .tab-panel:focus-visible { border-radius: var(--radius-sm); }
@@ -361,7 +366,8 @@ kbd { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var
 .copy-line { display: grid; gap: var(--space-2); }
 .copy-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .command { flex: 1 1 240px; min-width: 0; font-family: var(--font-mono); font-size: var(--text-sm); background: var(--surface-sunk); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); white-space: pre-wrap; overflow-wrap: anywhere; }
-.catalog { display: grid; gap: var(--space-2); border-top: 1px dashed var(--border); padding-top: var(--space-3); }
+.catalog { display: grid; gap: var(--space-2); border-top: 1px solid var(--border); padding-top: var(--space-5); }
+.catalog-more { justify-self: start; margin-inline-start: calc(-1 * var(--space-2)); }
 .catalog .heading h3 { font-size: var(--text-md); margin: 0; }
 .catalog-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .feed { overflow-wrap: anywhere; display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
@@ -500,6 +506,8 @@ input[data-key-field-state="works"] { border-color: var(--ok); }
 
 /* Forms built from setting items: a source's (added or changed from the Sources screen) and an add-on's data file. */
 .source-form, .data-file-form { box-shadow: none; }
+/* The add form inside a drawer is the drawer's own content, not a card in a card. */
+.source-form:not(.panel) { display: grid; gap: var(--space-3); min-width: 0; }
 [data-row-extra] > .source-form, [data-row-extra] > .data-file-form { margin: 0 0 var(--space-2); background: var(--surface-sunk); }
 .source-form h3, .data-file-form h5 { font-size: var(--text-section); line-height: var(--lh-section); margin: 0; }
 .data-file-form h5 { font-size: var(--text-md); line-height: var(--lh-md); }
@@ -683,3 +691,6 @@ pre.file-preview { margin: 0; max-height: 18rem; overflow: auto; white-space: pr
 @container settingsform (min-width: 640px) {
   .notice-targets { max-width: calc(100% - 17rem - var(--space-5)); }
 }
+
+/* The accounts block under the cards of Connections stands a section's gap below them. */
+.connections-accounts { margin-top: var(--space-8); }

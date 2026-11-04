@@ -26,6 +26,8 @@
 .refused { background: var(--danger-soft); color: var(--text); }
 .refusedText { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; }
 .refusedText svg { flex: none; color: var(--danger); }
+.waitingFirst { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); min-width: 0; }
+.privacyText { color: var(--text-muted); }
 .parts { list-style: none; margin: 0; padding: 0; min-width: 0; }
 .empty { margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-meta); line-height: var(--lh-meta); }
 
@@ -60,7 +62,7 @@
   .menuHead { position: absolute; top: var(--space-2); right: var(--space-2); }
   .part { padding-inline: var(--space-4); }
   .extra { padding-left: 0; }
-  .editor, .waiting, .refused, .empty { padding-inline: var(--space-4); }
+  .editor, .waiting, .refused, .empty, .waitingFirst { padding-inline: var(--space-4); }
 }
 :global([data-narrow]) .acts { display: contents; }
 :global([data-narrow]) .again { grid-area: acts; justify-self: start; margin-top: var(--space-2); }
@@ -71,3 +73,14 @@
 :global([data-narrow]) .service { grid-area: service; justify-self: start; }
 :global([data-narrow]) .privacy { grid-area: privacy; justify-self: start; }
 :global([data-narrow]) .sep { display: none; }
+
+/* Loading: the shape of the cards that are coming, at their height, and the block of accounts beneath them. */
+.skeleton { --bar: color-mix(in srgb, var(--text) 13%, var(--surface)); display: grid; gap: var(--space-4); margin-top: var(--space-4); min-width: 0; }
+.skeletonCard { display: grid; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; min-height: 195px; }
+.skeletonHead { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: var(--space-4); align-items: center; padding: var(--space-4) var(--space-5); }
+.skeletonIcon { display: block; width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--bar); }
+.skeletonLines { display: grid; gap: var(--space-2); min-width: 0; }
+.skeletonBar { display: block; height: 14px; width: 55%; border-radius: var(--radius-sm); background: var(--bar); }
+.skeletonShort { width: 30%; height: 12px; }
+.skeletonPart { display: grid; align-items: center; min-height: 48px; padding: var(--space-2) var(--space-5) var(--space-2) calc(var(--space-5) + var(--space-10) + var(--space-4)); border-top: 1px solid var(--border); }
+.skeletonAccounts { min-height: 96px; margin-top: var(--space-4); }

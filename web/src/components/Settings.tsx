@@ -67,6 +67,7 @@ import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
 import { AiChoices } from "./AiRouting";
 import { MergedRow } from "./MergedRow";
+import { AddonPage } from "./AddonPage";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
@@ -901,18 +902,25 @@ export function Settings(props: {
         </>
       );
     }
+    if (section.startsWith("addon/")) {
+      const plugin = section.slice("addon/".length);
+      const own = form(section);
+      return (
+        <>
+          {heading(section)}
+          <AddonPage plugin={plugin} hasContent={own !== null || moreSettings(section) !== null}>
+            {own}
+            <AddonSecrets unlessSignedIn plugin={plugin} name={label(section)} />
+            {moreSettings(section)}
+          </AddonPage>
+        </>
+      );
+    }
     return (
       <>
         {heading(section)}
         {form(section, section === "you" ? <YourName /> : undefined)}
         {section === "links" && <PageLinks />}
-        {section.startsWith("addon/") && (
-          <AddonSecrets
-            unlessSignedIn
-            plugin={section.slice("addon/".length)}
-            name={label(section)}
-          />
-        )}
         {section === "you" && <ActingAccounts />}
         {section === "today" && <ReminderWhere />}
         {section === "today" && <Notifications part="browser" />}

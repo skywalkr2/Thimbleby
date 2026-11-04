@@ -323,7 +323,7 @@ test("on a phone a connection's name takes the row's width, and a records table 
   expect(await page.locator(".source-table").count()).toBe(0);
   await notWider(page, "Connections on a phone");
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("?token=e2e-token#records/people");
+  await page.goto("?token=e2e-token#records/projects");
   const heads = page.locator("table thead th");
   await expect(heads.first()).toBeVisible(LOADED);
   // No header is cut to an ellipsis: each is as wide as its own text.
@@ -450,4 +450,20 @@ test("the AI page sets its spending group off with a rule above the heading", as
     firstRow: getComputedStyle(el.querySelector(".setting")!).borderTopWidth,
   }));
   expect(look).toEqual({ above: "1px", firstRow: "0px" });
+});
+
+// The page of an add-on in the side list is a nested link; its selected fill starts at the same edge as the other links' fill.
+test("the selected link of an add-on's page starts where the selected link of any other page starts", async ({ page }) => {
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await page.goto("?token=e2e-token#settings/connections");
+  const selected = async () => (await bar(page).locator("a[aria-current='page']").boundingBox())!;
+  await expect(bar(page).locator("a[aria-current='page']")).toBeVisible(LOADED);
+  const plain = await selected();
+  const nested = bar(page).locator(".settings-nav-sublist a").first();
+  await expect(nested).toBeVisible(LOADED);
+  await nested.click();
+  await expect(bar(page).locator(".settings-nav-sublist a[aria-current='page']")).toBeVisible(LOADED);
+  const inner = await selected();
+  expect(Math.abs(inner.x - plain.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(inner.width - plain.width)).toBeLessThanOrEqual(1);
 });

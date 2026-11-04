@@ -583,6 +583,45 @@ const kinds = (a: number[], cost: number[]) => [
   skill("draft", "Write an update in your voice", "Drafts a short note for you to check.", 10, a[1], cost[1]),
   skill("sort", "Sort a new item", "Decides where an item belongs.", a[2] === 0 ? 0 : 10, a[2], a[2] === 0 ? null : cost[2]),
 ];
+/** An add-on's data forms and their files, for the Files page: one kind with a file that comes with the add-on and one of the person's own. */
+const FORMS = [{ name: "example/templates", plugin: "example", label: "Page templates", description: "How a printed page is laid out.", has_preview: false, pattern: "*.yaml", single: false }];
+const FORM_FILES = [
+  { file: "classic", layer: "shipped", layers: ["shipped"], problem: null },
+  { file: "my-layout", layer: "workspace", layers: ["workspace", "shipped"], problem: null },
+];
+/** The Add-ons screen's reads with a catalog that was read: three add-ons to get, one of them with a price, and the one installed. */
+const pack = (id: string, name: string, summary: string, price: { model: "free" | "one_time" | "subscription"; amount: number | null; period?: "month" | "year" }, reaches: string[] = []) => ({
+  id,
+  name,
+  summary,
+  version: "1.2.0",
+  installed_version: null,
+  publisher: "Made-up Studio",
+  maintainers: false,
+  demo: false,
+  enabled: false,
+  removable: false,
+  installable: true,
+  compatible: true,
+  updated: "2026-10-02",
+  feed: "example.com",
+  install: "",
+  homepage: null,
+  homepage_domain: null,
+  costs: [],
+  price: { model: price.model, amount: price.amount, currency: "USD", note: "", period: price.period ?? null },
+  what: { adds: { actions: 2, ai_work: 1, item_types: [], screens: 1, setup_steps: 0, sources: 1, today: 1 }, reaches: { hosts: reaches, keys: 0, programs: [], sign_ins: [] }, keeps: "internal" as const, reads: [] as string[] },
+});
+const PACKS = {
+  enabled: true,
+  available: [
+    pack("example-notes", "Meeting notes", "Turns a meeting's notes into follow-ups.", { model: "free", amount: null }),
+    pack("example-social", "Social posts", "Drafts posts for you to approve and send.", { model: "subscription", amount: 4, period: "month" }, ["api.example.com"]),
+    pack("example-books", "Book writing", "Plans, drafts and builds a book, chapter by chapter.", { model: "one_time", amount: 29 }, ["files.example.com"]),
+  ],
+  feeds: [{ domain: "example.com", address: "https://example.com/packs.yaml", error: null, notes: [], own: false, read_at: "2026-11-03T09:00:00", removable: true }],
+  installed: [],
+};
 const AI_SKILLS = {
   min_score: 0.8,
   stale_days: 60,
@@ -937,11 +976,12 @@ function build(): Screen[] {
     ["links", "Quick links", SIGNED],
     ["business", "Your business", SEEDED],
     // Lists is a section only where an add-on (or a core kind) has a list that is not a project's; Files only where an add-on
-    // provides forms. The demo workspace has the first; no workspace made for a capture has the second (see settings-files below).
+    // provides forms. The demo workspace has the first; the second is answered by the capture itself (see FORMS below).
     ["lists", "Lists", DEMO],
     ["connections", "Connections", SIGNED],
     ["addons", "Add-ons", SIGNED],
-    ["files", "Files", SIGNED, "no workspace made for a capture has an add-on that provides forms, and Settings then has no Files section (it opens another section instead of this one)"],
+    // No workspace made for a capture has an add-on that provides forms, so the page's two reads are answered with the capture's own.
+    ["files", "Files", SIGNED],
     ["advanced", "Advanced", SIGNED],
   ];
   // What each section reads to draw itself, held or refused for its loading and couldn't-load pictures: the shell's own reads are
@@ -958,7 +998,8 @@ function build(): Screen[] {
     advanced: /\/api\/settings/,
   };
   for (const [id, label, where, why] of sections) {
-    const base = s("Settings", `settings-${id}`, `Settings, ${label}`, where, reach(`settings/${id}`), { main: id === "connections", ...(why ? { undrivable: why } : {}) });
+    const drive = id === "files" ? answeredMany("settings/files", [[/\/api\/data-forms$/, FORMS], [/\/api\/data-forms\/[^/]+\/[^/]+\/files$|\/api\/data-forms\/.+\/files$/, FORM_FILES]]) : reach(`settings/${id}`);
+    const base = s("Settings", `settings-${id}`, `Settings, ${label}`, where, drive, { main: id === "connections", ...(why ? { undrivable: why } : {}) });
     add(base);
     if (["you", "ai", "today", "backups", "appearance", "links", "advanced", "connections", "business"].includes(id)) add(...shared(base, `settings/${id}`, OWN_READS[id]));
   }
@@ -1000,6 +1041,30 @@ function build(): Screen[] {
   );
   // The add-ons screen with an add-on installed: the demo workspace has one (the accounts workspace's catalog is not reachable).
   add(state(s("Settings", "settings-addons", "Settings, Add-ons", DEMO, reach("settings/addons")), "With an add-on installed", DEMO, withChoice("settings/addons", /^Installed/)));
+  // The catalog that was read: the add-ons to get with their prices and what they reach (the workspace made for a capture has no reachable catalog).
+  add(state(s("Settings", "settings-addons", "Settings, Add-ons", DEMO, reach("settings/addons")), "A catalog with add-ons", SIGNED, answeredMany("settings/addons", [[/\/api\/packs$/, PACKS]])));
+  // Business: no business yet, one, and four (the page shows four by itself).
+  const businesses = (n: number) => patched("settings/business", /\/api\/setup\/business$/, (body: { sides: unknown[] }) => { body.sides = body.sides.slice(0, n); });
+  add(
+    state(page("business"), "No business yet", SEEDED, businesses(0)),
+    state(page("business"), "One business", SEEDED, businesses(1)),
+    // Lists: one list open (its choices, add and the rest), and one with nothing in it.
+    state(page("lists"), "A list open", DEMO, async (env) => {
+      await open(env, "settings/lists");
+      await env.page.locator(".list-accordion > summary").first().click();
+      await env.page.waitForTimeout(400);
+    }),
+    state(page("lists"), "A list with nothing in it", DEMO, async (env) => {
+      await patched("settings/lists", /\/api\/lists$/, (body: Array<{ values: string[] }>) => { if (body[0]) body[0].values = []; })(env);
+      await env.page.locator(".list-accordion > summary").first().click();
+      await env.page.waitForTimeout(400);
+    }),
+  );
+  const openAddConnection = async (env: Env) => {
+    await open(env, "settings/connections");
+    await press(env, /^Add (mail|an account|a connection)/, "Connections has no Add button");
+  };
+  const addConnection = s("Settings", "settings-add-connection", "Settings, Add a connection (the drawer)", SIGNED, openAddConnection);
   add(
     // Two accounts that have run and been measured: the pictures of the compare grid. No workspace made for a capture has a real
     // account, so the page's reads are answered with the capture's own (the page with no account at all is the state beside it).
@@ -1034,9 +1099,21 @@ function build(): Screen[] {
       await go(env, href.slice(href.indexOf("#") + 1));
       await settle(env.page);
     }),
-    s("Settings", "settings-add-connection", "Settings, Add a connection (the drawer)", SIGNED, async (env) => {
-      await open(env, "settings/connections");
-      await press(env, /^Add (mail|an account|a connection)/, "Connections has no Add button");
+    addConnection,
+    state(addConnection, "Step 2, a news feed", SIGNED, async (env) => {
+      await openAddConnection(env);
+      await env.page.getByRole("dialog").getByRole("radio", { name: /^A news feed/ }).click();
+      await env.page.getByRole("dialog").getByRole("button", { name: "Continue" }).click();
+      await env.page.waitForTimeout(500);
+    }),
+    state(addConnection, "A wrong address", SIGNED, async (env) => {
+      await openAddConnection(env);
+      await env.page.getByRole("dialog").getByRole("radio", { name: /^A news feed/ }).click();
+      await env.page.getByRole("dialog").getByRole("button", { name: "Continue" }).click();
+      await env.page.getByRole("dialog").getByLabel("Name", { exact: true }).fill("My feed");
+      await env.page.getByRole("dialog").getByLabel("Feed address").fill("not an address");
+      await env.page.getByRole("dialog").getByRole("button", { name: "Add connection" }).click();
+      await env.page.waitForTimeout(1200);
     }),
     s("Settings", "settings-sign-out", "Settings, Sign out of an account (the question)", SIGNED, async (env) => {
       await open(env, "settings/connections");

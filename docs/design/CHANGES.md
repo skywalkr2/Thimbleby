@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 338. Settings, part two: Your business, Connections, Add a connection, Lists, Files, Add-ons and an add-on's page (2026-11-04; gate fix batch G5b)
+
+| Where | Before | Now |
+|---|---|---|
+| Add-ons (7.9, 7.15; D10) | A failed catalog said "couldn't be read" three times, the empty area and the Refresh button each had a retry, tabs were a pill and an underline, "Add another catalog" was bare grey text, nothing said installing needs a restart | One failed card with Try again, the reason once under Catalog ("Offline: ..."); underline tabs; a link-style button; "Installing needs a restart, which you choose" before Install; the version on an installed row; a shorter introduction |
+| An add-on's page (7.9) | A title over a blank page when the add-on signs in | Its state, version and what it is for, its settings and keys, or "Nothing to set here" and the way to Connections; the nested link's selection has the same edge as the others |
+| Connections (7.9) | An error line for each failed read, a grey dot and "Not read yet" on every row, a bordered "Private" tag, an accounts block with another anatomy, no skeleton, Add held never | One failed card; one line "Nothing is read yet" with Read now when none of an account's connections was read; privacy as plain words; the accounts block with an icon, a real Add another account button and a section's gap above it; account cards as the skeleton; offline holds Add and every action of a connection |
+| Add a connection (7.9) | Two headings, a step line and a question that said the same; group labels in grey sentence case; an add-on's kinds with no line | The drawer's title, "Step 1 of 2" and one question; the shared small group label; a line for every kind (what it reads) |
+| Your business (7.9) | Rename and Remove in every row, two outline Add buttons, three help lines, no loading or failed state, nothing held offline | Add a business is the filled button; Rename and Remove in the row's menu; "Job · 2 items"; a skeleton, a failed card; offline holds the changes; the Lists below have no second intro |
+| Lists (7.9) | A closed list gave no count | "N choices" on each closed list |
+| Capture only | Files, the catalog's list and the states of Business, Lists and the Add drawer were not captured | Answered by the capture itself (`web/visual/inventory.ts`) |
+
+- **No config key, API or op change in this section.** `engine/packs.py` words a catalog's read error as the reason alone ("Offline: there is no internet connection"); the API shape is unchanged. Built: `web/src/components/AddonPage.test.tsx`, `Addons.test.tsx`, `BusinessSides.test.tsx`, `ConnectionCard.test.tsx`, `Sources.test.tsx`, `ValueLists.test.tsx`, `tests/test_packs.py`, `web/e2e/accounts.spec.ts`, `web/e2e/settings-walk.spec.ts`.
+
 ## 337. Three choices in the gate's fix round (2026-11-04; owner)
 
 | Where | Before | Now |

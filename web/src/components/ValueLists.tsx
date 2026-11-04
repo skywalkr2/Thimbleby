@@ -43,7 +43,7 @@ export function ValueLists(props: { level?: 2 | 3; place?: ListsPlace }) {
           {t("lists.title")}
         </Heading>
       </div>
-      <p className="hint">{t(justMe && place === "lists" ? "lists.intro.just_me" : "lists.intro")}</p>
+      {place === "lists" && <p className="hint">{t(justMe ? "lists.intro.just_me" : "lists.intro")}</p>}
       {shown.length === 0 ? (
         <EmptyState text={t("lists.none_yet")} />
       ) : (
@@ -72,7 +72,7 @@ function useUsedBy(list: ValueList): string {
 }
 
 function ListBlock(props: { list: ValueList }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const change = useListChange();
   const { list } = props;
   const base = `list-${slug(list.name)}`;
@@ -123,7 +123,7 @@ function ListBlock(props: { list: ValueList }) {
           <span id={`${base}-name`} className="list-accordion-title" tabIndex={-1}>
             {list.label}
           </span>
-          {used && <span className="list-accordion-meta">{used}</span>}
+          <span className="list-accordion-meta">{[tn("lists.count", list.values.length), used].filter(Boolean).join(" · ")}</span>
         </summary>
         <div className="list-accordion-body" hidden={!expanded}>
           <RowBody pane>

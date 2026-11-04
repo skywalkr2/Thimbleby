@@ -15,7 +15,10 @@ import { Actions } from "../ui/Actions";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { FormField } from "../ui/FormField";
+import { LoadFailed } from "../ui/LoadFailed";
 import { RowList } from "../ui/RowList";
+import { Skeleton } from "../ui/Skeleton";
+import { useConnection } from "../lib/connection";
 import styles from "./BusinessSides.module.css";
 
 type Kind = "job" | "business";
@@ -27,6 +30,7 @@ export function BusinessSides() {
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const [problem, setProblem] = useState("");
   const [adding, setAdding] = useState<Kind | null>(null);
+  const offline = useConnection().offline;
   const sides = state.data?.sides ?? [];
   // Removing or adding a side changes what is filed where, so every list is read again.
   const refresh = () => client.invalidateQueries();
@@ -35,13 +39,21 @@ export function BusinessSides() {
       <div className={styles.top}>
         <p className="hint">{t(sides.length > 0 ? "settings.business.intro" : "settings.business.intro_none")}</p>
         <Actions>
-          <Button onClick={() => setAdding("business")}>{t("settings.business.add_business")}</Button>
-          <Button onClick={() => setAdding("job")}>{t("settings.business.add_job")}</Button>
+          <Button variant="primary" icon="plus" disabled={state.isPending || offline} onClick={() => setAdding("business")}>
+            {t("settings.business.add_business")}
+          </Button>
+          <Button disabled={state.isPending || offline} onClick={() => setAdding("job")}>
+            {t("settings.business.add_job")}
+          </Button>
         </Actions>
       </div>
+      {state.isPending && <Skeleton rows={3} />}
+      {state.isError && <LoadFailed message={t("settings.business.load_failed")} onRetry={() => void state.refetch()} />}
       {sides.length > 0 && (
         <>
-          <h3 id="business-sides">{t("settings.business.sides")}</h3>
+          <h3 id="business-sides" className={styles.sides}>
+            {t("settings.business.sides")}
+          </h3>
           <RowList>
             {sides.map((side, position) => (
               <SavedSide
@@ -53,6 +65,7 @@ export function BusinessSides() {
                 onProblem={(err) => setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t))}
                 onClear={() => setProblem("")}
                 removal="ask"
+                inMenu
               />
             ))}
           </RowList>

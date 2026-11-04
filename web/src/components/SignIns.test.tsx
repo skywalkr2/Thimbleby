@@ -673,6 +673,9 @@ test("a service that names its accounts lists each by its address with Sign out 
   await waitFor(() => expect(within(one).queryByText("pat@example.com")).toBeNull());
   // With one account left the row says whose it is in a sentence.
   expect(within(one).getByText("Signed in as sam@example.com")).toBeInTheDocument();
+  // The accounts block has the cards' anatomy: an icon beside the name, and Add another account is a real button, not bare text.
+  expect(one.querySelector("[data-row-lead] svg")).not.toBeNull();
+  expect(within(one).getByRole("button", { name: "Add another account to Service demo/one" })).toHaveAttribute("data-weight", "outline");
   // Adding another account starts the same sign-in flow.
   await user.click(within(one).getByRole("button", { name: "Add another account to Service demo/one" }));
   await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?another=1"));

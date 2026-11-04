@@ -7,7 +7,8 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import type { ConnectionCard } from "../lib/connection-cards";
-import type { AccountState } from "../lib/connections";
+import { sourceState, type AccountState } from "../lib/connections";
+import { useConnection } from "../lib/connection";
 import { useSideSlot } from "../lib/marks";
 import { useSideFilter, useSides } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -32,7 +33,7 @@ const slug = (text: string) => text.replace(/[^A-Za-z0-9_-]/g, "-");
 export function ConnectionCardView(props: {
   card: ConnectionCard;
   /** Draws one of the card's connections as a row; `showPrivacy` is false when the card says it once for them all. */
-  renderPart: (source: Source, showPrivacy: boolean) => ReactNode;
+  renderPart: (source: Source, showPrivacy: boolean, hideStatus: boolean) => ReactNode;
   /** The card's privacy, said once for the account when all its connections share it; none when they differ. */
   privacy: ReactNode | null;
   onChooseSource: (plugin: string | null, kind?: string, account?: string) => void;
@@ -41,6 +42,23 @@ export function ConnectionCardView(props: {
   const act = useAct();
   const client = useQueryClient();
   const { card } = props;
+  const offline = useConnection().offline;
+  // Every connection of the account is waiting for its first read: said once for the account, with the one action, and not once for each.
+  const waitingFirst = card.kind === "account" && card.sources.length > 1 && card.sources.every((s) => sourceState(s) === "never");
+  const [reading, setReading] = useState(false);
+  const readAll = async () => {
+    setReading(true);
+    await act(
+      async () => {
+        const fresh: Source[] = [];
+        for (const source of card.sources) fresh.push(await api.readSource(source.id));
+        client.setQueryData<Source[]>(["watch"], (all) => all?.map((s) => fresh.find((f) => f.id === s.id) ?? s));
+        return fresh;
+      },
+      () => ({ message: t("connection.read_all_toast", { account: card.address ?? card.name }) }),
+    );
+    setReading(false);
+  };
   const titleId = `connection-${slug(card.key)}`;
   const words = useAccountWords();
   const filter = useSideFilter();
@@ -73,8 +91,8 @@ export function ConnectionCardView(props: {
   const signedIn = card.signedIn;
   const menu: MenuAction[] = [];
   if (signIn && signedIn) {
-    menu.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(signIn.name), undefined, card.address ?? undefined) });
-    menu.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => setConfirming(true), disabled: signingOut });
+    menu.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(signIn.name), undefined, card.address ?? undefined), disabled: offline });
+    menu.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => setConfirming(true), disabled: signingOut || offline });
   }
   const signOut = async () => {
     if (!signIn || !signedIn) return;
@@ -138,7 +156,7 @@ export function ConnectionCardView(props: {
                 size="sm"
                 variant={refused || problem ? "secondary" : "primary"}
                 className={styles.again}
-                disabled={again.busy || !again.item.ready}
+                disabled={again.busy || !again.item.ready || offline}
                 aria-label={t("sign_in.sign_in_again_account", { account: accountName })}
                 onClick={() => void again.start()}
               >
@@ -194,9 +212,17 @@ export function ConnectionCardView(props: {
           </Button>
         </div>
       )}
+      {waitingFirst && (
+        <div className={styles.waitingFirst} data-waiting-first="">
+          <span>{t("connection.waiting_first")}</span>
+          <Button size="sm" disabled={reading || offline} onClick={() => void readAll()}>
+            {t(reading ? "connection.reading_now" : "connection.read_now")}
+          </Button>
+        </div>
+      )}
       {card.sources.length > 0 ? (
         <ul className={styles.parts} aria-label={t("connection.parts_of", { account: card.kind === "account" ? accountName : t("connection.other.title") })}>
-          {card.sources.map((source) => props.renderPart(source, props.privacy === null))}
+          {card.sources.map((source) => props.renderPart(source, props.privacy === null, waitingFirst))}
         </ul>
       ) : (
         <p className={styles.empty}>{t("connection.empty_account")}</p>

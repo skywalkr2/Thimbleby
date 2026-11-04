@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { announceSignIn } from "../lib/sign-in-window";
+import { ConnectionProvider } from "../lib/connection";
 import { fakeApi, renderApp } from "../test-utils";
 import { Sources } from "./Sources";
 
@@ -84,13 +85,15 @@ test("a connection is a row of its card named by what it is, with a status in wo
 test("the privacy is said once in the header when the account's connections share it", async () => {
   open([part("a", ALEX), part("b", ALEX, { reads: ["calendar"], label: `Calendar, ${ALEX}` })]);
   const card = await screen.findByRole("region", { name: ALEX });
-  expect(card.querySelectorAll("[data-pill]")).toHaveLength(1);
+  expect(card.querySelectorAll("[data-privacy]")).toHaveLength(1);
+  expect(card.querySelectorAll("[data-pill]")).toHaveLength(0);
 });
 
 test("connections that differ in privacy each say their own", async () => {
   open([part("c", BLAKE), part("d", BLAKE, { reads: ["calendar"], label: `Calendar, ${BLAKE}`, data_level: "open" })]);
   const card = await screen.findByRole("region", { name: BLAKE });
-  expect(card.querySelectorAll("[data-pill]")).toHaveLength(2);
+  expect(card.querySelectorAll("[data-privacy]")).toHaveLength(2);
+  expect(card.querySelectorAll("[data-pill]")).toHaveLength(0);
 });
 
 test("the sides it is for are chips, and Change opens the boxes to pick them again, with Done to close", async () => {
@@ -147,4 +150,64 @@ test("signing an account out is in its menu and asks first", async () => {
   expect(calls.some((c) => c.route.startsWith("DELETE sign-ins"))).toBe(false);
   await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
   await waitFor(() => expect(calls.some((c) => c.route.startsWith("DELETE sign-ins/pack/account"))).toBe(true));
+});
+
+const unread = (id: string, account: string, over: Partial<Source> = {}) => part(id, account, { last: null, read_at: null, ...over });
+
+test("an account whose connections have none been read says so once, with Read now, and its rows do not repeat it", async () => {
+  const user = userEvent.setup();
+  const calls = open([unread("a1", ALEX), unread("a2", ALEX, { label: `Calendar, ${ALEX}`, reads: ["calendar"] })], {
+    "POST watch/a1/read": () => part("a1", ALEX),
+    "POST watch/a2/read": () => part("a2", ALEX, { label: `Calendar, ${ALEX}`, reads: ["calendar"] }),
+  });
+  const card = await screen.findByRole("region", { name: ALEX });
+  expect(within(card).getByText("Nothing is read yet. The first read starts within a few minutes.")).toBeInTheDocument();
+  // The header says it once; no row says "Not read yet" again.
+  const rows = within(card).getAllByRole("listitem");
+  for (const row of rows) expect(row.querySelector("[data-state-mark]")).toBeNull();
+  await user.click(within(card).getByRole("button", { name: "Read now" }));
+  await waitFor(() => expect(calls.filter((c) => /^POST watch\/a\d\/read$/.test(c.route))).toHaveLength(2));
+});
+
+test("while the app is offline Add and the menus of an account's connections are held", async () => {
+  fakeApi({
+    "GET watch": () => [part("a", ALEX)],
+    "GET watch/kinds": () => [],
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET projects": () => [],
+    "GET watch/authors": () => [],
+    "GET sign-ins": () => [],
+    "GET setup/business": () => ({ business: false, name: "", personal: "PRJ-1", sides: [], chosen: null }),
+  });
+  renderApp(
+    <ConnectionProvider live={{ state: "offline", lastUpdate: null, refresh: () => undefined, reconnect: () => undefined }}>
+      <Sources onAsk={vi.fn()} />
+    </ConnectionProvider>,
+  );
+  expect(await screen.findByRole("button", { name: "Add mail, calendar or folder" })).toBeDisabled();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /^More actions for Inbox/ }));
+  expect(await screen.findByRole("menuitem", { name: "Read now" })).toHaveAttribute("aria-disabled", "true");
+  expect(screen.getByRole("menuitem", { name: "Turn off" })).toHaveAttribute("aria-disabled", "true");
+});
+
+test("when the connections cannot be loaded there is one failed card with one Try again, not one for the accounts too", async () => {
+  fakeApi({
+    "GET watch": () => { throw new Error("down"); },
+    "GET watch/kinds": () => [],
+    "GET sign-ins": () => { throw new Error("down"); },
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+  });
+  renderApp(<Sources onAsk={vi.fn()} />);
+  expect(await screen.findByText("The connections couldn't be loaded.")).toBeInTheDocument();
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(1);
+});
+
+test("while the connections load the page shows account cards and the accounts block as a skeleton at their height", async () => {
+  fakeApi({ "GET watch": () => new Promise(() => undefined), "GET watch/kinds": () => [], "GET sign-ins": () => [], "GET settings": () => ({ fingerprint: "fp-1", items: [] }) });
+  renderApp(<Sources onAsk={vi.fn()} />);
+  const region = await screen.findByRole("status", { name: "Loading…" });
+  expect(region).toHaveAttribute("data-skeleton", "connections");
+  expect(region.children).toHaveLength(3);
 });

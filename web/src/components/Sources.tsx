@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { useConnection } from "../lib/connection";
 import { whenText as when } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { startCursor } from "../lib/cursor";
@@ -37,7 +38,7 @@ import { Icon, type IconName } from "../ui/Icon";
 import cardStyles from "./ConnectionCard.module.css";
 import { SourceSides } from "./SourceSides";
 import { Drawer } from "../ui/Drawer";
-import { Skeleton } from "../ui/Skeleton";
+import { Skeleton, SkeletonRegion } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { RadioCard, RadioCards } from "../ui/RadioCard";
@@ -46,9 +47,9 @@ import { FormField } from "../ui/FormField";
 import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
 import { FormBlock } from "../ui/FormBlock";
-import { Pill } from "../ui/Pill";
 import { StateMark, needsYou } from "../ui/StateMark";
 import { LoadFailed } from "../ui/LoadFailed";
+import { GroupLabel } from "../ui/GroupLabel";
 type Source = S["WatchSourceView"];
 type Kind = S["WatchKindView"];
 /** Opens the add form: from a sign-in, only the kinds of that sign-in's add-on; `n` tells one request from the next. */
@@ -150,6 +151,35 @@ export function useSourceSave() {
   );
 }
 
+/** What a page of connections is while it loads: account cards at the cards' height, and the block of accounts under them,
+ * so nothing jumps when the answer comes. */
+function ConnectionsSkeleton() {
+  return (
+    <SkeletonRegion shape="connections" className={cardStyles.skeleton}>
+      {[0, 1].map((n) => (
+        <div key={n} className={cardStyles.skeletonCard} aria-hidden="true">
+          <span className={cardStyles.skeletonHead}>
+            <span className={cardStyles.skeletonIcon} />
+            <span className={cardStyles.skeletonLines}>
+              <span className={cardStyles.skeletonBar} />
+              <span className={`${cardStyles.skeletonBar} ${cardStyles.skeletonShort}`} />
+            </span>
+          </span>
+          {[0, 1].map((m) => (
+            <span key={m} className={cardStyles.skeletonPart}>
+              <span className={cardStyles.skeletonLines}>
+                <span className={cardStyles.skeletonBar} />
+                <span className={`${cardStyles.skeletonBar} ${cardStyles.skeletonShort}`} />
+              </span>
+            </span>
+          ))}
+        </div>
+      ))}
+      <div className={`${cardStyles.skeletonCard} ${cardStyles.skeletonAccounts}`} aria-hidden="true" />
+    </SkeletonRegion>
+  );
+}
+
 export function Sources(props: {
   onAsk: (question?: string) => void;
   add?: AddRequest | null;
@@ -161,6 +191,7 @@ export function Sources(props: {
   onOpenLinks?: () => void;
 }) {
   const { t } = useWords();
+  const offline = useConnection().offline;
   const addTitleId = useId();
   // A source that has never been read is checked on again soon: it is read within a minute of being added.
   // Whether there is no AI account yet, once that has been read (an unread answer never says there is none).
@@ -237,6 +268,8 @@ export function Sources(props: {
         <Actions>
           <Button
             id={addButton}
+            icon="plus"
+            disabled={offline}
             aria-expanded={form?.type === "add"}
             onClick={openAdd}
           >
@@ -281,9 +314,15 @@ export function Sources(props: {
         )}
       </Drawer>
       {sources.isPending ? (
-        <Skeleton />
+        <ConnectionsSkeleton />
       ) : sources.isError ? (
-        <LoadFailed message={t("sources.load_failed")} onRetry={() => void sources.refetch()} />
+        <LoadFailed
+          message={t("sources.load_failed")}
+          onRetry={() => {
+            void sources.refetch();
+            void signIns.refetch();
+          }}
+        />
       ) : cards.length === 0 ? (
         // Asking how to add one needs an AI account; with none, the way on is choosing one, not a question that can't be answered.
         noAi ? (
@@ -304,14 +343,15 @@ export function Sources(props: {
             <li key={card.key} className={cardStyles.cardItem}>
               <ConnectionCardView
                 card={card}
-                privacy={privacyOnce(card, t)}
+                privacy={privacyOnce(card)}
                 onChooseSource={(plugin, _kind, account) => {
                   setAddDirty(false);
                   setForm({ type: "add", plugin, account });
                 }}
-                renderPart={(source, showPrivacy) => (
+                renderPart={(source, showPrivacy, hideStatus) => (
                   <SourcePart
                     key={source.id}
+                    hideStatus={hideStatus}
                     source={source}
                     inAccount={card.kind === "account"}
                     showPrivacy={showPrivacy}
@@ -330,25 +370,35 @@ export function Sources(props: {
           ))}
         </ul>
       )}
-      <SignIns
+      {!sources.isPending && !sources.isError && <SignIns
         accountsIn="cards"
         onOpenAddons={() => props.onOpenAddons?.()}
         onChooseSource={(plugin, _kind, account) => {
           setAddDirty(false);
           setForm({ type: "add", plugin, account });
         }}
-      />
+      />}
     </section>
   );
 }
 
 /** The privacy of an account's connections said once in its header, when they all share one level; none when they differ. */
-function privacyOnce(card: ConnectionCard, t: T): ReactNode | null {
+function privacyOnce(card: ConnectionCard): ReactNode | null {
   if (card.kind !== "account" || card.sources.length === 0) return null;
   const levels = new Set(card.sources.map((s) => s.data_level ?? "internal"));
   if (levels.size !== 1) return null;
-  const first = card.sources[0];
-  return <Pill describedAs={privacyFact(first, t)}>{t(`sources.level.${first.data_level ?? "internal"}`)}</Pill>;
+  return <PrivacyText source={card.sources[0]} />;
+}
+
+/** A connection's privacy as plain words in its meta line, never a bordered tag; a screen reader hears the longer sentence. */
+function PrivacyText(props: { source: Source }) {
+  const { t } = useWords();
+  return (
+    <span className={cardStyles.privacyText} data-privacy="">
+      <span aria-hidden="true">{t(`sources.level.${props.source.data_level ?? "internal"}`)}</span>
+      <span className="sr">{privacyFact(props.source, t)}</span>
+    </span>
+  );
 }
 
 /** The label of the sign-in a source reads through when every sign-in of its add-on is signed out, else none. */
@@ -378,6 +428,8 @@ function SourcePart(props: {
   inAccount: boolean;
   showPrivacy: boolean;
   alert: boolean;
+  /** The account says once that nothing has been read yet, so the row does not say it again. */
+  hideStatus?: boolean;
   kinds: Kind[] | undefined;
   kindsFailed: boolean;
   /** The service the person has signed out of that this source reads from, so it is not read until they sign in again. */
@@ -391,6 +443,8 @@ function SourcePart(props: {
   const act = useAct();
   const client = useQueryClient();
   const save = useSourceSave();
+  // Every action of a connection needs the network: held while the app is offline, and the offline bar says why.
+  const offline = useConnection().offline;
   const [busy, setBusy] = useState(false);
   const [looking, setLooking] = useState(false);
   const { source } = props;
@@ -435,15 +489,15 @@ function SourcePart(props: {
     void save((fingerprint) => api.removeSource(source.id, fingerprint), t("sources.removed_toast", { label: source.label }));
 
   const actions: MenuAction[] = [
-    { id: "read", label: t("sources.read_now"), run: () => void readNow(), disabled: !source.enabled || busy },
-    { id: "recent", label: t("sources.recent"), run: recent, disabled: busy || source.items === 0 },
-    { id: "change", label: t("sources.change"), run: props.onChange },
+    { id: "read", label: t("sources.read_now"), run: () => void readNow(), disabled: !source.enabled || busy || offline },
+    { id: "recent", label: t("sources.recent"), run: recent, disabled: busy || source.items === 0 || offline },
+    { id: "change", label: t("sources.change"), run: props.onChange, disabled: offline },
     // Offered only when the source can be asked for older mail (it says so by listing the days to pick from).
     ...(source.looked_back_to && (source.look_back_choices ?? []).length > 0
-      ? [{ id: "look_back", label: t("coverage.look_back.open"), run: () => setLooking(true) }]
+      ? [{ id: "look_back", label: t("coverage.look_back.open"), run: () => setLooking(true), disabled: offline }]
       : []),
-    { id: "power", label: t(source.enabled ? "sources.turn_off" : "sources.turn_on"), run: () => turn(!source.enabled) },
-    { id: "remove", danger: true, label: t("sources.remove"), run: remove },
+    { id: "power", label: t(source.enabled ? "sources.turn_off" : "sources.turn_on"), run: () => turn(!source.enabled), disabled: offline },
+    { id: "remove", danger: true, label: t("sources.remove"), run: remove, disabled: offline },
   ];
 
   // Until a read has worked there is no count to give: "0 items" would say it was read and found nothing.
@@ -483,7 +537,7 @@ function SourcePart(props: {
           <span className={cardStyles.title} id={titleId}>
             {kind ? t(`connection.part.${kind}`) : source.label}
           </span>
-          {props.showPrivacy && <Pill describedAs={privacyFact(source, t)}>{t(`sources.level.${source.data_level ?? "internal"}`)}</Pill>}
+          {props.showPrivacy && <PrivacyText source={source} />}
         </p>
         {lines.filter(Boolean).map((line, i) => (
           <p key={i} className={cardStyles.meta}>
@@ -492,9 +546,11 @@ function SourcePart(props: {
         ))}
       </div>
       <div className={cardStyles.status}>
-        <StateMark tone={status.tone} quiet>
-          {status.text}
-        </StateMark>
+        {!props.hideStatus && (
+          <StateMark tone={status.tone} quiet>
+            {status.text}
+          </StateMark>
+        )}
       </div>
       <div className={cardStyles.menu}>
         <RowMenu label={source.label} actions={actions} buttonId={menuId} />
@@ -769,6 +825,15 @@ function SourceForm(props: {
     return [...order.filter((g) => g.id === ""), ...order.filter((g) => g.id !== "")];
   })();
 
+  // A kind with no line of its own says what it reads, so every card has a title and a line.
+  const kindLine = (k: Kind) =>
+    has(`sources.kind_desc.${k.name}`)
+      ? t(`sources.kind_desc.${k.name}`)
+      : (k.reads ?? []).includes("mail")
+        ? t("sources.kind_desc.reads_mail")
+        : (k.reads ?? []).includes("calendar")
+          ? t("sources.kind_desc.reads_calendar")
+          : undefined;
   const kindTitle = (k: Kind) => (has(`sources.kind.${k.name}`) ? t(`sources.kind.${k.name}`) : k.label);
   const everyOptions = [...new Set([...EVERY_CHOICES, Number(every)])].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
   // A kind from an add-on that signs in as the person has a list of accounts to read: the only one is chosen already,
@@ -891,7 +956,7 @@ function SourceForm(props: {
   return (
     <form
       ref={formEl}
-      className="panel source-form"
+      className={props.titleId ? "source-form" : "panel source-form"}
       data-add-connection={adding ? "" : undefined}
       aria-labelledby={titleId}
       onSubmit={(e) => {
@@ -905,12 +970,9 @@ function SourceForm(props: {
         </h3>
       )}
       {props.twoStep && adding && !given && (
-        <div className="source-step">
-          <h4>{t(choosingKind ? "sources.step.choose_title" : "sources.step.details_title")}</h4>
-          <p className="hint" data-add-step="">
-            {t(choosingKind ? "sources.step.kind" : "sources.step.details")}
-          </p>
-        </div>
+        <p className="hint source-step" data-add-step="">
+          {t(choosingKind ? "sources.step.kind" : "sources.step.details")}
+        </p>
       )}
       {adding && !given && (!props.twoStep || choosingKind) && (
         <CheckboxGroup legend={t("sources.kind_title")}>
@@ -926,9 +988,9 @@ function SourceForm(props: {
               return (
                 <FormBlock key={group.id} role="group" aria-labelledby={groups.length > 1 ? groupId : undefined}>
                   {groups.length > 1 && (
-                    <p className="what" id={groupId}>
+                    <GroupLabel as="p" id={groupId}>
                       {group.label}
-                    </p>
+                    </GroupLabel>
                   )}
                   <RadioCards>
                     {group.kinds.map((k) => (
@@ -946,7 +1008,7 @@ function SourceForm(props: {
                           setFieldProblems({});
                         }}
                         title={kindTitle(k)}
-                        description={has(`sources.kind_desc.${k.name}`) ? t(`sources.kind_desc.${k.name}`) : undefined}
+                        description={kindLine(k)}
                       />
                     ))}
                   </RadioCards>

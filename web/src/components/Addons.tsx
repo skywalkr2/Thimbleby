@@ -56,6 +56,7 @@ export function Addons(props: { onBack?: () => void }) {
   const { t } = useWords();
   const { restarts } = useRestart();
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
+  const client = useQueryClient();
   const [tab, setTab] = useState("available");
   const [removed, setRemoved] = useState<Set<string>>(() => new Set());
   // An add-on installed from the list stays in it, with its note and Restart now, until the restart it asks for has happened.
@@ -89,7 +90,7 @@ export function Addons(props: { onBack?: () => void }) {
           </Tab>
         </TabList>
         <TabPanel id="available" className="tab-panel">
-          <Loaded query={packs}>{(view) => <Available view={view} removed={removed} onRemove={hideRemoved} kept={kept} onKeep={keepInstalled} />}</Loaded>
+          <Loaded query={packs}>{(view) => <Available onRefresh={() => void api.refreshPacks().then((view) => client.setQueryData(["packs"], view)).catch(() => undefined)} view={view} removed={removed} onRemove={hideRemoved} kept={kept} onKeep={keepInstalled} />}</Loaded>
         </TabPanel>
         <TabPanel id="installed" className="tab-panel">
           <Loaded query={packs}>{(view) => <InstalledList items={view.installed} removed={removed} onRemove={hideRemoved} />}</Loaded>
@@ -270,7 +271,7 @@ export function emptyReason(view: S["PacksView"], t: (key: string) => string): s
   return view.feeds.every((feed) => feed.error) ? t("addons.no_packs_failed") : t("addons.no_packs");
 }
 
-function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; onRemove: (id: string) => void; kept: ReadonlySet<string>; onKeep: (id: string) => void }) {
+function Available(props: { onRefresh: () => void; view: S["PacksView"]; removed: ReadonlySet<string>; onRemove: (id: string) => void; kept: ReadonlySet<string>; onKeep: (id: string) => void }) {
   const { t } = useWords();
   const { view } = props;
   // An add-on that is installed is listed under Installed, not here again; one with an update on offer, or one waiting for
@@ -280,7 +281,10 @@ function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; 
   const empty = emptyReason({ ...view, available }, t);
   return (
     <div className="addons-body">
-      {empty ? (
+      {empty && view.enabled && view.feeds.length > 0 && available.length === 0 && view.feeds.every((feed) => feed.error) ? (
+        // Nothing could be read: one failed card with its one Try again, the reason once in the Catalog below.
+        <LoadFailed message={empty} onRetry={props.onRefresh} />
+      ) : empty ? (
         <EmptyState text={empty} />
       ) : (
         <RowList>
@@ -310,7 +314,7 @@ function Available(props: { view: S["PacksView"]; removed: ReadonlySet<string>; 
         </RowList>
       )}
       {view.enabled && view.feeds.length === 0 && <AddCatalog first />}
-      {view.enabled && view.feeds.length > 0 && <Catalog feeds={view.feeds} />}
+      {view.enabled && view.feeds.length > 0 && <Catalog feeds={view.feeds} oneRetry={available.length === 0 && view.feeds.every((feed) => feed.error)} />}
       {getting !== null && available[getting] && (
         <GetIt
           pack={available[getting]}
@@ -432,7 +436,12 @@ function PackRow(props: {
     !props.group && <p key="price" className="hint">{priceText(pack.price, amount, t)}</p>,
   ];
   return (
-    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} state={needsYou(stateTone) ? stateTone : undefined} meta={<StateMark tone={stateTone}>{stateWord}</StateMark>} actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
+    <Row id={`pack-row-${index}`} aria-labelledby={`${base}-name`} title={pack.name} titleId={`${base}-name`} state={needsYou(stateTone) ? stateTone : undefined} meta={
+        <>
+          <StateMark tone={stateTone}>{stateWord}</StateMark>
+          {!installed && offerInstall && ` · ${t("addons.install_needs_restart")}`}
+        </>
+      } actions={<>{!installed && pack.installable && !change.installed && offerInstall && (
             <Button variant="primary"
               id={`pack-install-${index}`}
               data-key="primary"
@@ -775,7 +784,7 @@ function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
   );
 }
 
-function Catalog(props: { feeds: Feed[] }) {
+function Catalog(props: { feeds: Feed[]; oneRetry?: boolean }) {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -812,9 +821,11 @@ function Catalog(props: { feeds: Feed[] }) {
     <section className="catalog" aria-labelledby="catalog-title">
       <div className="heading">
         <h3 id="catalog-title">{t("addons.catalog")}</h3>
-        <Button disabled={busy} onClick={() => void refresh()}>
-          {t(busy ? "addons.refreshing" : "addons.refresh")}
-        </Button>
+        {!props.oneRetry && (
+          <Button disabled={busy} onClick={() => void refresh()}>
+            {t(busy ? "addons.refreshing" : "addons.refresh")}
+          </Button>
+        )}
       </div>
       {problem && (
         <p className="problem-note" role="alert">
@@ -834,7 +845,7 @@ function Catalog(props: { feeds: Feed[] }) {
           }}
         />
       ) : (
-        <Button variant="quiet" ref={addButton} onClick={() => setAdding(true)}>
+        <Button variant="quiet" className="catalog-more" ref={addButton} onClick={() => setAdding(true)}>
           {t("addons.catalog_add_another")}
         </Button>
       )}
@@ -972,7 +983,12 @@ function InstalledRow(props: { item: Installed; index: number; onRemoved: () => 
   const stateTone: StateTone = pending ? "warn" : item.state === "enabled" ? "ok" : "neutral";
   const stateWord = t(pending ? "addons.pill.restart" : item.state === "enabled" ? "addons.pill.on" : "addons.pill.off");
   return (
-    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} state={needsYou(stateTone) ? stateTone : undefined} meta={<StateMark tone={stateTone}>{stateWord}</StateMark>} actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
+    <Row id={`${base}-row`} aria-labelledby={`${base}-name`} title={name} titleId={`${base}-name`} state={needsYou(stateTone) ? stateTone : undefined} meta={
+        <>
+          <StateMark tone={stateTone}>{stateWord}</StateMark>
+          {item.version && ` · ${t("addons.version", { version: item.version })}`}
+        </>
+      } actions={<><SwitchButton on={isOn} label={name} busy={power.busy} onRun={() => void power.run(!isOn)} />
           <RowMenu label={name} actions={actions} /></>}>
 {item.description && <p className="pack-summary">{item.description}</p>}
 {pending && (

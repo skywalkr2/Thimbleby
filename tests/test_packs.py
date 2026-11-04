@@ -74,7 +74,7 @@ def test_feeds_are_kept_and_read_again_only_when_old_or_asked(tmp_path, monkeypa
 def test_a_catalog_that_cannot_be_read_says_why_in_words_with_no_code_and_no_address(tmp_path, monkeypatch):
     monkeypatch.setattr(engine.net, "TRANSPORT", httpx.MockTransport(lambda request: httpx.Response(404)))
     (feed,) = packs.read_feeds([FEED], tmp_path, 24, now=1000.0)
-    assert feed.error == "couldn't read it: nothing is at that address"
+    assert feed.error == "Nothing is at that address"
     assert "404" not in feed.error and "not_found" not in feed.error and FEED not in feed.error
 
 

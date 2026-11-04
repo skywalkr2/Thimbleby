@@ -1082,7 +1082,11 @@ test("the business page holds its sides with Rename, the words that mean it, and
   const first = open("business");
   expect(await screen.findByRole("heading", { level: 2, name: "Your business" })).toBeInTheDocument();
   expect(await screen.findByText("Orchard Press")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Rename Orchard Press" })).toBeInTheDocument();
+  // Rename and Remove are in the row's menu, and Add a business is the page's one filled button.
+  expect(screen.getByRole("button", { name: "More actions for Orchard Press" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Rename Orchard Press" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Add a business" })).toHaveAttribute("data-weight", "filled");
+  expect(screen.getByRole("button", { name: "Add a job" })).toHaveAttribute("data-weight", "outline");
   // The words that mean a side are not here: they are with Filing, under Advanced.
   expect(screen.queryByLabelText("Words that mean Orchard Press")).toBeNull();
   expect(await screen.findByText("Project status")).toBeInTheDocument();
