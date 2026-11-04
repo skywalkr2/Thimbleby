@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 341. A file records the person it came from (2026-11-04; gate fix batch G4d)
+
+Batch G4d of the gate's fix round (5.3, 5.1, 7.14). The person page's Files card and tab read no real files, because nothing recorded whose a file was; they read an ad-hoc details key. Now the `file` record has **from_person** (a reference to a person), written by `engine.files.add_file` and by `file.add`, checked to exist, and shown in the files list (`FileView.from_person`).
+
+| Where | Before | Now |
+|---|---|---|
+| File record (5.3, 5.1) | No link to a person | `from_person`, set from a person's page (`POST /api/files?from_person=`), by a hand-in that names a person (`person=` on the file, picture and voice-note hand-ins) and by `file.add`. Built: `tests/test_file_from_person.py` |
+| Person page (7.14) | Files card read `meta.person` | Reads `from_person`. Built: `web/src/components/PersonFiles.test.tsx` |
+| Mail attachments | Read once as text and not kept as files | Unchanged: a connector's attachment is not stored as a file yet, so it has no person to record (left to the item that keeps attachments) |
+
 ## 340. Today up to its mockup, What changed, Since yesterday, Handled for you, Stages, Rules to look over, Search and an event's page (2026-11-04; gate fix batch G2c)
 
 | Where | Before | Now |

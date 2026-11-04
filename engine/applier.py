@@ -4006,6 +4006,7 @@ def _apply_op(
             meta=op.meta,
             project=op.project,
             replaces=op.replaces,
+            from_person=op.from_person,
         )
         data = {
             "name": name,
@@ -4018,6 +4019,7 @@ def _apply_op(
             "origin": "tool",
             "trust": "untrusted",
             "replaces": op.replaces,
+            "from_person": op.from_person,
             "added_at": ctx.store.clock(),
             "sensitivity": level_for(ctx.store.plugins.file_kinds().get(op.file_kind), None),
         }

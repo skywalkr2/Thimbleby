@@ -1235,8 +1235,8 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 
 ## Found while reviewing G4c
 
-- [ ] [G4d] **"Files from <person>" never shows, because no file is linked to a person.** G4c reads `meta.person`, which nothing sets. Link a file to the person it came from in the engine: a mail attachment, or a hand-in naming them, records the sender's person id where the file's source is recorded. Then the card and the tab read that field, not an ad-hoc meta key. Needs a Python test, the API model, and a capture stage with such a file.
-- [ ] [G4d] **The person mockup comparison never shows "Draft a message" or the Files card:** the capture workspace has nothing waiting on the person and no file from them. Add a capture stage with both, so the person and person-states side-by-sides can be scored against the mockup.
+- [x] [G4d] **"Files from <person>" never shows, because no file is linked to a person.** G4c reads `meta.person`, which nothing sets. Link a file to the person it came from in the engine: a mail attachment, or a hand-in naming them, records the sender's person id where the file's source is recorded. Then the card and the tab read that field, not an ad-hoc meta key. Needs a Python test, the API model, and a capture stage with such a file. → fixed: tests/test_file_from_person.py (all ways in) and web/src/components/PersonFiles.test.tsx; a connector's mail attachment is not kept as a file today, so it records no person (stated in change log 341)
+- [x] [G4d] **The person mockup comparison never shows "Draft a message" or the Files card:** the capture workspace has nothing waiting on the person and no file from them. Add a capture stage with both, so the person and person-states side-by-sides can be scored against the mockup. → fixed: stage "heard-from" in web/visual/stages.ts, used by the person page and the Pat-based person-states captures
 - [x] [G1d] **At 390 the person page's four tabs wrap onto two rows.** Shared tabs scroll in one row on a phone, or fold into a "More" menu. → fixed: web/src/ui/sharedLook.test.tsx "a phone's tabs are one row that scrolls inside its own box" (gate-fix/g1d-capture2/person-page-day-390.png: one row); the layout checks (web/e2e/layout.spec.ts, handled.spec.ts, journey-helpers.ts) now skip what sits inside a box that scrolls
 
 ## Found while merging G5b
@@ -1258,3 +1258,8 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 - At the merge, G1d's shared side-filter rule was kept (more than four choices, or a name over 18 characters, makes one Side button and sheet), not G2c's own copy (22 characters). The side-filter spec and its sheet test follow G1d's.
 - [ ] [G1e] G2c handed back shared lines after G1d had finished: the header's search box and status chip, the sidebar's "Your sides" list with its counts and tiles, the inline empty state's button placement, row action alignment across rows, and the status popover's anchor. Its lines say "belongs to G1d".
 - [ ] [END] Known red on the merged tree: App.test "gone person keeps People marked", Notifications.test (the password-box notice address), WelcomeAiDrawer.test (the Recommended mark), glyphs.test (Quality's arrow), panes "one person at a time", long-names at 390, accounts VS06. All are in T1's prune.
+
+## Found while merging G4d
+
+- [ ] [END] `people-records.spec.ts:221`, "Settings adds a job and a business…": it clicks a "Remove Quarry Studio" button on the row. G5b moved Remove into the row's menu, so the spec opens the menu first.
+- [ ] [LATER] Mail attachments are read once as text and never kept as files (`engine/extract/attached.py`), so a file that came by mail records no person. Keeping attachments is its own piece of work (G4d, change log 341).

@@ -64,6 +64,7 @@ def hand_in(
     media_type: str | None = None,
     project: str | None = None,
     data_level: str | None = None,
+    from_person: str | None = None,
     origin: str = "input",
     now: datetime | None = None,
 ) -> str:
@@ -84,6 +85,7 @@ def hand_in(
         media_type=found,
         project=project,
         data_level=data_level,
+        from_person=from_person,
         origin="upload",
         now=now,
     )

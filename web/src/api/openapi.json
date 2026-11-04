@@ -10669,6 +10669,18 @@
             "title": "File Kind",
             "type": "string"
           },
+          "from_person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the person it came from; none when no one in particular.",
+            "title": "From Person"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -40044,7 +40056,7 @@
         "summary": "Files"
       },
       "post": {
-        "description": "Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON. Without\na `data_level` the file takes its kind's level (internal unless the kind says otherwise).",
+        "description": "Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON. Without\na `data_level` the file takes its kind's level (internal unless the kind says otherwise). `from_person` names\nthe person it came from, such as the page it was added from.",
         "operationId": "add_file_route_api_files_post",
         "parameters": [
           {
@@ -40106,6 +40118,22 @@
                 }
               ],
               "title": "Replaces"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Person"
             }
           },
           {
@@ -41159,6 +41187,22 @@
           },
           {
             "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person"
+            }
+          },
+          {
+            "in": "query",
             "name": "data_level",
             "required": false,
             "schema": {
@@ -41246,6 +41290,22 @@
           },
           {
             "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person"
+            }
+          },
+          {
+            "in": "query",
             "name": "data_level",
             "required": false,
             "schema": {
@@ -41329,6 +41389,22 @@
                 }
               ],
               "title": "Project"
+            }
+          },
+          {
+            "in": "query",
+            "name": "person",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person"
             }
           },
           {

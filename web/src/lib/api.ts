@@ -43,6 +43,8 @@ export interface FileUpload {
   project?: string | null;
   meta?: Record<string, unknown>;
   replaces?: string | null;
+  /** The id of the person the file came from, such as the page it was added from. */
+  fromPerson?: string | null;
 }
 
 const id = encodeURIComponent;
@@ -481,6 +483,7 @@ export const api = {
     const query = new URLSearchParams({ name: file.name, kind: upload.kind });
     if (upload.project) query.set("project", upload.project);
     if (upload.replaces) query.set("replaces", upload.replaces);
+    if (upload.fromPerson) query.set("from_person", upload.fromPerson);
     if (upload.meta && Object.keys(upload.meta).length) query.set("meta", JSON.stringify(upload.meta));
     const type = file.type || "application/octet-stream";
     return send<S["FileView"]>("POST", `files?${query.toString()}`, { headers: { "content-type": type }, body: file });

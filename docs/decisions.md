@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-04: A file records the person it came from (batch G4d of the fix round)
+
+**Decided:** (design by the main session; no owner choice needed.) The file record gets `from_person`, a person id, instead of the person page guessing from a details key. It is set by a file added from a person's page, a hand-in that names a person and `file.add`, always through the store's transaction and ledger.
+
+**Why:** D13 says the person page's Files card and tab show real files, and records refer to people by id.
+
+**Impact:** `engine/records.py`, `engine/files.py`, `engine/ops.py`, `engine/applier.py`, `api/`, `web/src/components/PersonFiles.tsx`, `web/visual/stages.ts`. A connector's mail attachment is not kept as a file today, so it records no person; that waits on keeping attachments. Change log: section 341.
+
 ## 2026-11-04: The shared parts, second pass (batch G1d of the fix round)
 
 **Decided:** (design by the main session, within D7; no owner choice needed.)

@@ -358,10 +358,10 @@ export const ENTRIES: Entry[] = [
   },
 
   // ---- A person
-  { page: "person", server: "sides", stage: "seeded", open: person("pat") },
+  { page: "person", server: "sides", stage: "heard-from", open: person("pat") },
   { page: "person-states", title: "Someone just added, with nothing yet", server: "sides", stage: "seeded", open: person("fresh") },
   { page: "person-states", title: "A long name and no email", server: "sides", stage: "seeded", open: person("long") },
-  { page: "person-states", title: "Loading", server: "sides", stage: "seeded", open: async (env) => holdReads(env, NEUTRAL, `records/person/${env.seed.people.pat}`) },
+  { page: "person-states", title: "Loading", server: "sides", stage: "heard-from", open: async (env) => holdReads(env, NEUTRAL, `records/person/${env.seed.people.pat}`) },
   {
     page: "person-states",
     title: "Person not found",
@@ -376,7 +376,7 @@ export const ENTRIES: Entry[] = [
     page: "person-states",
     title: "Editing the details",
     server: "sides",
-    stage: "seeded",
+    stage: "heard-from",
     open: async (env) => {
       await person("pat")(env);
       await env.page.getByRole("button", { name: "Edit", exact: true }).click();
@@ -387,7 +387,7 @@ export const ENTRIES: Entry[] = [
     page: "person-states",
     title: "Offline",
     server: "sides",
-    stage: "seeded",
+    stage: "heard-from",
     open: async (env) => {
       await person("pat")(env);
       await goOffline(env);
@@ -397,7 +397,7 @@ export const ENTRIES: Entry[] = [
     page: "person-states",
     title: "A save that failed",
     server: "sides",
-    stage: "seeded",
+    stage: "heard-from",
     open: async (env) => {
       await person("pat")(env);
       await env.page.getByRole("button", { name: "Edit", exact: true }).click();

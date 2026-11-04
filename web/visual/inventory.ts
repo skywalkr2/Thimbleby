@@ -467,6 +467,7 @@ type Where = Pick<Screen, "server" | "stage">;
 const SIGNED: Where = { server: "accounts", stage: "signed-in" };
 const FRESH: Where = { server: "accounts", stage: "fresh" };
 const SEEDED: Where = { server: "sides", stage: "seeded" };
+const HEARD_FROM: Where = { server: "sides", stage: "heard-from" };
 const FILLED: Where = { server: "sides", stage: "filled" };
 const EMPTY: Where = { server: "sides", stage: "empty" };
 const DEMO: Where = { server: "demo", stage: "demo" };
@@ -906,7 +907,7 @@ function build(): Screen[] {
   add(
     people,
     ...shared(people, "records/people", LISTS),
-    s("Records", "person-page", "A person's page", SEEDED, (env) => open(env, `records/person/${env.seed.people.pat}`)),
+    s("Records", "person-page", "A person's page", HEARD_FROM, (env) => open(env, `records/person/${env.seed.people.pat}`)),
     s("Records", "person-long-name", "A person's page, with a very long name", SEEDED, (env) => open(env, `records/person/${env.seed.people.long}`)),
     s("Records", "person-new", "A person's page, with nothing yet", SEEDED, (env) => open(env, `records/person/${env.seed.people.fresh}`)),
     s("Records", "person-missing", "A person's page that no longer exists", SEEDED, reach("records/person/PER-9999")),

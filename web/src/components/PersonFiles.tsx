@@ -1,5 +1,5 @@
 // The files from one person, on their page (design 7.14): a card beside the details with the newest few and "See all", and the
-// page's Files tab with every one. A file belongs to a person when its details name them; a person with no such file has neither
+// page's Files tab with every one. A file belongs to a person when it records them as where it came from; a person with no such file has neither
 // the card nor the tab, so nothing is drawn empty.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
@@ -10,12 +10,9 @@ import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
 
-/** The details key a file carries to say whose it is: the id of the person it came from. */
-export const FILE_FROM_KEY = "person";
-
-/** The files whose details name this person, newest first (the files list is already in that order). */
+/** The files recorded as coming from this person, newest first (the files list is already in that order). */
 export function filesFromPerson(files: S["FileView"][] | undefined, person: string): S["FileView"][] {
-  return (files ?? []).filter((f) => f.meta?.[FILE_FROM_KEY] === person);
+  return (files ?? []).filter((f) => f.from_person === person);
 }
 
 export function usePersonFiles(person: string, enabled: boolean): S["FileView"][] {

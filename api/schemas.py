@@ -2406,6 +2406,9 @@ class FileView(BaseModel):
     meta: dict[str, Any]
     origin: Literal["upload", "tool"]
     replaces: str | None
+    from_person: str | None = Field(
+        None, description="The id of the person it came from; none when no one in particular."
+    )
     added_at: str
     data_level: Literal["open", "internal", "restricted"] = Field(
         "internal", description="How sensitive its content is: it goes only to AI accounts allowed this level."

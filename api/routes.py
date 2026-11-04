@@ -372,6 +372,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     "meta",
                     "origin",
                     "replaces",
+                    "from_person",
                     "added_at",
                 )
             },
@@ -1244,10 +1245,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         project: str | None = None,
         meta: str = "{}",
         replaces: str | None = None,
+        from_person: str | None = None,
         data_level: Literal["open", "internal", "restricted"] | None = None,
     ) -> FileView:
         """Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON. Without
-        a `data_level` the file takes its kind's level (internal unless the kind says otherwise)."""
+        a `data_level` the file takes its kind's level (internal unless the kind says otherwise). `from_person` names
+        the person it came from, such as the page it was added from."""
         import json
 
         from engine.files import add_file
@@ -1273,6 +1276,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 project=project,
                 meta=details,
                 replaces=replaces,
+                from_person=from_person,
                 data_level=data_level,
             )
         )
@@ -1578,6 +1582,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         request: Request,
         name: str,
         project: str | None = None,
+        person: str | None = None,
         data_level: Literal["open", "internal", "restricted"] | None = None,
     ) -> Handed:
         """Hand in a voice note: the request body is the sound, its Content-Type the type. It is kept as the person's
@@ -1596,7 +1601,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         media_type = (request.headers.get("content-type") or "").split(";")[0].strip()
         handed = guard(
             lambda: transcribe.hand_in(
-                store, cfg, data, name=name, media_type=media_type, project=project, data_level=data_level
+                store,
+                cfg,
+                data,
+                name=name,
+                media_type=media_type,
+                project=project,
+                data_level=data_level,
+                from_person=person,
             )
         )
         changed()
@@ -1609,6 +1621,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         name: str,
         note: str = "",
         project: str | None = None,
+        person: str | None = None,
         data_level: Literal["open", "internal", "restricted"] | None = None,
     ) -> HandedImage:
         """Keep a picture and queue reading it through a listed account.
@@ -1637,6 +1650,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 note=note,
                 project=project,
                 data_level=data_level,
+                from_person=person,
             )
         )
         changed()
@@ -1655,6 +1669,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         name: str,
         note: str = "",
         project: str | None = None,
+        person: str | None = None,
         data_level: Literal["open", "internal", "restricted"] | None = None,
     ) -> HandedFile:
         """Read a document as outside content, or keep it in the person's files if no reader can take it."""
@@ -1710,6 +1725,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     name=name,
                     media_type=stored_type,
                     project=project,
+                    from_person=person,
                     data_level=data_level,
                     preserve_generic=keep_generic,
                 )

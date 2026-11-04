@@ -1006,6 +1006,7 @@ class FileAddOp(OpModel):
     project: str | None = Field(None, description="The project it belongs to; none means the whole workspace.")
     meta: dict[str, Any] = Field(default_factory=dict, description="Details the file kind asks for, validated on add.")
     replaces: str | None = Field(None, description="The earlier file this one is a new version of.")
+    from_person: str | None = Field(None, description="The id of the person the file came from, if one.")
 
     def describe(self) -> str | None:
         return f"Add the file {self.name}"

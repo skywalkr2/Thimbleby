@@ -76,6 +76,7 @@ def hand_in(
     note: str = "",
     project: str | None = None,
     data_level: str | None = None,
+    from_person: str | None = None,
     now: datetime | None = None,
 ) -> HandedPicture:
     """Keep a picture and queue reading it when a listed account can; otherwise keep it and say so plainly."""
@@ -98,6 +99,7 @@ def hand_in(
             media_type=found,
             project=project,
             data_level=data_level,
+            from_person=from_person,
             origin="upload",
             now=now,
         )
@@ -116,6 +118,7 @@ def hand_in(
         media_type=found,
         project=project,
         data_level=data_level,
+        from_person=from_person,
         origin="upload",
         now=now,
     )

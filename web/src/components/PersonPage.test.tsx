@@ -304,9 +304,10 @@ const fileFrom = (id: string, name: string, person: string | null): S["FileView"
   file_kind: "attachment",
   kind_label: "Document",
   project: null,
-  meta: person ? { person } : {},
+  meta: {},
   origin: "upload",
   replaces: null,
+  from_person: person,
   added_at: "2026-10-09T14:00:00Z",
   data_level: "internal",
 });

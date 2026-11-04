@@ -93,6 +93,7 @@ def check_file(
     meta: dict[str, Any] | None = None,
     project: str | None = None,
     replaces: str | None = None,
+    from_person: str | None = None,
     allow_generic: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Check a file against the limits and its kind. Returns its cleaned name and validated details; refusals say why
@@ -123,6 +124,8 @@ def check_file(
         raise StoreError(f"there is no project {project}")
     if replaces is not None and view.get("file", replaces) is None:
         raise StoreError(f"there is no file {replaces} to replace")
+    if from_person is not None and view.get("person", from_person) is None:
+        raise StoreError(f"there is no person {from_person}")
     return name, details
 
 
@@ -199,6 +202,7 @@ def add_file(
     meta: dict[str, Any] | None = None,
     origin: str = "upload",
     replaces: str | None = None,
+    from_person: str | None = None,
     data_level: str | None = None,
     preserve_generic: bool = False,
     context: WriteContext = _PM,
@@ -234,6 +238,7 @@ def add_file(
             meta=meta,
             project=project,
             replaces=replaces,
+            from_person=from_person,
         )
         return tx.create(
             "file",
@@ -248,6 +253,7 @@ def add_file(
                 "origin": origin,
                 "trust": "trusted" if origin == "upload" else "untrusted",
                 "replaces": replaces,
+                "from_person": from_person,
                 "added_at": (now or datetime.now(UTC)).isoformat(),
                 "sensitivity": level,
             },

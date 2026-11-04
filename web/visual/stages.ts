@@ -5,14 +5,15 @@ import { api, LONG } from "./drive.ts";
 import { chromiumSignIn } from "./signin.ts";
 
 export type ServerName = "accounts" | "sides" | "clear" | "demo";
-export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "filled" | "bulk" | "done" | "demo";
+export type Stage = "fresh" | "signed-in" | "failing" | "empty" | "seeded" | "heard-from" | "filled" | "bulk" | "done" | "demo";
 
 export const STAGE_ORDER: Record<ServerName, Stage[]> = {
   // fresh: nothing signed in, the walkthrough closed so the app's own menus are there; signed-in: three accounts read;
   // failing: the third account's sign-in has been withdrawn.
   accounts: ["fresh", "signed-in", "failing"],
   // empty: five sides and nothing else; seeded: a few people, to-dos and a long-named person; filled: two organizations, one with a very long name (the inventory); bulk: over a hundred to-dos.
-  sides: ["empty", "seeded", "filled", "bulk"],
+  // heard-from: the seeded printer has sent a file and has a to-do waiting on them, so their page has the Files card and Draft a message.
+  sides: ["empty", "seeded", "heard-from", "filled", "bulk"],
   // done: setup finished and nothing waiting (the server's own seed; nothing is added here).
   clear: ["done"],
   // demo: the browser tests' own demo workspace with a second stand-in account: it has add-on lists, an installed add-on and two
@@ -138,6 +139,19 @@ export async function setUp(server: ServerName, stage: Stage, env: StageEnv): Pr
         const project = n % 3 === 2 || projects.length === 0 ? undefined : projects[n % projects.length];
         await api(env.base, env.token, "todos", { method: "POST", body: { ...todo, owners: [me], project } });
       }
+      return;
+    }
+    case "sides/heard-from": {
+      const pat = (env.seed.people as { pat: string }).pat;
+      // A small made-up PDF the printer sent, kept as a file that records the person it came from.
+      const sent = await fetch(`${env.base}api/files?name=${encodeURIComponent("Proof sheet.pdf")}&from_person=${encodeURIComponent(pat)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.token}`, "content-type": "application/pdf" },
+        body: "%PDF-1.4\n% a made-up proof sheet\n",
+      });
+      if (!sent.ok) throw new Error(`POST api/files answered ${sent.status}: ${(await sent.text()).slice(0, 200)}`);
+      // One item waiting on them, so a message to them can be drafted.
+      await api(env.base, env.token, "todos", { method: "POST", body: { text: "Send the signed proof sheet", when: dayOffset(4), owners: [pat] } });
       return;
     }
     case "sides/filled": {

@@ -2164,6 +2164,7 @@ A file a person added or a program wrote. The bytes live in the workspace's file
 | `origin` | Literal['upload', 'tool'] | `'upload'` | Added by the person, or written by a program. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted: its content is material to read, never instructions. |
 | `replaces` | str \| None | `None` | The earlier file this one is a new version of. |
+| `from_person` | str \| None | `None` | The id of the person it came from (a sender, or whoever it was added from the page of); none when it came from no one in particular. |
 | `added_at` | datetime | required | When the record was added. |
 | `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | Its data level, how sensitive its content is: it goes only to AI accounts allowed this level. From the person's choice when they added it. Only the person changes it. |
 
@@ -3077,6 +3078,7 @@ Record a file whose bytes the host already stored under their hash, such as one 
 | `project` | str \| None | `None` | The project it belongs to; none means the whole workspace. |
 | `meta` | dict[str, Any] | `{}` | Details the file kind asks for, validated on add. |
 | `replaces` | str \| None | `None` | The earlier file this one is a new version of. |
+| `from_person` | str \| None | `None` | The id of the person the file came from, if one. |
 
 ### `glossary.add`
 
