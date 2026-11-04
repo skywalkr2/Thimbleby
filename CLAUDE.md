@@ -192,6 +192,11 @@ time. These rules hold for the main session and every subagent.
   default ports, set `PW_PORT_OFFSET`.
 - **Never stop processes by a broad pattern** (`pkill -f pytest`, `pkill -f playwright`): it kills other workers' runs.
   Stop only your own process by its id.
+- **Each helper running at the same time gets its own `PW_PORT_OFFSET`, chosen by the main session** (2026-11-04: two
+  helpers were given the same offset; one then deleted the other's server folder to get its own run going).
+  - A helper never deletes a file or folder it didn't create.
+  - A helper never stops a process by pattern, even its own.
+  - A collision is reported, not cleared.
 - **Don't poll with sleep loops**; a foreground `sleep` may return at once. Run a long job in the background and wait for
   its notification.
 - **Judge a run by its exit code**, not by grepping a summary line (pytest here prints none with `-q -n auto`).
