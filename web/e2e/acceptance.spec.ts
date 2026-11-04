@@ -1117,21 +1117,22 @@ test.describe.serial("acceptance scenario", () => {
     const adding = page.getByRole("dialog", { name: "Add a person" });
     await expect(adding.getByLabel(/Full name/)).toBeFocused();
     await adding.getByLabel(/Full name/).fill("Test Person");
+    await adding.getByText("More details").click();
     await adding.getByLabel(/^Role/).fill("Proofreader");
     await checkAccessibility(page);
     await adding.getByRole("button", { name: "Add a person" }).click();
-    const row = page.getByRole("row", { name: /Test Person/ });
+    const row = page.getByRole("listitem").filter({ hasText: /Test Person/ });
     await expect(row).toContainText("Proofreader");
     await row.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Edit" }).click();
     const editing = page.getByRole("dialog", { name: "Edit person" });
     await editing.getByLabel(/Full name/).fill("Renamed Person");
     await editing.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByRole("row", { name: /Renamed Person/ })).toBeVisible();
+    await expect(page.getByRole("listitem").filter({ hasText: /Renamed Person/ })).toBeVisible();
     // The rename's own toast, not whichever Undo happens to be last on screen.
     const renamed = page.getByRole("region", { name: "Notifications" }).locator("div", { hasText: /^Saved Renamed Person/ });
     await renamed.getByRole("button", { name: "Undo" }).click();
-    await expect(page.getByRole("row", { name: /Test Person/ })).toBeVisible();
+    await expect(page.getByRole("listitem").filter({ hasText: /Test Person/ })).toBeVisible();
     await checkAccessibility(page);
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
@@ -1147,6 +1148,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Add a person" }).click();
     const form = page.getByRole("dialog", { name: "Add a person" }).locator("form.setup-form");
     await form.getByLabel(/Full name/).fill("Org Person");
+    await form.getByText("More details").click();
     const org = form.getByRole("combobox", { name: /Organization/ });
     expect((await choicesOf(org)).map((c) => c.label)).toEqual(expect.arrayContaining(["Not set", "Add an organization…"]));
     await choose(org, { label: "Add an organization…" });
@@ -1159,15 +1161,15 @@ test.describe.serial("acceptance scenario", () => {
     await field.press("Enter");
     await expect(org).toContainText(name);
     await page.getByRole("dialog", { name: "Add a person" }).getByRole("button", { name: "Add a person" }).click();
-    const row = page.getByRole("row", { name: /Org Person/ });
+    const row = page.getByRole("listitem").filter({ hasText: /Org Person/ });
     await expect(row).toBeVisible();
     // The row says who they are; the organization is in the person's details, by name, never by its id.
     await expect(row).not.toContainText(/ORG-/);
     await expect(page.locator("[data-definition-list]", { hasText: "Organization" })).toContainText(name);
     await expect(page.locator("[data-definition-list]", { hasText: "Organization" })).not.toContainText(/ORG-/);
     const orgs = page.getByRole("region", { name: "Organizations" });
-    // The organizations are a table: the person count is a number in the People column.
-    await expect(orgs.getByRole("row", { name: new RegExp(name) }).getByRole("cell", { name: "1", exact: true })).toBeVisible();
+    // The organizations are rows: the person count is in the row's one meta line.
+    await expect(orgs.getByRole("listitem").filter({ hasText: name })).toContainText("1 person");
     await checkAccessibility(page);
   });
 

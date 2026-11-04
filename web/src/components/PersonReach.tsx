@@ -111,7 +111,7 @@ export function PersonReach(props: {
           </Button>
         </form>
       ) : (
-        <Button ref={opener} variant="quiet" size="sm" className={styles.add} onClick={() => setAdding(true)}>
+        <Button ref={opener} variant="quiet" size="sm" icon="plus" className={styles.add} onClick={() => setAdding(true)}>
           {t(values.length > 0 ? "person.add_another" : "person.add_kind", { kind: kindWord })}
         </Button>
       )}

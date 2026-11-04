@@ -100,7 +100,7 @@ test("a person's email, phone and sides are changed from their own form later", 
     "POST people/P-1": () => ({ ok: "P-1" }),
   });
   renderApp(<People />);
-  const tr = (await screen.findByRole("link", { name: "Ana Person" })).closest("tr")!;
+  const tr = (await screen.findByRole("link", { name: "Ana Person" })).closest("li")!;
   await user.click(within(tr).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit person" });
@@ -182,4 +182,37 @@ test("a person with nothing besides their own life is asked who they are to you,
   expect(within(dialog).queryByRole("group", { name: "Where they belong" })).toBeNull();
   expect(within(dialog).getByLabelText(/^Who they are to you/)).toBeInTheDocument();
   expect(within(dialog).getByLabelText("Email")).toBeInTheDocument();
+});
+
+test("a person whose record names no side opens ready to save, with their role in the form, and a save leaves their sides alone", async () => {
+  const user = userEvent.setup();
+  const calls = api([person("P-2", "Pat Printer", { role: "Printer", sides: [], how_to_reach: { email: ["pat@example.com"] } })], { ...sided, "POST people/P-2": () => ({ ok: "P-2" }) });
+  renderApp(<People />);
+  const tr = (await screen.findByRole("link", { name: "Pat Printer" })).closest("li")!;
+  await user.click(within(tr).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  const dialog = await screen.findByRole("dialog", { name: "Edit person" });
+  // What the record holds is in the form, behind "More details" opened for it; Save is not asked for a side the record never had.
+  expect(within(dialog).getByLabelText(/^Role/)).toHaveValue("Printer");
+  expect(within(dialog).getByText("More details").closest("details")).toHaveAttribute("open");
+  const email = within(dialog).getByLabelText("Email");
+  await user.clear(email);
+  await user.type(email, "pat.new@example.com");
+  const save = within(dialog).getByRole("button", { name: "Save" });
+  expect(save).toBeEnabled();
+  await user.click(save);
+  await waitFor(() => expect(calls.some((c) => c.route === "POST people/P-2")).toBe(true));
+  const body = calls.find((c) => c.route === "POST people/P-2")!.body as Record<string, unknown>;
+  expect(body).toMatchObject({ role: "Printer", how_to_reach: { email: ["pat.new@example.com"] } });
+  expect(body).not.toHaveProperty("sides");
+});
+
+test("adding a person asks for the name, where they belong and how to reach them, and keeps the rest behind More details", async () => {
+  const user = userEvent.setup();
+  api([], sided);
+  renderApp(<People />);
+  const dialog = await openAdd(user);
+  expect(within(dialog).getByText("More details").closest("details")).not.toHaveAttribute("open");
+  expect(within(dialog).getByRole("group", { name: "Where they belong" })).toBeInTheDocument();
+  expect(within(dialog).queryByText(/^\(/)).toBeNull();
 });

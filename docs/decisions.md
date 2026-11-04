@@ -29,6 +29,12 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 
 **Why:** the cold scorers and the audit named these on these screens. **Impact:** `web/src/components/` (the screens above), `engine/config/schema.py` and `levels.py` (`ui.open_rows_shown`), `api/open_items_routes.py` and `api/schemas.py` (`rows_shown`), both demo workspaces' `ui.yaml`, design 4 and 7.5, the wording sheet, `web/visual/` (states). Change log: section 333.
 
+## 2026-11-04: People, a person's page, the person form and Organizations at the gate, batch G4a of the fix round
+
+**Decided:** (the gate's fix round, batch G4a; design by the main session, no owner choice needed.) People and Organizations are lists of rows with one meta line (no table, no label-over-value cards on a phone); filters are drawn from twelve people (the filter bar rule). The person form asks the name, where they belong and how to reach them, and keeps the rest behind More details; a person whose record names no side opens ready to save (never block Save on a field the record already holds). A person's page says each thing once (the name's button and tab carry no name, the role and who they are only under the title, no kind tag), is headed by a crumb back to People, and a missing person is headed like every missing page. An organization's page leads with its note and counts. Change log: section 330.
+
+**Why:** the cold scorers found these screens below 4.0: empty columns, two competing tables, a form that could not be saved, a name said six times. **Impact:** `components/People.tsx`, `Organizations.tsx`, `PersonForm.tsx`, `PersonReach.tsx`, `RecordPage.tsx`, `RecordConversation.tsx`, `App.tsx` (the navigation mark), `wording/en.json`, design 7.13 and 7.14. Left to the shared parts (G1d): the drawer's title size and width, a disabled primary's look, the toast's wrap and countdown, the page header's small text and Back size, the phone tab bar covering the foot of a whole-page capture.
+
 ## 2026-11-04: Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review, batch G2a of the gate's fix round (section 329)
 
 **Decided:** (the gate's fix round, batch G2a; design by the main session.)

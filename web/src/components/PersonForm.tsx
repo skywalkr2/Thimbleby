@@ -124,7 +124,9 @@ export function PersonDrawer(props: {
 
   const sided = !justMe && sides.length > 0;
   const onPersonal = !sided || (personal !== null && ticked.includes(personal)) || ticked.length === 0;
-  const onWork = sided && sides.some((s) => ticked.includes(s.project));
+  // A person whose record names no side yet (not known) is shown both kinds of detail, so what the record holds is in the form.
+  const unplaced = !!p && ticked.length === 0;
+  const onWork = sided && (sides.some((s) => ticked.includes(s.project)) || unplaced);
   const twin = sameName(people.data ?? [], name, p?.id);
   const sameSides = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
   const reachNow = heldReach(reach); // as it is sent: no blanks, and a kind left with none is left out
@@ -138,7 +140,9 @@ export function PersonDrawer(props: {
     JSON.stringify(reachNow) !== JSON.stringify(heldReach(p?.how_to_reach)) ||
     (sided && picked !== null && !sameSides(ticked, p ? held : []));
   const formId = `person-form-${key}`;
-  const needSide = sided && ticked.length === 0;
+  const moreHeld = !!(p && (p.first_name || p.aliases.length > 0 || p.relation || p.role || p.org));
+  // A new person is placed on a side; one whose record names none is never stopped from saving on that account.
+  const needSide = sided && ticked.length === 0 && !(p && held.length === 0);
   const blocked = !name.trim() || !!twin || needSide;
   const reason = !name.trim() ? t("setup.name_missing") : twin ? t("person.dup_reason") : t("person.side_missing");
 
@@ -155,7 +159,7 @@ export function PersonDrawer(props: {
       how_to_reach: reachNow,
       ...(onPersonal ? { relation: relation.trim() || null } : {}),
       ...(!justMe && (!sided || onWork) ? { role: role.trim() || null, org: org || null } : {}),
-      ...(sided ? { sides: ticked } : {}),
+      ...(sided && (!p || picked !== null) ? { sides: ticked } : {}),
     };
     try {
       let id: string;
@@ -222,10 +226,8 @@ export function PersonDrawer(props: {
           invalid={!!twin}
           hint={twin ? <span className={styles.problem}>{t("person.dup", { name: twin.name })}</span> : undefined}
         />
-        <Field id={`pf-${key}`} label={t("setup.first_name")} value={firstName} onChange={setFirstName} hint={t("setup.first_name_hint")} />
-        <Field id={`pa-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.aliases_hint")} />
         {sided && (
-          <CheckboxGroup legend={t("person.sides")} hint={t("person.sides_hint")}>
+          <CheckboxGroup panel className={styles.sides} legend={t("person.sides")} hint={t("person.sides_hint")}>
             {places.map((pl) => (
               <label key={pl.id} className="check-line">
                 <input type="checkbox" checked={ticked.includes(pl.id)} onChange={() => toggle(pl.id)} />
@@ -233,13 +235,6 @@ export function PersonDrawer(props: {
               </label>
             ))}
           </CheckboxGroup>
-        )}
-        {onPersonal && <Field id={`pl-${key}`} label={t("setup.relation")} value={relation} onChange={setRelation} hint={t("setup.relation_hint")} />}
-        {(!sided || onWork) && !justMe && (
-          <>
-            <Field id={`pr-${key}`} label={t("setup.role")} value={role} onChange={setRole} hint={t("setup.role_hint")} />
-            <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
-          </>
         )}
         {kinds.map((kind) => {
           const values = reach[kind]?.length ? reach[kind] : [""];
@@ -268,6 +263,19 @@ export function PersonDrawer(props: {
             </div>
           );
         })}
+        {/* The rest is asked after the name, where they belong and how to reach them; what the record already holds opens it. */}
+        <details className="more-options" open={moreHeld || undefined} data-person-more="">
+          <summary>{t("record.more_details")}</summary>
+          <Field id={`pf-${key}`} label={t("setup.first_name")} value={firstName} onChange={setFirstName} hint={t("setup.first_name_hint")} />
+          <Field id={`pa-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.aliases_hint")} />
+          {onPersonal && <Field id={`pl-${key}`} label={t("setup.relation")} value={relation} onChange={setRelation} hint={t("setup.relation_hint")} />}
+          {(!sided || onWork) && !justMe && (
+            <>
+              <Field id={`pr-${key}`} label={t("setup.role")} value={role} onChange={setRole} hint={t("setup.role_hint")} />
+              <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
+            </>
+          )}
+        </details>
         {problem && <NotSaved what={name.trim() || undefined} reason={problem} busy={busy} onRetry={() => void save()} />}
       </form>
     </Drawer>

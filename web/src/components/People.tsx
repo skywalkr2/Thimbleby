@@ -3,7 +3,7 @@
 // the person's page for a new tab. Adding and editing happen in a drawer, so the table
 // stays in view and the new row appears beside the form. Organizations are kept here too, since a person works for one.
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { api, type S } from "../lib/api";
 import { day } from "../lib/dates";
 import { whoTheyAre } from "../lib/people-who";
@@ -15,7 +15,12 @@ import { EmptyState } from "../ui/EmptyState";
 import { FormField } from "../ui/FormField";
 import { ListDetail } from "../ui/ListDetail";
 import { Pill } from "../ui/Pill";
-import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
+import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
+import { PersonAvatar } from "./PersonAvatar";
+import { filterBarShown } from "../lib/filterbar";
+import { useRowKeys } from "../lib/keys";
+import { useSideSlot } from "../lib/marks";
 import { FilteredEmpty } from "../ui/FilteredEmpty";
 import { ListState } from "../ui/ListState";
 import { Organizations } from "./Organizations";
@@ -35,7 +40,7 @@ const ALL = "";
 const NONE = "\u0001none";
 
 /** The width the priority columns (name, role, organization, open items and the menu) need beside the pane. */
-const PEOPLE_FIT = 600;
+const PEOPLE_FIT = 520;
 
 export function People() {
   const { t, tn } = useWords();
@@ -66,29 +71,14 @@ export function People() {
     </>
   );
   const reach = (p: S["PersonView"]) => Object.entries(heldReach(p.how_to_reach)).flatMap(([kind, values]) => values.map((value) => `${kind}: ${value}`));
-  const reachColumn: TableColumn<S["PersonView"]> = {
-    id: "reach",
-    header: t("people.col.reach"),
-    rank: justMe ? 2 : 3,
-    core: justMe,
-    cell: (p) =>
-      reach(p).map((line) => (
-        <div key={line} title={line} className={styles.clip}>
-          {line}
-        </div>
-      )),
-  };
-  // One column says who they are: how they relate to you, then their part on each side of your work. The organization and the
-  // role are in the details.
-  const leading: TableColumn<S["PersonView"]>[] = [{ id: "who", header: t("people.col.who"), rank: 1, core: true, cell: who }];
-  const columns: TableColumn<S["PersonView"]>[] = [
-    ...leading,
-    reachColumn,
-    { id: "open", header: t("people.col.open"), rank: 1, core: true, numeric: true, cell: (p) => (p.open_items > 0 ? p.open_items : "") },
-    { id: "last", header: t("people.col.last"), rank: 2, cell: (p) => (p.last_contact ? day(p.last_contact) : "") },
-  ];
-  const filter = (
-    <FormField id="people-org" label={t("people.filter_org")} className={styles.orgFilter} data-size="content">
+  const slotOf = useSideSlot();
+  // A person is one row: their initials, their name, and one line that says what there is to say (open items, who they are, how to
+  // reach them); a person with nothing to say has the name alone.
+  const metaOf = (p: S["PersonView"]) =>
+    [p.open_items > 0 ? tn("people.open_with", p.open_items) : "", who(p), Object.values(heldReach(p.how_to_reach)).flat()[0] ?? ""].filter(Boolean).join(" \u00b7 ");
+  const orgFilterShown = !justMe && (orgs.data ?? []).length > 1 && filterBarShown(all.length, org !== ALL);
+  const filter = orgFilterShown ? (
+    <FormField id="people-org" label={t("people.filter_org")} labelHidden className={styles.orgFilter} data-size="content">
       <Select id="people-org" value={org} onChange={(e) => setOrg(e.target.value)}>
         <option value={ALL}>{t("people.all_orgs")}</option>
         {(orgs.data ?? []).map((o) => (
@@ -99,14 +89,22 @@ export function People() {
         <option value={NONE}>{t("people.no_org")}</option>
       </Select>
     </FormField>
-  );
+  ) : null;
+  // What the page holds, said once under the title: how many people and, beside sides, how many organizations.
+  const summary = people.data && !people.isError ? [tn("people.count", people.data.length), !justMe && orgs.data && !orgs.isError ? tn("orgs.count", orgs.data.length) : ""].filter(Boolean).join(", ") : undefined;
 
   return (
     <section className="panel-section" aria-labelledby="people-title">
       <PageHeader
         id="people-title"
         title={t("setup.people")}
-        filters={<SideFilter />}
+        subtitle={summary}
+        filters={
+          <>
+            <SideFilter holds={(people.data ?? []).length} />
+            {filter}
+          </>
+        }
         primary={
           <Button variant="primary" onClick={() => setAdding(true)}>
             {t("setup.add_person")}
@@ -119,7 +117,7 @@ export function People() {
         fit={PEOPLE_FIT}
         detail={selected ? <PersonDetail person={selected} justMe={justMe} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} /> : null}
       >
-        <ListState query={people} failed={t("people.load_failed")} shape="table" rows={6}>
+        <ListState query={people} failed={t("people.load_failed")} rows={6}>
           {() =>
             all.length === 0 ? (
               side.choice !== "all" ? (
@@ -129,35 +127,24 @@ export function People() {
               )
             ) : (
               <>
-                {!justMe && ((orgs.data ?? []).length > 1 || org !== ALL) && filter}
                 {rows.length === 0 ? (
                   <FilteredEmpty text={t("people.none_here")} onClear={() => setOrg(ALL)} />
                 ) : (
-                  <RecordsTable
-                    label={t("setup.people")}
-                    name={{
-                      header: t("people.col.name"),
-                      title: (p) => p.name,
-                      cell: (p, open) => (
-                        <>
-                          <a href={viewHref(recordView("person", p.id))} onClick={open}>
-                            {p.name}
-                          </a>{" "}
-                          {tags(p)}
-                          {p.aliases.length > 0 && <div className="hint">{t("setup.also_called", { names: p.aliases.join(", ") })}</div>}
-                        </>
-                      ),
-                    }}
-                    columns={columns}
-                    groups={[{ id: "all", title: t("setup.people"), rows }]}
-                    rowKey={(p) => p.id}
-                    selected={chosen}
-                    onSelect={(p) => setChosen(p.id)}
-                    actionsHeader={t("people.col.actions")}
-                    actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
-                  />
+                  <RowList aria-label={t("setup.people")}>
+                    {rows.map((p) => (
+                      <PersonRow
+                        key={p.id}
+                        person={p}
+                        selected={chosen === p.id}
+                        slot={slotOf((p.sides ?? [])[0])}
+                        meta={metaOf(p)}
+                        tags={tags(p)}
+                        onSelect={() => setChosen(p.id)}
+                        menu={<RowMenu label={p.name} actions={menu(p)} />}
+                      />
+                    ))}
+                  </RowList>
                 )}
-                <p className="hint">{tn("people.count", all.length)}</p>
               </>
             )
           }
@@ -167,6 +154,39 @@ export function People() {
       {adding && <PersonDrawer onClose={() => setAdding(false)} onSaved={(id) => setChosen(id)} />}
       {editing && <PersonDrawer person={editing} onClose={() => setEditing(null)} />}
     </section>
+  );
+}
+
+/** One person in the list: a click, Enter on the row or the name opens their details beside it; the name is also their page's link. */
+function PersonRow(props: { person: S["PersonView"]; selected: boolean; slot: number | null; meta: string; tags: React.ReactNode; onSelect: () => void; menu: React.ReactNode }) {
+  const p = props.person;
+  const ref = useRef<HTMLElement>(null);
+  useRowKeys(ref, { toggle: props.onSelect, primary: props.onSelect });
+  const open = (event: MouseEvent) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    props.onSelect();
+  };
+  return (
+    <Row
+      ref={ref}
+      lead={<PersonAvatar name={p.name} slot={props.slot} size="md" />}
+      title={
+        <a href={viewHref(recordView("person", p.id))} onClick={open}>
+          {p.name}
+        </a>
+      }
+      clamp={p.name}
+      pill={props.tags}
+      meta={props.meta}
+      oneLine
+      selected={props.selected}
+      menu={props.menu}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("a, button, input, select, textarea, [role='menuitem']")) return;
+        props.onSelect();
+      }}
+    />
   );
 }
 

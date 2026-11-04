@@ -66,7 +66,7 @@ test.describe("A person's page, Quality and setup to the 4.6 mockups", () => {
   test("the one filled button on a person's page adds a to-do for them: the form opens with them as the owner and the cursor in its words", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openPerson(page, id, NAME);
-    const primary = page.getByRole("button", { name: "Add a to-do for Odette" }).first();
+    const primary = page.getByRole("button", { name: "Add a to-do" }).first();
     await expect(primary).toHaveAttribute("data-weight", "filled");
     await primary.click();
     const dialog = page.getByRole("dialog", { name: "Add a to-do" });

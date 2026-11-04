@@ -1045,6 +1045,17 @@ Batch G1b of the gate's fix round (7.12, 7.13). The drawer is full height; the h
 | A to-do's page (7.5) | The facts split in two columns; the words repeated under the title; "Promised to: No one in particular" | One card; the words only when they differ from the title; the person's own to-do says nothing of it |
 | Outside these screens | Files showed a kind chip on every row; a person's Activity heading twice; "Nothing filled in yet"; "End them with it"; "From your notes" | The chip only with several kinds; the heading for a screen reader; the line gone; "Remove them too"; "Added by you" |
 
+## 330. People, a person's page, the person form and Organizations at the gate (2026-11-04; gate fix batch G4a)
+
+| Where | Before | Now |
+|---|---|---|
+| People (7.13) | Two tables with filter rows above them, mostly empty cells, labels over values on a phone | One list of rows (initials, name, one meta line, menu); the title says "4 people, 6 organizations"; the side and Organization filters only from twelve people, on one row |
+| Organizations (7.13) | A second table with its own outline button | Rows with one meta line, a quiet add button, "Removed organization X", one load-failed card for its own part |
+| Person form (7.14) | Eleven fields of equal weight; Save blocked for a person whose record names no side; hints in brackets | Name, where they belong (one panel), how to reach; the rest under More details (open when the record holds any); a person with no known side opens ready to save and is saved without touching sides |
+| A person's page (7.14) | "Add a to-do for Pat", "Open with Pat", a Person tag, the role twice, an empty-state card with a second button, tabs inside the left column | "Add a to-do", "Open items", no tag, the role once, who they are once, one muted line when nothing is open, tabs across both columns, a contact line on a phone, the ask box's help as a tooltip |
+| A missing person | Its own card with a warning icon and no crumb | A crumb, "Not here", one line, one filled Back to People; People stays marked |
+| An organization's page | Activity first, the note in a card | The note and "N people · N open items" under the title; a People section; no card when it has nothing to list |
+
 ## 329. Today, its review, Since yesterday, What changed, Handled for you, Stages, Search and the rules review (2026-11-04; gate fix batch G2a)
 
 | Where | Before | Now |

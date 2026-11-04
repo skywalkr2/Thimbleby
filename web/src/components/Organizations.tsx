@@ -10,14 +10,15 @@ import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
-import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
-import { Skeleton } from "../ui/Skeleton";
+import { ListState } from "../ui/ListState";
+import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
 import { Field } from "./PersonForm";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 import { EmptyState } from "../ui/EmptyState";
 export function Organizations() {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const act = useAct();
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   const [adding, setAdding] = useState(false);
@@ -33,46 +34,43 @@ export function Organizations() {
       run: () =>
         void act(
           () => api.removeOrganization(o.id),
-          () => ({ message: t("toast.removed", { name: o.name }), undo: () => api.restoreOrganization(o.id) }),
+          () => ({ message: t("toast.org_removed", { name: o.name }), undo: () => api.restoreOrganization(o.id) }),
         ),
     },
   ];
-  const columns: TableColumn<S["OrganizationView"]>[] = [
-    { id: "people", header: t("orgs.col.people"), rank: 1, numeric: true, cell: (o) => (o.people > 0 ? o.people : "") },
-    { id: "side", header: t("orgs.col.side"), rank: 1, cell: (o) => (o.side ? t(o.side_kind === "job" ? "orgs.side.job" : "orgs.side.business") : "") },
-    { id: "aliases", header: t("orgs.col.aliases"), rank: 2, cell: (o) => o.aliases.join(", ") },
-  ];
+  // One line says what there is to say: how many people work there, whether it is one of the person's own, other names it goes by.
+  const metaOf = (o: S["OrganizationView"]) =>
+    [o.people > 0 ? tn("orgs.people", o.people) : "", o.side ? t(o.side_kind === "job" ? "orgs.side.job" : "orgs.side.business") : "", o.aliases.length > 0 ? t("setup.also_called", { names: o.aliases.join(", ") }) : ""]
+      .filter(Boolean)
+      .join(" \u00b7 ");
   return (
     <section className="panel-section" aria-labelledby="organizations-title">
       <div className="heading">
         <h2 id="organizations-title">{t("setup.organizations")}</h2>
-        <Button onClick={() => setAdding(true)}>
+        <Button variant="quiet" onClick={() => setAdding(true)}>
           {t("setup.add_organization")}
         </Button>
       </div>
-      {orgs.isPending ? (
-        <Skeleton shape="table" rows={3} />
-      ) : rows.length === 0 ? (
-        <EmptyState text={t("setup.no_organizations")} />
-      ) : (
-        <RecordsTable
-          label={t("setup.organizations")}
-          name={{
-            header: t("orgs.col.name"),
-            title: (o) => o.name,
-            cell: (o, open) => (
-              <a href={viewHref(recordView("organization", o.id))} onClick={open}>
-                {o.name}
-              </a>
-            ),
-          }}
-          columns={columns}
-          groups={[{ id: "all", title: t("setup.organizations"), rows }]}
-          rowKey={(o) => o.id}
-          actionsHeader={t("people.col.actions")}
-          actions={(o) => <RowMenu label={o.name} actions={menu(o)} />}
-        />
-      )}
+      <ListState query={orgs} failed={t("orgs.load_failed")} rows={3}>
+        {() =>
+          rows.length === 0 ? (
+            <EmptyState text={t("setup.no_organizations")} />
+          ) : (
+            <RowList aria-label={t("setup.organizations")}>
+              {rows.map((o) => (
+                <Row
+                  key={o.id}
+                  title={<a href={viewHref(recordView("organization", o.id))}>{o.name}</a>}
+                  clamp={o.name}
+                  meta={metaOf(o)}
+                  oneLine
+                  menu={<RowMenu label={o.name} actions={menu(o)} />}
+                />
+              ))}
+            </RowList>
+          )
+        }
+      </ListState>
       {adding && <OrganizationDrawer onClose={() => setAdding(false)} />}
       {renaming && <OrganizationDrawer org={renaming} onClose={() => setRenaming(null)} />}
     </section>

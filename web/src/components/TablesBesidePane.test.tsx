@@ -143,10 +143,11 @@ test("a person row has no Details button either, and a long address is clipped w
     "GET organizations": () => [firstOrg],
   });
   renderApp(<People />);
-  const tr = await rowOf("Ana Person");
+  const tr = (await screen.findByRole("link", { name: "Ana Person" })).closest("li")!;
   expect(within(tr).queryByRole("button", { name: /Details/ })).toBeNull();
-  expect(within(tr).getByTitle("email: a.long.address.for.someone@example.org")).toBeInTheDocument();
-  await user.click(within(tr).getByText("Editor"));
+  // The meta line keeps to one line, ending in an ellipsis, with the whole line as its title.
+  expect(within(tr).getByTitle(/a\.long\.address\.for\.someone@example\.org$/)).toBeInTheDocument();
+  await user.click(within(tr).getByText(/^Editor/));
   expect(await screen.findByRole("dialog", { name: "Ana Person" })).toBeInTheDocument();
 });
 
@@ -160,24 +161,21 @@ test("the organization filter is sized to its content", async () => {
   expect(css).toMatch(/\[data-ui="select"\]\s*\{[^}]*width:\s*auto/);
 });
 
-test("the organizations are a table: name, how many people work there, whether it is yours, other names, and the row's menu", async () => {
+test("the organizations are rows: name, one meta line of how many people work there, whether it is yours and other names, and the row's menu", async () => {
   const user = userEvent.setup();
   fakeApi({
     "GET people": () => [person("P-1", "Ana Person")],
     "GET organizations": () => [{ ...firstOrg, aliases: ["Org 1"], side: "SIDE-1", side_kind: "business" as const }, org("ORG-2", "Org two", 0)],
   });
   renderApp(<People />);
-  const table = await screen.findByRole("table", { name: "Organizations" });
-  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent).filter(Boolean)).toEqual(["Organization", "People", "Yours", "Also called", "Options"]);
-  const one = within(table).getByText("Org one").closest("tr")!;
-  expect(one).toHaveTextContent("2");
-  expect(one).toHaveTextContent("Org 1");
-  // The name opens the organization's page, and an organization that is one of your sides says which kind.
+  const section = await screen.findByRole("region", { name: "Organizations" });
+  const one = (await within(section).findByText("Org one")).closest("li")!;
+  expect(one).toHaveTextContent("2 people \u00b7 Your business \u00b7 also called Org 1");
+  // The name opens the organization's page.
   expect(within(one).getByRole("link", { name: "Org one" })).toHaveAttribute("href", expect.stringContaining("organization/ORG-1"));
-  expect(one).toHaveTextContent("Your business");
-  // A person count of zero is an empty cell, and the menu is the only button on the row.
-  const two = within(table).getByText("Org two").closest("tr")!;
-  expect(within(two).queryByText("0")).toBeNull();
+  // A person count of zero says nothing, and the menu is the only button on the row.
+  const two = within(section).getByText("Org two").closest("li")!;
+  expect(two).not.toHaveTextContent(/\d/);
   expect(two).not.toHaveTextContent("Your");
   expect(within(two).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["More actions for Org two"]);
   await user.click(within(two).getByRole("button", { name: "More actions for Org two" }));

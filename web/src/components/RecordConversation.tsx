@@ -72,7 +72,7 @@ export function RecordConversation(props: { kind: string; id: string; about?: st
 
   const turns = talk.data?.turns ?? [];
   return (
-    <section aria-labelledby={`${base}-title`} className="conversation" data-conversation="">
+    <section aria-labelledby={`${base}-title`} className="conversation" data-conversation="" title={props.about ? t("conversation.hint") : undefined}>
       <h2 id={`${base}-title`} className={props.about ? "conversation-title" : "sr"}>
         {props.about ? t("conversation.about", { name: props.about }) : t("conversation.title")}
       </h2>
@@ -86,7 +86,7 @@ export function RecordConversation(props: { kind: string; id: string; about?: st
       <AskAboutThis
         label={t("conversation.label")}
         placeholder={props.about ? t("conversation.about_placeholder", { name: props.about }) : t("conversation.placeholder")}
-        hint={t("conversation.hint")}
+        hint={props.about ? undefined : t("conversation.hint")}
         value={message}
         onChange={setMessage}
         onSend={() => void send()}

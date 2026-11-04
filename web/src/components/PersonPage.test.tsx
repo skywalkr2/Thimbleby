@@ -86,7 +86,7 @@ test("the page has a crumb back to People, says who they are under the name, and
   expect(await screen.findByRole("heading", { level: 1, name: ANA })).toBeInTheDocument();
   expect(screen.getAllByText("my sister").length).toBeGreaterThan(0);
   // The one filled button adds a to-do for them; Edit is on their contact card.
-  expect(screen.getByRole("button", { name: "Add a to-do for Ana" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add a to-do" })).toBeInTheDocument();
   const card = document.querySelector<HTMLElement>("[data-contact-card]")!;
   expect(within(card).getByRole("button", { name: "Edit" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Edit details" })).toBeNull();
@@ -102,7 +102,7 @@ test("the details panel says each fact once: how to reach them, who they are, th
   const details = await loaded();
   await within(details).findByText("Prefers short notes");
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
-  expect(terms).toEqual(["Email", "Phone", "Who they are", "Sides", "Dates", "What matters to them"]);
+  expect(terms).toEqual(["Email", "Phone", "Sides", "Dates", "What matters to them"]);
   const value = (term: string) => within(details).getByText(term).closest("[data-definition]")!.querySelector("dd")!.textContent;
   expect(value("Email")).toContain("ana@example.com");
   expect(value("Phone")).toBe("Add phone");
@@ -194,7 +194,7 @@ test("the overview shows the first three open items and See all, which opens the
   expect(within(open).getAllByRole("link")).toHaveLength(3);
   expect(screen.queryByRole("region", { name: "Completed" })).toBeNull();
   await user.click(within(open).getByRole("button", { name: "See all" }));
-  await waitFor(() => expect(screen.getByRole("button", { name: /^Open with Ana/ })).toHaveAttribute("aria-pressed", "true"));
+  await waitFor(() => expect(screen.getByRole("button", { name: /^Open items/ })).toHaveAttribute("aria-pressed", "true"));
   const all = screen.getByRole("region", { name: `Open with ${ANA}` });
   expect(within(all).getAllByRole("link")).toHaveLength(4);
   expect(screen.getByRole("region", { name: "Completed" })).toBeInTheDocument();
@@ -240,7 +240,7 @@ test("the one filled button adds a to-do for them: the form opens with the curso
   const user = userEvent.setup();
   serve(friend);
   await loaded();
-  await user.click(screen.getByRole("button", { name: "Add a to-do for Ana" }));
+  await user.click(screen.getByRole("button", { name: "Add a to-do" }));
   const dialog = await screen.findByRole("dialog", { name: "Add a to-do" });
   expect(within(dialog).getByRole("combobox", { name: "Who does it" })).toHaveValue("PER-2");
   expect(document.activeElement).toBe(within(dialog).getByRole("textbox", { name: /^What/ }));
@@ -280,14 +280,20 @@ test("each line of the timeline has an icon for who did it", async () => {
   for (const entry of entries) expect(entry.querySelector("svg")).not.toBeNull();
 });
 
-test("with nothing open with them the page says so once, with the way to add a to-do for them", async () => {
-  const user = userEvent.setup();
+test("with nothing open with them the page says so in one plain line with the first useful step, and has no second add button beside the one filled one", async () => {
   serve(friend, {}, pageOf({ open_actions: [], open_questions: [], completed_actions: [] }));
   await loaded();
-  const empty = await screen.findByText("Nothing with Ana yet");
-  expect(empty).toBeInTheDocument();
-  expect(screen.getByText("To-dos, questions and messages with Ana Example show up here.")).toBeInTheDocument();
-  const box = empty.closest("[data-person-nothing]") as HTMLElement;
-  await user.click(within(box).getByRole("button", { name: "Add a to-do for Ana" }));
-  expect(await screen.findByRole("dialog", { name: "Add a to-do" })).toBeInTheDocument();
+  const line = await screen.findByText("Nothing open with Ana yet. Add their email, or a first to-do.");
+  expect(line.closest("[data-person-nothing]")).not.toBeNull();
+  expect(line.closest("[data-empty]")).toBeNull();
+  expect(screen.getAllByRole("button", { name: "Add a to-do" })).toHaveLength(1);
+});
+
+test("the person's name is said once in the page's own places: no button or tab repeats it", async () => {
+  serve(friend);
+  await loaded();
+  expect(screen.queryByRole("button", { name: /Add a to-do for/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Open with / })).toBeNull();
+  // The kind of page is not a tag beside the name: the crumb says it is a person.
+  expect(document.querySelector("[data-page-header] [data-pill]")).toBeNull();
 });

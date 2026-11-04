@@ -164,16 +164,15 @@ test.describe('"Just me" sees no work words', () => {
     await expect(page.getByRole("link", { name: seeded.area.name })).toBeVisible(LOADED);
   });
 
-  test("People shows who they are and how to reach them, with no Role, Organization or Organizations", async ({ page }) => {
+  test("People shows who they are and how to reach them in one line, with no Organization filter or Organizations", async ({ page }) => {
     await page.evaluate(() => {
       window.location.hash = "records/people";
     });
     await heading(page, "People");
-    await expect(page.getByRole("columnheader", { name: "Who they are" })).toBeVisible(LOADED);
-    await expect(page.getByRole("columnheader", { name: "How to reach" })).toBeVisible(LOADED);
-    await expect(page.getByRole("columnheader", { name: /^(Role|Organization)$/ })).toHaveCount(0);
+    const row = page.getByRole("listitem").filter({ hasText: seeded.person.name });
+    await expect(row).toContainText(seeded.person.relation, LOADED);
+    await expect(page.getByRole("combobox", { name: "Organization" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /Organizations/ })).toHaveCount(0);
-    await expect(page.getByRole("row", { name: new RegExp(seeded.person.name) })).toContainText(seeded.person.relation);
   });
 
   test("no main screen shows Work, Project, Stage, Organization, Owner or Template", async ({ page }) => {

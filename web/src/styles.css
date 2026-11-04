@@ -499,7 +499,6 @@ input[data-key-field-state="works"] { border-color: var(--ok); }
 @media (min-width: 1100px) { .record-rail { position: sticky; top: var(--space-4); } }
 @media (max-width: 1099.98px) {
   .record-grid[data-person-page] .record-main, .record-grid[data-person-page] .record-rail { display: contents; }
-  .record-grid[data-person-page] [data-slot="tabs"] { order: 1; }
   .record-grid[data-person-page] [data-slot="open"] { order: 2; }
   .record-grid[data-person-page] [data-contact-card] { order: 3; }
   .record-grid[data-person-page] [data-slot="rest"] { order: 4; }

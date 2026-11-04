@@ -87,7 +87,7 @@ test("the person form has a first name field; it is sent as typed, or as nothing
     "POST people/P-1": () => ({ ok: "P-1" }),
   });
   renderApp(<People />);
-  const tr = (await screen.findByRole("link", { name: "Ana Person" })).closest("tr")!;
+  const tr = (await screen.findByRole("link", { name: "Ana Person" })).closest("li")!;
   await user.click(within(tr).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit person" });

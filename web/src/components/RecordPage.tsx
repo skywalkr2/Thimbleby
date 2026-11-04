@@ -75,6 +75,9 @@ import { DefinitionList, Definition } from "../ui/DefinitionList";
 import { TabStrip } from "../ui/TabStrip";
 import styles from "./RecordPage.module.css";
 import { whoTheyAre } from "../lib/people-who";
+import { useIsNarrow } from "../lib/media";
+import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
 /** How an entry repeats, in words: "Every week, until Dec 31". */
 function repeatLines(value: { every?: string; until?: string | null } | null, t: (key: string, vars?: Record<string, string | number>) => string, dayText: (iso: string) => string): string[] {
   if (!value?.every) return [];
@@ -92,7 +95,7 @@ const GONE_BACK: Record<string, [View, string]> = {
 };
 
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
-  const { t, has } = useWords();
+  const { t, tn, has } = useWords();
   const { kind, id } = props;
   const record = useQuery({ queryKey: ["record", kind, id], queryFn: () => api.record(kind, id) });
   const fields = useQuery({ queryKey: ["kind", kind], queryFn: () => api.kindView(kind) });
@@ -103,6 +106,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const page = useQuery({ queryKey: ["record-page", kind, id], queryFn: () => api.recordPage(kind, id) });
   const lines = useValueLines();
   const { justMe, personal, sides } = useSides();
+  const narrow = useIsNarrow();
   const sideOf = useSideOf();
   // Personal's page and each side's page are the top of a side: they say what is inside and never call themselves a project.
   const isSide = kind === "project" && (personal === id || sides.some((s) => s.project === id));
@@ -237,6 +241,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           })
           // What the heading already says is not said again under it: the name field, or a to-do's wording, when it is the name.
           .filter((row) => !(NAME_FIELDS.has(row.name) && row.lines.length === 1 && row.lines[0] === name))
+          // An organization's note is the line under its title.
+          .filter((row) => !(kind === "organization" && row.name === "notes"))
           .filter((row) => row.lines.length > 0),
       )
     : [];
@@ -277,10 +283,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     });
     const role = String(data.fields.role ?? "").trim();
     const who = person && !isSelf ? whoTheyAre(person, personal, sides, t) : role;
-    // Who they are says how they relate and their part on each side; a role it doesn't say is a row of its own.
-    if (who && who !== role) personRows.push({ name: "who", label: t("person.row.who"), lines: who.split(", ") });
+    // Who they are is the line under their name, so the card does not say it again; a role that line doesn't say is a row of its own.
+    // The role is said once: under the name when that line is the role itself, else as a row of its own.
     if (role && !who.includes(role)) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
-    else if (who === role && role) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
+    else if (role && who === role && isSelf) personRows.push({ name: "role", label: labelOf("role"), lines: [role] });
     const org = names.get(String(data.fields.org ?? "")) ?? person?.org_name ?? "";
     if (isSelf && !justMe && sides.length > 0) {
       // The person's own page lists every job and business they keep, not only the one their record names.
@@ -323,6 +329,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       if (!how.has(a.id) && (a.owners ?? []).some((o) => o.includes(page.data?.name ?? "\u0000"))) how.set(a.id, t("person.rel.theirs", { name: first }));
     }
   }
+  const staff = kind === "organization" ? (people.data ?? []).filter((p) => p.org === id) : [];
   const heading = isSelf && name ? t("record.you_named", { name }) : name;
   const openCount = (page.data?.open_actions.length ?? 0) + (isSelf ? 0 : (page.data?.open_questions.length ?? 0));
   const menuOf = usePersonMenu(() => setEditing(true));
@@ -340,7 +347,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const asCard = isPerson && !isSelf;
   const firstName = person?.first_name || name.split(" ")[0] || name;
   const cardSlot = person ? slotOf((person.sides ?? [])[0]) : null;
-  const detailsPanel = data && (
+  const nothingToList = kind === "organization" && rows.length === 0 && folded.length === 0;
+  const detailsPanel = data && !nothingToList && (
     <div className={asCard ? "record-side" : "record-side record-sticky"} data-contact-card={asCard ? "" : undefined}>
       {asCard && !editing && (
         <div className="contact-head">
@@ -428,24 +436,27 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
-      {/* A person who is gone has no page to head: the card says so, and the heading is kept for a screen reader. */}
-      {gone && isPerson && (
-        <h1 id="record-title" className="sr" tabIndex={-1}>
-          {t("record.not_found.title")}
-        </h1>
-      )}
-      {!(gone && isPerson) && (
+      {/* A page that is gone is headed like every missing page: a title, one line and one way on. */}
       <PageHeader
         id="record-title"
-        title={heading || (gone ? t("record.not_found.title") : heading)}
-        kind={!isSide && !isSelf && !gone ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
-        subtitle={isPerson && person && !isSelf ? whoTheyAre(person, personal, sides, t) || undefined : undefined}
+        title={(isPerson || kind === "organization") && heading ? <span className={styles.personTitle} title={heading}>{heading}</span> : heading || (gone ? t("record.not_found.title") : heading)}
+        kind={!isSide && !isSelf && !gone && !isPerson ? <Pill tone="neutral">{justMe && kind === "project" ? t("record.kind.area") : sideName ? t("record.kind.project_in", { side: sideName }) : has(`record.kind.${kind}`) ? t(`record.kind.${kind}`) : readableTail(kind)}</Pill> : undefined}
+        subtitle={
+          isPerson && person && !isSelf ? (
+            whoTheyAre(person, personal, sides, t) || undefined
+          ) : kind === "organization" && data && settled ? (
+            <>
+              {String(data.fields.notes ?? "").trim() && <span>{String(data.fields.notes).trim()}</span>}
+              {String(data.fields.notes ?? "").trim() && <br />}
+              <span>{[tn("orgs.people", staff.length), tn("orgs.open_items", openCount)].join(" \u00b7 ")}</span>
+            </>
+          ) : undefined
+        }
         crumb={
           isPerson ? (
             <>
               <a href={viewHref("records/people")}>{t("setup.people")}</a>
               <span aria-hidden="true">›</span>
-              <span>{heading}</span>
             </>
           ) : undefined
         }
@@ -461,7 +472,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
             </Button>
           ) : asCard && data && person ? (
             <Button variant="primary" icon="plus" onClick={() => addTodo.open("", id)}>
-              {t("person.add_todo", { name: firstName })}
+              {t("person.add_todo")}
             </Button>
           ) : isPerson && !asCard && data && (drawer || offered.length > 0) && !editing ? (
             <Button ref={editButton} onClick={() => setEditing(true)}>
@@ -494,7 +505,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         }
         more={data && isPerson && person && !isSelf ? <RowMenu label={heading} actions={menuOf(person).filter((entry) => entry.id !== "edit")} /> : undefined}
       />
-      )}
+      {data && asCard && narrow && <ContactLine held={data.fields.how_to_reach} />}
       {data && kind === "question" && questionMenu.form}
       {data && message.form}
       {data && versions.form}
@@ -510,7 +521,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {record.isPending && <Skeleton />}
       {record.isError && gone && isPerson && removal.data?.state === "removed" && (
         <EmptyState
-          icon="alert"
+          icon="inbox"
           title={t("person.removed_title", { name: removal.data.name || t("person.removed_someone") })}
           text={removal.data.removed_at ? t("person.removed_text_when", { when: dayAndTime(removal.data.removed_at) }) : t("person.removed_text")}
           action={{ label: t("person.removed_restore"), onClick: () => restore(removal.data?.name || t("person.removed_someone")), primary: true }}
@@ -521,26 +532,42 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         </EmptyState>
       )}
       {record.isError && gone && isPerson && removal.data?.state !== "removed" && !removal.isPending && (
-        <EmptyState icon="alert" title={t("person.gone_title")} text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people") }} />
+        <EmptyState icon="inbox" text={t("person.gone_text")} action={{ label: t("person.gone_back"), href: viewHref("records/people"), primary: true }} />
       )}
       {record.isError && gone && !isPerson && <EmptyState icon="inbox" text={t("record.not_found")} action={{ label: t("record.not_found.back", { list: t(GONE_BACK[kind]?.[1] ?? "nav.home") }), href: viewHref(GONE_BACK[kind]?.[0] ?? "today"), primary: true }} />}
       {record.isError && !gone && <LoadFailed message={t("record.load_failed")} detail={record.error instanceof ApiError && record.error.detail ? record.error.detail : null} onRetry={() => void record.refetch()} />}
+      {data && tabbed && (
+        <div data-slot="tabs">
+        <TabStrip
+          label={t("person.tabs")}
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "overview", label: t("person.tab.overview") },
+            { value: "open", label: t("person.tab.open"), count: openCount },
+            { value: "activity", label: t("person.tab.activity") },
+          ]}
+        />
+        </div>
+      )}
       {data && (
         <div className="record-grid" data-person-page={asCard ? "" : undefined} data-todo-page={kind === "action" ? "" : undefined}>
           <div className="record-main">
-            {tabbed && (
-              <div data-slot="tabs">
-              <TabStrip
-                label={t("person.tabs")}
-                value={tab}
-                onChange={setTab}
-                options={[
-                  { value: "overview", label: t("person.tab.overview") },
-                  { value: "open", label: t("person.tab.open", { name: person?.first_name || name.split(" ")[0] || name }), count: openCount },
-                  { value: "activity", label: t("person.tab.activity") },
-                ]}
-              />
-              </div>
+            {kind === "organization" && (
+              <section aria-labelledby="org-people" data-org-people="">
+                <h2 id="org-people">
+                  {t("orgs.row.people")}
+                </h2>
+                {staff.length > 0 ? (
+                  <RowList>
+                    {staff.map((p) => (
+                      <Row key={p.id} title={<a href={viewHref(recordView("person", p.id))}>{p.name}</a>} meta={p.role || undefined} oneLine />
+                    ))}
+                  </RowList>
+                ) : (
+                  <p className="hint">{t("orgs.no_people")}</p>
+                )}
+              </section>
             )}
             {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
             {kind === "event" && <Attendees fields={data.fields} names={names} />}
@@ -557,13 +584,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
                 onSeeAll={() => setTab("open")}
               />
               {asCard && tab === "overview" && openCount === 0 && (
-                <EmptyState
-                  icon="check"
-                  title={t("person.nothing_title", { name: firstName })}
-                  text={t("person.nothing_text", { name })}
-                  action={{ label: t("person.add_todo", { name: firstName }), onClick: () => addTodo.open("", id) }}
-                  data-person-nothing=""
-                />
+                <p className="hint" data-person-nothing="">
+                  {t("person.nothing_text", { name: firstName })}
+                </p>
               )}
               </div>
             )}
@@ -896,5 +919,20 @@ function DetailInput(props: {
       {control}
       {note}
     </FormField>
+  );
+}
+
+/** On a phone, how to reach the person is a line under the title: the first email and the first phone, each one tap from a message or a call. */
+function ContactLine(props: { held: unknown }) {
+  const held = heldReach(props.held);
+  const first = (kind: string) => Object.entries(held).find(([k]) => k.trim().toLocaleLowerCase() === kind)?.[1][0];
+  const email = first("email");
+  const phone = first("phone");
+  if (!email && !phone) return null;
+  return (
+    <p className={styles.contactLine} data-contact-line="">
+      {email && <a href={`mailto:${email}`}>{email}</a>}
+      {phone && <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>{phone}</a>}
+    </p>
   );
 }

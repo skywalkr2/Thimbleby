@@ -42,6 +42,8 @@ test.describe("People and record pages", () => {
     // The sides are ticked from the list, and a new person starts with Personal.
     const group = dialog.getByRole("group", { name: "Where they belong" });
     await expect(group.getByRole("checkbox", { name: "Personal" })).toBeChecked();
+    // The rest of the form is behind More details.
+    await dialog.getByText("More details").click();
     await dialog.getByLabel(/^Who they are to you/).fill("my cousin");
     await dialog.getByLabel("Email").fill("hattie.fenn@example.com");
     await dialog.getByLabel("Phone").fill("555 0142");
@@ -55,7 +57,8 @@ test.describe("People and record pages", () => {
     const details = page.getByRole("region", { name: "Details", exact: true });
     await expect(details.getByText("hattie.fenn@example.com")).toBeVisible(LOADED);
     await expect(details.getByText("555 0142")).toBeVisible(LOADED);
-    await expect(details.getByText("my cousin")).toBeVisible(LOADED);
+    // Who they are is said once, under the name.
+    await expect(page.getByText("my cousin")).toBeVisible(LOADED);
     await expect(page.getByText("How you work with them")).toHaveCount(0);
     await expect(page.getByText(/I manage them|I report to them/)).toHaveCount(0);
     // Nothing is said twice: no separate "how to reach" block, no "Name checked", no "Side" beside "Sides".
@@ -127,7 +130,7 @@ test.describe("People and record pages", () => {
     await go(page, ((await links.nth(1).getAttribute("href")) ?? "").replace(/^.*#/, ""));
     await heading(page, existing);
     await expect(page.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /^Open with/ })).toBeVisible(LOADED);
+    await expect(page.getByRole("button", { name: /^Open items/ })).toBeVisible(LOADED);
     // One line to ask in, with no "nothing has been said" sentence over it.
     await expect(page.getByRole("textbox", { name: "What do you want to know, or have done?" })).toBeVisible(LOADED);
     await expect(page.getByText("Nothing has been said about this yet.")).toHaveCount(0);

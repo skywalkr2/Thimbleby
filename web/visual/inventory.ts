@@ -692,6 +692,8 @@ function build(): Screen[] {
       await env.page.getByRole("button", { name: "More actions for Quarry Press" }).click();
       env.undo.push(() => api(env.base, env.token, `organizations/${env.seed.organizations.short}/restore`, { method: "POST" }).then(() => undefined));
       await env.page.getByRole("menuitem", { name: /^Remove/ }).first().click();
+      // The pointer leaves the list, so no row shows the hover tint of the place the menu item was.
+      await env.page.mouse.move(0, 0);
       await env.page.waitForTimeout(900);
     }),
   );

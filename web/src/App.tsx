@@ -152,7 +152,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         ? origin.current
         : view === "records/rules-review"
           ? "records/knowledge"
-          : view;
+          : // A person's page and an organization's belong to People, so that entry stays marked, even when the page is gone.
+            shown.type === "record" && (shown.kind === "person" || shown.kind === "organization")
+            ? "records/people"
+            : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened

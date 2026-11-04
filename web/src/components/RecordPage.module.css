@@ -1,2 +1,9 @@
 /* A detail not filled in yet: a small text button that starts where the values do, so the panel's labels and values stay in line. */
 button.add { justify-self: start; padding-inline: 0; min-height: 0; }
+
+/* A person's name in the title keeps to two lines, ending in an ellipsis; the whole name is its title. */
+.personTitle { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+:global([data-narrow]) .personTitle { font-size: var(--text-xl); line-height: var(--lh-xl); }
+/* On a phone the way to reach them is one line under the title, each address or number one tap away. */
+.contactLine { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.contactLine a { color: var(--accent-text); overflow-wrap: anywhere; min-height: var(--hit-min); display: inline-flex; align-items: center; }

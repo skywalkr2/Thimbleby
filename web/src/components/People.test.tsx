@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { org, person, project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, type Routes, snapshotOf } from "../test-utils";
+import { FILTER_BAR_MIN, setFilterBarMin } from "../lib/filterbar";
 import { People } from "./People";
 
 const firstOrg = org("ORG-1", "Org one", 2);
@@ -17,7 +18,7 @@ function api(people: S["PersonView"][], extra: Routes = {}) {
   });
 }
 
-const row = async (name: string) => (await screen.findByRole("link", { name })).closest("tr")!;
+const row = async (name: string) => (await screen.findByRole("link", { name })).closest("li")!;
 const undoToast = async (user: ReturnType<typeof userEvent.setup>) => user.click(await screen.findByRole("button", { name: "Undo" }));
 
 /** Opens a person's form in its drawer, from the row's menu. */
@@ -28,7 +29,7 @@ async function edit(user: ReturnType<typeof userEvent.setup>, name: string) {
   return screen.findByRole("dialog", { name: "Edit person" });
 }
 
-test("people are a table with who they are, open items and last contact; the name links to the person's page, and the organization is in the details", async () => {
+test("people are rows with one line of who they are, open items and how to reach them; the name links to the person's page, and the organization is in the details", async () => {
   api([
     person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, open_items: 4, last_contact: "2026-10-08", how_to_reach: { email: ["ana@example.com"] } }),
     person("P-2", "Ben Person"),
@@ -39,10 +40,11 @@ test("people are a table with who they are, open items and last contact; the nam
   expect(tr).toHaveTextContent("Editor");
   expect(tr).not.toHaveTextContent("Org one");
   expect(tr).not.toHaveTextContent(firstOrg.id);
-  expect(tr).toHaveTextContent("email: ana@example.com");
-  expect(within(tr).getByText("4")).toBeInTheDocument();
+  expect(tr).toHaveTextContent("ana@example.com");
+  expect(tr).toHaveTextContent("4 open items");
   const bare = await row("Ben Person");
-  expect(within(bare).queryByText("0")).toBeNull();
+  expect(within(bare).queryByText(/open item/)).toBeNull();
+  expect(bare).not.toHaveTextContent(/\d/);
 });
 
 test("the person themselves is first and tagged, and someone who left or is only watched is tagged, with no Active tag on anyone", async () => {
@@ -62,7 +64,7 @@ test("the person themselves is first and tagged, and someone who left or is only
   expect(screen.queryByText("Active")).toBeNull();
 });
 
-test("the organization filter narrows the table to people who work for it, or for none", async () => {
+test("the organization filter narrows the list to people who work for it, or for none", async () => {
   const user = userEvent.setup();
   api([person("P-1", "Ana Person", { org: firstOrg.id, org_name: firstOrg.name }), person("P-2", "Ben Person")]);
   renderApp(<People />);
@@ -90,7 +92,7 @@ test("a row opens its detail with what is known, never zero, and a link to the p
   api([person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, aliases: ["Anita"], open_items: 1, how_to_reach: { phone: ["555-0100"] } })]);
   renderApp(<People />);
   const tr = await row("Ana Person");
-  await user.click(within(tr).getByText("Editor"));
+  await user.click(within(tr).getByText(/Editor/));
   const detail = await screen.findByRole("dialog", { name: "Ana Person" });
   expect(within(detail).getByText("Editor")).toBeInTheDocument();
   expect(within(detail).getByText("Anita")).toBeInTheDocument();
@@ -219,7 +221,7 @@ test("the organizations section has one row each with how many people work there
   api([]);
   renderApp(<People />);
   const section = await screen.findByRole("region", { name: "Organizations" });
-  const rows = (await within(section).findAllByRole("row")).slice(1);
+  const rows = await within(section).findAllByRole("listitem");
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("Org one");
   expect(rows[0]).toHaveTextContent("2");
@@ -233,7 +235,7 @@ test("an organization that is the person's own business says so and cannot be re
   api([], { "GET organizations": () => [{ ...firstOrg, people: 0, side: "PRJ-7", side_kind: "business" }, secondOrg] });
   renderApp(<People />);
   const section = await screen.findByRole("region", { name: "Organizations" });
-  const rows = (await within(section).findAllByRole("row")).slice(1);
+  const rows = await within(section).findAllByRole("listitem");
   expect(rows[0]).toHaveTextContent("Your business");
   expect(rows[1]).not.toHaveTextContent("Your");
   await user.click(within(rows[0]).getByRole("button", { name: /More actions for/ }));
@@ -259,7 +261,7 @@ test("an organization is renamed in a drawer, and undo renames it back", async (
   const user = userEvent.setup();
   const calls = api([], { "POST organizations/ORG-2": () => ({ ok: "ORG-2" }) });
   renderApp(<People />);
-  const item = (await screen.findByText("Org two")).closest("tr")!;
+  const item = (await screen.findByText("Org two")).closest("li")!;
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Rename" }));
   const dialog = await screen.findByRole("dialog", { name: "Rename organization" });
@@ -279,7 +281,7 @@ test("an organization people still work for can't be removed, and the menu says 
   const user = userEvent.setup();
   const calls = api([]);
   renderApp(<People />);
-  const item = (await screen.findByText("Org one")).closest("tr")!;
+  const item = (await screen.findByText("Org one")).closest("li")!;
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   const remove = await screen.findByRole("menuitem", { name: "Remove" });
   expect(remove).toHaveAttribute("aria-disabled", "true");
@@ -296,7 +298,7 @@ test("removing an organization acts at once, undo restores it, and a refusal's o
     "POST organizations/ORG-2/restore": () => ({ ok: "ORG-2" }),
   });
   renderApp(<People />);
-  const item = (await screen.findByText("Org two")).closest("tr")!;
+  const item = (await screen.findByText("Org two")).closest("li")!;
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST organizations/ORG-2/remove")).toBe(true));
@@ -322,11 +324,9 @@ test("with no side besides Personal people have Name, Who they are and How to re
   );
   renderApp(<People />);
   const tr = await row("Ana Person");
-  await waitFor(() => expect(screen.queryByRole("columnheader", { name: "Role" })).toBeNull());
-  expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(expect.arrayContaining(["Name", "Who they are", "How to reach"]));
-  expect(screen.queryByRole("columnheader", { name: "Organization" })).toBeNull();
+  await waitFor(() => expect(screen.queryByRole("combobox", { name: "Organization" })).toBeNull());
   expect(tr).toHaveTextContent("my sister");
-  expect(tr).toHaveTextContent("email: ana@example.com");
+  expect(tr).toHaveTextContent("ana@example.com");
   expect(tr).not.toHaveTextContent("Editor");
   expect(tr).not.toHaveTextContent(firstOrg.name);
   // No organization filter, no Organizations section.
@@ -379,8 +379,6 @@ test("with a side of work one column says who they are: how they relate to you f
   const personal = await row("Ana Person");
   const work = await row("Ben Person");
   const both = await row("Cal Person");
-  expect(screen.getByRole("columnheader", { name: "Who they are" })).toBeInTheDocument();
-  expect(screen.queryByRole("columnheader", { name: "Role" })).toBeNull();
   // Someone on the personal side: how they relate to you, and no role or organization in the row.
   expect(personal).toHaveTextContent("my sister");
   expect(personal).not.toHaveTextContent("Editor");
@@ -413,8 +411,46 @@ test("a person with a side but no part is said by the side's name, and one with 
   expect(await row("Dee Person")).toHaveTextContent("Printer");
 });
 
-test("while the people are read the page holds a table's head and rows, so the table does not shift the page when it arrives", () => {
+test("while the people are read the page holds skeleton rows, so the list does not shift the page when it arrives", () => {
   fakeApi({ people: () => new Promise(() => undefined), "people/organizations": () => [] });
   renderApp(<People />);
-  expect(document.querySelector('[data-skeleton="table"]')).not.toBeNull();
+  expect(document.querySelector("[data-skeleton]")).not.toBeNull();
+});
+
+// ---- the page says what it holds, and draws no filter for a short list ---------------------------------------------------
+
+test("a short list of people draws no organization filter and no side strip, and the title says how many people and organizations there are", async () => {
+  setFilterBarMin(FILTER_BAR_MIN);
+  api([person("P-1", "Ana Person"), person("P-2", "Ben Person")], withSide);
+  renderApp(<People />);
+  await row("Ana Person");
+  expect(screen.queryByRole("combobox", { name: "Organization" })).toBeNull();
+  expect(document.querySelector("[data-header-filters]")?.childElementCount ?? 0).toBe(0);
+  expect(await screen.findByText("2 people, 2 organizations")).toBeInTheDocument();
+});
+
+test("a person is one row with their initials, and a row with nothing to say has the name alone", async () => {
+  api([person("P-1", "Ana Person", { role: "Editor" }), person("P-2", "Ben Person")]);
+  renderApp(<People />);
+  const tr = await row("Ana Person");
+  expect(tr.querySelector("[data-avatar]")).toHaveTextContent("AP");
+  expect(within(tr).queryByText("Open items:")).toBeNull();
+  expect(within(await row("Ben Person")).queryByText(/·/)).toBeNull();
+});
+
+test("removing an organization says what was removed, and an organizations list that could not be read says so once instead of saying there are none", async () => {
+  const user = userEvent.setup();
+  api([], { "POST organizations/ORG-2/remove": () => ({ ok: "ORG-2" }) });
+  renderApp(<People />);
+  const item = (await screen.findByText("Org two")).closest("li")!;
+  await user.click(within(item).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  expect(await screen.findByText("Removed organization Org two.")).toBeInTheDocument();
+});
+
+test("when only the organizations fail to load, the organizations section says so with Try again and never claims there are none", async () => {
+  api([person("P-1", "Ana Person")], { "GET organizations": () => new Refuse(500, "no") });
+  renderApp(<People />);
+  expect(await screen.findByText("The organizations couldn't be loaded.")).toBeInTheDocument();
+  expect(screen.queryByText(/No organizations yet/)).toBeNull();
 });

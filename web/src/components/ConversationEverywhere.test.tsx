@@ -78,7 +78,7 @@ test("the pane beside the list of people has the box for the person chosen, and 
     ...none("person", "P-2"),
   });
   renderApp(<People />);
-  await user.click((await screen.findByRole("link", { name: "Ana Person" })).closest("tr")!);
+  await user.click((await screen.findByRole("link", { name: "Ana Person" })).closest("li")!);
   expect(await box()).toBeInTheDocument();
   expect(calls.some((c) => c.route === "GET records/person/P-1/conversation")).toBe(true);
   expect(calls.some((c) => c.route === "GET records/person/P-2/conversation")).toBe(false);

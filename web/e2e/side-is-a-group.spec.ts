@@ -142,7 +142,7 @@ test.describe("a business is also an organization", () => {
   test("People › Organizations lists the business once, as the person's own, and its page and the business's page name each other", async ({ page }) => {
     await go(page, "records/people");
     const organizations = page.getByRole("region", { name: "Organizations", exact: true });
-    const rows = organizations.getByRole("row").filter({ hasText: SIDE });
+    const rows = organizations.getByRole("listitem").filter({ hasText: SIDE });
     await expect(rows).toHaveCount(1, LOADED);
     await expect(rows).toContainText("Your business");
     // It is the one the person works for, and it can't be removed while it is one of their sides.

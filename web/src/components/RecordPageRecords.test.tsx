@@ -638,9 +638,9 @@ test("someone else's page keeps its own words, their details and who they are to
   expect(screen.getByRole("heading", { level: 2, name: "Details" })).toBeInTheDocument();
   // A flag that is off (the name not confirmed, not only followed) says nothing, and the name is the heading's.
   expect(screen.queryByText("Name verified")).toBeNull();
-  expect(screen.getByText("Who they are")).toBeInTheDocument();
-  // It is under the heading, and in the details beside the facts.
-  expect(screen.getAllByText("my sister")).toHaveLength(2);
+  // Who they are is said once, under the heading, and not again as a row of the card.
+  expect(screen.queryByText("Who they are")).toBeNull();
+  expect(screen.getAllByText("my sister")).toHaveLength(1);
   // How the person works with them is a question about people at work, and a sister isn't one.
   expect(screen.queryByText("How you work with them")).toBeNull();
 });
@@ -658,8 +658,9 @@ test("a page for a record that isn't there says so with a title, and offers no T
     "GET organizations": () => [],
   });
   renderApp(<RecordPage kind="person" id="PER-9" onBack={() => {}} />);
-  expect(await screen.findByText("This person isn't here any more")).toBeInTheDocument();
-  expect(screen.getByText("There is no one at this address.")).toBeInTheDocument();
+  expect(await screen.findByText("This person was removed, or the link is old.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "People" })).toHaveAttribute("href", expect.stringMatching(/#records\/people$/));
+  expect(screen.getByRole("link", { name: "Back to People" })).toHaveAttribute("data-variant", "primary");
   expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
   expect(screen.getByRole("link", { name: "Back to People" })).toHaveAttribute("href", expect.stringMatching(/#records\/people$/));
   expect(screen.getByRole("heading", { name: "Not here" })).toBeInTheDocument();
@@ -710,4 +711,45 @@ test("a page for a person who was removed says so and when, and Restore brings t
   await waitFor(() => expect(calls).toEqual(["restore"]));
   expect(await screen.findByText("Restored Sample Person.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+});
+
+test("an organization's page says its note under the title with how many people and open items, and lists the people who work there or says no one does", async () => {
+  const shown = { ...page({ kind: "organization", id: "ORG-1" }), name: "Printing Works" };
+  api("organization", "ORG-1", { name: "Printing Works", notes: "Prints and binds small runs." }, shown, {
+    "GET people": () => [person("PER-1", "Robin Sample", { org: "ORG-1", org_name: "Printing Works", role: "Printer" })],
+  });
+  renderApp(<RecordPage kind="organization" id="ORG-1" onBack={() => {}} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Printing Works" })).toBeInTheDocument();
+  const head = document.querySelector<HTMLElement>("[data-page-header]")!;
+  expect(head).toHaveTextContent("Prints and binds small runs.");
+  expect(head).toHaveTextContent("1 person · 0 open items");
+  // The note is said once, under the title, never again as a row of a card.
+  expect(screen.getAllByText("Prints and binds small runs.")).toHaveLength(1);
+  const people = screen.getByRole("heading", { name: "People" }).closest("section")!;
+  expect(within(people).getByRole("link", { name: "Robin Sample" })).toHaveAttribute("href", expect.stringMatching(/#records\/person\/PER-1$/));
+});
+
+test("an organization nobody works for says so in its People section", async () => {
+  api("organization", "ORG-2", { name: "Quiet Works" }, { ...page({ kind: "organization", id: "ORG-2" }), name: "Quiet Works" });
+  renderApp(<RecordPage kind="organization" id="ORG-2" onBack={() => {}} />);
+  expect(await screen.findByText("No one works here yet.")).toBeInTheDocument();
+  expect(document.querySelector("[data-page-header]")).toHaveTextContent("0 people · 0 open items");
+});
+
+test("a side's page lists a to-do that is open in it once, never twice (the side page shows what is inside beside what is open)", async () => {
+  const shop = { business: true, name: "Shop", personal: "PRJ-personal", sides: [{ project: "PRJ-shop", name: "Shop", kind: "business" }], chosen: "both" };
+  api(
+    "project",
+    "PRJ-shop",
+    { name: "Shop" },
+    page({ id: "PRJ-shop", name: "Shop", open_actions: [{ id: "ACT-1", text: "Pay the deposit", due: null, owners: [], project: "PRJ-shop", project_name: "Shop", origin: null }] }),
+    {
+      "GET setup/business": () => shop,
+      "GET projects": () => [project("PRJ-personal", "Personal"), project("PRJ-shop", "Shop")],
+    },
+  );
+  renderApp(<RecordPage kind="project" id="PRJ-shop" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: "Shop" });
+  await screen.findAllByText("Pay the deposit");
+  expect(screen.getAllByText("Pay the deposit")).toHaveLength(1);
 });
