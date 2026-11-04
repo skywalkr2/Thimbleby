@@ -112,7 +112,11 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
         - In the gate's scoring, point 8 (Phone) is reported but doesn't hold a screen under the bar.
         - Phone-only items, including the Week view showing five days on a phone, wait for the hosted install.
       - *G3c held by the owner (2026-11-04: "getting the schedule looking nice is very important, but i want to test everything else first"):* the Schedule up to its mockup is important and comes right after the owner's test of everything else. Its lines stay open in `u3-gate/items.md`.
-      - *Review point (owner, 2026-11-04: "do not do final build after T1 until we review where we are"):* after T1, nothing more starts (no G6, no end-of-round full run, no push) until the owner and the main session review where things stand.
+      - *Reviewed with the owner (2026-11-04):*
+        - The order to finish: T1, then G6 (motion and the shared leftovers), then the full run, then the push.
+        - The owner then tests everything but the Schedule.
+        - G3c comes next.
+        - The AI mistakes the owner finds in that test join U4 (owner: "the things I had seen were more low IQ mistakes … That will grow U4").
       - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
       - [ ] G6 (scope set by the owner, 2026-11-04): motion (D7: the mark at first launch and at the end of setup, nothing under reduced motion, hover, pressed and focus on every shared control) and the shared leftovers (G1e lines in `u3-gate/items.md`). Starts after the review point.
       - *Moved out of G6 (owner, 2026-11-04):*
