@@ -152,6 +152,14 @@ The self-check enforces it: a decision entry cites its change-log section ("Chan
       - no sleep loops.
 
   **Size:** about 50 to 80 items, or one shared component, so it fits one helper's context. A whole area is too much.
+- **A test earns its place** (owner, 2026-11-04: "remove any test that only causes time and effort, and never provides
+  any value when failing"). A test stays only if its failure would mean something a person would feel: data lost or
+  wrong, a side leaking into another, an outward act without approval, a broken install, base path or deploy check,
+  an accessibility or no-sideways-scroll rule, or a guard (wording, glyphs, specificity) that enforces a CLAUDE.md rule.
+  - A test that only checks exact wording, a pixel layout, or a flow already proven by a unit test is removed or reduced to
+    the behaviour it protects. It isn't chased.
+  - Never remove or loosen a guard for an invariant (CLAUDE.md "Checks are invariants"), a P0's regression test, or a
+    trust, applier, Undo or spending test.
 - **No fix loops on full runs** (owner, 2026-11-04: "do not let a subagent loop on fixes when its more efficient to fix
   tests at the end"). A full browser run takes about 30 minutes here.
   - A helper runs only the specs it touched, plus a failing spec's own project, and never repeats a full run just to see
