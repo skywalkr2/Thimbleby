@@ -155,11 +155,8 @@ export function ReminderWhere() {
             </label>
             {c.hint && <p className={styles.hint}>{c.hint}</p>}
             {(c.id === "calendar" || c.id === "mail") && !canCarry(c.id) && (
-              <p className={styles.hint} data-unavailable={c.id}>
-                {t(`reminders.where.none_${c.id}`)}{" "}
-                <a href={viewHref(settingsView("connections"))}>{t("reminders.where.none.sign_in")}</a>
-                {" · "}
-                <a href={viewHref(settingsView("you"))}>{t("reminders.where.none.switch_on")}</a>
+              <p className={styles.hint} data-unavailable={c.id} title={t(`reminders.where.none_${c.id}`)}>
+                {t(`reminders.where.needs_${c.id}`)} <a href={viewHref(settingsView("connections"))}>{t("reminders.where.none.sign_in")}</a>
               </p>
             )}
             {where === c.id && (c.id === "calendar" || c.id === "mail") && (

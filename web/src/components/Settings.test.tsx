@@ -8,6 +8,7 @@ import { project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, snapshotOf } from "../test-utils";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Settings } from "./Settings";
+import { ConnectionProvider } from "../lib/connection";
 import { setDensity, setTheme } from "../lib/theme";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
@@ -84,6 +85,7 @@ function api(items = ITEMS, extra: Record<string, (body: unknown) => unknown> = 
   const state = items.map((i) => ({ ...i }));
   return fakeApi({
     "GET settings": () => ({ fingerprint, items: state }),
+    "GET acts/accounts": () => ({ accounts: [] }),
     ...extra,
     "POST settings": (body) => {
       const handler = extra["POST settings"];
@@ -562,6 +564,7 @@ test("three fields changed one after another while the app's live stream keeps a
   const state = ITEMS.map((i) => ({ ...i }));
   let n = 1;
   const calls = fakeApi({
+    "GET acts/accounts": () => ({ accounts: [] }),
     // The server answers after a while, as a computer under load does.
     "GET settings": async () => {
       const answer = { fingerprint: `fp-${n}`, items: JSON.parse(JSON.stringify(state)) };
@@ -868,8 +871,9 @@ test("each page's More settings fold is its own and starts closed: opening one n
   const backups = (await screen.findByText("More settings")).closest("details") as HTMLDetailsElement;
   expect(backups.open).toBe(false);
   expect(backups).toHaveAttribute("data-more", "backups");
-  // It is the last thing on the page, and a page with nothing rarely changed has none.
-  expect(backups.parentElement?.lastElementChild).toBe(backups);
+  // It is the last thing on the page but the saving line, and a page with nothing rarely changed has none.
+  expect(backups.nextElementSibling).toHaveAttribute("data-save-status");
+  expect(backups.parentElement?.lastElementChild).toBe(backups.nextElementSibling);
   await user.click(within(nav).getByRole("link", { name: "You" }));
   await screen.findByRole("heading", { level: 2, name: "You" });
   expect(screen.queryByText("More settings")).toBeNull();
@@ -1958,7 +1962,7 @@ test("a setting saved with Enter can be reset at once after, each save going out
 test("a settings page that could not load is the shared error card with Try again, and while it loads the page is shaped like a form", async () => {
   const user = userEvent.setup();
   let ok = false;
-  fakeApi({ "GET settings": () => (ok ? { items: ITEMS, search_words: {} } : new Refuse(500, "no")) });
+  fakeApi({ "GET settings": () => (ok ? { items: ITEMS, search_words: {} } : new Refuse(500, "no")), "GET acts/accounts": () => ({ accounts: [] }) });
   renderApp(<Settings section="you" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   const alert = await screen.findByRole("alert");
   expect(alert).toHaveTextContent("The settings didn't load.");
@@ -1972,4 +1976,80 @@ test("while the settings load the page is a form-shaped skeleton and the side li
   renderApp(<Settings section="you" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
   expect(document.querySelector('[data-skeleton="form"]')).not.toBeNull();
   expect(screen.getByRole("link", { name: "Appearance" })).toBeInTheDocument();
+});
+
+test("an ask-before amount above the most one run may cost is said to be above it beside the amount, and nothing is refused", async () => {
+  const user = userEvent.setup();
+  const ask = item("ai.budgets.confirm_above_usd", { group: "ai.budgets", type: "number", value: 0.1, default: 0.1, money: true, description: "Ask before more than this." });
+  const run = item("ai.budgets.per_run_usd", { group: "ai.budgets", type: "number", value: 0.25, default: 0.25, money: true, basic: false, topic: "ai", description: "Never start one thing above this." });
+  const calls = api([ask, run], AI_ROUTES);
+  open("ai");
+  const box = await screen.findByLabelText("Ask me before anything over");
+  expect(screen.queryByText(/No single run starts above/)).toBeNull();
+  await user.clear(box);
+  await user.type(box, "$5{Enter}");
+  expect(await screen.findByText("No single run starts above $0.25, so you won't be asked about anything higher.")).toBeInTheDocument();
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "ai.budgets.confirm_above_usd": 5 } });
+});
+
+test("a changed setting says Changed with a dot, Reset is its own outline button, and the default is in Reset's tooltip, not a line of help", async () => {
+  api(ITEMS.map((i) => (i.key === "demo.title" ? { ...i, value: "Changed title", default: "Workspace", source: "file" as const } : i)));
+  open("you");
+  const reset = await screen.findByRole("button", { name: "Reset: The display name." });
+  expect(reset).toHaveAttribute("title", "Default: Workspace");
+  const mark = reset.closest(".setting-changed");
+  expect(mark).toHaveTextContent("Changed");
+  // The default is kept for a screen reader, but is no visible paragraph of its own.
+  const spoken = screen.getByText("Default: Workspace");
+  expect(spoken).toHaveClass("sr");
+  expect(spoken.tagName).toBe("SPAN");
+});
+
+test("Advanced says how many settings each topic holds, beside its name", async () => {
+  api([
+    item("watch.sorting", { type: "yes_no", group: "watch", value: true, default: true, basic: false, topic: "mail", description: "Sort incoming mail." }),
+    item("watch.threads", { type: "yes_no", group: "watch", value: true, default: true, basic: false, topic: "mail", description: "Group mail by thread." }),
+    item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false, topic: "learns", description: "Learn from corrections." }),
+  ]);
+  renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onChooseSource={() => undefined} />);
+  const mail = (await screen.findByRole("button", { name: "Mail" })).closest(".settings-topic") as HTMLElement;
+  expect(within(mail).getByText("2 settings")).toBeInTheDocument();
+  const learns = screen.getByRole("button", { name: "What the assistant learns" }).closest(".settings-topic") as HTMLElement;
+  expect(within(learns).getByText("1 setting")).toBeInTheDocument();
+  expect(screen.getByText("Rarely needed settings, grouped by topic.")).toBeInTheDocument();
+});
+
+test("a search marks the words it matched in the labels of the settings it found, and lists each section under a small label", async () => {
+  const user = userEvent.setup();
+  api(ITEMS);
+  open("you");
+  await user.type(await screen.findByRole("searchbox", { name: "Search settings" }), "display");
+  const found = await screen.findAllByText("display", { selector: "mark" });
+  expect(found.length).toBeGreaterThan(0);
+  const section = found[0].closest(".settings-results") as HTMLElement;
+  expect(section.querySelector("[data-group-label]")).not.toBeNull();
+});
+
+test("the section list is grouped under the shared group labels, one for each group that has a page", async () => {
+  api(ITEMS);
+  open("you");
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+  await within(nav).findByRole("link", { name: "Advanced" });
+  const labels = Array.from(nav.querySelectorAll("[data-group-label]")).map((l) => l.textContent);
+  expect(labels).toEqual(["About you", "Assistant", "Your data", "More"]);
+  // Each label names the list of links under it.
+  for (const group of Array.from(nav.querySelectorAll(".settings-nav-group"))) expect(group.getAttribute("aria-labelledby")).toBe(group.querySelector("[data-group-label]")?.id);
+});
+
+test("offline, the settings' fields and Add an account are held, and the page says changes wait for the app to be back", async () => {
+  api(ITEMS, AI_ROUTES);
+  renderApp(
+    <ConnectionProvider live={{ state: "offline", lastUpdate: null, refresh: () => undefined }}>
+      <Settings section="ai" onOpenGuide={() => undefined} onChooseSource={() => undefined} onOpenCompare={() => undefined} />
+    </ConnectionProvider>,
+  );
+  expect(await screen.findByText("Settings can't be changed until the app is back online.")).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Add an account" })).toBeDisabled();
+  expect(screen.getByText("Needs a connection.")).toBeInTheDocument();
 });

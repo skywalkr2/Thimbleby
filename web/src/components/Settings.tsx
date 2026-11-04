@@ -60,6 +60,9 @@ import { useSettingWordsFromCache } from "../lib/setting-words";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { GroupLabel } from "../ui/GroupLabel";
 import { useIsNarrow, useMediaQuery } from "../lib/media";
+import { useConnection } from "../lib/connection";
+import { parseAmount, useWriteAmount } from "../lib/money";
+import { Marked } from "./Marked";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
 import { AiChoices } from "./AiRouting";
@@ -220,6 +223,9 @@ export function SettingsFrame(props: {
   choose: (section: SettingsSection) => void;
   /** The search of a page that shows results itself (Settings). Without it, typing opens Settings with the search made. */
   search?: { query: string; onQuery: (query: string) => void };
+  /** The page is one reached from a section's own page (what each account can do): its way back is on the page, so a phone
+   * does not also show the list of sections above it. */
+  subpage?: boolean;
   /** What sits beside the title (the setup guide, on the first page). */
   acts?: ReactNode;
   contentRef?: Ref<HTMLDivElement>;
@@ -227,6 +233,7 @@ export function SettingsFrame(props: {
 }) {
   const { t } = useWords();
   const { listed } = useSettingsSections();
+  const phone = useIsNarrow();
   return (
     <section className="panel-section settings-screen" aria-labelledby="settings-title">
       <PageHeader id="settings-title" title={t("settings.title")} actions={props.acts} />
@@ -245,7 +252,7 @@ export function SettingsFrame(props: {
               }
             }}
           />
-          <SettingsNav listed={listed} current={props.under ?? null} choose={props.choose} />
+          {!(props.subpage && phone) && <SettingsNav listed={listed} current={props.under ?? null} choose={props.choose} />}
         </div>
         <div className="settings-content" ref={props.contentRef}>
           {props.children}
@@ -271,7 +278,8 @@ export function Settings(props: {
   addAccount?: number | null;
   onAddAccountOpened?: () => void;
 }) {
-  const { t, tn, has } = useWords();
+  const { t, tn, has, locale } = useWords();
+  const offline = useConnection().offline;
   const client = useQueryClient();
   const afterSave = useAfterSave();
   const settingWords = useSettingWordsFromCache();
@@ -610,6 +618,15 @@ export function Settings(props: {
     const targets = everything.find((i) => i.key === "storage.backups.targets")?.value;
     return Array.isArray(targets) && targets.length === 0;
   })();
+  const writeAmount = useWriteAmount();
+  // Ask-before above the most one run may cost is never asked: those runs don't start. Said beside the amount, nothing refused.
+  const crossNote = (item: Item): string | undefined => {
+    if (item.key !== "ai.budgets.confirm_above_usd") return undefined;
+    const run = everything.find((i) => i.key === "ai.budgets.per_run_usd");
+    const ask = parseAmount(String(draftOf(item)), locale);
+    const most = run ? parseAmount(String(draftOf(run)), locale) : null;
+    return ask !== null && most !== null && ask > most ? t("settings.note.ask_above_run", { most: writeAmount(most) }) : undefined;
+  };
   const row = (item: Item) => {
     const gate = switchOf(item, everything);
     return (
@@ -625,7 +642,9 @@ export function Settings(props: {
         problem={problems[item.key]}
         saving={saving.includes(item.key)}
         beside
-        disabled={false}
+        disabled={offline}
+        cross={crossNote(item)}
+        mark={query.trim() || undefined}
         depth={depthOf(item, everything)}
         gate={gate && isOff(gate, edits) ? gate : null}
         canList={canList}
@@ -673,6 +692,8 @@ export function Settings(props: {
   const form = (id: SettingsSection, lead?: ReactNode) => {
     const byTopic = topics(sectionItems(everything, id).filter((i) => !i.advanced));
     const headings = id === "ai" || (id.startsWith("addon/") && byTopic.length > 1);
+    // A page with no settings of its own and nothing leading it (Quick links) draws no empty block, which would hold a gap open.
+    if (byTopic.length === 0 && !lead) return null;
     return (
       <div className="settings-groups">
         {lead}
@@ -716,6 +737,9 @@ export function Settings(props: {
             >
               {topicLabel(topic.group, t, has)}
             </button>
+            <span className="topic-count" aria-hidden="true">
+              {tn("settings.topic_count", topic.items.length)}
+            </span>
           </h3>
           <div
             id={id}
@@ -801,14 +825,14 @@ export function Settings(props: {
       <>
         {placesHit.length > 0 && (
           <section className="settings-results" aria-label={t("settings.places")} data-places="">
-            <h3>{t("settings.places")}</h3>
+            <GroupLabel>{t("settings.places")}</GroupLabel>
             <ul className="settings-places">
               {placesHit.map((place) => (
                 <li key={place.id}>
                   <a href={viewHref(settingsView(place.section))} onClick={(e) => goTo(e, place.section)}>
-                    {place.label}
+                    <Marked text={place.label} query={query} />
                   </a>
-                  <span className="hint"> {place.about}</span>
+                  <span className="settings-place-about">{place.about}</span>
                 </li>
               ))}
             </ul>
@@ -826,7 +850,7 @@ export function Settings(props: {
               className="settings-results"
               aria-label={label(s.id)}
             >
-              <h3>{label(s.id)}</h3>
+              <GroupLabel>{label(s.id)}</GroupLabel>
               {rows(s.items)}
             </section>
           ))}
@@ -935,9 +959,11 @@ export function Settings(props: {
           results()
         ) : (
           <>
-            <p className="hint save-status" role="status" data-save-status="">
-              {saving.length > 0 ? t("settings.saving") : justSaved ? t("settings.saved_status") : ""}
-            </p>
+            {offline && (
+              <p className="hint" role="status" data-held="">
+                {t("settings.offline_held")}
+              </p>
+            )}
             <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
             {loaded && wanted !== section && (
               <p className="hint" role="status" data-not-available="">
@@ -946,6 +972,10 @@ export function Settings(props: {
               </p>
             )}
             {body()}
+            {/* At the foot of the page: the line appearing never moves the field being edited above it. */}
+            <p className="hint save-status" role="status" data-save-status="">
+              {saving.length > 0 ? t("settings.saving") : justSaved ? t("settings.saved_status") : ""}
+            </p>
           </>
         )}
       </SettingsFrame>

@@ -59,11 +59,13 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
   const { t } = useWords();
   const missed = useMissedOne();
   const anythingMissed = useAnythingToMiss();
+  // A touch screen has no keyboard to use the shortcuts with, so the list of them is not offered there.
+  const touch = useMediaQuery("(pointer: coarse)");
   return [
     {
       id: "help",
       entries: [
-        { id: "shortcuts", label: t("help.open"), icon: "grid", run: handlers.onHelp },
+        ...(touch ? [] : [{ id: "shortcuts", label: t("help.open"), icon: "grid" as const, run: handlers.onHelp }]),
         { id: "guide", label: t("header.help_guide"), icon: "book", run: () => afterClose(handlers.onOpenGuide) },
         ...(anythingMissed ? [{ id: "missed", label: t("missed.menu"), icon: "search" as const, run: missed }] : []),
         { id: "feedback", label: t("feedback.open"), icon: "chat", run: handlers.onFeedback },

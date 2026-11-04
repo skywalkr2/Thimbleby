@@ -53,7 +53,7 @@ export function Handover(props: { onBack?: () => void }) {
       <PageHeader
         id="handover-title"
         title={t("handover.title")}
-        subtitle={t("handover.intro")}
+        subtitle={view && !view.folder_set ? t("handover.intro_local") : t("handover.intro")}
         back={props.onBack ? { label: t("quality.back"), onClick: props.onBack } : undefined}
       />
       {page.isPending ? (

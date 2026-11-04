@@ -287,3 +287,15 @@ test("Settings says when notifications are allowed, blocked or not possible here
   showNotices();
   expect(screen.getByText("This computer can't show notifications from this app.")).toBeInTheDocument();
 });
+
+test("a blocked computer says so with a dot and the words, what to do, and a button that looks again", async () => {
+  const user = userEvent.setup();
+  stubNotification("denied");
+  showNotices();
+  const mark = screen.getByText("Notifications are blocked on this computer.").closest("[data-state-mark]");
+  expect(mark).toHaveAttribute("data-tone", "warn");
+  expect(screen.getByText(/Allow them for this app in this computer's notification settings/)).toBeInTheDocument();
+  stubNotification("granted");
+  await user.click(screen.getByRole("button", { name: "Check again" }));
+  expect(screen.getByText("Notifications are allowed on this computer.")).toBeInTheDocument();
+});

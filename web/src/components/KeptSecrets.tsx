@@ -97,12 +97,15 @@ export function KeptSecretRow(props: {
           {problem}
         </p>
       )}
-      <Actions align="end">
-        {props.more}
-        <Button variant="primary" size="sm" type="submit" disabled={!ready || busy} aria-label={props.saveLabel}>
-          {t(busy ? "secrets.saving" : "secrets.save")}
-        </Button>
-      </Actions>
+      {/* Once a key is kept, there is nothing to save or make until the person chooses to type another. */}
+      {!(props.held && how === "held") && (
+        <Actions align="start">
+          <Button variant="secondary" size="sm" type="submit" disabled={!ready || busy} aria-label={props.saveLabel}>
+            {t(busy ? "secrets.saving" : "secrets.save")}
+          </Button>
+          {props.more}
+        </Actions>
+      )}
     </FormBlock>
   );
 }
@@ -183,12 +186,9 @@ export function BackupKey() {
     push({ message: t(blocked ? "toast.copy_blocked" : "backup_key.copied"), tone: blocked ? "warn" : undefined });
   };
   return (
-    <section className="kept-secrets" aria-labelledby={`${base}-title`}>
+    <section className="kept-secrets backups-block" aria-labelledby={`${base}-title`}>
       <h3 id={`${base}-title`}>{t("backup_key.title")}</h3>
       <p className="hint">{t("backup_key.intro")}</p>
-      <p className="hint" id={`${base}-warning`}>
-        {t("backup_key.warning")}
-      </p>
       {held && local && !made && <p className="hint">{t("backup_key.replace_note")}</p>}
       {/* Once a key has been made, the typed field and Make stay away until the person has copied it, so there is one thing to do. */}
       {!made && (

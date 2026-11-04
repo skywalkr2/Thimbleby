@@ -12,6 +12,9 @@ import { pageLinks, type PageLink } from "../shell/HeaderLinks";
 import { Button } from "../ui/Button";
 import { FormField } from "../ui/FormField";
 import { Actions } from "../ui/Actions";
+import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
+import { StateMark } from "../ui/StateMark";
 
 const WEB = /^https?:\/\/\S+$/i;
 /** The longest name a link can have (the server's limit, shown beside the field rather than cut without a word). */
@@ -22,6 +25,13 @@ export function webAddress(typed: string): string {
   const text = typed.trim();
   if (/^[a-z][a-z0-9+.-]*:/i.test(text) && !/^[^/\s]+:\d+(\/|$)/.test(text)) return text;
   return /^[^\s/]+\.[^\s/]+/.test(text) ? `https://${text.replace(/^\/\//, "")}` : text;
+}
+
+/** An address cut in the middle when it is long, so the site and the end of the path both show. */
+export function middleCut(address: string, most = 56): string {
+  if (address.length <= most) return address;
+  const head = Math.ceil((most - 1) * 0.6);
+  return `${address.slice(0, head)}…${address.slice(address.length - (most - 1 - head))}`;
 }
 
 export function PageLinks() {
@@ -69,12 +79,18 @@ export function PageLinks() {
   return (
     <section className="settings-group" aria-labelledby="settings-section-links">
       <p className="hint">{t("pages.intro")}</p>
-      {links.length > 0 && (
-        <ul className="plain-list" aria-label={t("pages.list")}>
-          {links.map((l, i) => (
-            <li key={`${i}:${l.address}`} className="row-pair">
-              <span className="title">{l.name}</span> <span className="meta">{l.address}</span>
-              {!locked && (
+      <RowList aria-label={t("pages.list")} data-quick-links="">
+        {links.length === 0 && <Row as="li" loop={false} title={<StateMark tone="neutral">{t("pages.none")}</StateMark>} />}
+        {links.map((l, i) => (
+          <Row
+            key={`${i}:${l.address}`}
+            as="li"
+            loop={false}
+            title={l.name}
+            meta={<span title={l.address}>{middleCut(l.address)}</span>}
+            oneLine
+            actions={
+              !locked && (
                 <Button
                   size="sm"
                   variant="quiet"
@@ -83,14 +99,14 @@ export function PageLinks() {
                 >
                   {t("pages.remove")}
                 </Button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+              )
+            }
+          />
+        ))}
+      </RowList>
       {!locked && (
         <form
-          className="answer-form"
+          className="answer-form settings-column"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
@@ -108,7 +124,7 @@ export function PageLinks() {
               {problem}
             </p>
           )}
-          <Actions align="end">
+          <Actions align="start">
             <Button type="submit" variant="primary" disabled={!name.trim() || !address.trim()}>
               {t("pages.add")}
             </Button>

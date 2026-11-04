@@ -277,8 +277,7 @@ class WorkspaceFile(FileModel):
     language: str = Field(
         "en-US",
         pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
-        description="Which kind of English the assistant writes in for you, covering its spelling, punctuation and "
-        "dates. The app's own screens stay in English.",
+        description="The English the assistant writes in for you, with its spelling, punctuation and dates.",
         json_schema_extra={"choices": "languages"},
     )
     project: ProjectSettings = Field(default_factory=ProjectSettings, description="How a project's own record is kept.")
@@ -419,7 +418,7 @@ def shipped_cloud_folders() -> list[CloudFolder]:
 class BackupSettings(ConfigModel):
     automatic: bool = Field(
         True,
-        description="Make backups on schedule while the app runs, with nothing to click; off means only on request.",
+        description="Back up on a schedule while the app runs. Off means only when you ask.",
     )
     targets: list[BackupTarget] = Field(default_factory=list, description="Where full backups go. Use at least one.")
     cloud_folders: list[CloudFolder] = Field(
@@ -2479,8 +2478,7 @@ class TodaySettings(ConfigModel):
         3,
         ge=1,
         le=10,
-        description="How many rows each card in Today's side column (what came in, and the schedule) shows before its "
-        "line for the rest. The rest are one click away.",
+        description="How many rows each card beside Today's list shows before its line for the rest.",
     )
 
 
@@ -2741,9 +2739,7 @@ class NoticeApp(ConfigModel):
 class NotificationsSettings(ConfigModel):
     enabled: bool = Field(
         False,
-        description="A notice goes out when something needs you, such as a decision waiting, a task that stopped, a "
-        "restart or a failing backup. Never for routine processing, and only to you. It shows on the computer that "
-        "runs the app, while the app is open there, once that computer has allowed notifications from the app.",
+        description="A notice on this computer when something needs you, never for routine things.",
     )
     browser: bool = Field(
         True,
@@ -2941,18 +2937,15 @@ class UiFile(FileModel):
     )
     theme: Literal["system", "light", "dark"] = Field(
         "system",
-        description="Light or dark screens, or follow the computer's setting. Each person can change it for their own "
-        "device from the menu under their initials.",
+        description="Light or dark screens, or follow the computer's setting.",
     )
     density: Literal["comfortable", "compact"] = Field(
         "comfortable",
-        description="How much fits on screen. Comfortable rows, or compact ones that show more at once. Each person "
-        "can change it for their own device, and touch screens keep large targets either way.",
+        description="How much fits on screen, with comfortable rows or compact ones that show more.",
     )
     time_format: Literal["auto", "12h", "24h"] = Field(
         "auto",
-        description="How times of day are written. Automatic follows your language, and the other two "
-        "are always the 12-hour clock (9:30 AM) or the 24-hour clock (09:30).",
+        description="How times of day are written, by your language or always 12-hour or 24-hour.",
     )
     time_step: int = Field(
         15,
@@ -3683,8 +3676,7 @@ class RemindersSettings(ConfigModel):
     )
     quiet_start: str = Field(
         "21:00",
-        description="The time quiet hours start. A reminder that falls in quiet hours waits and arrives with the "
-        "others that waited, once they end, and so does what the assistant adds on its own.",
+        description="When quiet hours start. What falls in them waits and arrives once they end.",
         json_schema_extra={"choices": "times_of_day"},
     )
     quiet_end: str = Field(
@@ -3790,8 +3782,7 @@ class SentMatchSettings(ConfigModel):
 class BriefSettings(ConfigModel):
     enabled: bool = Field(
         True,
-        description="Whether Today opens with a card for the morning brief, the evening wrap-up and the Monday "
-        "briefing. You can close the card for the day; it comes back at the next time it is due.",
+        description="Today opens with a card for the morning brief, the evening wrap-up and the Monday briefing.",
     )
     morning_from: str = Field(
         "06:00",
@@ -4213,8 +4204,7 @@ class DatesSettings(ConfigModel):
     )
     suggest_reminders: bool = Field(
         True,
-        description="Whether a deadline, renewal, expiry, warranty end or bill an input names gets a reminder offered "
-        "with it. The offer waits for your yes; the day it falls on is kept either way.",
+        description="A deadline, renewal or bill an input names gets a reminder offered with it, waiting for your yes.",
     )
     lead_days: LeadDaysSettings = Field(
         default_factory=LeadDaysSettings,
@@ -4308,10 +4298,7 @@ class StewardFile(FileModel):
     )
     hold_outside_hours: bool = Field(
         True,
-        description="Whether what the assistant or a rule adds to Today on its own waits for your working hours when "
-        "its cause came in outside them or in quiet hours. What waited arrives together under one row, While you were "
-        "away. A reminder you set for a time is kept as chosen, and a stop, your own note and your setup are never "
-        "held. Off shows everything as it arrives.",
+        description="What the assistant adds on its own waits for your working hours, then arrives together.",
     )
     reply_thread_days: int = Field(
         14,

@@ -13,6 +13,7 @@ import { BrandContrast, ColorControl, LogoControl } from "./BrandControls";
 import { ChipList } from "./ChipList";
 import { MoneyField } from "./MoneyField";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
+import { Marked } from "./Marked";
 import { TimeZoneSelect } from "./TimeZoneSelect";
 import { restoreFocus } from "./ModalPanel";
 import { SecretField, type SecretInput } from "./SecretField";
@@ -48,6 +49,10 @@ export function SettingRow(props: {
   canList: boolean;
   /** Where a secret setting can be typed: given, a setting that holds a secret offers a password box. */
   secret?: SecretInput;
+  /** The words a search matched: they are marked in the label. */
+  mark?: string;
+  /** A note about this setting set against another (an amount above a limit that stops the work first); it changes nothing. */
+  cross?: string;
 }) {
   const { t, has, locale } = useWords();
   const writeAmount = useWriteAmount();
@@ -79,6 +84,7 @@ export function SettingRow(props: {
     hint && `${id}-hint`,
     waiting && `${id}-waiting`,
     props.reason && `${id}-reason`,
+    props.cross && `${id}-cross`,
     item.type === "list" && (item.options ?? []).length === 0 && `${id}-list`,
     invalid && `${id}-bad`,
     problem && `${id}-problem`,
@@ -304,20 +310,21 @@ export function SettingRow(props: {
 
   const checkbox = item.type === "yes_no" && !readOnly;
   const ticked = item.type === "list" && (item.options ?? []).length > 0 && !readOnly;
+  const labelText = <Marked text={label} query={props.mark} />;
   const labelNode = checkbox ? (
     <label className="check-line" htmlFor={id}>
       {control}
-      <span>{label}</span>
+      <span>{labelText}</span>
     </label>
   ) : readOnly ? (
     <span className="setting-label">{label}</span>
   ) : typedSecret || ticked || item.widget === "image" ? (
     <span className="setting-label" id={`${id}-label`}>
-      {label}
+      {labelText}
     </span>
   ) : (
     <label className="setting-label" htmlFor={id}>
-      {label}
+      {labelText}
     </label>
   );
   return (
@@ -343,6 +350,7 @@ export function SettingRow(props: {
                 className="link-button"
                 disabled={props.disabled}
                 aria-label={t("settings.reset_named", { label })}
+                title={showDefault ? t("settings.default", { value: valueWords(item.default) }) : undefined}
                 onClick={props.onReset}
               >
                 {t("settings.reset")}
@@ -359,6 +367,11 @@ export function SettingRow(props: {
         {props.reason && (
           <p className="hint" id={`${id}-reason`}>
             {props.reason}
+          </p>
+        )}
+        {props.cross && (
+          <p className="hint" id={`${id}-cross`}>
+            {props.cross}
           </p>
         )}
         {item.type === "list" && !readOnly && !ticked && (
@@ -385,9 +398,9 @@ export function SettingRow(props: {
       <div className="setting-help" data-help>
         {hint && <ClampedHint id={`${id}-hint`} text={hint} />}
         {showDefault && (
-          <p className="hint" id={`${id}-default`}>
+          <span className="sr" id={`${id}-default`}>
             {t("settings.default", { value: valueWords(item.default) })}
-          </p>
+          </span>
         )}
       </div>
       {picking && (

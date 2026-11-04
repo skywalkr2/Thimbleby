@@ -161,3 +161,9 @@ test("with no folder it says the work is saved on this computer only, with no pi
   expect(screen.queryByText("In sync")).toBeNull();
   expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
 });
+
+test("with no synced folder chosen the page speaks only of this computer, and says nothing of a folder it syncs to", async () => {
+  show(view({ state: "clear", here: null, folder: null, folder_set: false }));
+  expect(await screen.findByText("Your work is kept on this computer.")).toBeInTheDocument();
+  expect(screen.queryByText(/the folder it syncs to/)).toBeNull();
+});

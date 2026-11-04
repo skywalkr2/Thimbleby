@@ -77,7 +77,7 @@ export function MergedRow(props: {
         </div>
         <div className="merged-controls">
           {parts.map((part, n) =>
-            n % 2 === 1 && bySlot.has(part) ? <Fragment key={part}>{control(bySlot.get(part)!)}</Fragment> : part ? <span key={n}>{part}</span> : null,
+            n % 2 === 1 && bySlot.has(part) ? <Fragment key={part}>{control(bySlot.get(part)!)}</Fragment> : part ? <span key={n} className={/\p{L}/u.test(part) ? undefined : "merged-sep"}>{part}</span> : null,
           )}
         </div>
         {problem && (

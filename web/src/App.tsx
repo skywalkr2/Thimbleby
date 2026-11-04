@@ -255,8 +255,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;
     }
     // A screen reached from Settings keeps the Settings side bar, so every other section is one choice away.
-    const framed = (under: SettingsSection | undefined, body: ReactNode) => (
-      <SettingsFrame under={under} choose={(section) => setView(settingsView(section))}>
+    const framed = (under: SettingsSection | undefined, body: ReactNode, subpage = false) => (
+      <SettingsFrame under={under} subpage={subpage} choose={(section) => setView(settingsView(section))}>
         {body}
       </SettingsFrame>
     );
@@ -334,7 +334,17 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           />
         );
       case "settings/ai-compare":
-        return framed("ai", <AiCompare onBack={() => setView(settingsView("ai"))} />);
+        return framed(
+          "ai",
+          <AiCompare
+            onBack={() => setView(settingsView("ai"))}
+            onAdd={() => {
+              setAddAccount(Date.now());
+              setView(settingsView("ai"));
+            }}
+          />,
+          true,
+        );
       case "handover":
         return <Handover onBack={() => setView("today")} />;
       case "quality":

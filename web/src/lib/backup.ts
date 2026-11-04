@@ -26,3 +26,9 @@ export function backupTone(b: S["BackupStatus"]): "ok" | "warn" | "danger" | "ne
   if (b.last_error) return "danger";
   return b.needs_attention ? "warn" : "ok";
 }
+
+/** A folder by its own name, the last part of its path (a trailing separator ignored), for where a full path would crowd the page. */
+export function folderName(path: string): string {
+  const parts = path.split(/[\\/]+/).filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}

@@ -58,7 +58,10 @@ test("it shows where backups go, the last backup and the copies, each with Resto
   api(() => view());
   open();
   const where = await screen.findByRole("region", { name: "Where backups go" });
-  expect(await within(where).findByText("/mnt/drive", { exact: false })).toBeInTheDocument();
+  // A folder is shown by its name, with the whole path on hover.
+  const place = await within(where).findByText("Drive");
+  expect(place).toHaveAttribute("title", "/mnt/drive");
+  expect(where).not.toHaveTextContent("/mnt/drive");
   expect(await within(where).findByText(/Backed up/)).toBeInTheDocument();
   expect(within(where).getByRole("button", { name: "Back up now" })).toBeEnabled();
   const copies = within(where).getByRole("list", { name: "Copies you can restore from" });
@@ -69,7 +72,7 @@ test("it shows where backups go, the last backup and the copies, each with Resto
   expect(restore).toHaveTextContent("set aside, not deleted");
   expect(restore).not.toHaveTextContent(/isn't a button|cockpit|--backup/);
   expect(restore.querySelector("details")).toBeNull();
-  expect(restore).toHaveTextContent("Going back to a chosen moment isn't available yet.");
+  expect(restore).not.toHaveTextContent("isn't available yet");
 });
 
 test("Restore this copy asks first, in plain words, and a plain copy has no key field", async () => {
@@ -160,7 +163,7 @@ test("with no folder it says automatic backups are off and Back up now waits for
   api(() => view({ state: state({ configured: false, last_success: null, age_hours: null, needs_attention: true }), targets: [], copies: [], schedule: false }), []);
   open();
   const where = await screen.findByRole("region", { name: "Where backups go" });
-  expect(within(where).getAllByText("Automatic backups are off until you choose where they go.").length).toBeGreaterThan(0);
+  expect(within(where).getByText("Choose where backups go first.")).toBeInTheDocument();
   expect(within(where).getByRole("button", { name: "Back up now" })).toBeDisabled();
   expect(within(where).getByText("No copy has been made yet.")).toBeInTheDocument();
 });

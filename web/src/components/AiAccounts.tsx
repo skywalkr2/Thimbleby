@@ -27,6 +27,7 @@ import {
 import { useAccountCheck, setAccountCheck } from "../lib/account-checks";
 import { EVERYDAY, HARDER, modelsOf, planFor, useAccountActs, useConfirmAbove } from "../lib/ai-account-acts";
 import { day, monthDay, noReset, wallWhen } from "../lib/dates";
+import { useConnection } from "../lib/connection";
 import { useMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
@@ -39,6 +40,9 @@ import { Icon } from "../ui/Icon";
 import { Pill, type PillTone } from "../ui/Pill";
 import { StateMark, needsYou, type StateTone } from "../ui/StateMark";
 import { Row } from "../ui/Row";
+import { RowList } from "../ui/RowList";
+import { LoadFailed } from "../ui/LoadFailed";
+import { Skeleton } from "../ui/Skeleton";
 import { DialogFooter, ModalPanel, restoreFocus } from "./ModalPanel";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -88,17 +92,21 @@ export function AiAccounts(props: {
   const skills = useQuery({ queryKey: ["ai-skills"], queryFn: api.aiSkills });
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup, enabled: props.local === undefined });
   const local = props.local ?? setup.data?.local ?? true;
-  if (accounts.isPending) return null;
-  // A list that didn't load says so quietly, without a heading of its own.
-  if (accounts.isError) return <p className="hint">{t("ai_accounts.load_failed")}</p>;
+  const offline = useConnection().offline;
+  // Settings' own page shows rows in the place of the list while it loads, and a card with Try again when it didn't; a step
+  // of the setup guide shows nothing, and says so quietly.
+  if (accounts.isPending) return props.compact ? null : <Skeleton shape="rows" rows={2} />;
+  if (accounts.isError)
+    return props.compact ? <p className="hint">{t("ai_accounts.load_failed")}</p> : <LoadFailed message={t("ai_accounts.load_failed")} onRetry={() => void accounts.refetch()} />;
   const list = accounts.data;
   const Heading = props.level === 4 ? "h4" : props.level === 2 ? "h2" : "h3";
   const kinds = endpoints.data ?? [];
   const kindOf = (a: Account) => kinds.find((k) => k.id === a.kind);
+  const emptyRow = !props.compact && !!props.onAdd;
   return (
     <section className="ai-accounts" aria-labelledby="ai-accounts-title">
       <div className="heading">
-        <Heading id="ai-accounts-title" {...(props.level === 2 ? { tabIndex: -1, "data-section-heading": "" } : {})}>
+        <Heading id="ai-accounts-title" {...(props.level === 2 ? { tabIndex: -1, "data-section-heading": "", "data-heading-shown": "" } : {})}>
           {t("ai_accounts.title")}
           {list.length > 0 && (
             <span className={styles.count} aria-label={tn("ai_accounts.count", list.length)}>
@@ -106,13 +114,13 @@ export function AiAccounts(props: {
             </span>
           )}
         </Heading>
-        {(props.onCompare || props.onAdd) && (
+        {(props.onCompare || props.onAdd) && !(emptyRow && list.length === 0) && (
           <Actions>
             {props.onCompare && list.length > 0 && (
               <Button onClick={props.onCompare}>{t("ai_accounts.compare")}</Button>
             )}
             {props.onAdd && (
-              <Button variant="primary" onClick={props.onAdd}>
+              <Button variant="primary" disabled={offline} reason={t("settings.needs_connection")} onClick={props.onAdd}>
                 {t("ai_accounts.add")}
               </Button>
             )}
@@ -120,7 +128,27 @@ export function AiAccounts(props: {
         )}
       </div>
       {list.length === 0 ? (
-        <p className="hint">{t("ai_accounts.none")}</p>
+        emptyRow ? (
+          // The page that keeps the assistant from working says so as a warning row, with the one way out beside it.
+          <RowList aria-labelledby="ai-accounts-title" data-no-account="">
+            <Row
+              as="li"
+              loop={false}
+              state="warn"
+              title={
+                <StateMark tone="warn">{t("ai_accounts.none")}</StateMark>
+              }
+              meta={t("ai_accounts.none_meta")}
+              primary={
+                <Button variant="primary" disabled={offline} reason={t("settings.needs_connection")} onClick={props.onAdd}>
+                  {t("ai_accounts.add")}
+                </Button>
+              }
+            />
+          </RowList>
+        ) : (
+          <p className="hint">{t("ai_accounts.none")}</p>
+        )
       ) : (
         <>
           {!props.compact && <Summary accounts={list} kindOf={kindOf} onAddOne={props.onAdd} />}

@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { AiCompare } from "./AiCompare";
@@ -97,7 +98,7 @@ test("kinds of work down the side, one column for each account and model with th
   const rows = screen.getAllByRole("rowheader").map((r) => r.textContent);
   expect(rows).toEqual(["Pull actions from meeting notes", "Route a question to who decides", "Use a known term", "Write an update in your voice"]);
   expect(screen.getByRole("heading", { level: 2, name: "Compare what accounts can do" })).toBeInTheDocument();
-  expect(screen.getByText("How often each account gets it right · what a right answer costs · 80% or more counts as a pass")).toBeInTheDocument();
+  expect(screen.getByText("How often each account gets it right, and what that costs. 80% or more is a pass.")).toBeInTheDocument();
   // The model's own id is never shown.
   expect(document.body).not.toHaveTextContent("m-1");
 });
@@ -220,7 +221,7 @@ test("Back returns to Settings, and a list that didn't load says so with Try aga
   api();
   view.unmount();
   renderApp(<AiCompare onBack={onBack} />);
-  await user.click(await screen.findByRole("button", { name: "Back to settings" }));
+  await user.click(await screen.findByRole("button", { name: "Back to AI and spending" }));
   expect(onBack).toHaveBeenCalledTimes(1);
   view.unmount();
   api({ "GET ai/skills": () => new Refuse(500, "") });
@@ -347,4 +348,13 @@ test("a test that would cost more than is left of the daily limit asks first and
   expect(calls.filter((c) => c.route.endsWith("/measure"))).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "Test anyway" }));
   await waitFor(() => expect(calls.filter((c) => c.route.startsWith("POST ai/skills/") && c.route.endsWith("/measure"))).toHaveLength(2));
+});
+
+test("the empty page offers Add an account as a button, which asks for the form to open", async () => {
+  const user = userEvent.setup();
+  const add = vi.fn();
+  api({ "GET ai/accounts": () => [] }, UNMEASURED);
+  renderApp(<AiCompare onBack={() => undefined} onAdd={add} />);
+  await user.click(await screen.findByRole("button", { name: "Add an account" }));
+  expect(add).toHaveBeenCalledTimes(1);
 });

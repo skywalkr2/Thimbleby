@@ -475,3 +475,9 @@ describe("the variants for a person with only their own life", () => {
     }
   });
 });
+
+test("no entry of the sheet offers 'another command-line agent signed in as you', nor says a thing isn't built, available yet or only a stand-in", () => {
+  const entries = Object.entries(words);
+  const bad = entries.filter(([, text]) => /command-line agent signed in as you|isn't built|isn't available yet|not built yet|stand-in/i.test(String(text)));
+  expect(bad.map(([key]) => key)).toEqual([]);
+});

@@ -47,7 +47,7 @@ test("each account has the switch, off to begin with, and the intro says what an
   show([MAIL, SIGNED], []);
   expect(await switchOf("Work mail")).not.toBeChecked();
   expect(await switchOf("Demo service (pat@example.com)")).not.toBeChecked();
-  expect(screen.getByText(/An account that isn't switched on still gets drafts, which you carry out with Copy/)).toBeInTheDocument();
+  expect(screen.getByText(/without it you get drafts to carry out with Copy/)).toBeInTheDocument();
 });
 
 test("while the assistant has no name, the switch doesn't use one", async () => {
@@ -123,4 +123,16 @@ test("a service with no acting access to ask for can't be switched on, and says 
 test("with no accounts it says to sign in or add a mailbox first", async () => {
   show([], []);
   expect(await screen.findByText("No accounts yet. Sign in to a service or add a mailbox first.")).toBeInTheDocument();
+});
+
+test("a list of accounts that couldn't load is the shared card with Try again, and the rows come after it", async () => {
+  const user = userEvent.setup();
+  let ok = false;
+  fakeApi({ "GET acts/accounts": () => (ok ? { accounts: [MAIL] } : new Refuse(500, "no")), "GET settings": () => setting([]) });
+  renderApp(<ActingAccounts />);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("The accounts couldn't be loaded.");
+  ok = true;
+  await user.click(within(alert).getByRole("button", { name: "Try again" }));
+  expect(await switchOf("Work mail")).not.toBeChecked();
 });

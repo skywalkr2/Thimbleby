@@ -358,3 +358,18 @@ test("the header clips what is wider than the window but lets the search results
   expect(header).toMatch(/overflow-y: visible/);
   expect(header).not.toMatch(/overflow: hidden/);
 });
+
+test("a touch screen is not offered the list of keyboard shortcuts, and the rest of Help stays", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: /pointer:\s*coarse/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+  try {
+    show();
+    await user.click(screen.getByRole("button", { name: "Help" }));
+    const names = screen.getAllByRole("menuitem").map((i) => i.textContent);
+    expect(names).not.toContain("Show keyboard shortcuts");
+    expect(names).toContain("Setup guide");
+    expect(names).toContain("Write feedback");
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

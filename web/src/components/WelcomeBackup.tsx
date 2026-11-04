@@ -18,6 +18,7 @@ import { Pill } from "../ui/Pill";
 import { FormField } from "../ui/FormField";
 import { CheckboxGroup } from "../ui/CheckboxGroup";
 import { Actions } from "../ui/Actions";
+import { folderName } from "../lib/backup";
 import { RadioCard, RadioCards } from "../ui/RadioCard";
 
 /** The choice that is not one of the drives found: a folder of the person's own. */
@@ -27,7 +28,12 @@ function size(mb: number, t: (key: string, vars?: Record<string, string | number
   return mb >= 1024 ? t("welcome.backup.gb", { n: (mb / 1024).toFixed(1) }) : t("welcome.backup.mb", { n: Math.round(mb) });
 }
 
-export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
+export function WelcomeBackup(props: {
+  local: boolean;
+  saveLabel?: string;
+  /** Drawn on Settings' own page: its buttons start at the field's left edge, and a folder is shown by its name. */
+  settings?: boolean;
+}) {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -124,14 +130,16 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
   useContinue(hasSlot ? { run: save, label: t("welcome.backup.go"), disabled: !!missing, why: missing } : null);
 
   return (
-    <div className="guide-body">
+    <div className="guide-body" data-in-settings={props.settings ? "" : undefined}>
       {existing.length > 0 && (
         <div>
           <p className="what">{t("welcome.backup.current")}</p>
           <ul className="plain-list">
             {existing.map((e) => (
               <li key={e.path} className="inline-field">
-                <span className="path">{e.label ? t("welcome.backup.target", { label: e.label, path: e.path }) : e.path}</span>
+                <span className="path" title={props.settings ? e.path : undefined}>
+                  {props.settings ? e.label || folderName(e.path) : e.label ? t("welcome.backup.target", { label: e.label, path: e.path }) : e.path}
+                </span>
                 <Button
                   size="sm"
                   variant="quiet"
@@ -224,7 +232,7 @@ export function WelcomeBackup(props: { local: boolean; saveLabel?: string }) {
           </p>
         )}
         {!hasSlot && (
-          <Actions align="end">
+          <Actions align={props.settings ? "start" : "end"}>
             <Button variant="primary" loading={busy} disabled={!!missing || picked === null} reason={missing || undefined} onClick={() => void save()}>
               {props.saveLabel ?? t("welcome.backup.go_here")}
             </Button>

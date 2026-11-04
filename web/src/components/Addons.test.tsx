@@ -1066,7 +1066,7 @@ describe("a read token for a private release", () => {
     await user.click(await within(tool).findByRole("button", { name: "Add a download access key for Name of tool" }));
     const box = within(tool).getByLabelText("Download access key");
     await waitFor(() => expect(box).toHaveAttribute("type", "text"));
-    expect(within(tool).queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
+    expect(within(tool).queryByRole("button", { name: "Name where it is kept" })).toBeNull();
     await user.type(box, "RELEASE_TOKEN");
     await user.click(within(tool).getByRole("button", { name: "Save access key" }));
     await waitFor(() => expect(calls.find((c) => c.route === "POST packs/tool/token")?.body).toEqual({ reference: "env:RELEASE_TOKEN", fingerprint: "fp-1" }));

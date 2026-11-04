@@ -46,6 +46,7 @@ export function MoneyField(props: {
   return (
     <input
       id={props.id}
+      className="money-field"
       type="text"
       inputMode="decimal"
       autoComplete="off"

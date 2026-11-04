@@ -34,6 +34,7 @@ export interface Screen extends Entry {
 }
 
 const NEUTRAL = "settings/appearance";
+const WEB = "https" + "://";
 
 // ---------------------------------------------------------------- drives
 
@@ -434,6 +435,110 @@ const answered = (hash: string, path: RegExp, body: unknown) => async (env: Env)
   await settle(env.page);
 };
 
+/** The app loaded afresh at this screen, so what an earlier screen read and kept is read again (through any answer made up for it). */
+async function reopened(env: Env, hash: string): Promise<void> {
+  await env.page.goto("about:blank");
+  await env.page.goto(`${env.base}?token=${env.token}#${hash}`);
+  await settle(env.page);
+}
+
+/** The screen opened with several reads answered by made-up data of the capture's own. */
+const answeredMany = (hash: string, answers: Array<[RegExp, unknown]>) => async (env: Env) => {
+  const handler = async (route: Route) => {
+    const found = answers.find(([path]) => path.test(new URL(route.request().url()).pathname));
+    if (route.request().method() !== "GET" || !found) return route.fallback();
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(found[1]) });
+  };
+  await env.page.route("**/api/**", handler);
+  env.undo.push(() => env.page.unroute("**/api/**", handler));
+  await reopened(env, hash);
+};
+
+/** The screen opened with one read's own answer changed by `change` (the server's real answer, with a made-up part). */
+const patched = (hash: string, path: RegExp, change: (body: any) => void) => async (env: Env) => {
+  const handler = async (route: Route) => {
+    if (route.request().method() !== "GET" || !path.test(new URL(route.request().url()).pathname)) return route.fallback();
+    const response = await route.fetch();
+    const body = await response.json();
+    change(body);
+    return route.fulfill({ response, json: body });
+  };
+  await env.page.route("**/api/**", handler);
+  env.undo.push(() => env.page.unroute("**/api/**", handler));
+  await reopened(env, hash);
+};
+
+/** Chooses an option of the app's own list (a button that opens a panel of options), as a person does. */
+async function pickFromList(env: Env, name: string, option: string | RegExp): Promise<void> {
+  await env.page.getByRole("combobox", { name }).first().click();
+  const found = env.page.getByRole("option", { name: option }).first();
+  if ((await found.count()) === 0) throw new Unreachable(`the list ${name} has no option ${String(option)}`);
+  await found.click();
+}
+
+/** Every write of a setting is refused, so a change made on the screen shows what the person sees when a save fails. */
+async function refuseSaves(env: Env): Promise<void> {
+  const handler = async (route: Route) => {
+    if (route.request().method() !== "POST" || !/\/api\/settings$/.test(new URL(route.request().url()).pathname)) return route.fallback();
+    return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "The app couldn't save that." }) });
+  };
+  await env.page.route("**/api/**", handler);
+  env.undo.push(() => env.page.unroute("**/api/**", handler));
+}
+
+/** Two AI accounts that have been used, and what each has been measured to do: made up, for the screens that need accounts that have run. */
+const WHEN = new Date().toISOString();
+const aiAccount = (name: string, label: string, over: Record<string, unknown> = {}) => ({
+  name,
+  label,
+  kind: null,
+  adapter: "openai_compat",
+  base_url: null,
+  models: { routine: "small", deep: "large" },
+  used_for: [],
+  backup_for: [],
+  has_key: true,
+  key_state: "saved",
+  key_where: null,
+  credential_expires: null,
+  key_ending: false,
+  answered_at: WHEN,
+  spent_today_usd: 0.12,
+  checked_for: ["routine", "deep"],
+  check_failed_for: [],
+  checked_at: WHEN,
+  paused_until: null,
+  ...over,
+});
+const AI_ACCOUNTS = [aiAccount("main", "Everyday account", { used_for: ["routine", "deep"] }), aiAccount("second", "Backup account", { backup_for: ["routine", "deep"] })];
+const skill = (id: string, label: string, description: string, runs: number, passes: number, cost: number | null, age = 3) => ({
+  id,
+  label,
+  description,
+  measured: runs > 0,
+  runs,
+  passes,
+  pass_rate: runs > 0 ? passes / runs : null,
+  age_days: runs > 0 ? age : null,
+  cost_per_pass_usd: cost,
+  stale: null,
+  below_min: runs > 0 && passes / runs < 0.8,
+});
+const kinds = (a: number[], cost: number[]) => [
+  skill("extract", "Pull to-dos out of a message", "Reads a message and lists what it asks for.", 10, a[0], cost[0]),
+  skill("draft", "Write an update in your voice", "Drafts a short note for you to check.", 10, a[1], cost[1]),
+  skill("sort", "Sort a new item", "Decides where an item belongs.", a[2] === 0 ? 0 : 10, a[2], a[2] === 0 ? null : cost[2]),
+];
+const AI_SKILLS = {
+  min_score: 0.8,
+  stale_days: 60,
+  rule_suggestions: [],
+  accounts: [
+    { name: "main", models: [{ model: "everyday", measure: null, measure_why: null, skills: kinds([9, 7, 10], [0.004, 0.006, 0.002]) }, { model: "harder", measure: null, measure_why: null, skills: kinds([10, 9, 10], [0.03, 0.04, 0.02]) }] },
+    { name: "second", models: [{ model: "everyday", measure: null, measure_why: null, skills: kinds([8, 8, 0], [0.003, 0.004, 0]) }] },
+  ],
+};
+
 /** The search field with the cursor in it and these words typed, as a person types them; its results are waited for. */
 const searched = (words: string, wait: "results" | "none") => async (env: Env) => {
   await open(env, "today");
@@ -792,23 +897,80 @@ function build(): Screen[] {
     ai: /\/api\/(settings|ai|accounts|usage|spend|endpoints|models)/,
     connections: /\/api\/(settings|watch|accounts|sources|packs)/,
     business: /\/api\/(settings|lists|business|setup|projects|views)/,
+    today: /\/api\/(settings|notifications|reminder|acts|setup)/,
+    backups: /\/api\/(settings|backups|backup-key|sync|jobs|setup|cloud|status)/,
+    appearance: /\/api\/settings/,
+    links: /\/api\/settings/,
+    advanced: /\/api\/settings/,
   };
   for (const [id, label, where, why] of sections) {
     const base = s("Settings", `settings-${id}`, `Settings, ${label}`, where, reach(`settings/${id}`), { main: id === "connections", ...(why ? { undrivable: why } : {}) });
     add(base);
-    if (["you", "ai", "connections", "business"].includes(id)) add(...shared(base, `settings/${id}`, OWN_READS[id]));
+    if (["you", "ai", "today", "backups", "appearance", "links", "advanced", "connections", "business"].includes(id)) add(...shared(base, `settings/${id}`, OWN_READS[id]));
   }
+  const page = (id: string) => all.find((x) => x.page === `settings-${id}` && !x.title)!;
+  const linkList = (count: number, long = false) => (body: { items: Array<{ key: string; value: unknown }> }) => {
+    const links = Array.from({ length: count }, (_, n) => ({
+      name: long && n === 0 ? "The long page of notes the whole team keeps for the yearly review" : `Link number ${n + 1}`,
+      address: long && n === 0 ? `${WEB}www.example.com/${"folder/".repeat(10)}page` : `${WEB}example.com/page-${n + 1}`,
+    }));
+    const item = body.items.find((i) => i.key === "ui.links");
+    if (item) item.value = links;
+  };
+  add(
+    // Accounts that are set up: the page the person lives in, with the summary and a row for each.
+    state(page("ai"), "With accounts", SIGNED, answeredMany("settings/ai", [[/\/api\/ai\/accounts$/, AI_ACCOUNTS], [/\/api\/ai\/skills$/, AI_SKILLS]])),
+    // A choice that changes at once: the page after one is made, and after one that could not be saved.
+    state(page("appearance"), "A change made", SIGNED, async (env) => {
+      await open(env, "settings/appearance");
+      await pickFromList(env, "Spacing", "Compact");
+      await env.page.waitForTimeout(900);
+      await pickFromList(env, "Spacing", "Comfortable");
+      await env.page.waitForTimeout(900);
+    }),
+    state(page("appearance"), "A change that could not be saved", SIGNED, async (env) => {
+      await refuseSaves(env);
+      await open(env, "settings/appearance");
+      await pickFromList(env, "Clock", /^24-hour/);
+      await env.page.waitForTimeout(1200);
+    }),
+    state(page("links"), "One link", SIGNED, patched("settings/links", /\/api\/settings$/, linkList(1))),
+    state(page("links"), "Five links", SIGNED, patched("settings/links", /\/api\/settings$/, linkList(5))),
+    state(page("links"), "Twenty links, one with a long address", SIGNED, patched("settings/links", /\/api\/settings$/, linkList(20, true))),
+    state(page("advanced"), "Every topic open", SIGNED, async (env) => {
+      await open(env, "settings/advanced");
+      const toggles = env.page.locator(".topic-toggle");
+      for (let n = 0; n < (await toggles.count()); n += 1) await toggles.nth(n).click();
+      await env.page.waitForTimeout(500);
+    }),
+  );
   // The add-ons screen with an add-on installed: the demo workspace has one (the accounts workspace's catalog is not reachable).
   add(state(s("Settings", "settings-addons", "Settings, Add-ons", DEMO, reach("settings/addons")), "With an add-on installed", DEMO, withChoice("settings/addons", /^Installed/)));
   add(
-    // Two accounts to compare: the demo workspace has a second stand-in account.
-    s("Settings", "settings-ai-compare", "Settings, Compare AI accounts", DEMO, reach("settings/ai-compare")),
+    // Two accounts that have run and been measured: the pictures of the compare grid. No workspace made for a capture has a real
+    // account, so the page's reads are answered with the capture's own (the page with no account at all is the state beside it).
+    s("Settings", "settings-ai-compare", "Settings, Compare AI accounts", DEMO, answeredMany("settings/ai-compare", [[/\/api\/ai\/accounts$/, AI_ACCOUNTS], [/\/api\/ai\/skills$/, AI_SKILLS]])),
+    state(s("Settings", "settings-ai-compare", "Settings, Compare AI accounts", DEMO, reach("settings/ai-compare")), "No account yet", DEMO, reach("settings/ai-compare")),
     // The menu and the search: on a window with the side list, a search typed (its results); on a phone, the section picker open.
     s("Settings", "settings-menu", "Settings, the menu and search", SIGNED, async (env) => {
       await open(env, "settings");
       // The same search at every width (the phone has the box above its section picker).
       await env.page.getByRole("searchbox", { name: /Search settings/ }).fill("name");
       await env.page.waitForTimeout(800);
+    }),
+    state(s("Settings", "settings-menu", "Settings, the menu and search", SIGNED, reach("settings")), "No match", SIGNED, async (env) => {
+      await open(env, "settings");
+      await env.page.getByRole("searchbox", { name: /Search settings/ }).fill("zqxjv");
+      await env.page.waitForTimeout(800);
+    }),
+    // On a phone the sections are behind one row that opens a list: the list open. A window with the side list has no such row.
+    state(s("Settings", "settings-menu", "Settings, the menu and search", SIGNED, reach("settings")), "Sections open", SIGNED, async (env) => {
+      await open(env, "settings");
+      const picker = env.page.locator(".settings-picker > summary").first();
+      if ((await picker.count()) > 0 && (await picker.isVisible().catch(() => false))) {
+        await picker.click();
+        await env.page.waitForTimeout(500);
+      }
     }),
     s("Settings", "settings-addon-page", "An add-on's page", SIGNED, async (env) => {
       await open(env, "settings/addons");
@@ -828,9 +990,94 @@ function build(): Screen[] {
       await env.page.getByRole("menuitem", { name: "Sign out" }).click();
       await env.page.waitForTimeout(900);
     }),
+    state(s("Settings", "settings-sign-out", "Settings, Sign out of an account (the question)", SIGNED, reach("settings/connections")), "A long address", SIGNED, async (env) => {
+      await patched("settings/connections", /\/api\/sign-ins$/, (body: Array<{ accounts?: Array<{ address?: string }> }>) => {
+        for (const item of body) for (const a of item.accounts ?? []) a.address = "avery.lane.with.a.very.long.address.for.the.studio.and.the.shop@a-long-company-name.example.com";
+      })(env);
+      await env.page.getByRole("button", { name: /^More actions for [^\s,]+@[^\s,]+$/ }).last().click();
+      await env.page.getByRole("menuitem", { name: "Sign out" }).click();
+      await env.page.waitForTimeout(900);
+    }),
+    state(s("Settings", "settings-sign-out", "Settings, Sign out of an account (the question)", SIGNED, reach("settings/connections")), "Couldn't sign out", SIGNED, async (env) => {
+      const handler = async (route: Route) => {
+        if (route.request().method() !== "DELETE") return route.fallback();
+        return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "The service couldn't be reached to sign out." }) });
+      };
+      await env.page.route("**/api/sign-ins/**", handler);
+      env.undo.push(() => env.page.unroute("**/api/sign-ins/**", handler));
+      await open(env, "settings/connections");
+      await env.page.getByRole("button", { name: /^More actions for [^\s,]+@[^\s,]+$/ }).last().click();
+      await env.page.getByRole("menuitem", { name: "Sign out" }).click();
+      await env.page.getByRole("button", { name: "Sign out", exact: true }).click();
+      await env.page.waitForTimeout(1200);
+    }),
     s("Settings", "settings-ai-add", "Settings, Add an AI account", SIGNED, async (env) => {
       await open(env, "settings/ai");
       await press(env, /^Add an account/, "AI and spending has no Add an account button");
+      // The pointer rests where the button was, over a card: it must not tint one as if it were chosen.
+      await env.page.mouse.move(2, 2);
+      await env.page.waitForTimeout(300);
+    }),
+    // What follows a click: a service chosen (its key box), a key refused, and a network that fails.
+    state(s("Settings", "settings-ai-add", "Settings, Add an AI account", SIGNED, reach("settings/ai")), "A service chosen", SIGNED, async (env) => {
+      await open(env, "settings/ai");
+      await press(env, /^Add an account/, "AI and spending has no Add an account button");
+      await env.page.getByRole("radio").first().check({ force: true });
+      await env.page.mouse.move(2, 2);
+      await env.page.waitForTimeout(900);
+      // The key box is below the cards: the drawer's body is scrolled to it, as the person's own scroll would.
+      await env.page.locator("#ai-key, [id^=ai-key]").first().scrollIntoViewIfNeeded().catch(() => undefined);
+      await env.page.waitForTimeout(400);
+    }),
+    state(s("Settings", "settings-ai-add", "Settings, Add an AI account", SIGNED, reach("settings/ai")), "Network fails", SIGNED, async (env) => {
+      const handler = async (route: Route) => (route.request().method() === "POST" ? route.abort("connectionrefused") : route.fallback());
+      await env.page.route("**/api/ai/**", handler);
+      env.undo.push(() => env.page.unroute("**/api/ai/**", handler));
+      await open(env, "settings/ai");
+      await press(env, /^Add an account/, "AI and spending has no Add an account button");
+      await env.page.getByRole("radio").first().check({ force: true });
+      const key = env.page.locator('input[type="password"], input[id*="key"]').first();
+      await key.waitFor({ timeout: 12_000 });
+      await key.fill("not-a-real-key-0000");
+      const add = env.page.getByRole("button", { name: "Check", exact: true }).first();
+      await add.waitFor({ timeout: 12_000 });
+      await add.click({ timeout: 8_000 });
+      await env.page.mouse.move(2, 2);
+      await env.page.waitForTimeout(1500);
+    }),
+    state(s("Settings", "settings-ai-add", "Settings, Add an AI account", SIGNED, reach("settings/ai")), "Key refused", SIGNED, async (env) => {
+      const handler = async (route: Route) =>
+        route.request().method() === "POST" ? route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ detail: "That key was not accepted. Check it and try again." }) }) : route.fallback();
+      await env.page.route("**/api/ai/**", handler);
+      env.undo.push(() => env.page.unroute("**/api/ai/**", handler));
+      await open(env, "settings/ai");
+      await press(env, /^Add an account/, "AI and spending has no Add an account button");
+      await env.page.getByRole("radio").first().check({ force: true });
+      const key = env.page.locator('input[type="password"], input[id*="key"]').first();
+      await key.waitFor({ timeout: 12_000 });
+      await key.fill("not-a-real-key-0000");
+      const add = env.page.getByRole("button", { name: "Check", exact: true }).first();
+      await add.waitFor({ timeout: 12_000 });
+      await add.click({ timeout: 8_000 });
+      await env.page.mouse.move(2, 2);
+      await env.page.waitForTimeout(1500);
+    }),
+    state(s("Settings", "settings-ai-add", "Settings, Add an AI account", SIGNED, reach("settings/ai")), "Checking", SIGNED, async (env) => {
+      // The answer never comes while the picture is taken: the button says it is adding.
+      const handler = async (route: Route) => (route.request().method() === "POST" ? new Promise<void>(() => undefined) : route.fallback());
+      await env.page.route("**/api/ai/**", handler);
+      env.undo.push(() => env.page.unroute("**/api/ai/**", handler));
+      await open(env, "settings/ai");
+      await press(env, /^Add an account/, "AI and spending has no Add an account button");
+      await env.page.getByRole("radio").first().check({ force: true });
+      const key = env.page.locator('input[type="password"], input[id*="key"]').first();
+      await key.waitFor({ timeout: 12_000 });
+      await key.fill("not-a-real-key-0000");
+      const add = env.page.getByRole("button", { name: "Check", exact: true }).first();
+      await add.waitFor({ timeout: 12_000 });
+      await add.click({ timeout: 8_000 });
+      await env.page.mouse.move(2, 2);
+      await env.page.waitForTimeout(1500);
     }),
   );
 

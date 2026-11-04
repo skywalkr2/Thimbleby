@@ -65,9 +65,9 @@ describe("where reminders reach you", () => {
     expect(calendar).toBeDisabled();
     expect(screen.getByRole("radio", { name: /To my mail/ })).toBeEnabled();
     const reason = document.querySelector<HTMLElement>("[data-unavailable='calendar']")!;
-    expect(reason).toHaveTextContent(/No calendar account can carry reminders yet/);
-    expect(within(reason).getByRole("link", { name: "Sign in to an account" })).toHaveAttribute("href", expect.stringMatching(/#settings\/connections$/));
-    expect(within(reason).getByRole("link", { name: "Switch an account on" })).toHaveAttribute("href", expect.stringMatching(/#settings\/you$/));
+    expect(reason).toHaveTextContent(/Needs a signed-in calendar\./);
+    expect(reason).toHaveAttribute("title", expect.stringMatching(/No calendar account can carry reminders yet/));
+    expect(within(reason).getByRole("link", { name: "Sign in" })).toHaveAttribute("href", expect.stringMatching(/#settings\/connections$/));
     expect(document.querySelector("[data-unavailable='mail']")).toBeNull();
     expect(screen.getByRole("radio", { name: /Nowhere/ })).toBeChecked();
   });

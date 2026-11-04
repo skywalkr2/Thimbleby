@@ -226,7 +226,7 @@ test("Sign out asks first, saying what stops; Keep signed in changes nothing", a
   await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
   const dialog = await screen.findByRole("dialog", { name: "Sign out of Service demo/one?" });
   expect(within(dialog).getByText(/Reading from Service demo\/one stops until you sign in again/)).toBeInTheDocument();
-  expect(within(dialog).getByText(/Signing out can't be undone/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Signing back in starts the reading again/)).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Keep signed in" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.some((c) => c.route === "DELETE sign-ins/demo/one")).toBe(false);
@@ -708,4 +708,14 @@ test("a service that doesn't name its accounts keeps the one row and its menu's 
   expect(within(one).getByText("Signed in as pat@example.com")).toBeInTheDocument();
   expect(within(one).queryByRole("button", { name: /Add another account/ })).toBeNull();
   expect(within(one).queryByRole("list", { name: "Signed-in accounts" })).toBeNull();
+});
+
+test("the question starts with the cursor on Keep signed in, the safe answer, and Sign out is the one that needs a choice", async () => {
+  const user = userEvent.setup();
+  fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { status: "signed_in" })] });
+  open();
+  await user.click(await screen.findByRole("button", { name: "More actions for Service demo/one" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+  const dialog = await screen.findByRole("dialog", { name: "Sign out of Service demo/one?" });
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: "Keep signed in" })).toHaveFocus());
 });

@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRestart } from "../lib/restart";
 import { api, type S } from "../lib/api";
-import { backupText, backupTone } from "../lib/backup";
+import { backupText, backupTone, folderName } from "../lib/backup";
 import { dayAndTime } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { useWords } from "../lib/wording";
@@ -24,7 +24,7 @@ import { Row } from "../ui/Row";
 import { RowList } from "../ui/RowList";
 import { StateMark, needsYou } from "../ui/StateMark";
 export function BackupsPanel(props: { local: boolean }) {
-  const { t, tn } = useWords();
+  const { t } = useWords();
   const client = useQueryClient();
   const found = useQuery({ queryKey: ["backups"], queryFn: api.backups });
   const [busy, setBusy] = useState(false);
@@ -78,7 +78,7 @@ export function BackupsPanel(props: { local: boolean }) {
       const good = fresh.targets.filter((x) => !x.last_error);
       setResult(
         good.length > 0 && bad.length === 0
-          ? { ok: true, text: t("backups.now.done", { places: good.map((x) => x.label || x.path).join(", ") }) }
+          ? { ok: true, text: t("backups.now.done", { places: good.map((x) => x.label || folderName(x.path)).join(", ") }) }
           : { ok: false, text: t("backups.now.failed", { problem: bad[0]?.last_error ?? "" }) },
       );
     } catch (err) {
@@ -92,18 +92,18 @@ export function BackupsPanel(props: { local: boolean }) {
   const view: S["BackupsView"] = found.data;
   const there = view.targets.length > 0;
   return (
-    <section className="panel-section" aria-labelledby="backups-where-title" data-backups="">
+    <section className="panel-section backups-panel backups-block" aria-labelledby="backups-where-title" data-backups="">
       <div className="heading">
         <h3 id="backups-where-title">{t("backups.where.title")}</h3>
       </div>
-      <WelcomeBackup local={props.local} saveLabel={t("welcome.backup.save")} />
-      {!there && <p className="hint">{t("settings.backups.automatic_needs_folder")}</p>}
+      <WelcomeBackup local={props.local} saveLabel={t("welcome.backup.save")} settings />
       {view.targets.some((x) => !x.reachable) && (
         <p className="problem-note" role="note">
-          {t("backups.unreachable", { places: view.targets.filter((x) => !x.reachable).map((x) => x.label || x.path).join(", ") })}
+          {t("backups.unreachable", { places: view.targets.filter((x) => !x.reachable).map((x) => x.label || folderName(x.path)).join(", ") })}
         </p>
       )}
 
+      <div className="backups-block">
       <h3 id="backups-last-title">{t("backups.last.title")}</h3>
       <RowList aria-labelledby="backups-last-title" data-last-backup-list="">
         <Row
@@ -120,7 +120,7 @@ export function BackupsPanel(props: { local: boolean }) {
           }
         />
       </RowList>
-      <Actions align="end">
+      <Actions align="start">
         <Button loading={busy} disabled={!there} reason={t("backups.now.needs_folder")} onClick={() => void backUp()}>
           {t("backups.now")}
         </Button>
@@ -128,10 +128,14 @@ export function BackupsPanel(props: { local: boolean }) {
       <div role="status">
         {result && <p className={result.ok ? "hint" : "problem-note"}>{result.text}</p>}
       </div>
+      </div>
 
+      <div className="backups-block">
       <h3 id="backups-copies-title">{t("backups.copies.title")}</h3>
       {view.copies.length === 0 ? (
-        <p className="hint">{t("backups.copies.none")}</p>
+        <RowList aria-labelledby="backups-copies-title" data-no-copies="">
+          <Row as="li" loop={false} title={<StateMark tone="neutral">{t("backups.copies.none")}</StateMark>} />
+        </RowList>
       ) : (
         <ul className="plain-list" aria-labelledby="backups-copies-title">
           {view.copies.map((copy) => (
@@ -139,7 +143,7 @@ export function BackupsPanel(props: { local: boolean }) {
               <span>{copy.made_at ? dayAndTime(copy.made_at) : copy.name}</span>
               <span className="hint">
                 {" · "}
-                {copy.target}
+                {folderName(copy.target)}
                 {copy.encrypted ? ` · ${t("backup.encrypted")}` : ""}
               </span>{" "}
               <Button
@@ -159,10 +163,12 @@ export function BackupsPanel(props: { local: boolean }) {
         </ul>
       )}
 
+      </div>
+
+      <div className="backups-block">
       <h3 id="backups-restore-title">{t("backups.restore.title")}</h3>
       <div aria-labelledby="backups-restore-title" role="group" data-restore="">
-        <p>{t("backups.restore.how")}</p>
-        <p className="hint">{t("backups.restore.safe", { app: t("app.name") })}</p>
+        <p className="hint">{t("backups.restore.how", { app: t("app.name") })}</p>
         {view.copies.some((c) => c.encrypted) && <p className="hint">{t("backups.restore.key")}</p>}
         {view.pending && (
           <div data-restore-pending="">
@@ -180,7 +186,7 @@ export function BackupsPanel(props: { local: boolean }) {
           </div>
         )}
         <div role="status">{restoreNote && <p className="hint">{restoreNote}</p>}</div>
-        <p className="hint">{tn("backups.restore.not_built", 1)}</p>
+      </div>
       </div>
       {restoring && (
         <RestoreDialog

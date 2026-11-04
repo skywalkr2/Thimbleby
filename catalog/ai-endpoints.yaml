@@ -186,7 +186,7 @@ endpoints:
         sign_in_hint: Open a terminal, run claude and sign in, then press Test again.
         identity_command: [claude, auth, status]
         identity_field: email
-    note: Uses your Claude subscription or account through Claude Code, with its tools turned off.
+    note: Uses your Claude plan or account through Claude Code, with its tools off.
   - id: copilot
     name: GitHub Copilot CLI
     adapter: cli-agent
@@ -203,7 +203,7 @@ endpoints:
         errors:
           quota: ["exceeded your monthly quota"]  # as it printed, out of quota
         sign_in_hint: Open a terminal, run copilot and sign in with /login, then press Test again.
-    note: Uses your Copilot plan through the Copilot CLI, with every kind of tool it has denied.
+    note: Uses your Copilot plan through the Copilot CLI, with its tools denied.
   - id: codex
     name: Codex CLI
     adapter: cli-agent
@@ -220,7 +220,7 @@ endpoints:
         errors:
           auth: ["not logged in", "401 unauthorized", "missing bearer or basic authentication"]  # as it printed, signed out
         sign_in_hint: Open a terminal, run codex and sign in, then press Test again.
-    note: Uses your ChatGPT plan or account through the Codex CLI, in its read-only sandbox, without your own settings or rules.
+    note: Uses your ChatGPT plan or account through the Codex CLI, read-only.
   - id: gemini-cli
     name: Gemini CLI
     adapter: cli-agent

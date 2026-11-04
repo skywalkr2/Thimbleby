@@ -38,3 +38,16 @@ def test_a_card_line_fits_a_card_and_an_entry_with_a_long_note_has_a_summary():
         assert shown.count(". ") <= 1, (
             f"{entry['id']}: the card's line is more than two sentences; give the entry a summary"
         )
+
+
+def test_a_choice_card_says_what_it_is_in_two_lines():
+    """The words under a service's name on the add-an-account card (its summary, else its note) fit two lines of the
+    card (about 100 characters); the two open-ended entries that ask for an address or a command may say more."""
+    entries = CATALOG["endpoints"] if isinstance(CATALOG, dict) and "endpoints" in CATALOG else CATALOG
+    open_ended = {"other", "agent"}
+    too_long = {
+        e["id"]: len(e.get("summary") or e.get("note") or "")
+        for e in entries
+        if e["id"] not in open_ended and len(e.get("summary") or e.get("note") or "") > 100
+    }
+    assert too_long == {}

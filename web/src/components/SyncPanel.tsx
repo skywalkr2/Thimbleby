@@ -94,7 +94,7 @@ function SyncUnset() {
             {problem}
           </p>
         )}
-        <Actions align="end">
+        <Actions align="start">
           <Button
             disabled={busy}
             onClick={() => {
@@ -114,10 +114,10 @@ function SyncUnset() {
 
   return (
     <div className="sync-body">
-      <p>{t("setup.sync_unset")}</p>
+      <p className="hint">{t("setup.sync_unset")}</p>
       {canList ? (
-        <Actions align="end">
-          <Button variant="primary" ref={chooser} disabled={busy} onClick={() => setPicking(true)}>
+        <Actions align="start">
+          <Button ref={chooser} disabled={busy} onClick={() => setPicking(true)}>
             {t("setup.sync_choose")}
           </Button>
         </Actions>
@@ -207,7 +207,7 @@ export function SyncPanel() {
   const restart = useRestart();
   const data = sync.data;
   return (
-    <section className="panel-section" aria-labelledby="sync-title">
+    <section className="panel-section backups-block" aria-labelledby="sync-title">
       <div className="heading">
         <h3 id="sync-title">{t("setup.sync")}</h3>
       </div>
@@ -223,7 +223,7 @@ export function SyncPanel() {
         // A folder saved after the app started: the running app keeps what it started with until it restarts.
         <div className="sync-body">
           <p role="status">{t("setup.sync_pending", { folder: typeof saved === "string" ? saved : "" })}</p>
-          <Actions align="end">
+          <Actions align="start">
             <Button variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
               {t("restart.now")}
             </Button>

@@ -1,0 +1,14 @@
+/* Accounts the assistant can act on: a section of the form set off by a rule, each account a row with its switch at the right
+   (under its words on a narrow window), so the block shares the grid of the settings above it. */
+.section { display: grid; gap: var(--space-2); border-top: 1px solid var(--border); padding-top: var(--space-4); margin-top: var(--space-2); min-width: 0; }
+.section h3 { margin: 0; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-1) var(--space-5); padding: var(--space-3) 0; border-top: 1px solid var(--border); min-width: 0; }
+.row:first-child { border-top: 0; }
+.words { display: grid; gap: var(--space-1); min-width: 0; }
+.words strong { overflow-wrap: anywhere; }
+.words p { margin: 0; }
+.switch { font-weight: var(--weight-regular); }
+@media (max-width: 480px) {
+  .row { grid-template-columns: minmax(0, 1fr); }
+}

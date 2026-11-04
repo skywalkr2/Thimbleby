@@ -9,8 +9,9 @@ import { problemText } from "../lib/problem";
 import { rememberReturn } from "../lib/sign-in-return";
 import { freshSettings, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { LoadFailed } from "../ui/LoadFailed";
 import { Skeleton } from "../ui/Skeleton";
-import { ItemList, Item } from "../ui/ItemList";
+import styles from "./ActingAccounts.module.css";
 
 const KEY = "watch.acting";
 type Account = S["ActAccountView"];
@@ -56,27 +57,27 @@ export function ActingAccounts() {
   };
 
   return (
-    <section aria-labelledby={`${base}-title`} data-acting-accounts="">
+    <section className={styles.section} aria-labelledby={`${base}-title`} data-acting-accounts="">
       <h3 id={`${base}-title`}>{t("acting.heading")}</h3>
       <p className="hint">{t("acting.intro")}</p>
       {accounts.isPending ? (
         <Skeleton />
       ) : accounts.isError ? (
-        <p className="problem-note">{t("acting.load_failed")}</p>
+        <LoadFailed message={t("acting.load_failed")} onRetry={() => void accounts.refetch()} />
       ) : (accounts.data?.accounts ?? []).length === 0 ? (
         <p className="hint">{t("acting.none")}</p>
       ) : (
-        <ItemList aria-label={t("acting.list")}>
+        <ul className={styles.list} aria-label={t("acting.list")}>
           {(accounts.data?.accounts ?? []).map((a) => {
             const id = `${base}-${a.id}`.replace(/[^A-Za-z0-9_-]/g, "-");
             return (
-              <Item key={a.id} data-account={a.id}>
-                <div>
+              <li key={a.id} className={styles.row} data-account={a.id}>
+                <div className={styles.words}>
                   <strong id={`${id}-name`}>{a.label}</strong>
                   {!a.can_act && <p className="hint">{t("acting.cant", { label: a.label })}</p>}
                   {a.can_act && !a.acting && a.sign_in && <p className="hint">{t("acting.on_hint")}</p>}
                 </div>
-                <label className="check-line" htmlFor={id}>
+                <label className={`check-line ${styles.switch}`} htmlFor={id}>
                   <input
                     id={id}
                     type="checkbox"
@@ -87,10 +88,10 @@ export function ActingAccounts() {
                   />
                   <span>{t("acting.switch")}</span>
                 </label>
-              </Item>
+              </li>
             );
           })}
-        </ItemList>
+        </ul>
       )}
       {problem && (
         <p className="problem-note" role="alert">

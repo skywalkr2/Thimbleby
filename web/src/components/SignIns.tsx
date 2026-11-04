@@ -405,8 +405,11 @@ export function SignOutConfirm(props: { label: string; account: string | null; a
       {props.acting && <p>{t("sign_in.confirm.acting", { where })}</p>}
       <p className="hint">{t("sign_in.confirm.stays")}</p>
       <DialogFooter>
-        <Button onClick={props.onCancel}>{t("sign_in.confirm.cancel")}</Button>
-        <Button variant="danger" onClick={props.onConfirm}>
+        {/* The safe answer is the one the cursor starts on. */}
+        <Button autoFocus onClick={props.onCancel}>
+          {t("sign_in.confirm.cancel")}
+        </Button>
+        <Button variant="danger" icon="alert" onClick={props.onConfirm}>
           {t("sign_in.sign_out")}
         </Button>
       </DialogFooter>

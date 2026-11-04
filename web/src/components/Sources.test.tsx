@@ -1104,7 +1104,7 @@ describe("a secret setting typed on the screen", () => {
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     await continueAdd(user);
     await user.type(await screen.findByLabelText("Where the password is kept, as a reference."), "typed-here");
-    expect(screen.queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Name where it is kept" })).toBeNull();
     await user.type(screen.getByLabelText("About host"), "mail.example.com");
     await user.click(screen.getByRole("button", { name: "Add connection" }));
     await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
@@ -1172,7 +1172,7 @@ describe("a secret setting typed on the screen", () => {
     const box = await screen.findByLabelText("Where the password is kept, as a reference.");
     await waitFor(() => expect(box).toHaveAttribute("type", "text"));
     expect(screen.getByText(/Enter the name of the environment variable storing this secret/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Name where it is kept" })).toBeNull();
   });
 });
 

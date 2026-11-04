@@ -771,7 +771,7 @@ export function WelcomeAi(props: {
       value={e.id}
       checked={kindId === e.id && !usingFound}
       onChange={() => choose(e.id)}
-      tag={e.recommended && guide ? <Pill tone="ok">{t("welcome.ai.recommended")}</Pill> : undefined}
+      tag={e.recommended ? <Pill tone="ok">{t("welcome.ai.recommended")}</Pill> : undefined}
       title={e.name}
       description={e.summary || e.note || undefined}
     />
@@ -1140,7 +1140,7 @@ export function WelcomeAi(props: {
                   </RadioCards>
                 )}
                 {apps.length > 0 && (
-                  <FormBlock role="group" aria-labelledby="ai-apps-title">
+                  <FormBlock className="ai-apps-group" role="group" aria-labelledby="ai-apps-title">
                     <h3 id="ai-apps-title">{t("welcome.ai.apps")}</h3>
                     <RadioCards>{apps.map(underElse)}</RadioCards>
                   </FormBlock>

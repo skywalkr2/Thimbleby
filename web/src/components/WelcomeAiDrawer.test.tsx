@@ -414,3 +414,10 @@ test("a model with a listed price, or one the app's own table prices, doesn't as
   await user.click(screen.getByRole("radio", { name: /Nothing yet/ }));
   expect(screen.getByRole("button", { name: "Add account" })).toBeEnabled();
 });
+
+test("in the drawer the service the catalog recommends carries the Recommended mark, as in the guide", async () => {
+  api([MAIN], { "GET ai/endpoints": () => [{ ...KINDS[0], recommended: true }] });
+  open();
+  const card = (await screen.findByRole("radio", { name: /Service A/ })).closest("label, div") as HTMLElement;
+  expect(within(card.parentElement ?? card).getByText("Recommended")).toBeInTheDocument();
+});

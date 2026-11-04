@@ -61,7 +61,7 @@ describe("the backup key", () => {
     const calls = fakeApi(routes(true, { "POST backup-key": () => ({ ...SAVED, made: null }) }));
     openSettings("backups");
     const group = await screen.findByRole("region", { name: "Backup key" });
-    expect(within(group).getByText(/If it is lost, your backups can't be read/)).toBeInTheDocument();
+    expect(within(group).getByText(/if it is lost, the backups can't be read/)).toBeInTheDocument();
     const box = within(group).getByLabelText("Key for locking backups");
     expect(box).toHaveAttribute("type", "password");
     expect(screen.queryByLabelText("Where the backup key is kept.")).toBeNull();
@@ -83,6 +83,9 @@ describe("the backup key", () => {
     expect(await within(group).findByText("Kept on this computer")).toBeInTheDocument();
     expect(within(group).queryByLabelText("Key for locking backups")).toBeNull();
     expect(within(group).getByText(/Backups made before keep the key they were locked with/)).toBeInTheDocument();
+    // Once a key is kept there is nothing to save or make until the person chooses to replace it.
+    expect(within(group).queryByRole("button", { name: "Save backup key" })).toBeNull();
+    expect(within(group).queryByRole("button", { name: "Make one for me" })).toBeNull();
     await user.click(within(group).getByRole("button", { name: "Replace Key for locking backups" }));
     await user.type(within(group).getByLabelText("Key for locking backups"), TYPED);
     await user.click(within(group).getByRole("button", { name: "Save backup key" }));

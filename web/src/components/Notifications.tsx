@@ -15,6 +15,7 @@ import styles from "./Notifications.module.css";
 import { Button } from "../ui/Button";
 import { Select } from "../ui/Select";
 import { FormField } from "../ui/FormField";
+import { StateMark } from "../ui/StateMark";
 /** One target's test: runs it, and says how it went in a toast, or in the card when it didn't work. */
 function useTest(target: "browser" | "webhook") {
   const { t } = useWords();
@@ -56,9 +57,24 @@ function BrowserTarget() {
     <li className={styles.target} aria-labelledby={`${base}-name`}>
       <h4 id={`${base}-name`}>{t("notices.browser.title")}</h4>
       <p>{t("notices.browser.hint")}</p>
-      {state === "granted" && <p role="status">{t("notify.granted")}</p>}
-      {state === "denied" && <p role="status">{t("notify.denied")}</p>}
-      {state === "unsupported" && <p role="status">{t("notify.unsupported")}</p>}
+      {state === "granted" && (
+        <p role="status">
+          <StateMark tone="ok">{t("notify.granted")}</StateMark>
+        </p>
+      )}
+      {state === "denied" && (
+        <>
+          <p role="status">
+            <StateMark tone="warn">{t("notify.denied")}</StateMark>
+          </p>
+          <p className="hint">{t("notify.denied_how")}</p>
+        </>
+      )}
+      {state === "unsupported" && (
+        <p role="status">
+          <StateMark tone="neutral">{t("notify.unsupported")}</StateMark>
+        </p>
+      )}
       {test.problem && (
         <p className="problem-note" role="alert">
           {test.problem}
@@ -68,6 +84,11 @@ function BrowserTarget() {
         {state === "default" && (
           <Button variant="primary" size="sm" onClick={() => void askNotify().then(setState)}>
             {t("notify.allow")}
+          </Button>
+        )}
+        {state === "denied" && (
+          <Button size="sm" onClick={() => setState(notifyState())}>
+            {t("notify.check_again")}
           </Button>
         )}
         {state === "granted" && (

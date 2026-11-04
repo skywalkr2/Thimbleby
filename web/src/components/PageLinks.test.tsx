@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
-import { PageLinks, webAddress } from "./PageLinks";
+import { PageLinks, middleCut, webAddress } from "./PageLinks";
 
 // The list of the person's quick links, in Settings → Quick links (design 7.9): a name and a web address each, saved as it is
 // made with Undo. The header shows them (HeaderLinks.test.tsx).
@@ -134,4 +134,17 @@ test("the form adds https:// itself, says where the links appear, shows the name
   expect(document.querySelector("form")).toHaveAttribute("novalidate");
   await user.click(screen.getByRole("button", { name: "Add this link" }));
   await waitFor(() => expect(sent(calls)).toEqual([{ "ui.links": [{ name: "My bank", address: `${WEB}example.org/bank` }] }]));
+});
+
+test("with no link the list says so in one line, and a long address is cut in its middle with the whole one on hover", async () => {
+  const empty = show([]);
+  expect(await screen.findByText("No quick links yet.")).toBeInTheDocument();
+  void empty;
+  const long = `${WEB}www.example.com/${"folder/".repeat(12)}page`;
+  const cut = middleCut(long);
+  expect(cut.length).toBeLessThan(long.length);
+  expect(cut.startsWith(`${WEB}www.example.com`)).toBe(true);
+  expect(cut.endsWith("page")).toBe(true);
+  expect(cut).toContain("…");
+  expect(middleCut(`${WEB}example.com/a`)).toBe(`${WEB}example.com/a`);
 });

@@ -816,3 +816,13 @@ test("in a step of the setup guide each account is one card: no summary of who d
   expect(found).not.toContain("Change AI models");
   expect(found).not.toContain("Set the access key's expiry date");
 });
+
+test("with no account Settings shows a warning row with the dot, the words and the one button beside them", async () => {
+  api({ "GET ai/accounts": () => [] });
+  renderApp(<AiAccounts level={2} onAdd={() => undefined} onCompare={() => undefined} />);
+  const row = (await screen.findByText("No AI account is set up yet.")).closest("li") as HTMLElement;
+  expect(row).toHaveTextContent("nothing is read, drafted or checked");
+  // The one Add an account is in that row; the heading carries no second one.
+  expect(screen.getAllByRole("button", { name: "Add an account" })).toHaveLength(1);
+  expect(within(row).getByRole("button", { name: "Add an account" })).toBeInTheDocument();
+});

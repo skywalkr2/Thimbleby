@@ -128,7 +128,7 @@ export function SecretField(props: {
           </Button>
         )}
         {mode !== "where" && props.offerWhere !== false && (
-          <Button variant="quiet" size="sm" disabled={props.disabled} onClick={() => go("where")}>
+          <Button variant="quiet" size="sm" icon="chevron" className="flush-left" disabled={props.disabled} onClick={() => go("where")}>
             {t("secret.where_instead")}
           </Button>
         )}

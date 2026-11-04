@@ -23,7 +23,7 @@ import styles from "./AiCompare.module.css";
 import { EmptyState } from "../ui/EmptyState";
 const percent = (share: number) => Math.round(share * 100);
 
-export function AiCompare(props: { onBack: () => void }) {
+export function AiCompare(props: { onBack: () => void; /** Opens where an account is added; the empty page offers it as a button. */ onAdd?: () => void }) {
   const { t } = useWords();
   const money = useMoney();
   const client = useQueryClient();
@@ -280,7 +280,11 @@ export function AiCompare(props: { onBack: () => void }) {
       ) : !skills.data || !accounts.data ? (
         <Skeleton />
       ) : accountNames.length === 0 ? (
-        <EmptyState icon="gear" text={t("ai_compare.empty")} />
+        <EmptyState
+          icon="gear"
+          text={t("ai_compare.empty")}
+          action={props.onAdd ? { label: t("ai_accounts.add"), onClick: props.onAdd, primary: true } : null}
+        />
       ) : !anyResult ? (
         // While tests run, or when one failed (said above, in its place), the page doesn't also say nothing is measured.
         running.length > 0 || waiting.length > 0 || failed.length > 0 ? null : (
