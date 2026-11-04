@@ -104,6 +104,7 @@ The finished batches (S1-1, S1-2, S1-3, the UI gate) are in `roadmap-done.md`.
       - [ ] G3 Schedule (G3b finishes the lines G3 left open)
       - [ ] G4 Records
       - [ ] G5 Settings and Setup (with D1 and D10)
+      - [ ] T1 test robustness: the journeys and side-filter tests share a fixed clock so a run across midnight passes; the Settings search race (items.md, "CI failures")
       - [ ] G6 motion (D7), the keyboard walk, screenshot comparisons in CI (D8), the product file and the brand moments
       Then the full suites, a fresh inventory and mockup capture, and both cold scorers on every screen.
 

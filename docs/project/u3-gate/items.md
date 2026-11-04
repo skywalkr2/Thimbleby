@@ -834,3 +834,10 @@ into the working tree, with the test that proves it; work still in a helper's un
 - [ ] [audit] **Y11-26** (Not done): Y09-10; the count: S
 - [ ] [audit] **Y11-27** (Not done): Default to the page's side. `HandIn.tsx`. M
 - [ ] [audit] **Y11-29** (Not done (nothing found)): Two small CSS and label fixes. S
+
+## CI failures found during the round (batch T1, test robustness)
+
+From CI on f15e5e6, a docs-only commit whose code passed on c83736d. The web job ran from 23:55 to 00:12 UTC, across midnight.
+- [ ] [T1] **The journeys cross midnight.** `journeys-mail.spec.ts:187` (J2) and `journeys-new-start.spec.ts:292` (J6) don't find "Venue walk-through" on Today's Schedule. `tests/fake_services.py` `events()` places the near events from the server's start time, so they stay clear of midnight at that moment. But the test reaches Today minutes later, after midnight, and by then the events are on yesterday. Fix: the e2e servers and the browser share one fixed clock for the journeys (a fixed time of day, set in the test process with `time-machine` and the page clock), not the real time. Never faketime.
+- [ ] [T1] **`side-filter.spec.ts:72` and `:136`**, a calendar's clash and meetings under their side. Check whether the same midnight cause applies, then fix it with the same clock.
+- [ ] [T1] **`settings-walk.spec.ts:273`, the search on Connections and Add-ons.** It failed again after the fix in c83736d, so the cause isn't settled. Reproduce it locally under load, find the race, and fix it in the screen or the test's wait, never by loosening the assertion.
