@@ -1280,7 +1280,7 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 Owner's numbering kept. Recorded only; nothing is fixed until the owner says go. No names, addresses or mail from the owner's screenshots are copied here.
 
 **Setup walkthrough**
-- [ ] [U4] 1. You: the time zone list shows a box the person can type into (the filter box of the list). A list to pick from must not look like a text field.
+- [ ] [U4] 1. You: the time zone list shows a box the person can type into (the filter box of the list). A list to pick from must not look like a text field. The tests checked that the list opens and picks; none tried typing into it (owner: "you can def type in that field"). Failing test first: type into every list to pick from (time zone, people, projects, accounts, models, folders) and expect nothing typed (U4-0).
 - [ ] [U4] 2. Your AI account, OpenRouter: a valid key gets "The service asked to wait a moment. Try again shortly." The check of every tier runs into the service's rate limit; the person can't tell the key is fine, and the message sits under the key with no next step.
 - [ ] [U4] 3. Your AI account, Google AI Studio: after a model is picked, Continue stays off. The model has no known price, so the price boxes appear (filled in), and the step waits for a check that only runs on Enter or leaving the box; it never tries the model.
 - [ ] [U4] 4. Your AI account, a signed-in app (Copilot CLI): it works, but the words are beyond a non-technical person: "with its tools denied", "Change the model in that app's settings", "Can Reginald's AI service read your private mail…", "Which account is it?".

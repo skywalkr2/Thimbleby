@@ -241,6 +241,22 @@ time. These rules hold for the main session and every subagent.
   fixed in the same change, and the reply says what was checked.
 - Nothing is "ready to test" until the journey tests pass. The message to the owner gives the exact commands and what
   they should see.
+- **Walk a fresh install before every test of the owner's** (owner, 2026-11-05: most of what the owner's test of f410e11
+  found, tests could have caught). Run `cockpit init` with no template and `cockpit serve`, walk the walkthrough in the
+  browser the way a person does (Continue and skip only, then Today, Start once, the screen after), with the stand-in
+  AI's rough modes, screenshot every step and have the pictures scored cold. The owner gets the commands only after that.
+- **Every function has tests of how it fails, not only of how it works** (owner, 2026-11-05). For each feature, test:
+  - the service failing: refused key, rate limit while checking, credit run out with no reset time, a model with no
+    known price, slow answers, offline;
+  - the person doing nothing, skipping, clicking twice, or using a control the wrong way: typing into a list to pick
+    from, pressing a mark meant for one thing as another;
+  - real-world mess in the input: machine-made addresses, notices sent to one person, newsletters, broken PDFs.
+  A test says what must not happen as well as what should: no internal word on screen, one line per cause, no text
+  squeezed into a sliver, nothing typed into a list. The stand-in AI's rough modes and the messy mail fixture exist for
+  this; journey tests use them.
+- **A test never pins a state no person has judged.** A journey test checks what a person sees and does; when it checks
+  wording or a state that a cold score or the owner hasn't seen make sense, it holds a mistake in place (the setup
+  journey asserted the very Your promises line the owner found broken).
 - Never mark a plan item done on a part of it: say what is left. "Built" means a named test exists and passes: a checked
   roadmap box or a "Built" row cites it (the self-check enforces this from phase L0, see `docs/project/roadmap-done.md`; it reads both roadmap files).
 - Nothing lives only in the conversation. Every commitment to the owner or a plugin builder ("I'll add X", "Y is next") is
