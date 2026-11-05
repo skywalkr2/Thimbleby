@@ -43,7 +43,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   4. **The owner's checks and the gate week**, with its pass bar (P65; design 6.32): the laptop and phone exit checks
      (B-6a, B-6b), an add-on installed from a real release host (B-5), the guided Gmail mailbox (P67), and the real-mail
      re-run (P46).
-  5. **Phase I:** I-0 to I-0d, then I-0p, the public repository (P113), then the installers (I-1), then the tester
+  5. **Phase I:** I-0 to I-0d, then I-0p, the public repository (P113), then the owner's local run (I-0r), then the installers (I-1), then the tester
      milestone with the first public alpha (I-2).
 - **Open boxes in phases B and S below are not all current.** Several were built under later batches and not ticked.
   The reconcile runs in the next free helper slot during U3, under P125: every open box is checked against the code, then ticked with
@@ -953,6 +953,15 @@ code. Nearly all is built or planned. What is left, in two batches:
   - State (2026-10-29): built: C13, C15, C21, C22, C25, C36, C41 and C45 (`web/src/lib/keys.test.tsx`, `web/e2e/layout.spec.ts`, `web/src/components/WhatChanged.test.tsx`, `web/src/ui/glyphs.test.ts`, `web/src/ui/loading.test.ts`, `web/src/wording/wording.test.ts`); left: C16, C23, C24, C29, C35 and C43 are carried in `ui-review-status-2026-10-20.md` as Partial with a reason, but the item asks each to be re-marked and line 37 above still lists it open; the main session decides whether that counts.
 
 ## Phase I: installers for Windows and macOS (after phase S)
+
+- [ ] [I-0r] **The owner's local run, before the installers** (owner, 2026-11-05): after every step before phase I is
+  done, the owner starts a Claude Code session on their own computer (not in the cloud), with a local data set and the
+  installed app (the release package through `install.sh` or `install.ps1`, not a checkout), and has it use the app for
+  real. Prepared beforehand by the main session: a brief for that session (the journeys to walk, including the failure
+  paths of CLAUDE.md "How work reaches the owner"; what to record and how; that nothing from the local data set leaves
+  the computer or enters any repository, findings written in general terms), and a findings file in the format of
+  `docs/project/u3-gate/items.md` that the owner brings back. *Exit:* the findings are sorted (fix, usable, new) and
+  every fix is done, with its failing test first, before I-1 starts.
 
 - [ ] [I-0p] **The product in its own public repository** (owner, 2026-11-02, P113: "lets put this into the path to
   1.0"): a one-way export builds the public tree from an allowlist of paths (code, tests, the fictional workspaces, the
