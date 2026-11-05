@@ -5,7 +5,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button as AriaButton, DialogTrigger } from "react-aria-components";
 import { useWords } from "../lib/wording";
-import { useInFilterSheet } from "../ui/filterSheet";
+import { useInFilterSheet } from "../ui/inFilterSheet";
 import { Icon } from "../ui/Icon";
 import { Popover } from "../ui/Popover";
 import type { Calendars } from "./ScheduleEntry";

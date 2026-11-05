@@ -11,6 +11,7 @@ from engine.config import ConfigError, load_config
 from engine.records import REFERENCES, values_at
 from engine.selfcheck.built_claims import scan_built_claims
 from engine.selfcheck.decisions import check_decisions
+from engine.selfcheck.file_names import check_name_case
 from engine.selfcheck.free_text import check_free_text
 from engine.selfcheck.invariants import check_invariant_lines
 from engine.selfcheck.scans import (
@@ -163,6 +164,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
         ("config coverage", scan_config_coverage),
         ("built claims", scan_built_claims),
         ("decisions", check_decisions),
+        ("file names", check_name_case),
         ("invariant lines", check_invariant_lines),
         ("case skills", check_skills_named),
     ]

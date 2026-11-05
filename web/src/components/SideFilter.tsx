@@ -15,7 +15,7 @@ import { useTabCounts, type WaitingScreen } from "../lib/waiting";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { useInFilterSheet } from "../ui/filterSheet";
+import { useInFilterSheet } from "../ui/inFilterSheet";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Sheet } from "../ui/Sheet";
 import styles from "./SideFilter.module.css";

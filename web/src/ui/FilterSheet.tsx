@@ -5,7 +5,7 @@
 import { useState, type ReactNode } from "react";
 import { useWords } from "../lib/wording";
 import { Button } from "./Button";
-import { InFilterSheet } from "./filterSheet";
+import { InFilterSheet } from "./inFilterSheet";
 import { Sheet } from "./Sheet";
 import styles from "./FilterSheet.module.css";
 
