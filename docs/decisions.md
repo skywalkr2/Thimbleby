@@ -7,15 +7,16 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 ## 2026-11-05: Scope freeze for 1.0 (owner)
 
 **Decided:** from 2026-11-09, nothing new joins the 1.0 roadmap unless it fixes something broken or makes something
-already built usable. Any other new idea is written to the "after 1.0" list (as Thimbleby Corp and the hosted service
-are) and waits there. The owner can lift the freeze for any one item by saying so ("i agree until i dont"); the item
-then joins with its own decision entry.
+already built usable. Any other new idea is discussed with the owner when it comes in, to decide whether it is a miss
+that is a must for 1.0 (owner: "we can discuss any new scope to decide if its a miss that is a must if its not just future
+bug fixes"); a must joins with its own decision entry, anything else is written to the "after 1.0" list (as Thimbleby
+Corp and the hosted service are) and waits there. The owner can lift the freeze for any one item ("i agree until i dont").
 
 **Why:** the U4 list roughly doubled in one day of testing and lessons; most of it was fixes, but the plan only ends if
 new scope stops joining it.
 
 **Impact:** each new request is sorted in the reply that receives it: fix (joins U4 or the current batch), usable
-(joins it), or new (after 1.0, unless the owner lifts the freeze). P136 (absence calendars) and P137 (Ask answering
+(joins it), or new (discussed: a miss that is a must joins, else after 1.0). P136 (absence calendars) and P137 (Ask answering
 how-to questions) were recorded before the freeze and stay where they are. Change log: none.
 
 ## 2026-11-05: The walkthrough loses its Your promises step (owner)
