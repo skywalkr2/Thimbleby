@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-11-05: The walkthrough loses its Your promises step (owner)
+
+**Decided:** the setup walkthrough no longer has a Your promises step. It only described what Today does next, so it
+looked like a step that did nothing, the summary called it unfinished, and its status note broke the step list (the
+owner's test of f410e11, points 8, 9 and 12). The first look at the mail stays where it already starts: one line on
+Today with Start and its cost. The walkthrough has six steps and the summary.
+
+**Also:** the owner asks the UI/UX reviewer whether the round mark at the start of a to-do reads as select or as done,
+and what the clearer way to complete one is (point 17). Nothing changes there until the reviewer answers.
+
+**Impact:** design 7 (the walkthrough's steps and the summary) changes in the U4 change that builds this, with its
+change-log section. Change log: none.
+
 ## 2026-11-04: A docs-only push runs only the docs checks (owner)
 
 **Decided:** a push or pull request that changes only `docs/`, `reviews/`, `CLAUDE.md` or `AGENTS.md` no longer runs the

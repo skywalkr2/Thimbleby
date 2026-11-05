@@ -1287,11 +1287,11 @@ Owner's numbering kept. Recorded only; nothing is fixed until the owner says go.
 - [ ] [U4] 5. An added account shows "Not tested yet" and waits for the person to test it. Adding an account tests it at once, with no button.
 - [ ] [U4] 6. Mail and calendar, Google: the screen shows offline and then online while the app restarts. The restart was meant to be hidden.
 - [ ] [U4] 7. Mail and calendar: after the service's own sign-in page, nothing brings the person back to the app's window. Think through for now and for the installed app.
-- [ ] [U4] 8. Your promises: the step does nothing; it is text and Continue. The person expects to set something up there.
-- [ ] [U4] 9. After Your promises, the step list breaks: the step's name is drawn one letter per line beside "Starts when you press Start on Today", on every later step.
+- [ ] [U4] 8. Your promises: the step does nothing; it is text and Continue. The person expects to set something up there. → owner (2026-11-05): remove the step; the first look at the mail is part of Today after the walkthrough, where Start already is. Design 7 (the walkthrough's steps) changes with the fix.
+- [ ] [U4] 9. After Your promises, the step list breaks: the step's name is drawn one letter per line beside "Starts when you press Start on Today", on every later step. → goes with 8: no promises step, no status note in the list.
 - [ ] [U4] 10. People: a newsletter service's reply address (a long machine id) is listed as a person you write to. Said to be fixed before.
 - [ ] [U4] 11. People: only one real person was found; an earlier run found two. Looks like the search stopped early.
-- [ ] [U4] 12. Where things stand: Your promises shows "Set up" as though skipped, though that step has nothing to set up, so the walkthrough can't be finished cleanly.
+- [ ] [U4] 12. Where things stand: Your promises shows "Set up" as though skipped, though that step has nothing to set up, so the walkthrough can't be finished cleanly. → goes with 8: the summary has no promises row; it says Today has one line to start the assistant.
 - [ ] [U4] 21. Messages stay on screen (a "Started … and filed 4 items" message stays on the setup page). A signed-in app (Claude Code) shows "Check failed for everyday and harder work" while it works.
 
 **Today and after**
@@ -1299,7 +1299,7 @@ Owner's numbering kept. Recorded only; nothing is fixed until the owner says go.
 - [ ] [U4] 14. Today after Start: an empty card, with "Show 1 new item" drawn over the row below it.
 - [ ] [U4] 15. The AI account checked as working, then ran out of credit before Today. Every item became its own line, "Choose another account for …", each saying "no AI account is set up for the 'routine' tier" (an internal word, and the wrong reason), and each needing its own click to send again. It should be one line saying the account ran out, with one action.
 - [ ] [U4] 16. Once running: the work is good but not efficient, so it is confusing ("Group 4 to-dos under a new area?" with a name box inline; "Date 1 new to-do"). Today's schedule says deliveries the assistant found were "Added by you".
-- [ ] [U4] 17. To-dos: the circle closes the to-do (then Undo) when the person meant to select it.
+- [ ] [U4] 17. To-dos: the circle closes the to-do (then Undo) when the person meant to select it. → needs the UI/UX reviewer (owner, 2026-11-05: "I associate that circle with select"; Undo worked): is a round mark at the start of a row read as select or as done, and what is the clearer way to complete a to-do? Asked in the hand-back.
 - [ ] [U4] 18. To-dos: "1 to-do needs a date" hides the to-do behind a link. List it, with a date to pick beside it.
 - [ ] [U4] 19. Set aside, automated notices: notices sent only to the person (a new subscriber, a reply to their own post) are set aside as "sent to many people". Some are right, some are not.
 - [ ] [U4] 22. The terminal fills with a PDF reader's warnings ("Ignoring wrong pointing object …") and restart lines; a person sees them as errors.
