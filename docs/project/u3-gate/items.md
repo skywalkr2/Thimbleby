@@ -1274,3 +1274,33 @@ G1 moved these screens from 3.0 to 3.8 up to 3.6 to 4.1 (3 of 22 at 4.0). Lines 
 
 - [ ] [U4] CI on 9fb7fc4 (the CI-files push, which ran everything): `side-filter.spec.ts:152` "Follow-ups: only other people are listed, and the promises they made are under their side" failed once; the Settings search test above passed in the same run. It passed on f410e11 and in the local full run. Re-run it on its own first, then root-cause it; a failing test is never called a flake.
 - [x] [END] The build failed on the owner's Mac: `web/src/ui/filterSheet.ts` and `FilterSheet.tsx` differed only in capitals, and where capitals don't count the import of "./FilterSheet" opened the .ts file. Linux and CI never saw it. → fixed: renamed to `inFilterSheet.ts`; the self-check's new "file names" check finds any two names that differ only in capitals (`tests/test_selfcheck_file_names.py`).
+
+## U4: the owner's test of f410e11 (2026-11-04)
+
+Owner's numbering kept. Recorded only; nothing is fixed until the owner says go. No names, addresses or mail from the owner's screenshots are copied here.
+
+**Setup walkthrough**
+- [ ] [U4] 1. You: the time zone list shows a box the person can type into (the filter box of the list). A list to pick from must not look like a text field.
+- [ ] [U4] 2. Your AI account, OpenRouter: a valid key gets "The service asked to wait a moment. Try again shortly." The check of every tier runs into the service's rate limit; the person can't tell the key is fine, and the message sits under the key with no next step.
+- [ ] [U4] 3. Your AI account, Google AI Studio: after a model is picked, Continue stays off. The model has no known price, so the price boxes appear (filled in), and the step waits for a check that only runs on Enter or leaving the box; it never tries the model.
+- [ ] [U4] 4. Your AI account, a signed-in app (Copilot CLI): it works, but the words are beyond a non-technical person: "with its tools denied", "Change the model in that app's settings", "Can Reginald's AI service read your private mail…", "Which account is it?".
+- [ ] [U4] 5. An added account shows "Not tested yet" and waits for the person to test it. Adding an account tests it at once, with no button.
+- [ ] [U4] 6. Mail and calendar, Google: the screen shows offline and then online while the app restarts. The restart was meant to be hidden.
+- [ ] [U4] 7. Mail and calendar: after the service's own sign-in page, nothing brings the person back to the app's window. Think through for now and for the installed app.
+- [ ] [U4] 8. Your promises: the step does nothing; it is text and Continue. The person expects to set something up there.
+- [ ] [U4] 9. After Your promises, the step list breaks: the step's name is drawn one letter per line beside "Starts when you press Start on Today", on every later step.
+- [ ] [U4] 10. People: a newsletter service's reply address (a long machine id) is listed as a person you write to. Said to be fixed before.
+- [ ] [U4] 11. People: only one real person was found; an earlier run found two. Looks like the search stopped early.
+- [ ] [U4] 12. Where things stand: Your promises shows "Set up" as though skipped, though that step has nothing to set up, so the walkthrough can't be finished cleanly.
+- [ ] [U4] 21. Messages stay on screen (a "Started … and filed 4 items" message stays on the setup page). A signed-in app (Claude Code) shows "Check failed for everyday and harder work" while it works.
+
+**Today and after**
+- [ ] [U4] 13. Today: Start had to be pressed many times before it worked.
+- [ ] [U4] 14. Today after Start: an empty card, with "Show 1 new item" drawn over the row below it.
+- [ ] [U4] 15. The AI account checked as working, then ran out of credit before Today. Every item became its own line, "Choose another account for …", each saying "no AI account is set up for the 'routine' tier" (an internal word, and the wrong reason), and each needing its own click to send again. It should be one line saying the account ran out, with one action.
+- [ ] [U4] 16. Once running: the work is good but not efficient, so it is confusing ("Group 4 to-dos under a new area?" with a name box inline; "Date 1 new to-do"). Today's schedule says deliveries the assistant found were "Added by you".
+- [ ] [U4] 17. To-dos: the circle closes the to-do (then Undo) when the person meant to select it.
+- [ ] [U4] 18. To-dos: "1 to-do needs a date" hides the to-do behind a link. List it, with a date to pick beside it.
+- [ ] [U4] 19. Set aside, automated notices: notices sent only to the person (a new subscriber, a reply to their own post) are set aside as "sent to many people". Some are right, some are not.
+- [ ] [U4] 22. The terminal fills with a PDF reader's warnings ("Ignoring wrong pointing object …") and restart lines; a person sees them as errors.
+- [x] [U4] 20. The Schedule is "damn good already" (owner). → judged wrong: praise, nothing to fix; G3c still waits.
